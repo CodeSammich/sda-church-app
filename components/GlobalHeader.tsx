@@ -514,7 +514,7 @@ export const GlobalHeader = (props: any) => {
                                 maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                                 numberOfLines={1}
                                 style={{
-                                  color: theme.colors.onSurface,
+                                  color: theme.colors.primary,
                                   flexShrink: 1,
                                   fontSize: scaleTypographyMetric(14, headerTextScale),
                                   fontWeight: '700',
@@ -532,7 +532,7 @@ export const GlobalHeader = (props: any) => {
                         maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                         numberOfLines={1}
                         style={{
-                          color: theme.colors.onSurface,
+                          color: theme.colors.primary,
                           fontSize: scaleTypographyMetric(14, headerTextScale),
                           fontWeight: '700',
                           lineHeight: scaleTypographyMetric(19, headerTextScale),

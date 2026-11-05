@@ -352,7 +352,20 @@ describe("the Bible's dock follows the tab bar's system (#589)", () => {
     // Raised a shade off the page like the capsule, with its pills and round buttons in the page's colour.
     expect(bible).toContain('<View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>');
     expect(bible.match(/backgroundColor: getDockControlColor\(theme\),/g)).toHaveLength(5);
+    // Their words and icons: the three pills, and the narrator and sleep timer
+    // buttons (the narrator's language mark or its icon).
+    expect(bible.match(/getDockControlContentColor\(theme\)/g)).toHaveLength(6);
     expect(bible.match(/borderColor: getDockControlBorderColor\(theme\),/g)).toHaveLength(5);
+    // While the sleep timer is on, its button fills in like the play button.
+    expect(bible).toMatch(
+      /sleepTimerSetting !== null && \{\s*backgroundColor: theme\.colors\.tertiary,\s*borderColor: theme\.colors\.tertiary,\s*\}/,
+    );
+    expect(bible).toMatch(
+      /name="timer-outline"[\s\S]{0,200}sleepTimerSetting !== null\s*\? theme\.colors\.onPrimary\s*: getDockControlContentColor\(theme\)/,
+    );
+    expect(bible).toMatch(
+      /icon=\{isPlaying \? 'pause' : 'play'\}[\s\S]{0,120}containerColor=\{theme\.colors\.tertiary\}\s*iconColor=\{theme\.colors\.onPrimary\}/,
+    );
   });
 
   it('keeps the card within the screen: the hidden and shown heights hold its controls with room to spare', () => {

@@ -55,9 +55,10 @@ are captured, their sizes, and what they may show are in
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The screenshots
 and headers here are from the key-screen runs for 1.7.0 on November 5, 2026, the first
 with the floating tab bar and Bible card on every system (#589), white or night blue
-for older eyes, and Home's three-line countdown:
-[iOS](https://github.com/CodeSammich/sda-church-app/actions/runs/41973719090) and
-[Android](https://github.com/CodeSammich/sda-church-app/actions/runs/41973721946). The
+for older eyes, the card's pills in the selected tab's blue or gold, and Home's
+three-line countdown:
+[iOS](https://github.com/CodeSammich/sda-church-app/actions/runs/42003610581) and
+[Android](https://github.com/CodeSammich/sda-church-app/actions/runs/42003614621). The
 feature graphic was built from the Google Play ones.
 
 Each run also saves numbered App Store copies in its screenshots download's

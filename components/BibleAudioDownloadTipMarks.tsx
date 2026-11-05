@@ -64,7 +64,7 @@ export function BibleAudioDownloadTipMarks({ color, visible }: Readonly<{ color:
         <View
           testID="bible-audio-tip-dot"
           pointerEvents="none"
-          style={[ReaderStyles.timerBadge, { backgroundColor: color }]}
+          style={[ReaderStyles.controlDot, { backgroundColor: color }]}
         />
       )}
     </>

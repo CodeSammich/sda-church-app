@@ -407,7 +407,7 @@ export const createReaderStyles = (textScale: TextScale) => {
     justifyContent: 'center',
     position: 'relative',
   },
-  timerBadge: {
+  controlDot: {
     position: 'absolute',
     top: 7,
     right: 7,

@@ -172,10 +172,9 @@ the audio settings button at the left of the audio bar points the listener to Li
 offline:
 - **When:** after 3 stalls in one listening session, or one longer than 5 seconds. The
   usual loading at a chapter's start, or after a skip or a drag, doesn't count toward the 3.
-- **How:** the button's border pulses three times in the theme's main color, then a dot,
-  like the sleep timer's, stays until the popup opens. With Reduce Motion (iOS) or Remove
-  animations (Android) on, only the dot shows. A pulse due while the screen is off waits
-  until the app is back.
+- **How:** the button's border pulses three times in the theme's main color, then a dot
+  stays until the popup opens. With Reduce Motion (iOS) or Remove animations (Android)
+  on, only the dot shows. A pulse due while the screen is off waits until the app is back.
 - **In the popup:** it scrolls to Listen offline, which says "Playback often stops to
   load. Download to listen without waiting." above the row that opens Offline Bible
   Audio. Screen readers hear the same line as the button's hint, not as an announcement.
@@ -235,14 +234,19 @@ simple, blended colors.
   - **The Bible's audio and chapter controls float in a card of their own** above the
     capsule, as iOS puts a player above its tab bar: the same floating surface, as wide as
     the capsule on a phone and up to 640 points on a tablet, with its pills and round
-    buttons in the page's own colour (warm pink, or black), edged in the theme's outline,
-    or in a brighter gold on the dark theme's blue so their edges stand out at least 3:1
-    (`getDockControlBorderColor`). When the tab bar hides while
-    reading, the card slides down into its place.
+    buttons looking like the selected tab: light blue with blue words and icons, or a
+    deeper night blue with gold (`getDockControlColor`, `getDockControlContentColor`),
+    edged in the theme's outline, or in a brighter gold on the dark theme's blue so their
+    edges stand out at least 3:1 (`getDockControlBorderColor`). While the sleep timer is
+    on, its button fills in like the play button: blue with a white icon, or gold with a
+    dark one. When the tab bar hides while reading, the card slides down into its place.
   - **The header's buttons match the bars:** the back button, the page title, the search
     bar, and the Bible's translation, saved-verse, help and search buttons float on the
     same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a
-    page's top matches its bottom.
+    page's top matches its bottom. Their icons are grey, like the tab bar's other tabs;
+    blue, or gold in the dark theme, marks what opens a list or shows a state: the back
+    button, the translation button's names, icon and arrow, like the Bible card's pills,
+    and the saved-verse button once a verse is saved.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
