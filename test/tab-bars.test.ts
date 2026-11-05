@@ -14,6 +14,7 @@ import {
   getBarSurfaceColor,
   getDockControlBorderColor,
   getDockControlColor,
+  getDockControlContentColor,
   getSelectedTabTint,
   TABLET_TAB_BAR_MIN_WIDTH,
 } from '@/components/TabBarItems';
@@ -58,10 +59,13 @@ describe('the tab bars (#589)', () => {
     expect(getBarSurfaceColor(customDarkTheme)).toBe('#00405C');
     expect(getSelectedTabTint(customLightTheme)).toBe(customLightTheme.colors.primaryContainer);
     expect(getSelectedTabTint(customDarkTheme)).toBe('#0B2C3D');
-    // The card's pills and round buttons share the selected tab's colour.
+    // The card's pills and round buttons look like the selected tab: its pill
+    // colour, with its blue words, or gold in the dark theme.
     for (const theme of [customLightTheme, customDarkTheme]) {
       expect(getDockControlColor(theme)).toBe(getSelectedTabTint(theme));
     }
+    expect(getDockControlContentColor(customLightTheme)).toBe(customLightTheme.colors.primary);
+    expect(getDockControlContentColor(customDarkTheme)).toBe('#D2B258');
     // The card's pills and round buttons: a brighter gold edge on the dark
     // theme's night blue, 4.2:1 where the outline's was 2.8.
     expect(getDockControlBorderColor(customLightTheme)).toBe(customLightTheme.colors.outline);

@@ -26,6 +26,15 @@ export const getBarSurfaceColor = (theme: AppTheme) => theme.colors.floatingSurf
 export const getDockControlColor = (theme: AppTheme) => theme.colors.floatingSelected;
 
 /**
+ * The words and icons on the dock card's pills and round buttons: the selected
+ * tab's blue, or its gold in the dark theme, so each control looks like the
+ * selected tab below it. Blue stands out 5.2:1 on the light blue and gold 7.1:1
+ * on the night blue; gold on the light blue would be unreadable (1.8:1).
+ */
+export const getDockControlContentColor = (theme: AppTheme) =>
+  theme.dark ? theme.colors.metallicGold.main : theme.colors.primary;
+
+/**
  * The edge of the dock card's pills and round buttons: the theme's outline, or
  * in the dark theme a brighter gold. On the card's night blue the outline's
  * gold stood out only 2.8:1, below the 3:1 a control's edge needs; this one

@@ -352,6 +352,9 @@ describe("the Bible's dock follows the tab bar's system (#589)", () => {
     // Raised a shade off the page like the capsule, with its pills and round buttons in the page's colour.
     expect(bible).toContain('<View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>');
     expect(bible.match(/backgroundColor: getDockControlColor\(theme\),/g)).toHaveLength(5);
+    // Their words and icons: the three pills, and the narrator and sleep timer
+    // buttons (the narrator's language mark or its icon).
+    expect(bible.match(/getDockControlContentColor\(theme\)/g)).toHaveLength(6);
     expect(bible.match(/borderColor: getDockControlBorderColor\(theme\),/g)).toHaveLength(5);
   });
 

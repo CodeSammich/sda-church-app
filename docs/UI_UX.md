@@ -235,10 +235,11 @@ simple, blended colors.
   - **The Bible's audio and chapter controls float in a card of their own** above the
     capsule, as iOS puts a player above its tab bar: the same floating surface, as wide as
     the capsule on a phone and up to 640 points on a tablet, with its pills and round
-    buttons in the selected tab's colour (light blue, or a deeper night blue), edged in
-    the theme's outline, or in a brighter gold on the dark theme's blue so their edges
-    stand out at least 3:1 (`getDockControlBorderColor`). When the tab bar hides while
-    reading, the card slides down into its place.
+    buttons looking like the selected tab: light blue with blue words and icons, or a
+    deeper night blue with gold (`getDockControlColor`, `getDockControlContentColor`),
+    edged in the theme's outline, or in a brighter gold on the dark theme's blue so their
+    edges stand out at least 3:1 (`getDockControlBorderColor`). When the tab bar hides
+    while reading, the card slides down into its place.
   - **The header's buttons match the bars:** the back button, the page title, the search
     bar, and the Bible's translation, saved-verse, help and search buttons float on the
     same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a

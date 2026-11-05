@@ -47,7 +47,7 @@ import {
   getFloatingSurfaceStyle,
   ScrollEdgeFade,
 } from '@/components/CapsuleTabBar';
-import { getDockControlBorderColor, getDockControlColor } from '@/components/TabBarItems';
+import { getDockControlBorderColor, getDockControlColor, getDockControlContentColor } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -3862,7 +3862,7 @@ export default function BibleScreen() {
           pointerEvents="none"
           numberOfLines={1}
           ellipsizeMode="tail"
-          style={ReaderStyles.pillText}
+          style={[ReaderStyles.pillText, { color: getDockControlContentColor(theme) }]}
         >
           {book?.name || '...'}
         </Text>
@@ -3901,7 +3901,7 @@ export default function BibleScreen() {
           pointerEvents="none"
           numberOfLines={1}
           ellipsizeMode="tail"
-          style={ReaderStyles.pillText}
+          style={[ReaderStyles.pillText, { color: getDockControlContentColor(theme) }]}
         >
           {chapterNum}
         </Text>
@@ -3942,7 +3942,7 @@ export default function BibleScreen() {
           pointerEvents="none"
           numberOfLines={1}
           ellipsizeMode="tail"
-          style={ReaderStyles.pillText}
+          style={[ReaderStyles.pillText, { color: getDockControlContentColor(theme) }]}
         >
           {shortVerseLabel ? labels.verseShort : labels.verse}
         </Text>
@@ -4234,7 +4234,7 @@ export default function BibleScreen() {
                       adjustsFontSizeToFit
                       style={[
                         styles.audioLanguageMark,
-                        { color: theme.colors.onSurface },
+                        { color: getDockControlContentColor(theme) },
                       ]}
                     >
                       {getAudioLanguageMark(selectedAudioLanguage)}
@@ -4245,7 +4245,7 @@ export default function BibleScreen() {
                       name="account-voice"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurface}
+                      color={getDockControlContentColor(theme)}
                     />
                   )}
                   <BibleAudioDownloadTipMarks
@@ -4308,11 +4308,7 @@ export default function BibleScreen() {
                     name="timer-outline"
                     size={25}
                     textScale={bibleUiTextScale}
-                    color={
-                      sleepTimerSetting !== null
-                        ? theme.colors.tertiary
-                        : theme.colors.onSurface
-                    }
+                    color={getDockControlContentColor(theme)}
                   />
                   {sleepTimerSetting !== null && (
                     <View
