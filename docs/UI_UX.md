@@ -249,7 +249,10 @@ simple, blended colors.
     and the saved-verse button once a verse is saved.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
     Members who'd rather have softer colors choose **Standard** at first-launch setup's
-    last step, "Which is easier to read?", or later under You → Contrast:
+    last step, "Which is easier to read?", or later under You → Contrast. Members who
+    set up an earlier version are asked once, in **What's new** on their first launch
+    after the update (`constants/WhatsNew.ts`, keyed by version, so a later release can
+    add its own or none; live announcements, #562, would be separate):
     the bars, the card and the header's buttons a shade off the page, the light theme's
     own warm surface (`#FAF4EF`) or a warm brown in the dark (`#211F18`), with the
     selected tab and the card's pills on the light blue or a deeper gold-brown

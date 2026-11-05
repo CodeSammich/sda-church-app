@@ -677,6 +677,23 @@
       }
     },
     {
+      "$comment": "What's new (#669): shown once, on the first launch after an update, to members who set up an earlier version, which a missing whatsNewSeen stands for. The new look, and the contrast pictures, high contrast first. It asks a question, so it has no X.",
+      "name": "whats-new",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "whatsNewSeen": null },
+      "variants": ["default", "dark", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Close$"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^What.s new$", "^Which is easier to read\\?$", "^High contrast$", "^Standard$"] },
+        "dark": { "mustShowLines": ["^What.s new$", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^新功能$", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
       "name": "language",
       "group": "worship-and-you",
       "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464). Its title is also on the You screen behind it, so the rules require the options' descriptions, which only the dialog shows.",

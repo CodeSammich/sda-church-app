@@ -175,6 +175,7 @@ describe('saved settings', () => {
       'constants/Themes.ts',
       'constants/AppPreferences.ts',
       'services/ScreenshotRoute.ts',
+      'constants/WhatsNew.ts',
     ]
       .map(repoFile)
       .join('\n');
@@ -225,6 +226,8 @@ describe('saved settings', () => {
       'user-bible-dual-language': 'true',
       'user-bible-supporting-translation': 'BSB',
       'user-bible-show-pinyin': 'true',
+      // Every shot but its own has seen this version's "What's new" (#669).
+      'whats-new-seen': require('../package.json').version,
     });
     const large = shots.find((candidate: { file: string }) => candidate.file === 'ios/bible-dual-large.png');
     expect(buildManifest(large.settings)['user-text-scale']).toBe('1.5');
@@ -1222,6 +1225,7 @@ describe('Android key screens (#372)', () => {
       'user-language': 'en',
       'user-theme': 'light',
       'user-text-scale': '2',
+      'whats-new-seen': require('../package.json').version,
     });
   });
 

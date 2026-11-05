@@ -1,5 +1,7 @@
 import { AppAlertHost } from '@/components/AppAlert';
 import { InitialSetup } from '@/components/InitialSetup';
+import { WhatsNewDialog } from '@/components/WhatsNewDialog';
+import { shouldShowWhatsNew, WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION } from '@/constants/WhatsNew';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LaunchSplash } from '@/components/LaunchSplash';
 import {
@@ -277,6 +279,8 @@ export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [launchSplashVisible, setLaunchSplashVisible] = useState(playsLaunchAnimation);
   const [showSetup, setShowSetup] = useState(false);
+  // "What's new", once, for members who set up an earlier version (#669).
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<any>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
@@ -651,12 +655,13 @@ export default function RootLayout() {
 
     async function prepare() {
       try {
-        const [savedLang, savedTheme, setupDone, savedTextScale, savedContrast] = await Promise.all([
+        const [savedLang, savedTheme, setupDone, savedTextScale, savedContrast, whatsNewSeen] = await Promise.all([
           AsyncStorage.getItem('user-language'),
           AsyncStorage.getItem(THEME_STORAGE_KEY),
           AsyncStorage.getItem('has-completed-setup'),
           AsyncStorage.getItem(TEXT_SCALE_STORAGE_KEY),
           AsyncStorage.getItem(CONTRAST_STORAGE_KEY),
+          AsyncStorage.getItem(WHATS_NEW_SEEN_KEY),
         ]);
 
         // Always determine fallbacks first
@@ -692,6 +697,7 @@ export default function RootLayout() {
         if (setupDone !== 'true') {
           setShowSetup(true);
         }
+        setShowWhatsNew(shouldShowWhatsNew(setupDone === 'true', whatsNewSeen));
       } catch (e) {
         console.warn('Failed to load settings', e);
       } finally {
@@ -773,6 +779,11 @@ export default function RootLayout() {
     );
   };
 
+  const onWhatsNewDone = async () => {
+    setShowWhatsNew(false);
+    await AsyncStorage.setItem(WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION);
+  };
+
   const onCompleteSetup = async () => {
     // Persist current settings when completing setup to ensure they stick on reload
     // even if the user didn't explicitly change them from system defaults.
@@ -786,6 +797,8 @@ export default function RootLayout() {
       ),
       AsyncStorage.setItem(THEME_STORAGE_KEY, themeMode),
       AsyncStorage.setItem(TEXT_SCALE_STORAGE_KEY, serializeTextScale(textScale)),
+      // Setup asked the contrast, so "What's new" has nothing more to ask.
+      AsyncStorage.setItem(WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION),
     ]);
     setShowSetup(false);
   };
@@ -895,6 +908,8 @@ export default function RootLayout() {
                   theme={theme}
                   showSetup={showSetup}
                   onCompleteSetup={onCompleteSetup}
+                  showWhatsNew={isReady && !showSetup && showWhatsNew}
+                  onWhatsNewDone={onWhatsNewDone}
                   installAvailable={
                     !installPromptDismissed &&
                     (installPrompt !== null || isIosSafariBrowser())
@@ -921,6 +936,8 @@ function RootLayoutNav({
   theme,
   showSetup,
   onCompleteSetup,
+  showWhatsNew,
+  onWhatsNewDone,
   installAvailable,
   onInstall,
   onDismissInstall,
@@ -933,6 +950,8 @@ function RootLayoutNav({
   theme: AppTheme;
   showSetup: boolean;
   onCompleteSetup: () => void;
+  showWhatsNew: boolean;
+  onWhatsNewDone: () => void;
   installAvailable: boolean;
   onInstall: () => Promise<void>;
   onDismissInstall: () => void;
@@ -1163,6 +1182,7 @@ function RootLayoutNav({
         {showSetup && !installAvailable && (
           <InitialSetup onComplete={onCompleteSetup} />
         )}
+        {showWhatsNew && !installAvailable && <WhatsNewDialog onDone={onWhatsNewDone} />}
 
         <Snackbar
           visible={updateStatus !== 'idle' || updateAvailable}

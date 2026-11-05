@@ -58,6 +58,8 @@ const SETTING_KEYS = {
   contrast: 'user-contrast',
   // The first-launch setup step a key-screens build opens, by name (#669).
   setupStep: 'screenshot-setup-step',
+  // The newest "What's new" seen (#669); missing shows it.
+  whatsNewSeen: 'whats-new-seen',
 };
 
 // Settings of the simulated phone rather than the app, by platform. A variant
@@ -81,6 +83,8 @@ const APP_BASE_SETTINGS = {
   language: 'en',
   theme: 'light',
   textScale: 1,
+  // This version's "What's new" already seen, so it shows only in its own shot.
+  whatsNewSeen: JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).version,
 };
 const BASE_SETTINGS = {
   ios: { ...APP_BASE_SETTINGS, iosTextSize: 'large' },

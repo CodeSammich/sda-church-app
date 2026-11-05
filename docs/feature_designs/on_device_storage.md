@@ -49,7 +49,7 @@ The app saves its settings and the member's saved verses with [AsyncStorage](htt
 
 | Keys | What they hold | Saved by |
 | --- | --- | --- |
-| `has-completed-setup`, `user-language`, `user-theme`, `user-text-scale`, `user-contrast` | First-launch setup and the app's preferences (`user-contrast`: `standard`, or high contrast when missing, #669) | `app/_layout.tsx` |
+| `has-completed-setup`, `user-language`, `user-theme`, `user-text-scale`, `user-contrast`, `whats-new-seen` | First-launch setup and the app's preferences (`user-contrast`: `standard`, or high contrast when missing; `whats-new-seen`: the newest version whose What's new was shown, #669) | `app/_layout.tsx` |
 | `user-bible-translation`, `user-bible-supporting-translation`, `user-bible-dual-language`, `user-bible-show-pinyin`, `user-bible-book`, `user-bible-chapter`, `user-bible-audio-readers`, `user-bible-audio-sources` | The Bible reader's choices and the place last read | `app/(tabs)/bible/index.tsx`; `app/_layout.tsx` also resets the translation to the new language's when the app language changes |
 | `saved-bible-verses-v1` | Saved verses | `services/SavedVersesService.ts` |
 | `preferred-bulletin-location` | Which congregation's bulletin to show | `app/(tabs)/home/bulletin.tsx` |
