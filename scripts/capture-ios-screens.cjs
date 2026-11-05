@@ -122,6 +122,10 @@ const STILL_RETRIES = 6;
 // 2026-10-21 a busy runner left one Home shot on the splash for 41 seconds,
 // while the 18 around it loaded. The run lists each relaunch, so a launch
 // problem that keeps coming back still shows, and fails if it happens twice.
+// A record that says the app didn't do what the shot started, such as audio
+// that never played, gets the same: on 1.7.0's runs the iPad Simulator's
+// audio stayed buffering at 0:00 on half of them, with the network and the
+// 215 KB file fine, while the same app played it on the iPhone every time.
 const LAUNCHES = 2;
 
 // While waiting, a sample screenshot every this many seconds. Comparing them
@@ -671,6 +675,14 @@ const capture = async (outDir, { group, platform = 'ios' } = {}) => {
         if (shot.settings.orientation === 'landscape') await turnUpright(laterFile);
         if (recorded) records.push(readShotRecord());
       }
+      const recordCheck = recorded
+        ? await recorded.check({ first: records[0], later: records[1], seconds: shot.later })
+        : { problems: [] };
+      if (recordCheck.problems.length && launch < LAUNCHES) {
+        relaunched.push(`${shot.file}: ${recordCheck.problems.join(', ')}, after ${finalSeconds}s`);
+        console.log(`${shot.file} <- ${shot.url}  (${recordCheck.problems.join(', ')}; launching again)`);
+        continue;
+      }
       timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
       for (const check of shot.checks) {
         if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
@@ -678,11 +690,7 @@ const capture = async (outDir, { group, platform = 'ios' } = {}) => {
       }
       if (shot.record && !recorded) problems.push(`unknown record "${shot.record}"`);
       if (recorded) {
-        const { problems: wrong, notes = [] } = await recorded.check({
-          first: records[0],
-          later: records[1],
-          seconds: shot.later,
-        });
+        const { problems: wrong, notes = [] } = recordCheck;
         problems.push(...wrong);
         for (const problem of wrong) console.log(`::error::${shot.file}: ${problem}`);
         for (const note of notes) console.log(`::warning::${shot.file}: ${note}`);

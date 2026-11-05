@@ -898,7 +898,9 @@ For both, the key-screens build also saves what happened into its storage
 (`recordForScreenshot` in `services/ScreenshotRoute.ts`): the player's status, with
 the addresses it streams from, or how the lesson opened. The capture reads it back
 (`scripts/key-screen-records.cjs`, named by the screen's `record`) and fails the shot
-if the audio didn't play or Quick Look didn't open. Both need the network, so when one
+if the audio didn't play or Quick Look didn't open, after launching it once more, as
+for a stuck launch: on 1.7.0's runs the iPad Simulator's audio stayed buffering at 0:00
+on half of them, with the network fine, while the iPhone played it every time. Both need the network, so when one
 fails, the runner asks those addresses itself, since the Simulator shares its network,
 and the failure ends either "The network was the cause, not the app: this runner
 couldn't reach them either", or that the runner reached them, so the app is at fault.

@@ -1150,6 +1150,17 @@ describe('launching again after a stuck launch', () => {
     }
   });
 
+  it("launches an iOS shot once more when its record says the app didn't do what it started", () => {
+    // 1.7.0's iPad audio stayed buffering at 0:00 on half its runs, with the
+    // network fine. The record is read after the later shot, and checked once.
+    const source = repoFile('scripts/capture-ios-screens.cjs');
+    const retry = source.indexOf('if (recordCheck.problems.length && launch < LAUNCHES) {');
+    expect(retry).toBeGreaterThan(source.indexOf('if (shot.later) {'));
+    expect(retry).toBeLessThan(source.indexOf('timings.push('));
+    expect(source.match(/await recorded\.check\(/g)).toHaveLength(1);
+    expect(source).toContain('const { problems: wrong, notes = [] } = recordCheck;');
+  });
+
   it('lists each relaunch in the summary, and warns on the run', () => {
     const log = jest.spyOn(console, 'log').mockImplementation(() => {});
     expect(relaunchLines([])).toEqual([]);
