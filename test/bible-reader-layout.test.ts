@@ -9,7 +9,11 @@ import {
   getBulletinVerseScrollOffset,
   getBibleDockLayout,
   getBibleDockViewportLayout,
+  getDockPillGrowth,
+  getDockPillPaddingHorizontal,
+  NARROW_DOCK_CARD,
   shouldShortenVerseLabel,
+  WIDE_DOCK_PILLS_ROW,
 } from '@/styles/ReaderStyles';
 import { StyleSheet } from 'react-native';
 
@@ -131,17 +135,21 @@ describe('Bible reader text scaling', () => {
     // "Psalms" read "Ps…" beside a full-size "Verse".
     const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(source).toContain('bibleUiTextScale * getHeaderFontScale(osFontScale)');
-    expect(source).toContain('getBibleDockLayout(viewportWidth, dockTextScale)');
+    // The dock's controls get the floating card's width (#589), at most the
+    // content column's on a wide screen (#324).
+    expect(source).toContain('() => getBibleDockLayout(dockCardWidth, dockTextScale),');
     // The book, chapter, and Verse labels, the selection count, the audio
     // language mark, both audio times, and the hidden copy that measures pills.
     expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(8);
   });
 
   it('shortens the Verse label before the book name is cut short (#376)', () => {
-    // Psalms 130 + 23 64 + Verse 100 + 2 gaps of 8 = 310.
+    // Psalms 130 + 23 64 + Verse 100 + 2 gaps of 8 = 310, and 4 to spare.
     const pills = { bookPillWidth: 130, chapterPillWidth: 64, versePillWidth: 100 };
     expect(shouldShortenVerseLabel({ ...pills, rowWidth: 340 })).toBe(false);
-    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 310 })).toBe(false);
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 314 })).toBe(false);
+    // Fitting by a point isn't enough: "Juan" became "Ju…" beside "Versículo".
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 311 })).toBe(true);
     expect(shouldShortenVerseLabel({ ...pills, rowWidth: 300 })).toBe(true);
     // Unmeasured: the full label.
     expect(shouldShortenVerseLabel({ ...pills, rowWidth: 0 })).toBe(false);
@@ -152,6 +160,26 @@ describe('Bible reader text scaling', () => {
     expect(source).toContain("verseShort: 'Vers.',");
     // The pill still says "Verse" to screen readers.
     expect(source).toContain('accessibilityLabel={labels.verse}');
+  });
+
+  it("keeps \"Psalms\" and \"Versículo\" whole in a phone's floating card (#589)", () => {
+    // Android's key-screen phone is 384 points: a 352-point card, about 250
+    // points for the pills. At 150% text, "Psalms" was cut to "Psal…" beside
+    // "23" and "Vs." with 10 points a side; 6 gives it about 24 more.
+    const phone = { cardWidth: 352, textScale: 1.5 };
+    expect(getDockPillPaddingHorizontal({ ...phone, dockTextScale: 1.5 })).toBe(6);
+    // The default size fits with the usual padding, as do a tablet's cards.
+    expect(getDockPillPaddingHorizontal({ ...phone, dockTextScale: 1, textScale: 1 })).toBe(10);
+    expect(getDockPillPaddingHorizontal({ cardWidth: 640, dockTextScale: 1.5, textScale: 1.5 })).toBe(10);
+    expect(getDockPillPaddingHorizontal({ cardWidth: 640, dockTextScale: 2, textScale: 2 })).toBe(8);
+    // An iPhone Pro Max's card is 408 points: not narrow.
+    expect(NARROW_DOCK_CARD).toBeGreaterThan(352);
+    expect(NARROW_DOCK_CARD).toBeLessThanOrEqual(408);
+    const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(source).toContain('getDockPillPaddingHorizontal({ cardWidth: dockCardWidth, dockTextScale, textScale })');
+    // The verse pill's cap applies only once the labels are shortened: in
+    // Spanish at the default size, "Versículo" fit the row but not 40% of it.
+    expect(source).toContain("maxWidth: shortVerseLabel ? '40%' : undefined,");
   });
 
   it('stacks reader controls when space is narrow or text is enlarged', () => {
@@ -267,7 +295,8 @@ describe('Bible reader text scaling', () => {
     const modals = bible.split('<Modal').slice(1);
     expect(modals).toHaveLength(4);
     for (const modal of modals) {
-      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}\s+contentContainerStyle=\{\[\s+ReaderStyles\.modalContent,\s+\{ maxHeight: popupMaxHeight \},/);
+      // Each is as wide as the You tab's dialogs at most, on a wide screen (#324).
+      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}\s+contentContainerStyle=\{\[\s+ReaderStyles\.modalContent,\s+popupWidthStyle,\s+\{ maxHeight: popupMaxHeight \},/);
     }
     expect(createReaderStyles(2)).not.toHaveProperty('audioSettingsContent');
   });
@@ -281,5 +310,75 @@ describe('Bible reader text scaling', () => {
     expect(getVerseNumberColumnWidth(176, 1.25, 1)).toBeGreaterThan(base);
     // Never narrower than the original fixed width at the default system size.
     expect(base).toBeGreaterThanOrEqual(36);
+  });
+});
+
+describe("the chapter dock's pills on a wide row (#324)", () => {
+  it('let the book pill take the spare room on a phone, and share it 2:1:1 on a tablet', () => {
+    // A phone's row is at most about 340 points, even on a 440-point iPhone.
+    for (const row of [290, 310, 340, 400]) expect(getDockPillGrowth(row)).toEqual({ book: 1, chapter: 0, verse: 0 });
+    // The iPad mini's row is about 570 points, the 13-inch iPad's about 720.
+    for (const row of [WIDE_DOCK_PILLS_ROW, 570, 720]) {
+      expect(getDockPillGrowth(row)).toEqual({ book: 2, chapter: 1, verse: 1 });
+    }
+  });
+
+  it('measures the chapter number alone on a wide row, so "Verse" isn\'t shortened for room it has', () => {
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(bible).toContain("renderPillMeasure(String(chapterNum), setChapterLabelWidth)");
+    expect(bible).toContain('chapterPillWidth: dockPillGrowth.chapter ? chapterLabelWidth : chapterPillWidth,');
+    expect(bible.match(/flexGrow: dockPillGrowth\.(book|chapter|verse),/g)).toHaveLength(3);
+  });
+});
+
+describe("the Bible's dock follows the tab bar's system (#589)", () => {
+  const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+
+  it('floats in a card above the capsule, on every system', () => {
+    // As wide as the capsule on a phone, wider on a tablet, at most 640 points.
+    expect(bible).toContain('const DOCK_CARD_MAX_WIDTH = 640;');
+    expect(bible).toContain(
+      'Math.max(getCapsuleTabBarWidth(viewportWidth), Math.min(getContentWidth(viewportWidth, columnScale), DOCK_CARD_MAX_WIDTH)),',
+    );
+    // The card keeps the capsule's gap from the bottom edge, and CAPSULE_STACK_GAP above it.
+    expect(bible).toContain('const bottomDockInset = getCapsuleBottomGap(systemBottomInset);');
+    expect(bible).toContain('measuredBottomTabHeight - bottomDockInset)) + CAPSULE_STACK_GAP;');
+    // While the capsule shows, the room below the card is the capsule's; when it
+    // hides, the card slides down to the capsule's gap.
+    expect(bible).toContain(
+      'outputRange: [bottomDockInset, bottomDockInset + bottomTabContentHeight],',
+    );
+    expect(bible).toMatch(/<ScrollEdgeFade\s+background=\{theme\.colors\.background\}/);
+    // Raised a shade off the page like the capsule, with its pills and round buttons in the page's colour.
+    expect(bible).toContain('<View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>');
+    expect(bible.match(/backgroundColor: getDockControlColor\(theme\),/g)).toHaveLength(5);
+    // Their words and icons: the three pills, and the narrator and sleep timer
+    // buttons (the narrator's language mark or its icon).
+    expect(bible.match(/getDockControlContentColor\(theme\)/g)).toHaveLength(6);
+    expect(bible.match(/borderColor: getDockControlBorderColor\(theme\),/g)).toHaveLength(5);
+    // While the sleep timer is on, its button fills in like the play button.
+    expect(bible).toMatch(
+      /sleepTimerSetting !== null && \{\s*backgroundColor: theme\.colors\.tertiary,\s*borderColor: theme\.colors\.tertiary,\s*\}/,
+    );
+    expect(bible).toMatch(
+      /name="timer-outline"[\s\S]{0,200}sleepTimerSetting !== null\s*\? theme\.colors\.onPrimary\s*: getDockControlContentColor\(theme\)/,
+    );
+    expect(bible).toMatch(
+      /icon=\{isPlaying \? 'pause' : 'play'\}[\s\S]{0,120}containerColor=\{theme\.colors\.tertiary\}\s*iconColor=\{theme\.colors\.onPrimary\}/,
+    );
+  });
+
+  it('keeps the card within the screen: the hidden and shown heights hold its controls with room to spare', () => {
+    // A phone with the card above a 70-point capsule 20 points up, as on a Face ID iPhone.
+    const layout = getBibleDockViewportLayout({
+      bottomInset: 20,
+      bottomTabHeight: 70 + 8,
+      contentHeight: 150,
+      headerHeight: 100,
+      viewportHeight: 844,
+    });
+    expect(layout.hiddenHeight).toBe(170);
+    expect(layout.visibleHeight).toBe(248);
+    expect(layout.visibleNeedsScroll).toBe(false);
   });
 });

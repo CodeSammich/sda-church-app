@@ -22,6 +22,9 @@
  *                                                                         several runners
  *   node scripts/capture-android-screens.cjs --out <dir> --store          The Google Play shots, on an emulator
  *                                                                         of Google Play's size
+ *   node scripts/capture-android-screens.cjs --out <dir> --split 504      The shots at an iPad's split window
+ *                                                                         504 points wide (#324), on an emulator
+ *                                                                         that size (android.splitWindows)
  *
  * The key-screens preview build (EXPO_PUBLIC_KEY_SCREENS=1) must already be
  * installed on the only connected emulator. ADB names the adb to use (default
@@ -41,6 +44,7 @@ const {
   looksBlank,
   looksLikeSplash,
   planCaptures,
+  planSplitCaptures,
   planStoreCopies,
   relaunchLines,
   settledAfter,
@@ -237,17 +241,40 @@ const screenshot = (file) => {
 
 const isRunning = (pkg) => spawnSync(ADB, ['shell', `pidof ${pkg}`], { encoding: 'utf8' }).stdout.trim() !== '';
 
-/** The shots to take: a group's, every one, or each Google Play shot once. */
-const planShots = (config, { group, store }) => {
+/**
+ * The shots to take: a group's, every one, each Google Play shot once, or a
+ * split window's.
+ */
+const planShots = (config, { group, store, split }) => {
+  if (split) return planSplitCaptures(config, split);
   const shots = planCaptures(config, 'android');
   if (!store) return takeGroup(shots, group, config);
   const names = new Set(planStoreCopies(config, 'android').map((copy) => copy.name));
   return shots.filter((shot) => names.has(shot.name));
 };
 
-const capture = async (outDir, { group, store }) => {
+/**
+ * The emulator a capture runs on: the phone, Google Play's size, or an iPad's
+ * split window, in points at 2x (320 dpi).
+ */
+const SPLIT_DENSITY = 320;
+const deviceFor = (config, { store, split }) => {
+  if (split) {
+    const window = config.android.splitWindows.find((each) => each.width === split);
+    if (!window) throw new Error(`No split window ${split} points wide in android.splitWindows.`);
+    return {
+      name: `an iPad's split window, ${split} points wide`,
+      width: window.width * 2,
+      height: window.height * 2,
+      density: SPLIT_DENSITY,
+    };
+  }
+  return store ? config.android.googlePlay : config.android.phone;
+};
+
+const capture = async (outDir, { group, store, split }) => {
   const config = loadConfig();
-  const device = store ? config.android.googlePlay : config.android.phone;
+  const device = deviceFor(config, { store, split });
   const pkg = previewPackage();
   await becomeRoot();
   prepareEmulator();
@@ -269,7 +296,7 @@ const capture = async (outDir, { group, store }) => {
   const timings = [];
   const started = Date.now();
 
-  for (const shot of planShots(config, { group, store })) {
+  for (const shot of planShots(config, { group, store, split })) {
     // A stuck launch gets another (LAUNCHES in capture-ios-screens.cjs).
     for (let launch = 1; launch <= LAUNCHES; launch++) {
       shell(`am force-stop ${pkg}`);
@@ -350,13 +377,13 @@ const capture = async (outDir, { group, store }) => {
   if (!store) writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
-  const part = store ? ', Google Play shots' : group ? `, group ${group}` : '';
+  const part = store ? ', Google Play shots' : split ? ', split window' : group ? `, group ${group}` : '';
   const summary = [
     `### Android key screens (${device.name}, ${device.width} × ${device.height} at ${device.density} dpi${part})`,
     '',
     store
       ? `${captured.size} captured in ${minutes} minutes, and copied into \`screens/google-play/\`.`
-      : group
+      : group || split
         ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
         : `${captured.size} captured in ${minutes} minutes, in \`screens/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
@@ -398,10 +425,11 @@ if (require.main === module) {
   };
   const outDir = argument('--out');
   if (!outDir) {
-    console.error('Usage: node scripts/capture-android-screens.cjs --out <dir> [--group <group> | --store]');
+    console.error('Usage: node scripts/capture-android-screens.cjs --out <dir> [--group <group> | --store | --split <width>]');
     process.exit(2);
   }
-  capture(resolve(outDir), { group: argument('--group'), store: process.argv.includes('--store') }).catch((error) => {
+  const split = argument('--split') && Number(argument('--split'));
+  capture(resolve(outDir), { group: argument('--group'), store: process.argv.includes('--store'), split }).catch((error) => {
     console.error(error);
     process.exit(1);
   });
@@ -414,6 +442,7 @@ module.exports = {
   STORAGE_VERSION,
   STATUS_BAR_REGIONS,
   planShots,
+  deviceFor,
   checkScreenSize,
   previewPackage,
   writeStorage,

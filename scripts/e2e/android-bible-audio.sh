@@ -10,6 +10,9 @@
 # It checks that a book downloaded to listen offline (#556) plays with no
 # connection, moving between its chapters with the media keys.
 #
+# First it presses each tab and checks the app doesn't crash, which the key
+# screens, opening every screen by deep link, can't see.
+#
 # It also checks that the reader marks and follows the verse being read
 # (#561) and doesn't fight a listener who scrolls. The build must set
 # EXPO_PUBLIC_AUDIO_E2E=1, so the reader logs what it decides
@@ -102,22 +105,23 @@ prepare_app() {
   # second, so its screen never goes idle.
   open_chapter GEN 2
   local point
-  # First-launch setup is three steps (#523): Next, Next, then Get Started.
+  # First-launch setup is four steps (#523, #669): Next until Get Started.
   if point=$(ATTR=text TRIES=15 element_center 'Next'); then
-    # shellcheck disable=SC2086
-    sh_ input tap $point >/dev/null
-    sleep 1
-    if point=$(ATTR=text TRIES=5 element_center 'Next'); then
+    local taps=0
+    while [ "$taps" -lt 5 ]; do
       # shellcheck disable=SC2086
       sh_ input tap $point >/dev/null
       sleep 1
-    fi
-    if point=$(ATTR=text TRIES=5 element_center 'Get Started'); then
-      # shellcheck disable=SC2086
-      sh_ input tap $point >/dev/null
-      sleep 2
-      log 'Finished first-launch setup.'
-    fi
+      taps=$((taps + 1))
+      if point=$(ATTR=text TRIES=3 element_center 'Get Started'); then
+        # shellcheck disable=SC2086
+        sh_ input tap $point >/dev/null
+        sleep 2
+        log 'Finished first-launch setup.'
+        break
+      fi
+      point=$(ATTR=text TRIES=5 element_center 'Next') || break
+    done
   fi
   sh_ am force-stop "$PKG" >/dev/null
 }
@@ -547,6 +551,36 @@ scenario_scroll_while_paused() {
   [ "$back" != "$still" ] || { echo 'play did not take the page back to the verse being read'; return 1; }
 }
 
+# Presses each tab in turn, as a member would, and checks that the app is
+# still running and logged no crash. The key screens open every screen by deep
+# link and never press a tab, so they missed 1.7.0's first test builds
+# crashing on every tab press. The tabs don't move, so they're found once, on
+# the Bible, since Home's countdown keeps uiautomator from reading it.
+app_running() { [ -n "$(sh_ pidof "$PKG")" ]; }
+app_crashed() { adb_ logcat -d -b crash | tr -d '\r' | grep -E "Process: $PKG," >/dev/null; }
+scenario_tab_presses() {
+  adb_ logcat -b crash -c
+  open_chapter GEN 3
+  local tab bounds
+  declare -A points=()
+  for tab in Home Bible Explore You; do
+    bounds=$(element_bounds "$tab") || { echo "no $tab tab"; return 1; }
+    points[$tab]=$(point_in "$bounds")
+  done
+  # The selected tab first, then each of the others, then back to the Bible,
+  # whose own listener takes over the press.
+  for tab in Bible Explore You Home Bible; do
+    # shellcheck disable=SC2086
+    sh_ input tap ${points[$tab]} >/dev/null
+    sleep 3
+    if app_crashed || ! app_running; then
+      adb_ logcat -d -b crash | tr -d '\r' | grep -A2 'FATAL EXCEPTION' | head -3
+      echo "the app crashed when the $tab tab was pressed"
+      return 1
+    fi
+  done
+}
+
 # Psalm 117 plays into Psalm 118 with the screen off. When the screen comes
 # back on, the reader shows Psalm 118 and follows the verse being read.
 scenario_follow_after_screen_off() {
@@ -570,6 +604,7 @@ scenario_follow_after_screen_off() {
 
 sh_ cmd media_session volume --stream 3 --set 0 >/dev/null 2>&1
 prepare_app
+run tab-presses scenario_tab_presses
 if [ "${E2E_PRIMARY_BLOCKED:-0}" = 1 ]; then
   run primary-host-down scenario_primary_host_down
 fi

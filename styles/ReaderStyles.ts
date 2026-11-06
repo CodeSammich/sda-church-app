@@ -127,11 +127,44 @@ export const getBibleDockLayout = (
 };
 
 /**
+ * How the chapter dock's book, chapter, and verse pills share their row's
+ * spare room, as flex growth. On a phone, whose row is at most about 340
+ * points, the book pill takes it all, so a long book name has room. On a row
+ * at least WIDE_DOCK_PILLS_ROW wide, on a tablet or a wide window (#324), they
+ * share it 2:1:1, so the book pill doesn't stretch across the column beside
+ * two small ones.
+ */
+export const WIDE_DOCK_PILLS_ROW = 480;
+export const getDockPillGrowth = (rowWidth: number) =>
+  rowWidth >= WIDE_DOCK_PILLS_ROW ? { book: 2, chapter: 1, verse: 1 } : { book: 1, chapter: 0, verse: 0 };
+
+/**
+ * The side padding of the chapter dock's book, chapter, and verse pills. A
+ * phone's pills sit in the floating card above the tab bar (#589), whose row
+ * is only about 250 points on a 384-point Android phone, so at enlarged text
+ * they keep 6 points a side, which still clears their rounded ends: "Psalms"
+ * then fits whole beside "119" and "Vs." at 150% (#376). At the default size
+ * it fits with the usual 10.
+ */
+export const NARROW_DOCK_CARD = 400;
+export const getDockPillPaddingHorizontal = ({
+  cardWidth,
+  dockTextScale,
+  textScale,
+}: {
+  cardWidth: number;
+  dockTextScale: number;
+  textScale: number;
+}) => (cardWidth < NARROW_DOCK_CARD && dockTextScale > 1 ? 6 : textScale >= 1.75 ? 8 : 10);
+
+/**
  * Whether the chapter dock's verse pill shows its short label ("Vs.") rather
  * than its full one ("Verse"): only when the book, chapter, and verse pills
  * can't all fit at their full widths. The verse label shortens before the book
  * name is cut short with "…" (#376). Widths are 0 until measured, so it starts
- * with the full label.
+ * with the full label. The full label needs a few points to spare: the shown
+ * pills round their widths, so on a row that fit by a point, "Juan" became
+ * "Ju…" beside "Versículo" in a phone's floating card (#589).
  */
 export const shouldShortenVerseLabel = ({
   rowWidth,
@@ -139,18 +172,20 @@ export const shouldShortenVerseLabel = ({
   chapterPillWidth,
   versePillWidth,
   gap = 8,
+  slack = 4,
 }: {
   rowWidth: number;
   bookPillWidth: number;
   chapterPillWidth: number;
   versePillWidth: number;
   gap?: number;
+  slack?: number;
 }) =>
   rowWidth > 0 &&
   bookPillWidth > 0 &&
   chapterPillWidth > 0 &&
   versePillWidth > 0 &&
-  bookPillWidth + chapterPillWidth + versePillWidth + 2 * gap > rowWidth;
+  bookPillWidth + chapterPillWidth + versePillWidth + 2 * gap + slack > rowWidth;
 
 /**
  * Shared styles for the Bible Reader and other immersive reading components.
@@ -372,7 +407,7 @@ export const createReaderStyles = (textScale: TextScale) => {
     justifyContent: 'center',
     position: 'relative',
   },
-  timerBadge: {
+  controlDot: {
     position: 'absolute',
     top: 7,
     right: 7,
@@ -408,6 +443,7 @@ export const createReaderStyles = (textScale: TextScale) => {
     borderRadius: 7,
     marginLeft: -7,
   },
+  // The Bible screen puts this in the content column on a wide screen (#324).
   scrollContent: {
     paddingLeft: 4,
     paddingRight: enlargedReadingLayout ? 8 : 20,

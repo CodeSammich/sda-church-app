@@ -67,14 +67,17 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
-          # The joined download, and each group's own, which a run keeps for a
+          # The joined downloads, and each group's own, which a run keeps for a
           # day and may have alone if its join failed. Each has a screens
           # folder, so all their shots go into one, and every group's are
-          # checked, not just the first folder's.
+          # checked, not just the first folder's. The joined ones are palette
+          # copies, in parts (scripts/pack-review-downloads.cjs), so a group's
+          # originals are copied over them while they last.
           gh run download "$RUN_ID" --repo "$REPO" --pattern 'android-key-screens-*' --dir "$RUNNER_TEMP/earlier"
           screens="$RUNNER_TEMP/screens"
           mkdir -p "$screens/android"
-          find "$RUNNER_TEMP/earlier" -path '*/screens/android/*.png' -exec cp {} "$screens/android/" \;
+          find "$RUNNER_TEMP/earlier" -path '*-android-[0-9]*/screens/android/*.png' -exec cp {} "$screens/android/" \;
+          find "$RUNNER_TEMP/earlier" -path '*/screens/android/*.png' ! -path '*-android-[0-9]*/screens/*' -exec cp {} "$screens/android/" \;
           count=$(find "$screens/android" -name '*.png' | wc -l)
           test "$count" -gt 0 || { echo 'That run has no key screens.' >&2; exit 1; }
           echo "Checking the $count screenshots in that run's downloads."
@@ -97,9 +100,9 @@ jobs:
           retention-days: 14
 
   ios:
-    # On a Mac: the iPhone shots are read by Apple's Vision.
+    # On a Mac: the iPhone's and the iPad's shots are read by Apple's Vision.
     if: inputs.platform == 'ios'
-    name: Check the iPhone key screens of an earlier run
+    name: Check the iOS (iPhone and iPad) key screens of an earlier run
     runs-on: macos-26
     timeout-minutes: 20
     permissions:
@@ -129,12 +132,31 @@ jobs:
           # the app's download.
           gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-key-screens-*' --dir "$RUNNER_TEMP/earlier" ||
             gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
-          SCREENS="$(find "$RUNNER_TEMP/earlier" -type d -name screens -print -quit)"
-          test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
+          # Each device's shots may be in parts, as palette copies
+          # (scripts/pack-review-downloads.cjs), so they all go into one
+          # folder, and each group's originals, which a run keeps for a day,
+          # over them.
+          mkdir -p "$RUNNER_TEMP/groups"
+          gh run download "$RUN_ID" --repo "$REPO" --pattern 'key-screens-*' --dir "$RUNNER_TEMP/groups" || true
+          SCREENS="$RUNNER_TEMP/screens"
+          mkdir -p "$SCREENS/ios" "$SCREENS/ipad"
+          for platform in ios ipad; do
+            find "$RUNNER_TEMP/earlier" "$RUNNER_TEMP/groups" -path "*/screens/$platform/*.png" -exec cp {} "$SCREENS/$platform/" \;
+          done
+          count=$(find "$SCREENS" -name '*.png' | wc -l)
+          test "$count" -gt 0 || { echo 'That run has no key screens.' >&2; exit 1; }
           echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
 
+      # The iPhone's and the iPad's (#324), each writing its own results.
       - name: Check the text on the key screens
-        run: node scripts/check-screens.cjs --dir "$SCREENS"
+        run: |
+          set -uo pipefail
+          status=0
+          node scripts/check-screens.cjs --dir "$SCREENS" || status=1
+          cp "$SCREENS/ocr.json" "$SCREENS/ocr-ios.json"
+          cp "$SCREENS/checks.json" "$SCREENS/checks-ios.json"
+          node scripts/check-screens.cjs --dir "$SCREENS" --platform ipad || status=1
+          exit "$status"
 
       - name: Upload the text that was read
         if: always()
@@ -142,7 +164,7 @@ jobs:
         with:
           name: key-screen-checks-${{ inputs.screens_from_run }}
           path: |
-            ${{ env.SCREENS }}/ocr.json
-            ${{ env.SCREENS }}/checks.json
+            ${{ env.SCREENS }}/ocr*.json
+            ${{ env.SCREENS }}/checks*.json
           if-no-files-found: warn
           retention-days: 14

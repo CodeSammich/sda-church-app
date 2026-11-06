@@ -63,6 +63,7 @@ describe('popup scroll hints', () => {
     for (const file of [
       'components/LanguageDialog.tsx',
       'components/ThemeDialog.tsx',
+      'components/ContrastDialog.tsx',
       'components/TextSizeDialog.tsx',
       'components/InitialSetup.tsx',
     ]) {

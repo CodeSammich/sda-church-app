@@ -115,8 +115,8 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-preview-apk.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `iOS key screens join`, which joins the `iOS key screens batch <n> (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change. Before #372 it was named `Build iOS Simulator app (Apple Silicon Mac)` | `ios-key-screens.yml` | `main` |
-| `Android key screens join`, which joins the `Android key screens batch <n> (<group>)` jobs and fails if the build or any of them failed | `android-key-screens.yml` | `main` |
+| `iOS key screens join`, which joins the `iOS key screens batch <n>` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change. Before #372 it was named `Build iOS Simulator app (Apple Silicon Mac)` | `ios-key-screens.yml` | `main` |
+| `Android key screens join`, which joins the `Android key screens batch <n>` jobs and fails if the build or any of them failed | `android-key-screens.yml` | `main` |
 | `Screenshots reviewed` | `ios-key-screens.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -134,7 +134,7 @@ gate stops it from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `iOS key screens batch 2 (bible-reading)`.
+  job's name includes the matrix values it names, such as `iOS key screens batch 2`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
 - **`main-release-source-gate.yml` runs from `main`'s copy of the workflow**, because it
@@ -848,7 +848,9 @@ has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. To test the
 release on an Apple Silicon Mac before merging, download the app, the artifact ending in
 `-arm64`, from the run's Artifacts section (kept 14 days); you don't need an iPhone.
-The screenshots are a separate download, `ios-key-screens-<number>-<run>`. See
+The screenshots are separate downloads, `ios-key-screens-<number>-<run>-iphone-1`,
+`-ipad-1`, and so on, each under the 50 MB Chrome looks inside
+([Downloads under 50 MB](native-builds.md#downloads-under-50-mb)). See
 [iOS key screens](native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 To check an earlier run's screenshots again, say after changing a text check in
@@ -1222,6 +1224,9 @@ minutes.
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:
 
+- **Tab presses:** each tab is pressed in turn, and the app must keep running with
+  no crash in the log. The key screens open every screen by deep link and never
+  press a tab, so they missed 1.7.0's first test builds crashing on every tab press.
 - **Primary host down:** a local DNS server on the runner makes
   `assets.adventistconnect.org` unreachable, and Genesis 1 must play from the
   Internet Archive.

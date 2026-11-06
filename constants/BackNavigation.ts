@@ -1,12 +1,6 @@
 import { hasAndroidWebBackGuard } from './InstalledWebApp';
-import type { AppTheme } from './Themes';
 
 export const SABBATH_SCHOOL_BACK_TARGET = '/';
-
-export const getHeaderBackButtonColors = (theme: AppTheme) => ({
-  backgroundColor: theme.colors.surface,
-  borderColor: theme.colors.outline,
-});
 
 export const hasHeaderBackButton = (
   segments: readonly string[],

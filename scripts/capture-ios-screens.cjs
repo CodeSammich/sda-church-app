@@ -19,9 +19,14 @@
  *   node scripts/capture-ios-screens.cjs --out <dir> --group bible-reading
  *                                                        Captures only that group's screens, for one of
  *                                                        several runners; merge-key-screens.cjs joins them
+ *   node scripts/capture-ios-screens.cjs --pick-device --platform ipad
+ *   node scripts/capture-ios-screens.cjs --out <dir> --platform ipad
+ *                                                        The same on the iPad in screens.json, for the
+ *                                                        screens that list ipadVariants (#324)
  *
- * The app must already be installed on that iPhone. The Simulator only runs on
- * macOS with Xcode.
+ * The app must already be installed on that iPhone or iPad. The Simulator only
+ * runs on macOS with Xcode. Nothing in simctl turns the Simulator sideways, so
+ * the iPad's landscape shots use serve-sim (SERVE_SIM), which does.
  *
  * It also plans each platform's shots from the list, for
  * capture-android-screens.cjs, check-screens.cjs, and merge-key-screens.cjs.
@@ -49,6 +54,15 @@ const SETTING_KEYS = {
   translation: 'user-bible-translation',
   // The narrator chosen for each translation, as { cuv: '<narrator>' }.
   audioReaders: 'user-bible-audio-readers',
+  // High, the default, or standard, for each theme (#669).
+  contrastLight: 'user-contrast-light',
+  contrastDark: 'user-contrast-dark',
+  // The first-launch setup step a key-screens build opens, by name (#669).
+  setupStep: 'screenshot-setup-step',
+  // The newest "What's new" seen (#669); missing shows its contrast question,
+  // and whatsNewStep 'dark' opens its second.
+  whatsNewSeen: 'whats-new-seen',
+  whatsNewStep: 'screenshot-whats-new-step',
 };
 
 // Settings of the simulated phone rather than the app, by platform. A variant
@@ -56,6 +70,8 @@ const SETTING_KEYS = {
 // this one (#372).
 const DEVICE_SETTINGS = {
   ios: ['iosTextSize'],
+  // The iPad's text size, like the iPhone's, and which way it's turned (#324).
+  ipad: ['iosTextSize', 'orientation'],
   // Android's font size (font_scale) and display size, as a multiple of the
   // emulator's own density.
   android: ['fontScale', 'displayScale'],
@@ -70,9 +86,14 @@ const APP_BASE_SETTINGS = {
   language: 'en',
   theme: 'light',
   textScale: 1,
+  // This version's "What's new" already seen, so it shows only in its own shot.
+  whatsNewSeen: JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).version,
 };
 const BASE_SETTINGS = {
   ios: { ...APP_BASE_SETTINGS, iosTextSize: 'large' },
+  // The iPad saves no text size (null), so its shots show the size a tablet
+  // starts at, 150%, as members' iPads and the App Store listing do (#324).
+  ipad: { ...APP_BASE_SETTINGS, textScale: null, iosTextSize: 'large', orientation: 'portrait' },
   android: { ...APP_BASE_SETTINGS, fontScale: 1, displayScale: 1 },
 };
 
@@ -101,6 +122,10 @@ const STILL_RETRIES = 6;
 // 2026-10-21 a busy runner left one Home shot on the splash for 41 seconds,
 // while the 18 around it loaded. The run lists each relaunch, so a launch
 // problem that keeps coming back still shows, and fails if it happens twice.
+// A record that says the app didn't do what the shot started, such as audio
+// that never played, gets the same: on 1.7.0's runs the iPad Simulator's
+// audio stayed buffering at 0:00 on half of them, with the network and the
+// 215 KB file fine, while the same app played it on the iPhone every time.
 const LAUNCHES = 2;
 
 // While waiting, a sample screenshot every this many seconds. Comparing them
@@ -111,13 +136,23 @@ const SAMPLE_EVERY = 2;
 // Where services/ScreenshotRoute.ts looks for the screen to open.
 const ROUTE_KEY = 'screenshot-route';
 
+// serve-sim turns the iPad Simulator sideways, which simctl can't (#324). It
+// drives the Simulator through Apple's private interfaces, so package.json pins
+// its version exactly and the lockfile its dependencies; a new Xcode may need a
+// newer version.
+const SERVE_SIM = join(__dirname, '..', 'node_modules', '.bin', 'serve-sim');
+const SERVE_SIM_ORIENTATIONS = { portrait: 'portrait', landscape: 'landscape_left' };
+
 const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
   JSON.parse(readFileSync(file, 'utf8'));
 
 // A shot's rough cost in seconds: its wait, the time its record usually takes
 // after that, and any later shot's, plus about 5 to relaunch the app and take
-// the screenshot.
-const shotCost = (shot) => shot.wait + (RECORDS[shot.record]?.typical || 0) + (shot.later || 0) + 5;
+// the screenshot, and 5 more on the iPad, whose larger screenshots, some
+// turned upright, took about 20 seconds a shot to the iPhone's 14 (#324).
+const IPAD_EXTRA = 5;
+const shotCost = (shot) =>
+  shot.wait + (RECORDS[shot.record]?.typical || 0) + (shot.later || 0) + 5 + (shot.platform === 'ipad' ? IPAD_EXTRA : 0);
 
 /**
  * The shots of one group in test/screens/screens.json: related screens
@@ -141,16 +176,27 @@ const variantSuits = (overrides, platform) =>
   );
 
 /**
+ * A screen's variants on one platform. The iPad takes each screen's
+ * `ipadVariants` (#324), on the same runner as the screen's iPhone shots; the
+ * iPhone and Android take every screen's `variants`, unless its `platforms`
+ * leave one out.
+ */
+const variantsOn = (screen, platform) => {
+  if (platform === 'ipad') return screen.ipadVariants || [];
+  return !screen.platforms || screen.platforms.includes(platform) ? screen.variants : [];
+};
+
+/**
  * Lists every shot on one platform: its name, file, deep link, settings, and
- * checks. A screen with `platforms` is taken only on those, and a variant only
- * on the platform whose device settings it changes, if any.
+ * checks. A variant is taken only on the platform whose device settings it
+ * changes, if any. The iPad's portrait shots come first, so the Simulator
+ * turns only once.
  */
 const planCaptures = (config, platform = 'ios') => {
   if (!PLATFORMS.includes(platform)) throw new Error(`No platform "${platform}"; use ${PLATFORMS.join(' or ')}.`);
-  return config.screens
-    .filter((screen) => !screen.platforms || screen.platforms.includes(platform))
+  const shots = config.screens
     .flatMap((screen) =>
-      screen.variants.flatMap((variant) => {
+      variantsOn(screen, platform).flatMap((variant) => {
         const overrides = config.variants[variant];
         if (!overrides) throw new Error(`Screen "${screen.name}" uses unknown variant "${variant}".`);
         if (!variantSuits(overrides, platform)) return [];
@@ -175,16 +221,50 @@ const planCaptures = (config, platform = 'ios') => {
         }];
       }),
     );
+  const landscape = (shot) => (shot.settings.orientation === 'landscape' ? 1 : 0);
+  return shots.sort((a, b) => landscape(a) - landscape(b));
+};
+
+/**
+ * The Android shots at one of the iPad's Split View and Slide Over widths
+ * (`android.splitWindows` in screens.json, #324), which no Simulator can be
+ * made to show: the screens whose `ipadVariants` take the iPad in portrait,
+ * the ones a wide screen changes most, at a tablet's 150% text, named
+ * android/<screen>-w<width>.png. The layouts follow the window's width, so an
+ * emulator that size shows what the iPad's window would.
+ */
+const SPLIT_TEXT_SCALE = 1.5;
+const planSplitCaptures = (config, width) => {
+  const window = (config.android.splitWindows || []).find((each) => each.width === width);
+  if (!window) {
+    throw new Error(`No split window ${width} points wide; screens.json has ${(config.android.splitWindows || []).map((each) => each.width).join(', ')}.`);
+  }
+  return config.screens
+    .filter((screen) => (screen.ipadVariants || []).includes('default'))
+    .map((screen) => ({
+      platform: 'android',
+      screen: screen.name,
+      group: screen.group,
+      name: `${screen.name}-w${width}`,
+      file: `android/${screen.name}-w${width}.png`,
+      route: screen.path,
+      url: `${SCHEME}://${screen.path}`,
+      settings: { ...BASE_SETTINGS.android, ...(screen.settings || {}), textScale: SPLIT_TEXT_SCALE },
+      checks: [],
+      wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
+      split: { width: window.width, height: window.height },
+    }));
 };
 
 /**
  * The AsyncStorage manifest: every value is a string, keyed by its storage key,
- * plus the screen to open unless it's Home. An object is saved as JSON.
+ * plus the screen to open unless it's Home. An object is saved as JSON, and a
+ * null isn't saved, so the app uses its own default.
  */
 const buildManifest = (settings, route = '') => ({
   ...Object.fromEntries(
     Object.entries(settings)
-      .filter(([name]) => !ALL_DEVICE_SETTINGS.includes(name))
+      .filter(([name, value]) => !ALL_DEVICE_SETTINGS.includes(name) && value !== null)
       .map(([name, value]) => {
         const key = SETTING_KEYS[name];
         if (!key) throw new Error(`Unknown setting "${name}".`);
@@ -201,6 +281,13 @@ const buildManifest = (settings, route = '') => ({
  * rejects the Simulator's 1320 × 2868.
  */
 const APP_STORE_SIZE = { width: 1206, height: 2622 };
+
+/**
+ * App Store Connect's iPad slot, "iPad 13-inch display", takes 2064 × 2752,
+ * the 13-inch iPad Pro's screen, in either orientation. The Simulator's 13-inch
+ * iPad Pro takes shots that size, so the copies keep it.
+ */
+const IPAD_APP_STORE_SIZE = { width: 2064, height: 2752 };
 
 /**
  * Writes a store copy of a screenshot without its alpha channel, scaled to
@@ -222,12 +309,31 @@ const writeOpaqueCopy = async (source, destination, size) => {
 const writeAppStoreCopy = (source, destination) => writeOpaqueCopy(source, destination, APP_STORE_SIZE);
 
 /**
+ * Writes an App Store copy of an iPad shot, refusing one that isn't the 13-inch
+ * iPad's size, portrait or landscape, which App Store Connect would reject.
+ */
+const writeIpadAppStoreCopy = async (source, destination) => {
+  const sharp = require('sharp');
+  const { width, height } = await sharp(source).metadata();
+  const { width: short, height: long } = IPAD_APP_STORE_SIZE;
+  if (!((width === short && height === long) || (width === long && height === short))) {
+    throw new Error(`${source} is ${width} × ${height}, not the 13-inch iPad's ${short} × ${long}; check ipad.device in test/screens/screens.json.`);
+  }
+  await writeOpaqueCopy(source, destination);
+};
+
+/** The writer for each Apple platform's App Store copies. */
+const STORE_COPY_WRITERS = { ios: writeAppStoreCopy, ipad: writeIpadAppStoreCopy };
+
+/**
  * The store copies, in upload order: the App Store's from the iPhone shots, as
- * app-store/<language>/<NN>-<shot>.png, and Google Play's from the Android
- * ones, as google-play/<language>/<NN>-<shot>.png (#372).
+ * app-store/<language>/<NN>-<shot>.png, and from the iPad shots, as
+ * app-store-ipad/<language>/<NN>-<shot>.png (#324), and Google Play's from the
+ * Android ones, as google-play/<language>/<NN>-<shot>.png (#372).
  */
 const STORES = [
   { list: 'appStore', folder: 'app-store', platform: 'ios' },
+  { list: 'appStoreIpad', folder: 'app-store-ipad', platform: 'ipad' },
   { list: 'googlePlay', folder: 'google-play', platform: 'android' },
 ];
 const planStoreCopies = (config, platform) =>
@@ -260,16 +366,19 @@ const newestRuntime = () => {
   return ios[0];
 };
 
-/** The configured iPhone on the newest iOS runtime, created if the runner lacks one. */
-const pickDevice = (config) => {
-  const name = config.ios.device;
+/**
+ * The configured iPhone, or iPad, on the newest iOS runtime, created if the
+ * runner lacks one.
+ */
+const pickDevice = (config, platform = 'ios') => {
+  const name = config[platform].device;
   const runtime = newestRuntime();
   const { devices } = JSON.parse(simctl('list', 'devices', 'available', '--json'));
   const existing = (devices[runtime.identifier] || []).find((device) => device.name === name);
   if (existing) return { udid: existing.udid, name, runtime: runtime.name };
   const { devicetypes } = JSON.parse(simctl('list', 'devicetypes', '--json'));
   const type = devicetypes.find((candidate) => candidate.name === name);
-  if (!type) throw new Error(`This Xcode has no "${name}" Simulator; update ios.device in test/screens/screens.json.`);
+  if (!type) throw new Error(`This Xcode has no "${name}" Simulator; update ${platform}.device in test/screens/screens.json.`);
   return { udid: simctl('create', name, type.identifier, runtime.identifier), name, runtime: runtime.name };
 };
 
@@ -441,12 +550,49 @@ const statusBarClear = async (file, regions = STATUS_BAR_REGIONS) => {
   return true;
 };
 
-const CHECKS = { statusBarClear };
+/**
+ * The iPad's status bar is one 24-point line, the clock and date on the left
+ * and the icons on the right, with no island: text behind it would show in the
+ * gap between them. Measured on the 13-inch iPad in each orientation (#324),
+ * again as fractions of the width.
+ */
+const STATUS_BAR_REGIONS_BY_SCREEN = {
+  ios: STATUS_BAR_REGIONS,
+  ipad: [{ x: [0.17, 0.89], y: [0.004, 0.02] }],
+  'ipad-landscape': [{ x: [0.13, 0.9], y: [0.003, 0.015] }],
+};
 
-const capture = async (outDir, group) => {
+/** The device a shot was taken on, and which way it was turned: ipad-landscape. */
+const screenOf = (shot) =>
+  shot.settings.orientation === 'landscape' ? `${shot.platform}-landscape` : shot.platform;
+
+const CHECKS = {
+  statusBarClear: (file, shot) => statusBarClear(file, STATUS_BAR_REGIONS_BY_SCREEN[screenOf(shot)]),
+};
+
+const serveSim = (...args) =>
+  execFileSync(SERVE_SIM, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+
+/**
+ * Turns a landscape screenshot upright. simctl saves the screen as the iPad
+ * holds it in portrait, so with serve-sim's landscape_left the app's top is
+ * on the image's left.
+ */
+const turnUpright = async (file) => {
+  const sharp = require('sharp');
+  writeFileSync(file, await sharp(file).rotate(90).png().toBuffer());
+};
+
+/** Turns the Simulator to an orientation, and waits for the app to turn with it. */
+const turnDevice = async (udid, orientation) => {
+  serveSim('rotate', SERVE_SIM_ORIENTATIONS[orientation], '-d', udid);
+  await sleep(3);
+};
+
+const capture = async (outDir, { group, platform = 'ios' } = {}) => {
   const config = loadConfig();
   const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
-  const device = pickDevice(config);
+  const device = pickDevice(config, platform);
   const { udid } = device;
   spawnSync('xcrun', ['simctl', 'boot', udid]); // Already booted is fine.
   simctl('bootstatus', udid, '-b');
@@ -461,8 +607,18 @@ const capture = async (outDir, group) => {
   const timings = [];
   const sampleDir = mkdtempSync(join(tmpdir(), 'key-screen-samples-'));
   const started = Date.now();
+  const shots = takeGroup(planCaptures(config, platform), group, config);
+  // serve-sim's helper, which turns the iPad, runs until the Simulator shuts down.
+  let orientation = 'portrait';
+  if (shots.some((shot) => shot.settings.orientation && shot.settings.orientation !== orientation)) {
+    serveSim('--detach', udid);
+  }
 
-  for (const shot of takeGroup(planCaptures(config), group, config)) {
+  for (const shot of shots) {
+    if (shot.settings.orientation && shot.settings.orientation !== orientation) {
+      orientation = shot.settings.orientation;
+      await turnDevice(udid, orientation);
+    }
     // A stuck launch gets another (LAUNCHES).
     for (let launch = 1; launch <= LAUNCHES; launch++) {
       spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
@@ -498,6 +654,7 @@ const capture = async (outDir, group) => {
       const records = recorded ? [readShotRecord()] : [];
       const finalSeconds = Math.round((Date.now() - launched) / 1000);
       await compareSamples(samples, file);
+      if (shot.settings.orientation === 'landscape') await turnUpright(file);
       const settled = settledAfter(samples, finalSeconds);
       const problems = [];
       if (!isRunning(udid, bundleId)) problems.push(`the app wasn't running after opening ${shot.url}`);
@@ -513,21 +670,27 @@ const capture = async (outDir, group) => {
       }
       if (shot.later) {
         await sleep(shot.later);
-        simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', join(outDir, shot.laterFile));
+        const laterFile = join(outDir, shot.laterFile);
+        simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', laterFile);
+        if (shot.settings.orientation === 'landscape') await turnUpright(laterFile);
         if (recorded) records.push(readShotRecord());
+      }
+      const recordCheck = recorded
+        ? await recorded.check({ first: records[0], later: records[1], seconds: shot.later })
+        : { problems: [] };
+      if (recordCheck.problems.length && launch < LAUNCHES) {
+        relaunched.push(`${shot.file}: ${recordCheck.problems.join(', ')}, after ${finalSeconds}s`);
+        console.log(`${shot.file} <- ${shot.url}  (${recordCheck.problems.join(', ')}; launching again)`);
+        continue;
       }
       timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
       for (const check of shot.checks) {
         if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
-        else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
+        else if (!(await CHECKS[check](file, shot))) problems.push(`failed ${check}`);
       }
       if (shot.record && !recorded) problems.push(`unknown record "${shot.record}"`);
       if (recorded) {
-        const { problems: wrong, notes = [] } = await recorded.check({
-          first: records[0],
-          later: records[1],
-          seconds: shot.later,
-        });
+        const { problems: wrong, notes = [] } = recordCheck;
         problems.push(...wrong);
         for (const problem of wrong) console.log(`::error::${shot.file}: ${problem}`);
         for (const note of notes) console.log(`::warning::${shot.file}: ${note}`);
@@ -546,24 +709,25 @@ const capture = async (outDir, group) => {
 
   // A group has only some of the shots; merge-key-screens.cjs makes these
   // once the groups are joined.
-  for (const copy of group ? [] : planAppStore(config)) {
+  for (const copy of group ? [] : planStoreCopies(config, platform)) {
     if (!captured.has(copy.name)) {
       failures.push(`${copy.file}: its shot "${copy.name}" wasn't captured`);
       continue;
     }
     const file = join(outDir, copy.file);
     mkdirSync(dirname(file), { recursive: true });
-    await writeAppStoreCopy(join(outDir, copy.source), file);
+    await STORE_COPY_WRITERS[platform](join(outDir, copy.source), file);
   }
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
   const part = group ? `, group ${group}` : '';
+  const storeFolder = platform === 'ipad' ? 'app-store-ipad' : 'app-store';
   const summary = [
     `### Key screens (${device.name}, ${device.runtime}${part})`,
     '',
     group
       ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
-      : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the App Store shots in \`screens/app-store/\`.`,
+      : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the App Store shots in \`screens/${storeFolder}/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
     ...relaunchLines(relaunched),
     '',
@@ -580,20 +744,117 @@ const capture = async (outDir, group) => {
   if (failures.length) process.exitCode = 1;
 };
 
+// The tabs, by their English labels, and the order pressTabs presses them in:
+// the selected tab first, then each of the others, then back to the Bible,
+// whose own listener takes over the press.
+const TAB_LABELS = ['Home', 'Bible', 'Explore', 'You'];
+const TAB_PRESS_ORDER = ['Bible', 'Explore', 'You', 'Home', 'Bible'];
+
+/**
+ * Where each tab's label is, as fractions of the screen from the top left,
+ * from Vision's reading of a screenshot: the lowest line that reads exactly
+ * the label, so a word higher up the page isn't taken for it.
+ */
+const findTabs = (lines) =>
+  Object.fromEntries(
+    TAB_LABELS.map((label) => {
+      const matches = lines.filter((line) => line.text.trim() === label && line.box[1] > 0.75);
+      const lowest = matches.sort((a, b) => b.box[1] - a.box[1])[0];
+      return [label, lowest && { x: lowest.box[0] + lowest.box[2] / 2, y: lowest.box[1] + lowest.box[3] / 2 }];
+    }),
+  );
+
+/**
+ * Presses each tab in turn on a Bible chapter, as a member would, and fails
+ * if the app stops running. The shots open every screen by deep link and
+ * never press a tab, so they missed 1.7.0's first builds crashing on every
+ * tab press. Vision finds the tabs' labels in a screenshot, and serve-sim
+ * presses them, as fractions of the screen. Saves a screenshot after each
+ * press in <outDir>/<platform>-tabs/.
+ */
+const pressTabs = async (outDir, { platform = 'ios' } = {}) => {
+  const config = loadConfig();
+  const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
+  const { udid, name } = pickDevice(config, platform);
+  spawnSync('xcrun', ['simctl', 'boot', udid]); // Already booted is fine.
+  simctl('bootstatus', udid, '-b');
+  // serve-sim's helper, which presses, runs until the Simulator shuts down.
+  // One may already be running from the iPad's landscape shots.
+  spawnSync(SERVE_SIM, ['--detach', udid], { stdio: 'inherit' });
+  await turnDevice(udid, 'portrait');
+  const shot = planCaptures(config, platform).find((candidate) => candidate.name === 'bible-dual-default');
+  const dataContainer = simctl('get_app_container', udid, bundleId, 'data');
+  spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
+  mkdirSync(dirname(manifestPath(dataContainer, bundleId)), { recursive: true });
+  writeFileSync(manifestPath(dataContainer, bundleId), JSON.stringify(buildManifest(shot.settings, shot.route)));
+  simctl('ui', udid, 'appearance', 'light');
+  simctl('ui', udid, 'content_size', shot.settings.iosTextSize);
+  simctl('launch', udid, bundleId);
+  await sleep(shot.wait + 5);
+
+  const dir = join(outDir, `${platform}-tabs`);
+  mkdirSync(dir, { recursive: true });
+  const first = join(dir, '0-opened.png');
+  simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', first);
+  const read = JSON.parse(
+    execFileSync('xcrun', ['swift', join(__dirname, 'ocr-screens.swift'), 'en-US', first], { encoding: 'utf8' }),
+  );
+  const tabs = findTabs(Object.values(read)[0] || []);
+  const running = () => simctl('spawn', udid, 'launchctl', 'list').includes(`UIKitApplication:${bundleId}`);
+  const failures = [];
+  const missing = TAB_LABELS.filter((label) => !tabs[label]);
+  if (missing.length) failures.push(`no ${missing.join(', ')} tab found on the Bible screen (see ${platform}-tabs/0-opened.png)`);
+  else if (!running()) failures.push('the app stopped before any tab was pressed');
+  else {
+    for (const [index, label] of TAB_PRESS_ORDER.entries()) {
+      serveSim('tap', String(tabs[label].x), String(tabs[label].y), '-d', udid);
+      await sleep(3);
+      simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', join(dir, `${index + 1}-${label}.png`));
+      if (!running()) {
+        failures.push(`the app stopped when the ${label} tab was pressed`);
+        break;
+      }
+    }
+  }
+  const summary = [
+    `### Tab presses (${name})`,
+    '',
+    failures.length
+      ? failures.map((failure) => `- ❌ ${failure}`).join('\n')
+      : `Pressed ${TAB_PRESS_ORDER.join(', ')}; the app kept running.`,
+    '',
+  ].join('\n');
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+  console.log(summary);
+  if (failures.length) process.exitCode = 1;
+};
+
 if (require.main === module) {
+  const argument = (name) => {
+    const index = process.argv.indexOf(name);
+    return index === -1 ? undefined : process.argv[index + 1];
+  };
+  const platform = argument('--platform') || 'ios';
+  if (!['ios', 'ipad'].includes(platform)) {
+    console.error('--platform is ios or ipad; capture-android-screens.cjs takes the Android shots.');
+    process.exit(2);
+  }
   if (process.argv.includes('--pick-device')) {
-    console.log(pickDevice(loadConfig()).udid);
+    console.log(pickDevice(loadConfig(), platform).udid);
+  } else if (process.argv.includes('--press-tabs')) {
+    pressTabs(resolve(argument('--out') || '.'), { platform }).catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
   } else {
-    const argument = (name) => {
-      const index = process.argv.indexOf(name);
-      return index === -1 ? undefined : process.argv[index + 1];
-    };
     const outDir = argument('--out');
     if (!outDir) {
-      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir> [--group <group>]');
+      console.error(
+        'Usage: node scripts/capture-ios-screens.cjs [--platform ios|ipad] --pick-device | --out <dir> [--group <group>] | --press-tabs [--out <dir>]',
+      );
       process.exit(2);
     }
-    capture(resolve(outDir), argument('--group')).catch((error) => {
+    capture(resolve(outDir), { group: argument('--group'), platform }).catch((error) => {
       console.error(error);
       process.exit(1);
     });
@@ -601,6 +862,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  findTabs,
+  TAB_PRESS_ORDER,
   shotCost,
   takeGroup,
   settledAfter,
@@ -621,12 +884,22 @@ module.exports = {
   STILL_RETRIES,
   loadConfig,
   planCaptures,
+  planSplitCaptures,
+  SPLIT_TEXT_SCALE,
   buildManifest,
   planAppStore,
   planStoreCopies,
+  variantsOn,
   writeAppStoreCopy,
+  writeIpadAppStoreCopy,
   writeOpaqueCopy,
   APP_STORE_SIZE,
+  IPAD_APP_STORE_SIZE,
+  SERVE_SIM,
+  STORE_COPY_WRITERS,
+  STATUS_BAR_REGIONS_BY_SCREEN,
+  screenOf,
+  turnUpright,
   manifestPath,
   statusBarClear,
 };

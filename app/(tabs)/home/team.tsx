@@ -1,3 +1,4 @@
+import { contentColumnStyle } from '@/constants/Layout';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   CHURCH_EMAIL,
@@ -13,6 +14,7 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -21,6 +23,7 @@ import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { ImageBackground } from '@/components/ImageBackground';
 import { Card, Divider, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function MeetOurTeamScreen() {
   const { language } = useContext(LanguageContext);
@@ -28,6 +31,7 @@ export default function MeetOurTeamScreen() {
   const theme = useAppTheme();
   const NavigationStyles = useNavigationStyles();
   const { textScale } = useTextSize();
+  const columnScale = useContentColumnScale();
   const { fontScale } = useWindowDimensions();
   const useStackedActions = fontScale * textScale >= 1.5;
   const styles = useMemo(
@@ -112,7 +116,7 @@ export default function MeetOurTeamScreen() {
         </ImageBackground>
 
         {/* Content Body */}
-        <View style={styles.body}>
+        <View style={[styles.body, contentColumnStyle(columnScale)]}>
           {/* Cards for each team member */}
           {TEAM_MEMBERS.map((member, index) => (
             <Card
@@ -187,6 +191,7 @@ export default function MeetOurTeamScreen() {
             </Card>
           ))}
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

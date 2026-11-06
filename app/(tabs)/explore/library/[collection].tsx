@@ -1,8 +1,10 @@
 import { TitleHero } from '@/components/TitleHero';
 import {
   LibraryBookCard,
+  getLibraryGridCardWidth,
   shouldUseLibraryListLayout,
 } from '@/components/LibraryBookCard';
+import { contentColumnStyle, getContentWidth } from '@/constants/Layout';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -14,6 +16,7 @@ import {
 } from '@/features/library/LibraryShelves';
 import { useLibraryShelfBooks } from '@/features/library/useLibraryShelfBooks';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import {
@@ -22,6 +25,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function LibraryScreen() {
   const { collection, q } = useLocalSearchParams<{
@@ -35,11 +39,13 @@ export default function LibraryScreen() {
   const { getShelfBooks } = useLibraryShelfBooks(language, {
     loadEgwCovers: shelf === 'egw' || !!EGW_BOOK_IDS_BY_SHELF[shelf],
   });
-  const styles = useMemo(() => createStyles(textScale), [textScale]);
+  const columnScale = useContentColumnScale();
+  const styles = useMemo(() => createStyles(textScale, columnScale), [columnScale, textScale]);
   const useListLayout = shouldUseLibraryListLayout(
-    width,
+    getContentWidth(width, columnScale),
     Math.max(1, fontScale * textScale),
   );
+  const gridCardWidth = getLibraryGridCardWidth(getContentWidth(width, columnScale));
   const shelfTitle = LIBRARY_SHELF_TITLES[shelf][language];
   const books = getShelfBooks(shelf, q);
   const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
@@ -73,6 +79,7 @@ export default function LibraryScreen() {
                 author={book.author}
                 coverSource={book.coverSource}
                 coverUrls={book.coverUrls}
+                gridWidth={gridCardWidth}
                 listLayout={useListLayout}
                 onPress={book.onPress}
                 title={book.title}
@@ -80,17 +87,22 @@ export default function LibraryScreen() {
             ))}
           </View>
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );
 }
 
-const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
+const createStyles = (
+  textScale: Parameters<typeof scaleTypographyMetric>[1],
+  columnScale: number,
+) =>
   StyleSheet.create({
     scrollContent: {
       paddingBottom: 28,
     },
     content: {
+      ...contentColumnStyle(columnScale),
       paddingHorizontal: 20,
     },
     bookGrid: {

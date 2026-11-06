@@ -7,6 +7,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { List } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const allLabels = {
   en: {
@@ -218,6 +219,7 @@ export default function WorshipScreen() {
       >
         <Section title={labels.elmhurstTitle} events={createEvents('elmhurst')} />
         <Section title={labels.brooklynTitle} events={createEvents('brooklyn')} />
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

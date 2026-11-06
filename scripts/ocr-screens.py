@@ -27,9 +27,14 @@ def main(paths):
     for path in paths:
         with Image.open(path) as image:
             width, height = image.size
+            # RapidOCR reads a palette PNG's colour indexes as grey, which lost
+            # 24 of 123 Android checks. The review downloads hold palette
+            # copies (scripts/pack-review-downloads.cjs), so those are given
+            # to it in full colour, and every other image as it was.
+            source = image.convert("RGBA" if "transparency" in image.info else "RGB") if image.mode == "P" else path
         # The app never shows text upside down, so skip RapidOCR's check for it,
         # which turned some short words over: the EN badge read as N3.
-        output = engine(path, use_cls=False)
+        output = engine(source, use_cls=False)
         lines = []
         for points, text, score in zip(output.boxes if output.boxes is not None else [], output.txts or (), output.scores or ()):
             xs = [float(point[0]) for point in points]

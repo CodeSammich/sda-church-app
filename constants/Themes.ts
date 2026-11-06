@@ -32,6 +32,32 @@ export type ThemeMode =
   | typeof THEME_SUNSET
   | typeof THEME_SYSTEM;
 
+/**
+ * How strongly the tab bar, the Bible's card and the header's buttons stand
+ * out from the page (#669). High contrast, the default, is white, or the
+ * brand's night blue in the dark theme, for members with presbyopia, who
+ * couldn't tell softer colours from the page (#593). Standard is a shade off
+ * the page, which many younger members prefer; they choose it under You →
+ * Contrast. A designer's advice: contrast is usually the default, and those
+ * it bothers change it.
+ */
+export const CONTRAST_STANDARD = 'standard';
+export const CONTRAST_HIGH = 'high';
+export type ContrastMode = typeof CONTRAST_STANDARD | typeof CONTRAST_HIGH;
+/**
+ * The light and dark themes each have their own, since a member may switch
+ * between them, or the System or Sunrise/Sunset theme does it for them.
+ */
+export type ThemeKind = 'light' | 'dark';
+export type ContrastModes = Record<ThemeKind, ContrastMode>;
+export const CONTRAST_STORAGE_KEYS: Record<ThemeKind, string> = {
+  light: 'user-contrast-light',
+  dark: 'user-contrast-dark',
+};
+export const DEFAULT_CONTRAST_MODES: ContrastModes = { light: CONTRAST_HIGH, dark: CONTRAST_HIGH };
+export const parseContrastMode = (value: string | null | undefined): ContrastMode =>
+  value === CONTRAST_STANDARD ? CONTRAST_STANDARD : CONTRAST_HIGH;
+
 /** Script-specific families registered by the root Expo font loader. */
 export const SCRIPTURE_FONT_FAMILIES = {
   greek: 'Gentium-Regular',
@@ -140,6 +166,15 @@ export const customLightTheme = {
     bulletinRemarkSurface: '#FFF1CC', // Restrained amber notice surface
     onBulletinRemarkSurface: '#6B3D00', // High-contrast warm notice text
     onSurface: LIGHT_THEME_COLORS.onSurface,
+    // Everything that floats over a page (#589): the tab bar, the Bible's card
+    // and the header's buttons, and the pill behind the selected tab, in high
+    // contrast, the default. White (and night blue in the dark theme) so that
+    // older members with presbyopia can tell these controls sit on top and can
+    // be pressed; a shade off the canvas blended into it for them. Standard
+    // contrast (STANDARD_FLOATING_COLORS) is that shade, for members who choose
+    // it (#669). See docs/UI_UX.md.
+    floatingSurface: '#FFFFFF',
+    floatingSelected: '#E3F2FD',
 
     // UI Variants & Boundaries
     surfaceVariant: '#F1F3F4', // Secondary UI / Top Search Bar BG
@@ -280,6 +315,11 @@ export const customDarkTheme: AppTheme = {
     bulletinRemarkSurface: '#332A18',
     onBulletinRemarkSurface: '#F6D88A',
     onSurface: DARK_THEME_COLORS.onSurface,
+    // The floating tab bar, Bible card and header buttons in the brand's night
+    // blue, and a deeper blue behind the gold selected tab, in high contrast:
+    // like the light theme's white, clearly not the page, for older eyes.
+    floatingSurface: '#00405C',
+    floatingSelected: '#0B2C3D',
 
     // UI Variants & Boundaries
     surfaceVariant: '#211F18',
@@ -344,6 +384,19 @@ export const customDarkTheme: AppTheme = {
 };
 
 /**
+ * The floating surfaces in standard contrast (#669): the theme's own warm
+ * surface in the light theme (L1, #FAF4EF), and a warm brown in the dark (D3,
+ * #211F18), with the selected tab and the card's pills on the light blue, or
+ * on a deeper gold-brown (#3B3423). Text and icons on them read at least 4.5:1:
+ * blue 5.4 and grey 5.8 on the light, gold 8.1 and grey 8.1 on the brown, and
+ * gold 6.0 on its pills.
+ */
+export const STANDARD_FLOATING_COLORS = {
+  light: { floatingSurface: '#FAF4EF', floatingSelected: '#E3F2FD' },
+  dark: { floatingSurface: '#211F18', floatingSelected: '#3B3423' },
+} as const;
+
+/**
  * Context for managing the global theme state.
  * Moving this here centralizes all theme-related logic (Tenet 5).
  */
@@ -351,6 +404,8 @@ export const ThemeContext = createContext({
   themeMode: THEME_SYSTEM as ThemeMode,
   setThemeMode: (_mode: ThemeMode) => {},
   toggleTheme: (_dark?: boolean) => {},
+  contrastModes: DEFAULT_CONTRAST_MODES,
+  setContrastMode: (_kind: ThemeKind, _mode: ContrastMode) => {},
 });
 
 /**
@@ -360,8 +415,13 @@ export const getAppTheme = (
   isDark: boolean,
   useSystemFonts = false,
   textScale: TextScale = DEFAULT_TEXT_SCALE,
+  contrast: ContrastMode = CONTRAST_HIGH,
 ): AppTheme => {
-  const theme = isDark ? customDarkTheme : customLightTheme;
+  const base = isDark ? customDarkTheme : customLightTheme;
+  const theme: AppTheme =
+    contrast === CONTRAST_HIGH
+      ? base
+      : { ...base, colors: { ...base.colors, ...STANDARD_FLOATING_COLORS[isDark ? 'dark' : 'light'] } };
 
   // Plus Jakarta Sans is a Latin font and does not contain Han glyphs. React
   // Native on iOS does not reliably fall back

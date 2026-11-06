@@ -7,36 +7,31 @@ import {
 } from '@/hooks/useGlobalHeaderHeight';
 
 // The Bible header's translation button shares a row with the icon buttons
-// (#376). When the row is tight it gives up its 文A icon first, then its names,
-// cut short with "…" and then dropped, and last its language badges, and stacks
-// only as a last resort. It used to stack whenever the full button didn't fit,
+// (#376). When the row is tight it gives up its names, cut short with "…" and
+// then dropped, keeping its language badges, and stacks only as a last resort.
+// It used to stack whenever the full button didn't fit,
 // as with a back arrow at the app's 150% and 200% text sizes, leaving a wide,
 // mostly empty button and a back arrow between the rows.
 describe("the Bible header's controls", () => {
   // Room for the translation button: 380 − 2 × (56 + 8) − 12 = 240.
   const phone = { rowWidth: 380, iconButtonCount: 2, iconButtonSize: 56 };
-  // The iPhone shot with a back arrow at 200%: the full button needs about 210
-  // where about 202 is left; without the icon the full names need about 183.
+  // The badges with the full names, with each cut to one letter, and alone.
   const widths = { fullButtonWidth: 210, shortestButtonWidth: 160, badgesOnlyButtonWidth: 110 };
-  const everything = { stack: false, hideTranslationIcon: false, hideTranslationNames: false };
+  const everything = { stack: false, hideTranslationNames: false };
 
   it('show everything when the full button fits', () => {
     expect(getBibleControlsLayout({ ...phone, ...widths })).toEqual(everything);
   });
 
-  it('give up the icon first, keeping the badges and as much of the names as fits', () => {
-    expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 342 })).toEqual({
-      stack: false,
-      hideTranslationIcon: true,
-      hideTranslationNames: false,
-    });
+  it('keep the badges and as much of the names as fits, cut short with "…"', () => {
+    // 202 left: too little for the full names (210), enough for one letter each (160).
+    expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 342 })).toEqual(everything);
   });
 
   it('drop the names, "…" and all, once even one letter each won\'t fit, keeping the badges', () => {
     // 150 left: too little for the badges with first-letter names (160).
     expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 290 })).toEqual({
       stack: false,
-      hideTranslationIcon: true,
       hideTranslationNames: true,
     });
   });
@@ -57,11 +52,25 @@ describe("the Bible header's controls", () => {
     expect(shortestTranslationLabel('K')).toBe('K');
     const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
     expect(header).toContain('{renderTranslationChipContent({})}');
-    expect(header).toContain('{renderTranslationChipContent({ shortest: true, withIcon: false })}');
-    expect(header).toContain('{renderTranslationChipContent({ withIcon: false, withNames: false })}');
+    expect(header).toContain('{renderTranslationChipContent({ shortest: true })}');
+    expect(header).toContain('{renderTranslationChipContent({ withNames: false })}');
+    // No 文A icon from 1.7.0: the EN and 繁 badges say what it said, at about its size.
+    expect(header).not.toContain('name="translate"');
+    expect(header).toMatch(/translationLanguageBadge: \{[^}]*minHeight: 26,[^}]*minWidth: 30,/);
     // Without names, nothing is left to cut short, so no "…" either.
     expect(header).toMatch(/\{withNames && \(\s*<Text/);
     expect(header).not.toMatch(/translationChip: \{[^}]*maxWidth: 240/);
+    // The names are blue, or gold in the dark theme, like the Bible card's
+    // pills, both in the list of translations and when one stands alone.
+    expect(header.match(/color: theme\.colors\.primary,\n\s*(flexShrink: 1,|fontSize: scaleTypographyMetric\(14)/g)).toHaveLength(2);
+    // The EN and 繁 badges look like the card's pills too, in either contrast,
+    // not the theme's older selection colour, which was near-black on the dark
+    // theme's night blue.
+    expect(header).toMatch(
+      /styles\.translationLanguageBadge,\s*\{\s*backgroundColor: getDockControlColor\(theme\),\s*borderColor: getDockControlBorderColor\(theme\),/,
+    );
+    expect(header).toMatch(/color: getDockControlContentColor\(theme\),\s*fontSize: scaleTypographyMetric\(14, headerTextScale\)/);
+    expect(header).not.toContain('theme.colors.primaryContainer');
   });
 
   it('are reported only by the header that shows them', () => {

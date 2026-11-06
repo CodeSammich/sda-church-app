@@ -22,6 +22,8 @@ type LibraryBookCardProps = Readonly<{
   listLayout: boolean;
   onPress: () => void;
   title: string;
+  /** A grid card's width, from getLibraryGridCardWidth; without it, half the row. */
+  gridWidth?: number;
 }>;
 
 export const shouldUseLibraryListLayout = (
@@ -38,6 +40,23 @@ export const shouldUseLibraryListLayout = (
   return safeWidth < 352 || (safeWidth - 52) / 2 < 150 * safeScale;
 };
 
+// The grid's side padding and the gap between its covers.
+const GRID_PADDING = 20;
+const GRID_GAP = 12;
+
+/**
+ * How many covers a row of the grid holds: two on a phone, and three once the
+ * content is wide enough, as on a tablet (#324), so covers stay a sensible size
+ * rather than filling half the screen.
+ */
+export const getLibraryGridColumns = (contentWidth: number) => (contentWidth >= 600 ? 3 : 2);
+
+/** A grid card's width, so every cover in the grid is the same size. */
+export const getLibraryGridCardWidth = (contentWidth: number) => {
+  const columns = getLibraryGridColumns(contentWidth);
+  return Math.floor((contentWidth - 2 * GRID_PADDING - GRID_GAP * (columns - 1)) / columns);
+};
+
 export function LibraryBookCard({
   accessibilityHint,
   author,
@@ -46,6 +65,7 @@ export function LibraryBookCard({
   listLayout,
   onPress,
   title,
+  gridWidth,
 }: LibraryBookCardProps) {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
@@ -61,7 +81,7 @@ export function LibraryBookCard({
       onPress={onPress}
       style={[
         styles.card,
-        listLayout ? styles.listCard : styles.gridCard,
+        listLayout ? styles.listCard : gridWidth ? { width: gridWidth } : styles.gridCard,
         {
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.outlineVariant,

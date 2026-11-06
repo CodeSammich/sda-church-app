@@ -1,6 +1,7 @@
 import { MenuCard } from '@/components/MenuCard';
 import { VerseHero } from '@/components/VerseHero';
 import { WrappingButton as Button } from '@/components/WrappingButton';
+import { contentColumnStyle } from '@/constants/Layout';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_EMAIL,
@@ -15,11 +16,13 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Card, Divider, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const allLabels = {
   en: {
@@ -179,6 +182,7 @@ const allLabels = {
 export default function FellowshipsScreen() {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
+  const columnScale = useContentColumnScale();
   const { fontScale } = useWindowDimensions();
   const useStackedActions = fontScale * textScale >= 1.5;
   const styles = useMemo(
@@ -216,7 +220,7 @@ export default function FellowshipsScreen() {
         />
 
         {/* Content Body */}
-        <View style={styles.body}>
+        <View style={[styles.body, contentColumnStyle(columnScale)]}>
           {/* Section 2: Elmhurst, Queens */}
           <View style={styles.sectionHeaderContainer}>
             <Text variant="titleLarge" style={[styles.sectionHeading, { color: theme.colors.onBackground }]}>
@@ -421,6 +425,7 @@ export default function FellowshipsScreen() {
           </Card>
 
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

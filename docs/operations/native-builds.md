@@ -608,7 +608,8 @@ needs a Mac.
 each release PR into `main` without signing, on Apple Silicon runners (`macos-26`,
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
 once, one per key-screen group, numbered in the groups' order: **iOS key screens batch
-1 (home)** to **batch 5 (worship-and-you)**:
+1** (`home`) to **batch 5** (`worship-and-you`). The names carry only the number; a
+failed batch's log says which group it took:
 
 - The `bible-text` runner (batch 3), which has the lightest group, compiles the app once,
   reusing what it can from the compile cache (below), and shares it with the others as
@@ -626,19 +627,20 @@ once, one per key-screen group, numbered in the groups' order: **iOS key screens
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
   running 45 seconds after launch, and takes its group's key screens.
 
-**iOS key screens join** then joins the batches, on Linux, and uploads two downloads
-(14-day retention):
+**iOS key screens join** then joins the batches, on Linux, and uploads these downloads
+(14-day retention). Each screenshot download stays under the 50 MB Chrome looks inside
+([Downloads under 50 MB](#downloads-under-50-mb)):
 
-- `ios-key-screens-<number>-<run>`, which the review comment links: the key screens in
-  `screens/ios/<screen>-<variant>.png` (described below), the App Store copies, and the
-  text checks.
+- `ios-key-screens-<number>-<run>-iphone-1`, and `-iphone-2` and so on if the shots need
+  more than one, which the review comment links as the iPhone screenshots: the key
+  screens in `screens/ios/<screen>-<variant>.png` (described below), with the text checks.
+- `ios-key-screens-<number>-<run>-ipad-1` and so on: the iPad's, in `screens/ipad/`.
+- `ios-key-screens-<number>-<run>-app-store`: the App Store copies, in
+  `screens/app-store/` and `screens/app-store-ipad/`.
 - The download ending in `-arm64`: the app, `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`,
   and a screenshot of its first screen, `…-arm64-first-screen.png`, named like the
-  Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`.
-
-They're separate because Chrome's Safe Browsing blocks a download with an unsigned app
-zipped inside it, so a shared download kept reviewers from the screenshots. Chrome may
-still block the app's download; `gh run download <run> --pattern '*-arm64'` gets it.
+  Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`. Chrome may block
+  it, since it's an unsigned app; `gh run download <run> --pattern '*-arm64'` gets it.
 
 Pull requests into `release-candidate` don't run it, and neither do other pull
 requests into `main`, such as Dependabot's security updates. To test a change to the
@@ -793,19 +795,63 @@ builds for the Mac's own processor. To build it in the workflow again:
    **Main protection** ruleset's required checks; see
    [Changing a required check](admin-runbook.md#changing-a-required-check).
 
+#### Downloads under 50 MB
+
+Every download a reviewer opens in Chrome must stay **under 50 MB, with no app inside**.
+Chrome looks inside a zip only up to 50 MB (Chromium's `download_file_types.asciipb` sets
+`max_file_size_to_analyze` to 52428800 for zip). Past that, Google's servers judge it
+without seeing that it holds only pictures, and may call it dangerous. That has happened
+twice:
+
+- Before #484, Chrome blocked the one download that held both the screenshots and the
+  unsigned Simulator app, about 160 MB. The app became its own download.
+- 1.7.0's iPad shots took the joined iPhone and iPad download to 349 MB, and Chrome
+  called it dangerous. Through 1.6.x, about 150 MB had passed, by luck rather than by
+  rule.
+
+So both joins run `scripts/pack-review-downloads.cjs`. It writes each device's shots as
+palette PNGs: the same names and sizes, at about a quarter of the bytes. The app's flat
+colours stay exact, and the photos are dithered, which looks the same at a glance. If a
+device's shots still pass 45 MB, it splits them, in name order, into parts of about equal
+size, each with the run's `ocr.json`, `checks.json`, and `settle-times.json`; a device's
+parts unzip into the same folders. The store copies are their own download, untouched.
+The review comment links every part. On 1.7.0's run the downloads were:
+
+| Download | Shots | Zip |
+| --- | --- | --- |
+| iPhone, 2 parts | 126 | 23 and 24 MB |
+| iPad | 72 | 33 MB |
+| App Store copies | 18 | 23 MB |
+| Android | 167 | 27 MB |
+| Google Play copies | 13 | 7 MB |
+
+Each workflow uploads at most three parts a device. The join fails if a device would need
+a fourth, or a download would pass 50 MB. Then add an upload step for the next part in
+`ios-key-screens.yml` or `android-key-screens.yml`, and raise `MAX_PARTS` in
+`scripts/pack-review-downloads.cjs` and its test to match; the review comment
+(`key-screens-review.yml`) finds every part by its name. Don't put an app, a build, or
+anything but screenshots and their results in a download a reviewer opens. Each group's own
+download, kept a day, has the original shots, which **Key screens recheck** reads over
+the palette copies while they last.
+
+RapidOCR used to read a palette PNG's colour indexes as grey, which failed 24 of 123
+Android checks on the copies. `scripts/ocr-screens.py` now gives it those in full colour,
+and the copies pass all 123.
+
 #### Key screens
 
-The five runners screenshot the 40 screens listed in `test/screens/screens.json`, 96
+The five runners screenshot the 47 screens listed in `test/screens/screens.json`, 109
 shots in all, so a layout problem on iPhone shows up before release rather than in
-TestFlight (#331). Each runner takes one group (`--group <name>`) of related
+TestFlight (#331). Each runner then takes its group's iPad shots; see
+[iPad key screens](#ipad-key-screens). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in
 `screens.json` with what each holds. Each runner checks its shots' text, and
 `scripts/merge-key-screens.cjs` joins the groups into one `screens/` folder and makes
 the App Store copies. The release PR waits only for the slowest group.
 
 **Adding a key screen.** Give it the `group` for its part of the app, as `groups`
-describes. A test fails if any group would take more than 6 minutes to capture. The
-limit is a reminder to prune, not a rule:
+describes. A test fails if any group would take more than 8 minutes to capture on the
+iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
 
 1. Prune first: drop variants that repeat what another shot already shows, such as a
    dark or Chinese copy of a screen whose layout doesn't change, and screens no longer
@@ -877,10 +923,9 @@ twice fails the run.
 
 **Audio and Quick Look.** Bible audio plays only on Android in the other checks
 ([Android audio test on release PRs](#android-audio-test-on-release-prs)), so two
-iPhone-only shots in the `worship-and-you` group check it there, on the app the run
-already builds (#551). That group finished first or second in the six release runs
-from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so the two shots,
-about 50 seconds with their launches, shouldn't lengthen the run. In the first trial
+iPhone-only shots check it there, on the app the run already builds (#551): Bible
+audio in the `worship-and-you` group, and the lesson, with Sabbath School, in `library`.
+The two shots take about 50 seconds with their launches. In the first trial
 the audio started a second after its 6-second wait, and the lesson took 22 seconds
 from launch to the shot.
 
@@ -896,7 +941,9 @@ For both, the key-screens build also saves what happened into its storage
 (`recordForScreenshot` in `services/ScreenshotRoute.ts`): the player's status, with
 the addresses it streams from, or how the lesson opened. The capture reads it back
 (`scripts/key-screen-records.cjs`, named by the screen's `record`) and fails the shot
-if the audio didn't play or Quick Look didn't open. Both need the network, so when one
+if the audio didn't play or Quick Look didn't open, after launching it once more, as
+for a stuck launch: on 1.7.0's runs the iPad Simulator's audio stayed buffering at 0:00
+on half of them, with the network fine, while the iPhone played it every time. Both need the network, so when one
 fails, the runner asks those addresses itself, since the Simulator shares its network,
 and the failure ends either "The network was the cause, not the app: this runner
 couldn't reach them either", or that the runner reached them, so the app is at fault.
@@ -917,9 +964,9 @@ every screen must show:
   match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a
   line that must start at least that far across, such as Psalm 9's right-aligned
   "Selah", or `{ "line": …, "maxTop": 0.4 }`, for one that must start no farther
-  down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header uses them: the
-  translation button shows its 文A icon (which Vision reads as "XA"), the EN badge, and
-  both full names, and at 150% and 200% with a back arrow it shows them without the icon;
+  down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header opened from Home uses
+  them: its translation button must show both full names at 100%, and on the iPhone at
+  150% and 200% too, while the Android phone's narrower screen may drop them there;
 - no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
   ("undefined", "NaN").
 
@@ -938,8 +985,9 @@ prompt failed, and so did one screenshot the app hadn't drawn yet, which the bla
 then missed. To try a rule change without waiting for a full run, start **Key screens
 recheck** (`key-screens-recheck.yml`) by hand on your branch, with **platform** `ios`
 and **screens_from_run** set to an earlier run's ID: it downloads that run's screenshots
-and only checks them, on a Mac, since Vision reads them. It's a workflow of its own,
-started only by hand, so it never shows as a skipped check on pull requests. The tests use text Vision read from real screenshots
+and only checks them, the iPhone's and then the iPad's, on a Mac, since Vision reads
+them. It's a workflow of its own, started only by hand, so it never shows as a skipped
+check on pull requests. The tests use text Vision read from real screenshots
 (`test/screens/ocr-samples.json`), unedited. It includes Vision's mistakes on text
 that's fine on screen, such as "ANDKPW MUKKA" for the "ANDREW MURRAY" printed small on
 the *Humility* cover image, and "eternal life4." for a verse with footnote 4. The
@@ -950,7 +998,7 @@ pass or fail them, and a test makes sure of it.
 release pull request into `main`, the iOS preview posts a notice when the pull request
 opens or gets a push (the screenshots take 30 to 40 minutes, most of it the
 [Android key screens](#android-key-screens)' build) and removes the comment with the
-earlier, now out-of-date screenshots. When the iPhone run and the Android run for that
+earlier, now out-of-date screenshots. When the iOS run (iPhone and iPad) and the Android run for that
 commit have both finished, it replaces the notice with a comment linking both
 platforms' screenshots, so one review covers both. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.
@@ -975,6 +1023,81 @@ the app still reads that key. A screen whose content changes every day, such as 
 with its verse of the day and countdown, is marked `changesDaily`, for when these images
 are compared with known-good copies.
 
+#### iPad key screens
+
+The app runs on iPad as an iPad app (#324), so the release PR's run also screenshots it
+on a 13-inch iPad Pro Simulator (`ipad.device` in `screens.json`). The maintainers have
+no iPad, so these shots, and a check on a member's iPad through TestFlight before each App
+Store release, are how iPad layouts get tested.
+
+- **Which shots.** Each screen's `ipadVariants`, 64 shots: every key screen in landscape,
+  where a wide screen changes the most, and in the language its checks read (`landscape`,
+  `landscape-zh`, `landscape-zh-cn`, `landscape-es`); the screens a wide screen changes
+  most in portrait too (`default`: Home, New Member & Visitor, the Bible, Explore, the
+  library and a library grid, Sabbath School, a hymn, You, and the Text size dialog); and
+  Home, the Bible, the library, Sabbath School, and Text size at 200% in landscape
+  (`landscape-xl`), where the column is widest. The iPad's shots save no text size, unlike
+  the iPhone's 100%, so they show the 150% a tablet starts at, as members and the App
+  Store listing see it; the Text size dialog's checks confirm it. Each runner's portrait
+  shots come first, so the iPad turns once. They're named
+  `screens/ipad/<screen>-<variant>.png`.
+- **Where they're taken.** On the same five runners as the iPhone's, each taking its
+  own group's iPad shots after its iPhone shots, so the iPad adds no job: a sixth Mac job
+  once got a Mac before the compiling runner did, and the other five waited 45 minutes.
+  Each runner gives the iPad its slow first boot alongside the iPhone's while it waits for
+  the app, then shuts the iPad down: left running beside the iPhone, it slowed the
+  iPhone's shots 1.5 to 2 times and stalled a launch. After the iPhone's shots, the iPhone
+  shuts down and the iPad boots again, in about a minute, for its own.
+  The compiling runner boots its iPad only after its iPhone shots: with both booted
+  during a compile, its iPhone shots slowed to a minute each, and the app was gone from
+  one.
+- **Turning the Simulator.** `simctl` can't rotate a Simulator, so the capture uses
+  [serve-sim](https://github.com/EvanBacon/serve-sim), an Apache-2.0 tool by an Expo
+  developer that drives the Simulator through Apple's private interfaces. It's a
+  development dependency pinned to one exact version in `package.json`, with its own
+  dependencies in the lockfile, and the capture runs it from `node_modules/.bin`
+  (`SERVE_SIM` in `scripts/capture-ios-screens.cjs`). The capture job's checkout keeps no
+  GitHub token (`persist-credentials: false`). A new Xcode may need a newer version: if
+  the landscape shots come out in portrait, check its releases first.
+  serve-sim can also unfold the iPhone Duo Simulator, which #432 needs.
+- **Text checks.** The same rules as the iPhone's, with the iPad's own places for the tab
+  labels and chapter controls, by orientation (`REGIONS_BY_PLATFORM` in
+  `scripts/check-screens.cjs`), and its own status bar regions for `statusBarClear`
+  (`STATUS_BAR_REGIONS_BY_SCREEN`). A rule written for the iPhone's screen can name its
+  `platforms`.
+- **Layout checks.** Three more, on the iPad only, for what goes wrong on a wide screen:
+  - **The column.** Text between the header and the tab bar stays inside the centred
+    content column: 864 points wide at the iPad's 150%, 1,152 at 200%, as
+    `constants/Layout.ts` makes it, give or take 1% of the width. Text that spreads across
+    the screen fails. The header and the tab bar span the screen, so they're left out, and
+    so is a screen marked `wideContent`, such as a lesson in Quick Look.
+  - **The edges.** No text below the status bar touches the screen's left or right edge,
+    as a page cut off in landscape would.
+  - **Popups.** A popup's surface, measured from its colour across the middle of the
+    screen, is at most 560 points wide. On iOS, a Paper popup given a percentage width
+    filled 90% of the iPad with its text still in the middle, so its text alone can't
+    show it; #587's narrator popup did, until `test/layout.test.ts` caught it. The
+    screens with `popup=` in their path are measured, and setup, marked `popup`. Light
+    theme only: in dark mode the dimmed page is too close to the surface's colour.
+
+  `test/screens.test.ts` checks each against the app's own sizes, and on November 3,
+  2026, they passed all 52 of the earlier trial's 13-inch shots. A trial run then broke the
+  column and a popup's width on purpose in its build, and both checks failed them.
+- **App Store copies.** The shots under `appStoreIpad` are copied, without transparency,
+  to `screens/app-store-ipad/en-US/`, the uploaded listing's, at the 13-inch iPad's 2064 × 2752, portrait or
+  landscape, which App Store Connect's **iPad 13-inch display** slot takes.
+- **Time.** About 20 seconds a shot, against the iPhone's 14 (`shotCost` adds 5), and 5
+  to 7 more to read each shot's text. A test flags a group whose iPad shots would take
+  more than 7 minutes, like the iPhone's 6: a reminder to prune, then to rebalance the
+  groups, and only then to raise the limit. The busiest group's runner takes about 10
+  minutes more than it did without the iPad, so the compiling runner's job limit is 70
+  minutes and the others' 130.
+- **What it can't show.** A window beside another app, or one resized by hand, which no
+  command can set up in the Simulator. The layouts follow the window's width, not the
+  device, so the Android key screens take the screens a wide screen changes most at Split
+  View and Slide Over widths instead (see [Android key screens](#android-key-screens)),
+  and the unit tests in `test/layout.test.ts` cover the widths in between.
+
 #### Android key screens
 
 The **Android key screens** workflow (`android-key-screens.yml`) takes the same key
@@ -990,7 +1113,7 @@ only with a read-only token and reads no secret.
   emulator's x86_64 processor (`npm run build:android:apk:debug:intel`) and with
   `EXPO_PUBLIC_KEY_SCREENS=1`, so it reads the saved screen and `popup=`. The published
   APK and the store builds don't.
-- **Android key screens batch 1 (home)** to **batch 5 (worship-and-you)**, one per group, each boots an emulator the size of
+- **Android key screens batch 1** (`home`) to **batch 5** (`worship-and-you`), one per group, each boots an emulator the size of
   the phone below while the app builds, on Android 16 (API 36). First it frees disk
   space: an emulator needs about 7.4 GB, and one runner had only 6.4 GB free, so
   `scripts/free-runner-disk.sh` removes preinstalled tools these jobs never use, such as
@@ -999,22 +1122,35 @@ only with a read-only token and reads no secret.
   app and runs `scripts/capture-android-screens.cjs --group <group>`, which saves
   `screens/android/<screen>-<variant>.png`, and then checks their text
   (`check-screens.cjs --platform android`).
-- **Android key screens batch 6 (google-play)** takes only the Google Play
+- **Android key screens batch 6** (`google-play`) takes only the Google Play
   shots, on an emulator of Play's size (below).
-- **Android key screens join** joins the batches into one artifact,
-  `android-key-screens-<pr>-<run>`, with the Google Play copies, and fails if any group
-  failed.
+- **Android key screens batch 7** (`split-320`) to **batch 10** (`split-981`) take the
+  screens a wide screen changes most (those whose `ipadVariants` include `default`) at
+  a tablet's 150%, on emulators the size of an iPad's Slide Over and Split View windows,
+  in points at 2x (`android.splitWindows`), which no iOS Simulator can be made to show
+  (#324). The layouts follow the window's width, not the device, so these show what the
+  iPad's window would. `capture-android-screens.cjs --split <width>` saves
+  `screens/android/<screen>-w<width>.png`, and `check-screens.cjs --split <width>` checks
+  the tab labels and verse button where the window puts them, no word cut short, the
+  content column where the window is wider than it, and the Text size popup's width.
+  The screens' `mustShowLines` are written for the phone, so they're left out.
+- **Android key screens join** joins the batches into
+  `android-key-screens-<pr>-<run>-android-1` (and `-android-2` and so on if the shots need
+  more than one) and the Google Play copies, `android-key-screens-<pr>-<run>-google-play`,
+  each under 50 MB ([Downloads under 50 MB](#downloads-under-50-mb)), and fails if any
+  group failed.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
-workflow's run on the same commit. It then links both downloads, says whether both
+workflow's run on the same commit. It then links every download of both, says whether both
 passed, and says how long each run took, from its start until its join job finished. Its
 **Screenshots reviewed** approval covers both. If a failed Android group is rerun after
 the comment is posted, this workflow's **Refresh the screenshot review comment** job
 updates it in place, with the rerun's result and screenshots. Both workflows write the
 comment through `key-screens-review.yml`. To recheck an earlier
 run's Android screenshots with new rules, start **Key screens recheck** with **platform**
-`android` and **screens_from_run**, as for the iPhone; it runs on Linux. It checks every
-group's shots, from the run's joined download and each group's own.
+`android` and **screens_from_run**, as for iOS; it runs on Linux. It checks every
+group's shots, from the run's joined downloads and, while the run keeps them, each
+group's own originals.
 
 **The phone.** The emulator is the size of the best-selling Android phone where most
 Adventists live, set under `android.phone` in `screens.json`. Of the church's 24.4
@@ -1082,8 +1218,7 @@ on buttons. `uiautomator dump`, which reads the text exactly, can't run on Home:
 countdown keeps the screen from ever going idle, which the dump waits for. It also sees
 a label's whole text even when the screen cuts it short. The script turns off RapidOCR's
 check for upside-down text, which the app never shows: it turned some short words over,
-so the EN badge read as N3. RapidOCR reads the 文A icon as
-文A where Vision reads XA, so those rules accept either.
+so the EN badge read as N3.
 
 The phone's screen holds less than the iPhone's, so a few lines fall below the fold
 there, such as the Sabbath School age groups. A rule written
@@ -1415,13 +1550,15 @@ JavaScript loads by name, so Expo's bundler lists them in a `keep.xml` file and 
 shrinker keeps everything on that list. If an image is missing only from a release
 build, check that it's listed in `android/app/build/generated/res/react/release/raw/keep.xml`.
 
-Phones stay in portrait on both platforms. On iOS, `"orientation": "portrait"` in
-`app.json` does it. On Android, `plugins/withAndroidPhonePortrait.js` removes the
+Phones stay in portrait on both platforms. On the iPhone, `"orientation": "portrait"` in
+`app.json` does it. The iPad turns every way (#324): its own
+`UISupportedInterfaceOrientations~ipad` key in `app.json` lists all four orientations,
+which App Store Connect requires of an iPad app that can share the screen with another
+app, and iPadOS 26 lets every iPad app's window be resized. On Android, `plugins/withAndroidPhonePortrait.js` removes the
 manifest's orientation lock and asks for portrait at run time only when the screen's
 smallest width is under 600dp, so tablets and unfolded foldables turn freely. Android 16
 ignores orientation locks on screens 600dp or wider for apps that target API 36, and Play
-Console flags apps that set one (#426). Whether to support iPad is a separate decision
-(#324).
+Console flags apps that set one (#426).
 
 The Android home screen widget for the verse of the day (#235) is built with
 `expo-widgets`. `plugins/withAndroidVerseWidget.js` runs only the Android half of its

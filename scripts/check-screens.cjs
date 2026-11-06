@@ -17,10 +17,15 @@
  *   right-aligned text, and one with `maxTop` no farther down than that, such
  *   as a popup's title), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
- *   such as the Bible header without its 文A icon at a large text size;
+ *   such as the Bible header's names, required on the Android phone at 100% only;
  * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
  *   and seconds, that moved on by at least half the time between the shots,
- *   such as Bible audio's elapsed time while it plays (#551).
+ *   such as Bible audio's elapsed time while it plays (#551);
+ * - on the iPad (#324), a page's text stays in the centred content column,
+ *   no text touches the screen's left or right edge, and a popup is no wider
+ *   than POPUP_MAX_WIDTH, measured from its surface's colour, since on iOS a
+ *   popup could fill the screen with its text still in the middle. A screen
+ *   with `wideContent`, such as a web page the app shows, skips the first two.
  *
  * Where a label is missing, it takes a closer look at that strip of the screen,
  * enlarged and with more contrast, before reporting it.
@@ -31,8 +36,13 @@
  *                                                         capture-ios-screens.cjs --group bible-reading
  *   node scripts/check-screens.cjs --dir <screens folder> --platform android
  *                                                         Checks the Android shots, android/*.png
+ *   node scripts/check-screens.cjs --dir <screens folder> --platform ipad
+ *                                                         Checks the iPad shots, ipad/*.png (#324)
  *   node scripts/check-screens.cjs --dir <screens folder> --platform all
- *                                                         Checks both, as in the joined artifact
+ *                                                         Checks them all, as in the joined artifacts
+ *   node scripts/check-screens.cjs --dir <screens folder> --split 504
+ *                                                         Checks the Android shots at an iPad's split
+ *                                                         window 504 points wide, android/*-w504.png (#324)
  *
  * Writes ocr.json and checks.json into that folder, and a summary to the step
  * summary. Exits 1 if any rule fails.
@@ -41,7 +51,7 @@ const { execFileSync } = require('node:child_process');
 const { appendFileSync, existsSync, mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
-const { PLATFORMS, loadConfig, planCaptures, takeGroup } = require('./capture-ios-screens.cjs');
+const { PLATFORMS, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup, variantsOn } = require('./capture-ios-screens.cjs');
 
 // Vision's languages for each app language, most important first. Bible screens
 // in English also show Chinese, so English reads both.
@@ -78,6 +88,23 @@ const REGIONS_BY_PLATFORM = {
     // While reading, the tab bar hides and the chapter controls move down.
     chapterControlsReading: [0.88, 0.99],
   },
+  // The 13-inch iPad in portrait, 3:4 (#324): the tab labels at 96% of the
+  // way down, and the chapter controls at 91%, or 96% while reading.
+  // A page's content runs from below the header, which ends 88 points down,
+  // to the tab bar: the column check looks there.
+  ipad: {
+    tabs: [0.92, 0.99],
+    chapterControls: [0.85, 0.94],
+    chapterControlsReading: [0.92, 0.99],
+    content: [0.068, 0.92],
+  },
+  // And in landscape, 4:3: the tab labels at 95%, the chapter controls at 89%.
+  'ipad-landscape': {
+    tabs: [0.91, 0.99],
+    chapterControls: [0.83, 0.93],
+    chapterControlsReading: [0.9, 0.99],
+    content: [0.09, 0.91],
+  },
   // The Galaxy A07's screen, 20:9, with Android's gesture bar below the tabs.
   android: {
     tabs: [0.88, 0.99],
@@ -93,6 +120,7 @@ const REGIONS = REGIONS_BY_PLATFORM.ios;
 const NEVER_SHOWN = ['Open in', 'Get Started', 'undefined', 'NaN', '[object Object]'];
 const NEVER_SHOWN_BY_PLATFORM = {
   ios: NEVER_SHOWN,
+  ipad: NEVER_SHOWN,
   android: [...NEVER_SHOWN, "isn't responding", 'keeps stopping', 'has stopped'],
 };
 
@@ -102,14 +130,16 @@ const isChinese = (text) => /\p{Script=Han}/u.test(text);
 /**
  * Whether a label appears as a whole word, with its top inside the region.
  * "Verse" doesn't count inside "Verses". Chinese has no spaces between words,
- * so any occurrence counts there.
+ * so any occurrence counts there. Case doesn't count: Vision read the iPad
+ * tab bar's "Inicio" as "InIcIo" (#589), and a label cut short is still short
+ * in any case.
  */
 const showsLabel = (lines, label, region) => {
   // A label given as a list shows if any of its forms does.
   if (Array.isArray(label)) return label.some((form) => showsLabel(lines, form, region));
   const pattern = isChinese(label)
     ? new RegExp(escape(label), 'u')
-    : new RegExp(`(^|[^\\p{L}])${escape(label)}($|[^\\p{L}])`, 'u');
+    : new RegExp(`(^|[^\\p{L}])${escape(label)}($|[^\\p{L}])`, 'iu');
   return lines.some(
     (line) =>
       pattern.test(line.text) &&
@@ -154,10 +184,29 @@ const expectedLabels = (shot) => {
 const forPlatform = (rules, platform) =>
   (rules || []).filter((rule) => typeof rule === 'string' || !rule.platforms || rule.platforms.includes(platform));
 
+/**
+ * Where the labels sit in an Android split window (#324), measured in points
+ * from its bottom on the emulators at each width: the tab labels about 58 up,
+ * the chapter controls about 148, or 72 while reading. A page's content runs
+ * from below the status bar to the tab bar.
+ */
+const splitRegions = ({ height }) => {
+  const up = (points) => 1 - points / height;
+  return {
+    tabs: [up(80), up(8)],
+    chapterControls: [up(175), up(120)],
+    chapterControlsReading: [up(100), up(50)],
+    content: [40 / height, up(80)],
+  };
+};
+
+/** Where a shot's labels belong: its device's regions, turned as the shot was. */
+const regionsFor = (shot) => (shot.split ? splitRegions(shot.split) : REGIONS_BY_PLATFORM[screenOf(shot)]);
+
 /** Returns what's wrong with one shot, given the lines of text read from it. */
 const checkShot = (shot, lines) => {
   const problems = [];
-  const regions = REGIONS_BY_PLATFORM[shot.platform];
+  const regions = regionsFor(shot);
   for (const [region, labels] of expectedLabels(shot)) {
     const missing = labels.filter((label) => !showsLabel(lines, label, regions[region]));
     if (!missing.length) continue;
@@ -167,7 +216,11 @@ const checkShot = (shot, lines) => {
         : `the verse button doesn't show "${[missing[0]].flat()[0]}"`,
     );
   }
+  // Setup's own shots, which open before setup is done, show its Get Started
+  // on its last step on purpose (#669).
+  const setupShot = shot.settings?.setupDone === false;
   for (const text of NEVER_SHOWN_BY_PLATFORM[shot.platform]) {
+    if (setupShot && text === 'Get Started') continue;
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {
@@ -227,6 +280,151 @@ const checkAdvance = (shot, lines, laterLines) => {
     : [`the time shown went from ${before[0]} to ${after[0]} in ${shot.later} seconds, not on by at least ${shot.later / 2}`];
 };
 
+/**
+ * The app's layout sizes the iPad checks expect, from constants/Layout.ts,
+ * constants/AppPreferences.ts, and styles/PopupStyles.ts, which
+ * test/screens.test.ts keeps in step: the content column is CONTENT_MAX_WIDTH
+ * points wide at the default text size and wider in proportion above it; a
+ * tablet starts at TABLET_TEXT_SCALE; and a popup is at most POPUP_MAX_WIDTH.
+ */
+const CONTENT_MAX_WIDTH = 720;
+const DEFAULT_TEXT_SCALE = 1.25;
+const TABLET_TEXT_SCALE = 1.5;
+const POPUP_MAX_WIDTH = 560;
+
+// The iPad's own text size, as the app sees it (fontScale). The iPad shots
+// use its default; at a larger one the column is about as wide as the screen,
+// so the column check skips it.
+const IOS_FONT_SCALES = { large: 1 };
+
+// How far, as a fraction of the width, text may stray past the column or come
+// to the screen's edge: Vision's boxes are a few points loose, and a line's
+// box can include a chevron or icon beside it.
+const COLUMN_SLACK = 0.01;
+const EDGE = 0.004;
+// Below the status bar, whose clock sits near the left edge.
+const BELOW_STATUS_BAR = 0.025;
+
+// A popup's surface, the light theme's canvas (constants/Themes.ts), which
+// the dimmed page behind it never matches.
+const POPUP_SURFACE = [0xf2, 0xe6, 0xdf];
+
+const percent = (fraction) => `${Math.round(fraction * 100)}%`;
+
+/** The iPad's width in points, as the shot was turned, or a split window's. */
+const widthInPoints = (shot) => {
+  if (shot.split) return shot.split.width;
+  return screenOf(shot) === 'ipad-landscape' ? shot.points.height : shot.points.width;
+};
+
+/** The content column's left and right edges, as fractions of the width, or null to skip. */
+const columnEdges = (shot) => {
+  const fontScale = shot.split ? shot.settings.fontScale : IOS_FONT_SCALES[shot.settings.iosTextSize];
+  if (!fontScale) return null;
+  const width = widthInPoints(shot);
+  const scale = (shot.settings.textScale ?? TABLET_TEXT_SCALE) * fontScale;
+  const column = Math.min(width, Math.round(CONTENT_MAX_WIDTH * Math.max(1, scale / DEFAULT_TEXT_SCALE)));
+  return [(width - column) / 2 / width, (width + column) / 2 / width];
+};
+
+/**
+ * What's wrong with an iPad shot's layout, from its text's positions (#324):
+ * text outside the content column, between the header and the tab bar, and
+ * text touching the screen's left or right edge, as when landscape cuts a page
+ * off.
+ */
+const checkIpadLayout = (shot, lines) => {
+  if ((shot.platform !== 'ipad' && !shot.split) || shot.wideContent) return [];
+  const problems = [];
+  // Words and numbers only: iPadOS draws its window's resize grip in the
+  // bottom-right corner, which Vision reads as "/".
+  const read = lines.filter((line) => !line.closerLook && /[\p{L}\p{N}]/u.test(line.text));
+  const edges = columnEdges(shot);
+  if (edges) {
+    const [left, right] = [edges[0] - COLUMN_SLACK, edges[1] + COLUMN_SLACK];
+    const [top, bottom] = regionsFor(shot).content;
+    const outside = read.filter(
+      (line) => line.box[1] >= top && line.box[1] <= bottom && (line.box[0] < left || line.box[0] + line.box[2] > right),
+    );
+    if (outside.length) {
+      problems.push(
+        `text outside the content column, ${percent(edges[0])} to ${percent(edges[1])} of the way across: ` +
+          outside
+            .slice(0, 3)
+            .map((line) => `"${line.text.trim()}" at ${percent(line.box[0])} to ${percent(line.box[0] + line.box[2])}`)
+            .join(', '),
+      );
+    }
+  }
+  // RapidOCR, which reads the Android split windows, boxes a banner's title
+  // with some of its photo, out to the edge, so they skip this.
+  const touching = shot.split ? [] : read.filter(
+    (line) => line.box[1] >= BELOW_STATUS_BAR && (line.box[0] < EDGE || line.box[0] + line.box[2] > 1 - EDGE),
+  );
+  if (touching.length) {
+    problems.push(`text at the screen's edge, likely cut off: ${touching.slice(0, 3).map((line) => `"${line.text.trim()}"`).join(', ')}`);
+  }
+  return problems;
+};
+
+/** Whether a shot shows a popup: popup= in its path (#372), or a screen marked `popup`, such as setup. */
+const showsPopup = (shot) => Boolean(shot.popup) || /[?&]popup=/.test(shot.route);
+
+/**
+ * The widest run of `color` through the screen's middle, as a fraction of the
+ * width: a popup's surface, which is centred. Runs bridge gaps of up to `gap`
+ * of the width, such as a line of text, and each row starts from the middle,
+ * or the nearest surface pixel within a gap of it. A page without a dimmed
+ * popup over it is the same colour edge to edge, 1.
+ */
+const surfaceWidth = async (file, color = POPUP_SURFACE, { tolerance = 10, gap = 0.012 } = {}) => {
+  const sharp = require('sharp');
+  const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  const isSurface = (x, y) => {
+    const index = (y * width + x) * 3;
+    return color.every((value, channel) => Math.abs(data[index + channel] - value) <= tolerance);
+  };
+  const maxGap = Math.round(width * gap);
+  const middle = Math.round(width / 2);
+  let widest = 0;
+  for (let y = Math.round(height * 0.1); y < height * 0.9; y += 4) {
+    let start = -1;
+    for (let dx = 0; dx <= maxGap && start < 0; dx++) {
+      if (isSurface(middle + dx, y)) start = middle + dx;
+      else if (isSurface(middle - dx, y)) start = middle - dx;
+    }
+    if (start < 0) continue;
+    const edge = (step) => {
+      let last = start;
+      for (let x = start; x >= 0 && x < width; x += step) {
+        if (isSurface(x, y)) last = x;
+        else if (Math.abs(x - last) > maxGap) break;
+      }
+      return last;
+    };
+    widest = Math.max(widest, (edge(1) - edge(-1) + 1) / width);
+  }
+  return widest;
+};
+
+/**
+ * Whether an iPad popup is at most POPUP_MAX_WIDTH wide (#324). On iOS, a
+ * popup given a percentage width filled 90% of the iPad with its text in only
+ * the middle, so its text alone can't tell. Light theme only: in dark mode the
+ * dimmed page is too close to the surface's colour.
+ */
+const checkPopupWidth = async (shot, file) => {
+  if ((shot.platform !== 'ipad' && !shot.split) || shot.wideContent || !showsPopup(shot) || shot.settings.theme === 'dark') {
+    return [];
+  }
+  const width = widthInPoints(shot);
+  const measured = await surfaceWidth(file);
+  return measured > POPUP_MAX_WIDTH / width + COLUMN_SLACK
+    ? [`the popup is about ${Math.round(measured * width)} points wide, more than ${POPUP_MAX_WIDTH}`]
+    : [];
+};
+
 /** Both lists of rules, or undefined when neither has any. */
 const joinRules = (screenRules, variantRules) =>
   screenRules || variantRules ? [...(screenRules || []), ...(variantRules || [])] : undefined;
@@ -235,16 +433,38 @@ const joinRules = (screenRules, variantRules) =>
 const planChecks = (config, platform = 'ios') =>
   planCaptures(config, platform).map((shot) => {
     const screen = config.screens.find((candidate) =>
-      candidate.variants.some((variant) => `${candidate.name}-${variant}` === shot.name),
+      variantsOn(candidate, platform).some((variant) => `${candidate.name}-${variant}` === shot.name),
     );
     const variant = shot.name.slice(screen.name.length + 1);
     const forVariant = screen.variantRules?.[variant] || {};
     return {
       ...shot,
       tabs: screen.tabs,
+      ...(screen.wideContent ? { wideContent: true } : {}),
+      ...(screen.popup ? { popup: true } : {}),
+      ...(platform === 'ipad' ? { points: config.ipad.points } : {}),
       mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
       mustNotShowLines: joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+    };
+  });
+
+/**
+ * The Android shots at a split window `width` points wide (#324), with what
+ * doesn't depend on the window's size: the tab labels, the verse button, the
+ * screen's mustNotShowLines (no word cut short), and the layout checks. Its
+ * mustShowLines are written for the phone, where a narrower window may leave
+ * a line below the fold, so they're left out.
+ */
+const planSplitChecks = (config, width) =>
+  planSplitCaptures(config, width).map((shot) => {
+    const screen = config.screens.find((candidate) => candidate.name === shot.screen);
+    return {
+      ...shot,
+      tabs: screen.tabs,
+      ...(screen.wideContent ? { wideContent: true } : {}),
+      ...(screen.popup ? { popup: true } : {}),
+      mustNotShowLines: screen.mustNotShowLines,
     };
   });
 
@@ -285,13 +505,13 @@ const ocrRapid = (jobs) => {
 };
 
 /**
- * Reads each image's text with its platform's reader: Vision for the iPhone,
- * on a Mac, and RapidOCR for Android, on Linux.
+ * Reads each image's text with its platform's reader: Vision for the iPhone
+ * and iPad, on a Mac, and RapidOCR for Android, on Linux.
  */
 const ocr = (jobs) => {
   const android = jobs.filter((job) => job.platform === 'android');
-  const iphone = jobs.filter((job) => job.platform !== 'android');
-  return { ...(iphone.length ? ocrVision(iphone) : {}), ...ocrRapid(android) };
+  const apple = jobs.filter((job) => job.platform !== 'android');
+  return { ...(apple.length ? ocrVision(apple) : {}), ...ocrRapid(android) };
 };
 
 /**
@@ -343,7 +563,7 @@ const readText = async (dir, shots) => {
   for (const shot of present) {
     const file = join(dir, shot.file);
     for (const [regionName, labels] of expectedLabels(shot)) {
-      const region = REGIONS_BY_PLATFORM[shot.platform][regionName];
+      const region = regionsFor(shot)[regionName];
       if (labels.every((label) => showsLabel(text[file] || [], label, region))) continue;
       const strip = join(workDir, `${shot.name}-${regionName}.png`);
       await cropStrip(file, region, strip);
@@ -367,29 +587,41 @@ const main = async () => {
   };
   const dir = argument('--dir') && resolve(argument('--dir'));
   if (!dir) {
-    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder> [--platform ios|android|all] [--group <group>]');
+    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder> [--platform ios|ipad|android|all] [--group <group>]');
     process.exit(2);
   }
   const config = loadConfig();
-  // all: both platforms' shots in one folder, as in the joined artifact.
-  const platform = argument('--platform') || 'ios';
+  // all: every platform's shots in one folder, as in the joined artifacts.
+  const split = argument('--split') && Number(argument('--split'));
+  const platform = split ? 'android' : argument('--platform') || 'ios';
   const platforms = platform === 'all' ? PLATFORMS : [platform];
-  const shots = takeGroup(platforms.flatMap((each) => planChecks(config, each)), argument('--group'), config);
+  const shots = split
+    ? planSplitChecks(config, split)
+    : takeGroup(platforms.flatMap((each) => planChecks(config, each)), argument('--group'), config);
   const text = await readText(dir, shots);
   writeFileSync(join(dir, 'ocr.json'), JSON.stringify(text, null, 1));
 
-  const results = shots.map((shot) => {
-    const lines = text[join(dir, shot.file)];
+  const results = [];
+  for (const shot of shots) {
+    const file = join(dir, shot.file);
+    const lines = text[file];
     const later = shot.laterFile && text[join(dir, shot.laterFile)];
-    return {
+    results.push({
       file: shot.file,
-      problems: lines ? [...checkShot(shot, lines), ...checkAdvance(shot, lines, later)] : ['no screenshot'],
-    };
-  });
+      problems: lines
+        ? [
+            ...checkShot(shot, lines),
+            ...checkAdvance(shot, lines, later),
+            ...checkIpadLayout(shot, lines),
+            ...(await checkPopupWidth(shot, file)),
+          ]
+        : ['no screenshot'],
+    });
+  }
   writeFileSync(join(dir, 'checks.json'), JSON.stringify(results, null, 1));
   const failed = results.filter((result) => result.problems.length);
   const summary = [
-    `### Key-screen text checks (${{ ios: 'iPhone', android: 'Android', all: 'iPhone and Android' }[platform]})`,
+    `### Key-screen text checks (${split ? `Android, ${split}-point split window` : { ios: 'iPhone', ipad: 'iPad', android: 'Android', all: 'iPhone, iPad, and Android' }[platform]})`,
     '',
     `${results.length - failed.length} of ${results.length} screenshots pass.`,
     ...failed.map((result) => `- ❌ ${result.file}: ${result.problems.join('; ')}`),
@@ -414,11 +646,23 @@ module.exports = {
   VERSE_BUTTON_SHORT,
   REGIONS,
   REGIONS_BY_PLATFORM,
+  regionsFor,
   NEVER_SHOWN,
   NEVER_SHOWN_BY_PLATFORM,
   showsLabel,
   checkShot,
   checkAdvance,
+  checkIpadLayout,
+  checkPopupWidth,
+  columnEdges,
+  surfaceWidth,
+  CONTENT_MAX_WIDTH,
+  DEFAULT_TEXT_SCALE,
+  TABLET_TEXT_SCALE,
+  POPUP_MAX_WIDTH,
+  POPUP_SURFACE,
   planChecks,
+  planSplitChecks,
+  splitRegions,
   fromStrip,
 };

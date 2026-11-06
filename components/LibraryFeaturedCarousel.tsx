@@ -1,8 +1,10 @@
 import { AppIcon } from '@/components/AppIcon';
 import { LibraryCoverImage } from '@/components/LibraryCoverImage';
+import { contentColumnStyle } from '@/constants/Layout';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
@@ -71,7 +73,8 @@ export function LibraryFeaturedCarousel({
 }: LibraryFeaturedCarouselProps) {
   const { textScale } = useTextSize();
   const headerHeight = useGlobalHeaderHeight();
-  const styles = useMemo(() => createStyles(textScale), [textScale]);
+  const columnScale = useContentColumnScale();
+  const styles = useMemo(() => createStyles(textScale, columnScale), [columnScale, textScale]);
   const listRef = useRef<FlatList<FeaturedCarouselItem>>(null);
   const [pageWidth, setPageWidth] = useState(0);
   const [ownPage, setOwnPage] = useState(shownPage ?? 0);
@@ -271,7 +274,10 @@ const DOTS_BOTTOM = 16;
 
 // The page sits on a darkened, blurred cover in both themes, so its text is
 // always light.
-const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
+const createStyles = (
+  textScale: Parameters<typeof scaleTypographyMetric>[1],
+  columnScale: number,
+) =>
   StyleSheet.create({
     carousel: {
       marginBottom: 24,
@@ -290,7 +296,10 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
     scrim: {
       backgroundColor: 'rgba(0, 0, 0, 0.55)',
     },
+    // The banner spans the screen; its cover and text stay in the content
+    // column on a wide screen.
     content: {
+      ...contentColumnStyle(columnScale),
       alignItems: 'center',
       flexDirection: 'row',
       gap: 18,

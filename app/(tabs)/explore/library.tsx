@@ -18,6 +18,7 @@ import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import { router, Stack, useIsFocused } from 'expo-router';
 import { useCallback, useContext, useMemo } from 'react';
 import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const copy = {
   en: {
@@ -156,6 +157,7 @@ export default function LibraryHubScreen() {
             );
           })}
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

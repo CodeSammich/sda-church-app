@@ -12,9 +12,11 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { openSdaBible } from '@/features/library/SdaBibleReader';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
+import { contentColumnStyle } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
@@ -22,6 +24,7 @@ import { useContext } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { Text } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const allLabels = {
   en: {
@@ -90,6 +93,7 @@ const allLabels = {
 
 export default function ExploreScreen() {
   const theme = useAppTheme();
+  const columnScale = useContentColumnScale();
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
@@ -130,7 +134,7 @@ export default function ExploreScreen() {
           </Text>
         </ImageBackground>
 
-        <View style={styles.cardList}>
+        <View style={[styles.cardList, contentColumnStyle(columnScale)]}>
           <MenuCard
             title={labels.library}
             description={labels.librarySub}
@@ -177,6 +181,7 @@ export default function ExploreScreen() {
             onPress={openZoomClass}
           />
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

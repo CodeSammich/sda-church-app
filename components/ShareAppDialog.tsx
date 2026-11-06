@@ -3,7 +3,7 @@ import { PopupScrollView } from '@/components/PopupScrollView';
 import { APP_DOWNLOAD_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { Image, Share, StyleSheet, View } from 'react-native';
 import { Button, Dialog, Portal, Text } from 'react-native-paper';
@@ -51,6 +51,7 @@ export function ShareAppDialog({ onDismiss, visible }: ShareAppDialogProps) {
   const labels = copy[language as keyof typeof copy] || copy.en;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight();
+  const popupWidthStyle = usePopupWidthStyle();
 
   const shareLink = async () => {
     try {
@@ -65,7 +66,7 @@ export function ShareAppDialog({ onDismiss, visible }: ShareAppDialogProps) {
       <Dialog
         visible={visible}
         onDismiss={onDismiss}
-        style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
+        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
         <PopupHeader
           closeLabel={labels.close}
@@ -112,11 +113,6 @@ const styles = StyleSheet.create({
   description: {
     alignSelf: 'stretch',
     marginBottom: 16,
-  },
-  dialog: {
-    alignSelf: 'center',
-    maxWidth: 560,
-    width: '90%',
   },
   // As in ThemeDialog: with the X's 48-point row, 16 keeps the title where
   // Paper's own title sits.

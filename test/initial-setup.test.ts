@@ -190,14 +190,17 @@ describe('InitialSetup', () => {
     });
 
     await goOn(screen, 'Siguiente');
+    await goOn(screen, 'Siguiente');
+    await goOn(screen, 'Siguiente');
     await goOn(screen, 'Comenzar');
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('goes through the three steps, back and on, and finishes on the last', async () => {
+  it('goes through the five steps, back and on, and finishes on the last', async () => {
     const onComplete = jest.fn();
-    const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete }));
-    const stepLabel = (n: number) => screen.getByLabelText(`Step ${n} of 3`);
+    const setContrastMode = jest.fn();
+    const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete }), { setContrastMode });
+    const stepLabel = (n: number) => screen.getByLabelText(`Step ${n} of 5`);
 
     expect(stepLabel(1)).toBeTruthy();
     expect(screen.getByText('Language')).toBeTruthy();
@@ -216,6 +219,22 @@ describe('InitialSetup', () => {
     await goOn(screen);
     expect(stepLabel(3)).toBeTruthy();
     expect(screen.getByText('Appearance')).toBeTruthy();
+
+    // The contrast for light mode, then dark mode (#669): the pictures, with
+    // high contrast chosen.
+    await goOn(screen);
+    expect(stepLabel(4)).toBeTruthy();
+    expect(screen.getByText('Which is easier to read in light mode?')).toBeTruthy();
+    let options = screen.getAllByRole('radio');
+    expect(options.map((option) => option.props.accessibilityState.checked)).toEqual([true, false]);
+    await fireEvent.press(options[1]);
+    expect(setContrastMode).toHaveBeenCalledWith('light', 'standard');
+    await goOn(screen);
+    expect(stepLabel(5)).toBeTruthy();
+    expect(screen.getByText('Which is easier to read in dark mode?')).toBeTruthy();
+    options = screen.getAllByRole('radio');
+    await fireEvent.press(options[1]);
+    expect(setContrastMode).toHaveBeenCalledWith('dark', 'standard');
     expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
     expect(onComplete).not.toHaveBeenCalled();
 

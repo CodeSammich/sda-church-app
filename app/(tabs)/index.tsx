@@ -3,7 +3,7 @@ import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
 } from '@/constants/ExternalBrandAssets';
-import { WrappingActionButton } from '@/components/WrappingActionButton';
+import { labelsFitSideBySide, WrappingActionButton } from '@/components/WrappingActionButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -11,9 +11,14 @@ import {
   CHURCH_LONGITUDE,
   openSabbathStream,
 } from '@/constants/ExternalLinks';
-import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import {
+  contentColumnStyle,
+  contentColumnWithin,
+  DESIGN_TOKENS,
+  getContentWidth,
+  getCountdownFontSize,
+} from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
@@ -43,6 +48,7 @@ import {
 import { ImageBackground } from '@/components/ImageBackground';
 import { Card, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function HomeScreen() {
   const { language } = useContext(LanguageContext);
@@ -53,15 +59,10 @@ export default function HomeScreen() {
   // time would update the tab navigator, and every tab's header, as often.
   const screenOptions = useMemo(() => ({ heroUnderStatusBar }), [heroUnderStatusBar]);
   const { textScale } = useTextSize();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
   const effectiveTextScale = Math.max(1, fontScale * textScale);
   // Keep the home card grid at two columns at every text zoom level.
   const useStackedLayout = false;
-  // Once the app's and the phone's text sizes add up to 2× or more, the verse
-  // card's two buttons each get a full row, and the Sabbath countdown's label
-  // sits above the countdown, so words like "Compartir" and "Sabbath" are
-  // never cut off or broken mid-word (#385).
-  const stackHeroActions = effectiveTextScale >= 2;
   const styles = useMemo(
     () => createStyles(textScale, effectiveTextScale, useStackedLayout),
     [effectiveTextScale, textScale, useStackedLayout],
@@ -88,7 +89,6 @@ export default function HomeScreen() {
       sabbathSchool: 'This Week’s Lesson',
       hymnal: 'Hymnal',
       sabbathStarts: 'Sabbath starts in',
-      sabbathEnds: 'Sabbath ends in',
       isSabbath: 'Happy Sabbath!',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
@@ -106,7 +106,6 @@ export default function HomeScreen() {
       sabbathSchool: '本週安息日學課程',
       hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
-      sabbathEnds: '距離安息日結束還有',
       isSabbath: '安息日快樂！',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
@@ -124,7 +123,6 @@ export default function HomeScreen() {
       sabbathSchool: '本周安息日学课程',
       hymnal: '诗歌本',
       sabbathStarts: '距离安息日还有',
-      sabbathEnds: '距离安息日结束还有',
       isSabbath: '安息日快乐！',
       locationDefault: '纽约',
     },
@@ -140,7 +138,6 @@ export default function HomeScreen() {
       sabbathSchool: 'Lección de esta semana',
       hymnal: 'Himnario',
       sabbathStarts: 'El Sábado comienza en',
-      sabbathEnds: 'El Sábado termina en',
       isSabbath: '¡Feliz Sábado!',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
@@ -149,6 +146,29 @@ export default function HomeScreen() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // The timer's size on screen, with both text sizes counted in, less the
+  // phone's, which the text applies again itself.
+  const countdownFontSize =
+    getCountdownFontSize(getContentWidth(windowWidth, effectiveTextScale), effectiveTextScale) / fontScale;
+  // One size for every card's text, which keeps each title's words whole.
+  const gridTitles = useMemo(
+    () => [labels.livestream, labels.bulletin, labels.give, labels.hymnal, labels.sabbathSchool, labels.discover],
+    [labels],
+  );
+  // Once the app's and the phone's text sizes add up to 2× or more, the verse
+  // card's two buttons each get a full row, so words like "Compartir" are
+  // never cut off or broken mid-word (#385). So they do, too, wherever a word
+  // of either button's label wouldn't fit beside the other button: on a narrow
+  // phone in Spanish, or in a narrow iPad window (#324). The Sabbath countdown
+  // has its own rule, below.
+  const stackHeroActions =
+    effectiveTextScale >= 2 ||
+    !labelsFitSideBySide(
+      [(labels as any).shareVerse, (labels as any).readVerse],
+      getHeroActionsRowWidth(windowWidth, effectiveTextScale),
+      HERO_ACTIONS_GAP,
+      effectiveTextScale,
+    );
 
   const [verseOfTheDay, setVerseOfTheDay] = useState<{
     text: string;
@@ -162,7 +182,6 @@ export default function HomeScreen() {
   const [isSabbath, setIsSabbath] = useState(false);
   const [countdown, setCountdown] = useState('');
   const [useGps, setUseGps] = useState(false);
-  const [targetDate, setTargetDate] = useState<Date | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sunsets, setSunsets] = useState<{ fri: Date | null; sat: Date | null }>({
     fri: null,
@@ -218,29 +237,6 @@ export default function HomeScreen() {
     });
   }, [useGps, userCoords, new Date().toDateString()]);
 
-  const formatDisplayDate = (date: Date) => {
-    if (language === 'en') {
-      const day = date.getDate();
-      const suffix = (d: number) => {
-        if (d > 3 && d < 21) return 'th';
-        switch (d % 10) {
-          case 1:
-            return 'st';
-          case 2:
-            return 'nd';
-          case 3:
-            return 'rd';
-          default:
-            return 'th';
-        }
-      };
-      const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date);
-      const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);
-      return `${weekday}, ${month} ${day}${suffix(day)}`;
-    }
-    return formatAppDate(date, language, { weekday: true });
-  };
-
   useEffect(() => {
     // If GPS status changes (user clicks "Allow"), the component will re-render
     // and this timer logic will re-calculate based on the new context.
@@ -275,7 +271,6 @@ export default function HomeScreen() {
         target.setDate(target.getDate() + 7);
       }
 
-      setTargetDate(target);
       setIsSabbath(isSabbathNow);
 
       const diff = Math.max(0, target.getTime() - now.getTime());
@@ -430,8 +425,10 @@ export default function HomeScreen() {
           <Text
             variant="titleMedium"
             style={{
+              // The content column's width on a wide screen, so the verse
+              // keeps a comfortable line length.
+              ...contentColumnWithin(24, effectiveTextScale),
               color: '#FFFFFF',
-              alignSelf: 'stretch',
               textAlign: 'center',
               fontStyle: 'italic',
               marginTop: 4,
@@ -471,43 +468,40 @@ export default function HomeScreen() {
             mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
-              <View style={[styles.timerRow, stackHeroActions && styles.timerRowStacked]}>
-                <View style={[styles.labelColumn, stackHeroActions && styles.labelColumnStacked]}>
-                  <Text
-                    variant="labelMedium"
-                    style={{
-                      color: isSabbath ? theme.colors.primary : theme.colors.secondary,
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {isSabbath ? labels.isSabbath : labels.sabbathStarts}
-                  </Text>
-                  {targetDate && (
-                    <>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {formatDisplayDate(targetDate)}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {labels.locationDefault}
-                      </Text>
-                    </>
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.timerValueSubtle,
-                    stackHeroActions && styles.timerValueStacked,
-                    { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
-                  ]}
-                >
-                  {countdown || '--:--:--'}
-                </Text>
-              </View>
+              {/* Three centred lines, like a clock (#593): what the timer counts
+                  to, the timer, and the place. The timer already says when, so
+                  no date. During the Sabbath the first line greets it instead. */}
+              <Text
+                variant="labelMedium"
+                style={{
+                  color: isSabbath ? theme.colors.primary : theme.colors.secondary,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                }}
+              >
+                {isSabbath ? labels.isSabbath : labels.sabbathStarts}
+              </Text>
+              <Text
+                style={[
+                  styles.timerValueSubtle,
+                  {
+                    color: isSabbath ? theme.colors.primary : theme.colors.onSurface,
+                    fontSize: countdownFontSize,
+                    lineHeight: Math.round(countdownFontSize * 1.3),
+                  },
+                ]}
+              >
+                {countdown || '--:--:--'}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}>
+                {labels.locationDefault}
+              </Text>
             </Card.Content>
           </Card>
 
           <View style={styles.grid}>
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.livestream}
               titleBlockLines={3}
               subtitle={(labels as any).liveNow}
@@ -520,6 +514,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.bulletin}
               titleBlockLines={3}
               icon="newspaper-variant-outline"
@@ -535,6 +530,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.give}
               titleBlockLines={3}
               icon="hand-heart-outline"
@@ -550,6 +546,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.hymnal}
               titleBlockLines={3}
               icon="music-note"
@@ -565,6 +562,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.sabbathSchool}
               titleBlockLines={3}
               icon="book-open-page-variant"
@@ -580,6 +578,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.discover}
               titleBlockLines={3}
               icon="compass"
@@ -596,10 +595,21 @@ export default function HomeScreen() {
             />
           </View>
         </List.Section>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );
 }
+
+// The verse card's sides, its buttons' row's own padding, and the gap between
+// the two buttons.
+const HERO_SIDE_PADDING = 24;
+const HERO_ACTIONS_PADDING = 16;
+const HERO_ACTIONS_GAP = 12;
+
+/** The width the verse card's buttons share, within the content column. */
+const getHeroActionsRowWidth = (windowWidth: number, effectiveTextScale: number) =>
+  getContentWidth(windowWidth, effectiveTextScale) - 2 * HERO_SIDE_PADDING - 2 * HERO_ACTIONS_PADDING;
 
 const createStyles = (
   textScale: Parameters<typeof scaleTypographyMetric>[1],
@@ -607,7 +617,7 @@ const createStyles = (
   useStackedLayout: boolean,
 ) => StyleSheet.create({
   hero: {
-    paddingHorizontal: 24,
+    paddingHorizontal: HERO_SIDE_PADDING,
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomLeftRadius: 28,
@@ -615,6 +625,7 @@ const createStyles = (
     overflow: 'hidden',
   },
   content: {
+    ...contentColumnStyle(effectiveTextScale),
     padding: 20,
     paddingBottom: 16,
   },
@@ -624,11 +635,11 @@ const createStyles = (
     marginBottom: 8,
   },
   heroActions: {
+    ...contentColumnWithin(HERO_SIDE_PADDING, effectiveTextScale),
     flexDirection: useStackedLayout ? 'column' : 'row',
     marginTop: 16,
-    gap: 12,
-    width: '100%',
-    paddingHorizontal: 16,
+    gap: HERO_ACTIONS_GAP,
+    paddingHorizontal: HERO_ACTIONS_PADDING,
   },
   heroActionButton: {
     flex: useStackedLayout ? undefined : 1,
@@ -651,33 +662,12 @@ const createStyles = (
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  timerRow: {
-    flexDirection: useStackedLayout ? 'column' : 'row',
-    alignItems: useStackedLayout ? 'flex-start' : 'center',
-    justifyContent: 'space-between',
-  },
-  labelColumn: {
-    flex: 1,
-  },
-  timerRowStacked: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  labelColumnStacked: {
-    flex: 0,
-    alignSelf: 'stretch',
-  },
-  timerValueStacked: {
-    marginTop: 8,
-  },
   timerValueSubtle: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontVariant: ['tabular-nums'],
-    fontSize: scaleTypographyMetric(16, textScale),
-    lineHeight: scaleTypographyMetric(24, textScale),
     fontWeight: '700',
-    marginTop: useStackedLayout ? 8 : 0,
-    flexShrink: 0,
+    textAlign: 'center',
+    marginVertical: 2,
   },
   grid: {
     flexDirection: 'row',

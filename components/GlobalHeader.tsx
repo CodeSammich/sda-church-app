@@ -1,7 +1,7 @@
+import { contentColumnStyle } from '@/constants/Layout';
 import {
   getBackAction,
   getBackTarget,
-  getHeaderBackButtonColors,
   hasHeaderBackButton,
 } from '@/constants/BackNavigation';
 import {
@@ -26,10 +26,17 @@ import {
   type BibleSearchOptions,
   type BibleSearchRow,
 } from '@/hooks/useBibleSearch';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { prepareBibleSearch } from '@/services/BibleSearch';
 import { isKeyScreensBuild } from '@/services/ScreenshotRoute';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
+import { getFloatingSurfaceStyle } from '@/components/CapsuleTabBar';
+import {
+  getDockControlBorderColor,
+  getDockControlColor,
+  getDockControlContentColor,
+} from '@/components/TabBarItems';
 import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
 import {
   useContext,
@@ -126,6 +133,7 @@ export const GlobalHeader = (props: any) => {
     bibleTranslation;
   const theme = useAppTheme();
   const { textScale } = useTextSize();
+  const columnScale = useContentColumnScale();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -200,9 +208,9 @@ export const GlobalHeader = (props: any) => {
   // Whole-Bible search (#516), from the Bible screen.
   const bibleSearch = props.options?.bibleSearch as BibleSearchOptions | undefined;
   // The translation button shares a row with the icon buttons. When the row
-  // is tight it gives up its 文A icon first, then its translation names, cut
-  // short with "…" and then dropped, and last its language badges: it takes a
-  // row of its own only when even the badges alone can't fit (#376). Stacking
+  // is tight it gives up its translation names first, cut short with "…" and
+  // then dropped, and last its language badges: it takes a row of its own
+  // only when even the badges alone can't fit (#376). Stacking
   // whenever the full button didn't fit left a wide, mostly empty button and a
   // back arrow between the rows. Hidden copies measure each form.
   const [bibleRowWidth, setBibleRowWidth] = useState(0);
@@ -219,7 +227,7 @@ export const GlobalHeader = (props: any) => {
           iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
           iconButtonSize: compactControlHeight,
         })
-      : { stack: false, hideTranslationIcon: false, hideTranslationNames: false };
+      : { stack: false, hideTranslationNames: false };
   const stackBibleControls = bibleControlsLayout.stack;
   // Every tab's header stays mounted and sees the Bible's route while it's
   // open, so only the header showing the Bible's controls reports them.
@@ -434,15 +442,7 @@ export const GlobalHeader = (props: any) => {
         styles.floatingSearchbar,
         isExpandableBible && styles.expandedBibleSearchbar,
         { minHeight: compactControlHeight },
-        {
-          backgroundColor: theme.colors.surface,
-          borderWidth: 1,
-          borderColor: theme.colors.outline,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6,
-        },
+        getFloatingSurfaceStyle(theme),
       ]}
       inputStyle={{
         minHeight: 0,
@@ -456,23 +456,12 @@ export const GlobalHeader = (props: any) => {
     />
   );
 
-  // `shortest` draws each translation name cut to its first letter, for
-  // measuring the narrowest forms of the button. Without names, the badges
-  // stand alone, with no "…".
-  const renderTranslationChipContent = ({
-    shortest = false,
-    withIcon = true,
-    withNames = true,
-  } = {}) => (
+  // Each translation's language badge (EN, 繁) and name, with no 文A icon: the
+  // badges already say what it said. `shortest` draws each name cut to its
+  // first letter, for measuring the narrowest forms of the button. Without
+  // names, the badges stand alone, with no "…".
+  const renderTranslationChipContent = ({ shortest = false, withNames = true } = {}) => (
     <>
-                    {withIcon && (
-                      <AppIcon
-                        name="translate"
-                        size={18}
-                        textScale={headerTextScale}
-                        color={theme.colors.primary}
-                      />
-                    )}
                     {bibleTranslationItems?.length ? (
                       <View style={styles.translationChipItems}>
                         {bibleTranslationItems.map((item, index) => (
@@ -493,22 +482,23 @@ export const GlobalHeader = (props: any) => {
                                 +
                               </Text>
                             )}
+                            {/* Like the Bible card's pills, in either contrast. */}
                             <View
                               style={[
                                 styles.translationLanguageBadge,
                                 {
-                                  backgroundColor: theme.colors.primaryContainer,
-                                  borderColor: theme.colors.outlineVariant,
+                                  backgroundColor: getDockControlColor(theme),
+                                  borderColor: getDockControlBorderColor(theme),
                                 },
                               ]}
                             >
                               <Text
                                 maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                                 style={{
-                                  color: theme.colors.onPrimaryContainer,
-                                  fontSize: scaleTypographyMetric(11, headerTextScale),
+                                  color: getDockControlContentColor(theme),
+                                  fontSize: scaleTypographyMetric(14, headerTextScale),
                                   fontWeight: '800',
-                                  lineHeight: scaleTypographyMetric(15, headerTextScale),
+                                  lineHeight: scaleTypographyMetric(19, headerTextScale),
                                 }}
                               >
                                 {item.badge}
@@ -519,7 +509,7 @@ export const GlobalHeader = (props: any) => {
                                 maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                                 numberOfLines={1}
                                 style={{
-                                  color: theme.colors.onSurface,
+                                  color: theme.colors.primary,
                                   flexShrink: 1,
                                   fontSize: scaleTypographyMetric(14, headerTextScale),
                                   fontWeight: '700',
@@ -537,7 +527,7 @@ export const GlobalHeader = (props: any) => {
                         maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                         numberOfLines={1}
                         style={{
-                          color: theme.colors.onSurface,
+                          color: theme.colors.primary,
                           fontSize: scaleTypographyMetric(14, headerTextScale),
                           fontWeight: '700',
                           lineHeight: scaleTypographyMetric(19, headerTextScale),
@@ -570,7 +560,11 @@ export const GlobalHeader = (props: any) => {
       keyboardDismissMode={isBiblePage ? 'on-drag' : 'none'}
       // iOS draws its keyboard over the app, so the last results scroll above it.
       automaticallyAdjustKeyboardInsets={isBiblePage}
-      contentContainerStyle={isBiblePage ? { paddingTop: 8, paddingBottom: insets.bottom + 16 } : undefined}
+      // In the content column on a wide screen (#324).
+      contentContainerStyle={[
+        contentColumnStyle(columnScale),
+        isBiblePage ? { paddingTop: 8, paddingBottom: insets.bottom + 16 } : null,
+      ]}
       keyExtractor={(item) => item.key}
       maxToRenderPerBatch={10}
       renderItem={({ item }) => {
@@ -674,10 +668,8 @@ export const GlobalHeader = (props: any) => {
                 height: compactControlHeight,
                 borderRadius: compactControlHeight / 2,
               },
-              {
-                ...getHeaderBackButtonColors(theme),
-                opacity: pressed ? 0.8 : 1,
-              },
+              getFloatingSurfaceStyle(theme),
+              { opacity: pressed ? 0.8 : 1 },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -709,9 +701,8 @@ export const GlobalHeader = (props: any) => {
                       windowWidth - 86 - (headerSearchButton ? compactControlHeight + 12 : 0),
                     paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
                   },
+                  getFloatingSurfaceStyle(theme),
                   {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.outline,
                     opacity: titleChipAnim,
                     transform: [{ translateY: titleChipTranslateY }],
                   },
@@ -768,7 +759,7 @@ export const GlobalHeader = (props: any) => {
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
-                    {renderTranslationChipContent({ shortest: true, withIcon: false })}
+                    {renderTranslationChipContent({ shortest: true })}
                   </View>
                 )}
                 {bibleTranslation && (
@@ -782,7 +773,7 @@ export const GlobalHeader = (props: any) => {
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
-                    {renderTranslationChipContent({ withIcon: false, withNames: false })}
+                    {renderTranslationChipContent({ withNames: false })}
                   </View>
                 )}
                 {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
@@ -798,14 +789,11 @@ export const GlobalHeader = (props: any) => {
                           : compactControlHeight,
                       },
                       stackBibleControls && styles.stackedTranslationChip,
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
+                      getFloatingSurfaceStyle(theme),
+                      { opacity: pressed ? 0.75 : 1 },
                     ]}
                   >
                     {renderTranslationChipContent({
-                      withIcon: !bibleControlsLayout.hideTranslationIcon,
                       withNames: !bibleControlsLayout.hideTranslationNames,
                     })}
                   </Pressable>
@@ -826,10 +814,8 @@ export const GlobalHeader = (props: any) => {
                       style={({ pressed }) => [
                         styles.collapsedSearchButton,
                         { height: compactControlHeight, width: compactControlHeight },
-                        {
-                          backgroundColor: theme.colors.surface,
-                          opacity: pressed ? 0.75 : 1,
-                        },
+                        getFloatingSurfaceStyle(theme),
+                        { opacity: pressed ? 0.75 : 1 },
                       ]}
                     >
                       <AppIcon
@@ -852,10 +838,8 @@ export const GlobalHeader = (props: any) => {
                       style={({ pressed }) => [
                         styles.collapsedSearchButton,
                         { height: compactControlHeight, width: compactControlHeight },
-                        {
-                          backgroundColor: theme.colors.surface,
-                          opacity: pressed ? 0.75 : 1,
-                        },
+                        getFloatingSurfaceStyle(theme),
+                        { opacity: pressed ? 0.75 : 1 },
                       ]}
                     >
                       <AppIcon
@@ -882,10 +866,8 @@ export const GlobalHeader = (props: any) => {
                       style={({ pressed }) => [
                         styles.collapsedSearchButton,
                         { height: compactControlHeight, width: compactControlHeight },
-                        {
-                          backgroundColor: theme.colors.surface,
-                          opacity: pressed ? 0.75 : 1,
-                        },
+                        getFloatingSurfaceStyle(theme),
+                        { opacity: pressed ? 0.75 : 1 },
                       ]}
                     >
                       <AppIcon
@@ -912,7 +894,8 @@ export const GlobalHeader = (props: any) => {
               styles.collapsedSearchButton,
               styles.headerSearchButton,
               { height: compactControlHeight, width: compactControlHeight },
-              { backgroundColor: theme.colors.surface, opacity: pressed ? 0.75 : 1 },
+              getFloatingSurfaceStyle(theme),
+              { opacity: pressed ? 0.75 : 1 },
             ]}
           >
             <AppIcon
@@ -971,12 +954,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 12,
     marginRight: 8,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
   },
   floatingTitleChip: {
     minHeight: 40,
@@ -986,16 +963,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
     marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
   },
   floatingSearchbar: {
-    elevation: 4,
     borderRadius: 24,
     minHeight: 44,
     marginRight: 12,
@@ -1038,11 +1008,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
   },
   // An invisible copy of the translation chip at its natural width, with the
   // chip's padding and gap, to decide whether it fits beside the icon buttons.
@@ -1069,14 +1034,16 @@ const styles = StyleSheet.create({
     gap: 4,
     justifyContent: 'center',
   },
+  // About the size of the 文A icon the button had until 1.7.0, so the
+  // language reads at a glance.
   translationLanguageBadge: {
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 22,
-    minWidth: 24,
-    paddingHorizontal: 4,
+    minHeight: 26,
+    minWidth: 30,
+    paddingHorizontal: 6,
   },
   // At its own width, over the icon buttons, rather than stretched across the
   // row with its names in the middle.
@@ -1090,11 +1057,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
   },
   headerSearchButton: {
     marginRight: 12,

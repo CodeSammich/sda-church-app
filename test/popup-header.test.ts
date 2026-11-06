@@ -1,6 +1,7 @@
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
+import { ContrastDialog } from '@/components/ContrastDialog';
 import { fireEvent } from '@testing-library/react-native';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
@@ -11,6 +12,7 @@ describe('popup close buttons', () => {
     { name: 'Language', dialog: LanguageDialog, close: 'Close', language: 'en' as const },
     { name: 'Theme', dialog: ThemeDialog, close: '關閉', language: 'zh' as const },
     { name: 'Text size', dialog: TextSizeDialog, close: 'Cerrar', language: 'es' as const },
+    { name: 'Contrast', dialog: ContrastDialog, close: '关闭', language: 'zh-cn' as const },
   ])('the $name dialog closes with an X, not a Close button', async ({ dialog, close, language }) => {
     const onDismiss = jest.fn();
     const screen = await renderWithPreferences(

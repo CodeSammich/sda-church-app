@@ -73,9 +73,10 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 
 - **Version:** the release's version, such as `0.42.0`. It must match the build; see
   [Version numbers](version-numbers.md).
-- **Screenshots:** iPhone 6.9-inch only. Copies are in
-  [`docs/store-assets/`](../store-assets/README.md) under `app-store/`; sizes and how
-  they're captured are in [Store listings](store-listing.md#screenshots).
+- **Screenshots:** iPhone, and iPad 13-inch from the first version with iPad support
+  (#324). Copies are in [`docs/store-assets/`](../store-assets/README.md) under
+  `app-store/`; sizes and how they're captured are in
+  [Store listings](store-listing.md#screenshots).
 - **Promotional Text, Description, Keywords:** per language, from
   [Store listings](store-listing.md).
 - **Support URL:** `https://app.nyccsda.org/support.html`. **Marketing URL:** blank.
@@ -94,7 +95,6 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 | Analytics, crash reporting, ads, accounts, forms, or push notifications | App Privacy, and Google Play's matching answers |
 | Local notifications, as a download's "done" since #610 | Nothing: they're made on the phone, need no entitlement, and send nothing |
 | Ads, chat, user posts, a web browser, or medical or health content | Age Rating |
-| iPad support (#324) | iPad screenshots. Test first: Apple doesn't let an update remove iPad support. |
 | A new language, such as Japanese | A new localization, published with that release |
 | In-app purchases, subscriptions, or a paid app | Pricing, the Digital Services Act answer (selling may make the church a trader), and the audit's [item 1](store-policy-audit.md#1-nonprofit-identity-and-donation-flow--release-blocker) |
 | A mainland China release | An ICP filing and a religious-information license, through a Chinese partner |
