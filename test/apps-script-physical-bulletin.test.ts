@@ -388,15 +388,17 @@ describe('printed bulletin Apps Script helpers', () => {
       'requireValueInList(Queens,Brooklyn, true) | setAllowInvalid(false) | ' +
       'setHelpText(Location must be Queens or Brooklyn. / 地点必须是 Queens 或 Brooklyn。)';
 
-    it('adds a Queens and a Brooklyn row for this coming Sabbath and the next', () => {
+    it('adds a Queens and a Brooklyn row for this coming Sabbath and the two after', () => {
       const sheet = weeklySheet([['2026-10-31', 'Queens', 'Matthew 6:10']]);
       // A Wednesday: the coming Sabbath is November 7.
-      expect(run(sheet, '2026-11-04')).toBe(4);
+      expect(run(sheet, '2026-11-04')).toBe(6);
       expect(added(sheet, 2)).toEqual([
         ['Sat Nov 07 2026', 'Queens'],
         ['Sat Nov 07 2026', 'Brooklyn'],
         ['Sat Nov 14 2026', 'Queens'],
         ['Sat Nov 14 2026', 'Brooklyn'],
+        ['Sat Nov 21 2026', 'Queens'],
+        ['Sat Nov 21 2026', 'Brooklyn'],
       ]);
       expect(sheet.values[1][2]).toBe('Matthew 6:10');
     });
@@ -407,6 +409,8 @@ describe('printed bulletin Apps Script helpers', () => {
         ['2026-11-07', 'Brooklyn'],
         ['2026-11-14', 'Queens'],
         ['2026-11-14', 'Brooklyn'],
+        ['2026-11-21', 'Queens'],
+        ['2026-11-21', 'Brooklyn'],
       ]);
       expect(run(sheet, '2026-11-04')).toBe(0);
       // From under the header to the bottom of the 40-row grid.
@@ -427,7 +431,7 @@ describe('printed bulletin Apps Script helpers', () => {
         ['Example', 'Queens', 'John 10:11-16', 'The Good Shepherd'],
         ['Example', 'Brooklyn', 'Psalms 23:1-6'],
       ]);
-      expect(run(sheet, '2026-11-04')).toBe(4);
+      expect(run(sheet, '2026-11-04')).toBe(6);
       expect(sheet.values.slice(1, 3).map((row) => row[0])).toEqual(['Example', 'Example']);
     });
 
@@ -436,25 +440,46 @@ describe('printed bulletin Apps Script helpers', () => {
         ['2026-11-07', 'queens'],
         [new Date(2026, 10, 14), 'Brooklyn'],
       ]);
-      expect(run(sheet, '2026-11-07')).toBe(2);
+      expect(run(sheet, '2026-11-07')).toBe(4);
       expect(added(sheet, 3)).toEqual([
         ['Sat Nov 07 2026', 'Brooklyn'],
         ['Sat Nov 14 2026', 'Queens'],
+        ['Sat Nov 21 2026', 'Queens'],
+        ['Sat Nov 21 2026', 'Brooklyn'],
       ]);
       expect(run(sheet, '2026-11-07')).toBe(0);
     });
 
+    it('leaves filled-in rows exactly as they are when the window grows', () => {
+      // Rows from the two-week window, already filled in for the coming Sabbath.
+      const sheet = weeklySheet([
+        ['2026-11-07', 'Queens', 'Matthew 6:9-13', 'Our Daily Bread', '日用的飲食', '第3首', 'AH 12', '', 'AH 1', 'Solo', 'AH 5'],
+        ['2026-11-07', 'Brooklyn', 'Psalms 121:1-8', 'Help From the Hills', '從山上來的幫助', '第8首', '', '', 'AH 2', '', 'AH 6'],
+        ['2026-11-14', 'Queens', 'John 15:1-5'],
+        ['2026-11-14', 'Brooklyn'],
+      ]);
+      const before = sheet.values.map((row) => [...row]);
+      // A Friday, the day before the filled-in Sabbath.
+      expect(run(sheet, '2026-11-06')).toBe(2);
+      expect(sheet.values.slice(0, before.length)).toEqual(before);
+      expect(added(sheet, before.length)).toEqual([
+        ['Sat Nov 21 2026', 'Queens'],
+        ['Sat Nov 21 2026', 'Brooklyn'],
+      ]);
+      expect(run(sheet, '2026-11-06')).toBe(0);
+    });
+
     it('adds grid rows when the tab has run out', () => {
       const sheet = weeklySheet([['2026-10-31', 'Queens']], 2);
-      expect(run(sheet, '2026-11-01')).toBe(4);
-      expect(sheet.values).toHaveLength(6);
+      expect(run(sheet, '2026-11-01')).toBe(6);
+      expect(sheet.values).toHaveLength(8);
       // The rules cover the grown grid too.
-      expect(sheet.rules.map((rule) => rule.split(':').slice(0, 3).join(':'))).toEqual(['2:2:5', '2:1:5']);
+      expect(sheet.rules.map((rule) => rule.split(':').slice(0, 3).join(':'))).toEqual(['2:2:7', '2:1:7']);
     });
 
     it('sets a deleted or emptied tab up again, with its headers and examples', () => {
       for (const spreadsheet of [book(null), book(weeklySheet([], 1000, null))]) {
-        expect(run(spreadsheet, '2026-11-04')).toBe(4);
+        expect(run(spreadsheet, '2026-11-04')).toBe(6);
         const sheet = spreadsheet.tabs['Weekly Data'];
         expect(sheet.values[0]).toEqual(HEADERS);
         expect(added(sheet, 1)).toEqual([
@@ -464,6 +489,8 @@ describe('printed bulletin Apps Script helpers', () => {
           ['Sat Nov 07 2026', 'Brooklyn'],
           ['Sat Nov 14 2026', 'Queens'],
           ['Sat Nov 14 2026', 'Brooklyn'],
+          ['Sat Nov 21 2026', 'Queens'],
+          ['Sat Nov 21 2026', 'Brooklyn'],
         ]);
         expect(sheet.values[2]).toEqual([
           'Example', 'Brooklyn', 'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',

@@ -206,9 +206,11 @@ English and a Chinese column for each hymn of praise and response, and no
 Sabbath School or special music columns. #558 replaced it with this tab.
 
 Opening the spreadsheet adds the rows to fill in: a `Queens` and a `Brooklyn`
-row, with the date, for this coming Sabbath and the one after, the two weeks the
-app shows (see [Automatic quarter and visibility
-maintenance](#automatic-quarter-and-visibility-maintenance)).
+row, with the date, for this coming Sabbath and the two after (see [Automatic
+quarter and visibility
+maintenance](#automatic-quarter-and-visibility-maintenance)). The app shows the
+first two. The third is there because the pastor usually knows a sermon about
+two weeks ahead.
 
 Rows 2 and 3 are worked examples, one for each location, with `Example` in
 `Date`. Nothing reads a row whose `Date` isn't a date, so they never reach a
@@ -400,7 +402,7 @@ On open, the script:
 4. appends missing Saturdays so the next three quarters always have rows, plus
    the fourth quarter ahead when the current quarter is in its final 21 days;
 5. puts back a deleted `Weekly Data` tab or its missing columns, adds its rows
-   for the next two Sabbaths, and sets its `Date` and `Location` rules;
+   for the next three Sabbaths, and sets its `Date` and `Location` rules;
 6. hides old schedule rows without deleting them;
 7. repaints the conflict highlights described below across every schedule row;
 8. tags the tabs and columns it finds by name, so a later rename doesn't lose
@@ -513,7 +515,7 @@ opening the sheet repeatedly does not create duplicates. If rows already exist
 for a future quarter, the script does not delete or rewrite them.
 
 The same run gives `Weekly Data` a `Queens` and a `Brooklyn` row, with the date
-filled in, for this coming Sabbath (today, on a Saturday) and the one after
+filled in, for this coming Sabbath (today, on a Saturday) and the two after
 (`weeklyDataSabbaths` in `BULLETIN_SCHEDULE_MAINTENANCE_CONFIG`). It adds a row
 only where that date and location has none, however the date is written, so a
 row staff added themselves is never repeated. New rows go at the bottom, and
