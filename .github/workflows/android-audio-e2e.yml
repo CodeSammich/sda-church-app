@@ -99,12 +99,23 @@ jobs:
       # host, so the primary source fails as it would in an outage, without
       # changing the app. Every other name resolves normally.
       - name: Make the church's audio host unreachable
+        # Ubuntu's package servers can hang without a word: on 2026-11-05 this
+        # step sat for 88 minutes, until the job's own limit. Each try at the
+        # install gets 4 minutes, with one more try after a pause.
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           # The runner image's package lists go stale when Ubuntu replaces a
           # package, and installing from them fails with a 404.
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends dnsmasq-base >/dev/null
+          install_dnsmasq() {
+            sudo timeout --kill-after=10 240 apt-get update -qq &&
+              sudo timeout --kill-after=10 240 apt-get install -y --no-install-recommends dnsmasq-base >/dev/null
+          }
+          if ! install_dnsmasq; then
+            echo '::warning::Installing dnsmasq-base failed or took over 4 minutes; trying once more.'
+            sleep 15
+            install_dnsmasq
+          fi
           dns_ip="$(hostname -I | awk '{print $1}')"
           sudo dnsmasq --listen-address="$dns_ip" --bind-interfaces --no-hosts \
             --resolv-file=/run/systemd/resolve/resolv.conf \
