@@ -31,9 +31,10 @@ var BULLETIN_SCHEDULE_MAINTENANCE_CONFIG = Object.freeze({
   // During a quarter's final days, one more quarter is appended.
   populateLeadDays: 21,
   previousWeekDays: 7,
-  // Weekly Data gets a row per location for this coming Sabbath and the one
-  // after: the two weeks the app shows.
-  weeklyDataSabbaths: 2,
+  // Weekly Data gets a row per location for this coming Sabbath and the two
+  // after. The app shows the first two; the third is there because the pastor
+  // usually knows a sermon about two weeks ahead.
+  weeklyDataSabbaths: 3,
   weeklyDataLocations: Object.freeze(['Queens', 'Brooklyn']),
 });
 

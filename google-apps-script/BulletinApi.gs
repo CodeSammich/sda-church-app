@@ -93,6 +93,30 @@ var SAFE_SINGLE_VALUES = Object.freeze([
 
 var PRIVATE_NAME_PLACEHOLDER = 'Name withheld';
 
+// The hymns a week gets when its row leaves the cell blank (user, 2026-11-06).
+// Each is filed and looked up like a typed entry, so the printed bulletin finds
+// its Chinese title, and the app its Chinese hymnal number. A location with
+// nothing else in it gets none, so it stays empty: an empty Brooklyn shows the
+// app's joint-service note.
+var DEFAULT_SERVICE_HYMNS = Object.freeze({
+  hymnOfPraise: 'AH 1 Praise to the Lord',
+  hymnOfResponse: 'AH 348 The Church Has One Foundation',
+});
+
+// The fields the app's isBulletinLocationEmpty (services/BulletinService.ts)
+// counts as content. They're the bulletin's field names, not sheet columns:
+// columns are found by their header in row 1, wherever they are (the schemas
+// below), so moving one changes nothing here.
+// test/apps-script-bulletin-merge.test.ts keeps this list the same as the app's.
+var BULLETIN_LOCATION_CONTENT_FIELDS = Object.freeze([
+  'hymnOfPraise', 'sermonTitle', 'hymnOfResponse', 'bibleVerses', 'sabbathSchoolHymns',
+  'specialMusicTitle', 'sermon', 'chairPastoralPrayer', 'offeringPrayer', 'translation',
+  'chineseTeacher', 'englishTeacher', 'youthTeacher', 'kidsTeacher', 'specialMusic',
+  'pianist', 'ssChair', 'ssOpeningPrayer', 'closingPrayer', 'flowerOffering',
+  'sabbathSchool', 'chair', 'songLeader', 'sabbathMessage', 'sabbathMessageTitle',
+  'technician', 'encouragement',
+]);
+
 // Weekly Data is the reviewed, staff-managed source for sermon content.
 // These headers are intentionally concise so final owners can correct a week's
 // content directly without an append-only response workflow.
@@ -981,6 +1005,12 @@ function populateBulletinIntake_(location, intakeRows) {
         return;
       }
       var text = displayValue_(value);
+      var sides = field.hymn ? splitBilingualHymnTitle_(text) : null;
+      if (sides) {
+        setPath_(location, field.path.concat('english'), sides.english);
+        setPath_(location, field.path.concat('chinese'), sides.chinese);
+        return;
+      }
       setPath_(
         location,
         field.hymn ? field.path.concat(getBulletinHymnLanguage_(text)) : field.path,
@@ -988,14 +1018,57 @@ function populateBulletinIntake_(location, intakeRows) {
       );
     });
   });
-  // Keep the entered hymns in order, without the blank cells between them.
+  // A blank Hymn of Praise or Hymn of Response gets its default. A typed TBD
+  // goes out blank instead, so the app shows its own TBD in the reader's
+  // language, with no YouTube search for "TBD", and the printed bulletin its
+  // bilingual one.
+  var hasContent = bulletinLocationHasContent_(location);
+  Object.keys(DEFAULT_SERVICE_HYMNS).forEach(function (key) {
+    var hymn = location[key];
+    var tbd = ['english', 'chinese'].filter(function (side) {
+      return String(hymn[side] || '').trim().toUpperCase() === 'TBD';
+    });
+    if (tbd.length) {
+      tbd.forEach(function (side) {
+        hymn[side] = '';
+      });
+    } else if (hasContent && isBlank_(hymn.english) && isBlank_(hymn.chinese)) {
+      var text = DEFAULT_SERVICE_HYMNS[key];
+      setPath_(location, [key, getBulletinHymnLanguage_(text)], text);
+    }
+  });
+
+  // Keep the entered hymns in order, without the blank cells between them. A
+  // cell may hold several separated by semicolons, as staff have typed them
+  // (2026-11-06): each becomes its own (splitHymnCell_).
   var hymns = [];
   for (var index = 0; index < location.sabbathSchoolHymns.length; index += 1) {
-    if (!isBlank_(location.sabbathSchoolHymns[index])) {
-      hymns.push(location.sabbathSchoolHymns[index]);
-    }
+    splitHymnCell_(location.sabbathSchoolHymns[index]).forEach(function (part) {
+      hymns.push(part);
+    });
   }
   location.sabbathSchoolHymns = hymns;
+}
+
+// Whether a location has anything to show, decided as the app's
+// isBulletinLocationEmpty does: any of its content fields with a value but a
+// blank or TBD.
+function bulletinLocationHasContent_(location) {
+  var has = function (value) {
+    if (value && typeof value === 'object') {
+      return Object.keys(value).some(function (key) {
+        return has(value[key]);
+      });
+    }
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      return false;
+    }
+    var text = String(value).trim();
+    return text !== '' && text.toUpperCase() !== 'TBD';
+  };
+  return BULLETIN_LOCATION_CONTENT_FIELDS.some(function (key) {
+    return has(location[key]);
+  });
 }
 
 function getBulletinIntakeRows_(spreadsheet, requestedDate, location) {
@@ -1152,6 +1225,68 @@ function findScheduleColumn_(headers, header, location, occurrence) {
 // a bare number for the Chinese hymnal, is Chinese.
 function getBulletinHymnLanguage_(text) {
   return /[A-Za-z]/.test(text) && !/[\u3400-\u9fff]/.test(text) ? 'english' : 'chinese';
+}
+
+// The hymns in one Sabbath School cell, split at each semicolon (; or ；)
+// outside parentheses. No hymnal title has a semicolon, and a note such as
+// "(verses 1; 3)" stays whole. A cell with no semicolon is one hymn, as
+// before; a line break isn't a separator, since one hymn may be typed with
+// its English and Chinese titles on two lines.
+function splitHymnCell_(value) {
+  var text = String(value || '');
+  var parts = [];
+  var depth = 0;
+  var start = 0;
+  for (var index = 0; index < text.length; index += 1) {
+    var character = text.charAt(index);
+    if (character === '(' || character === '（') {
+      depth += 1;
+    } else if ((character === ')' || character === '）') && depth > 0) {
+      depth -= 1;
+    } else if ((character === ';' || character === '；') && depth === 0) {
+      parts.push(text.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts
+    .map(function (part) {
+      return part.trim();
+    })
+    .filter(function (part) {
+      return part !== '';
+    });
+}
+
+// A one-cell hymn typed in both languages, "English (中文)" or "中文 (English)",
+// such as a song no hymnal has, split into its two sides so it prints Chinese
+// over English (user, 2026-11-06). Only when one part is all English and the
+// other all Chinese, with no digit and no TBD: anything else, such as
+// "Holy, Holy, Holy (Nicaea)", "第5首 讚美上主 (Praise)" or "TBD (待定)", is
+// filed whole as before, and a number still finds its twin in the hymnal
+// lookup. Parentheses hold only the other language's title: a note in them,
+// such as "Amazing Grace (合唱)", would be read as the title (the staff rule
+// in docs/operations/bulletin-automation.md).
+function splitBilingualHymnTitle_(text) {
+  var match = /^(.+?)\s*[(（]([^()（）]+)[)）]$/.exec(String(text).trim());
+  if (!match || /\d/.test(text) || /TBD|待定|尚未確定|尚未确定/i.test(text)) {
+    return null;
+  }
+  var outer = match[1].trim();
+  var inner = match[2].trim();
+  var isEnglish = function (part) {
+    return /[A-Za-z]/.test(part) && !/[\u3400-\u9fff]/.test(part);
+  };
+  var isChinese = function (part) {
+    return /[\u3400-\u9fff]/.test(part) && !/[A-Za-z]/.test(part);
+  };
+  if (isEnglish(outer) && isChinese(inner)) {
+    return { english: outer, chinese: inner };
+  }
+  if (isChinese(outer) && isEnglish(inner)) {
+    return { english: inner, chinese: outer };
+  }
+  return null;
 }
 
 function valueForAliases_(headers, row, aliases) {

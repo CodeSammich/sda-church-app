@@ -206,9 +206,11 @@ English and a Chinese column for each hymn of praise and response, and no
 Sabbath School or special music columns. #558 replaced it with this tab.
 
 Opening the spreadsheet adds the rows to fill in: a `Queens` and a `Brooklyn`
-row, with the date, for this coming Sabbath and the one after, the two weeks the
-app shows (see [Automatic quarter and visibility
-maintenance](#automatic-quarter-and-visibility-maintenance)).
+row, with the date, for this coming Sabbath and the two after (see [Automatic
+quarter and visibility
+maintenance](#automatic-quarter-and-visibility-maintenance)). The app shows the
+first two. The third is there because the pastor usually knows a sermon about
+two weeks ahead.
 
 Rows 2 and 3 are worked examples, one for each location, with `Example` in
 `Date`. Nothing reads a row whose `Date` isn't a date, so they never reach a
@@ -249,6 +251,29 @@ Rules:
   language where it can. A tab that still has the older `English …` and
   `Chinese …` columns for either hymn is read too, and a supplied side is never
   overwritten.
+- A song typed in both languages in one of those two cells, `English (中文)` or
+  `中文 (English)`, is split into its two sides (`splitBilingualHymnTitle_`), so
+  it prints Chinese over English and the app shows the reader's language. Only
+  when one part is all English and the other all Chinese, with no digit and no
+  `TBD`, `待定` or `尚未確定`: `Holy, Holy, Holy (Nicaea)` or `第5首 讚美上主
+  (Praise to the Lord)` is filed whole, as before. **Use parentheses only for the
+  other language's title.** A note in them, such as `Amazing Grace (合唱)` or
+  `奇異恩典 (Piano)`, would be read as the title: 合唱 prints where the Chinese
+  title goes, which is easy to spot and fix in the cell. The Sabbath School cells
+  aren't split this way.
+- Left blank, `Hymn of Praise` is `AH 1 Praise to the Lord` and `Hymn of
+  Response` is `AH 348 The Church Has One Foundation` (`DEFAULT_SERVICE_HYMNS` in
+  `BulletinApi.gs`). The default is read as if typed. The printed bulletin shows
+  its Chinese title too (第5首 讚美上主, 第413首 教會基礎), and the app in Chinese
+  shows hymns 5 and 413 of the Chinese hymnal.
+  - **To show TBD instead,** type `TBD`. The API sends it out blank, so the app
+    shows its own TBD in the reader's language, with no YouTube search, and the
+    printed bulletin prints its bilingual TBD.
+  - **A week with no row gets no default.**
+  - **A location with nothing else filled in gets no default,** here or in the
+    `Sabbath Calendar`, counted as the app counts it
+    (`BULLETIN_LOCATION_CONTENT_FIELDS`). So an empty Brooklyn still shows the
+    app's joint-service note.
 - `Bible Verses` stores the reference used by Church at Study and the digital
   bulletin's Today's Verse. It may be a same-chapter range or supported
   semicolon-separated references, such as `John 3:16-18; Psalm 23`. The printed
@@ -259,9 +284,12 @@ Rules:
 - `Sabbath School Hymn 1` to `3` each hold one opening hymn, typed in either
   language as a number, a title, or both, such as `第12首 讚美上帝大君王`,
   `AH 73 Holy, Holy, Holy`, or `還要等多久`. Chinese text or a bare number is
-  read as a Chinese hymnal number. Leave unused cells blank. There's no
-  closing-hymn column: the closing repeats every opening hymn, so both
-  bulletins show them once, as the opening and closing hymns.
+  read as a Chinese hymnal number. Leave unused cells blank. Several hymns typed
+  in one cell, separated by semicolons (`;` or `；`), are read as one each, in
+  order (`splitHymnCell_`); a semicolon inside parentheses or a line break
+  doesn't split. One hymn per cell is still best. There's no closing-hymn
+  column: the closing repeats every opening hymn, so both bulletins show them
+  once, as the opening and closing hymns.
 - The [`Hymn Bank` tab](#the-hymn-bank-tab) has every hymn written this way,
   ready to copy into any of the hymn cells.
 - `Special Music Title` is the piece performed. Who performs it stays in the
@@ -400,7 +428,7 @@ On open, the script:
 4. appends missing Saturdays so the next three quarters always have rows, plus
    the fourth quarter ahead when the current quarter is in its final 21 days;
 5. puts back a deleted `Weekly Data` tab or its missing columns, adds its rows
-   for the next two Sabbaths, and sets its `Date` and `Location` rules;
+   for the next three Sabbaths, and sets its `Date` and `Location` rules;
 6. hides old schedule rows without deleting them;
 7. repaints the conflict highlights described below across every schedule row;
 8. tags the tabs and columns it finds by name, so a later rename doesn't lose
@@ -513,7 +541,7 @@ opening the sheet repeatedly does not create duplicates. If rows already exist
 for a future quarter, the script does not delete or rewrite them.
 
 The same run gives `Weekly Data` a `Queens` and a `Brooklyn` row, with the date
-filled in, for this coming Sabbath (today, on a Saturday) and the one after
+filled in, for this coming Sabbath (today, on a Saturday) and the two after
 (`weeklyDataSabbaths` in `BULLETIN_SCHEDULE_MAINTENANCE_CONFIG`). It adds a row
 only where that date and location has none, however the date is written, so a
 row staff added themselves is never repeated. New rows go at the bottom, and
@@ -620,8 +648,10 @@ until 1.6.1, which saved a print-only verse in a `PRINTED_BIBLE_VERSE_*` Script
 Property; the next **Create Word Doc…** deletes any left.
 
 Blank content remains blank in the API and renders as `TBD` in the app or as the
-bilingual printed placeholder. The exception is a blank `Bible Verses`: the
-printed bulletin isn't made until it's filled in.
+bilingual printed placeholder. There are two exceptions:
+- a blank `Bible Verses`: the printed bulletin isn't made until it's filled in;
+- a blank `Hymn of Praise` or `Hymn of Response`: it gets its default hymn when
+  the location has anything else (see [`Weekly Data`](#3-weekly-data)).
 
 A missing schedule is different: the `Sabbath Calendar` tab, its `Date` column,
 or the Sabbath's row is gone, so there's no schedule record at all (#580).
@@ -752,8 +782,10 @@ preview surface, not the canonical release channel.
 - Brooklyn uses the label `Sabbath Encouragement`, not `Sabbath Message`.
 - The bulletin doesn't link to the master spreadsheet, which only church
   accounts can open (#553).
-- Every blank content field displays `TBD`; a populated field suppresses the
-  cautious joint-service fallback note for Brooklyn.
+- Every blank content field displays `TBD`, except the Hymn of Praise and Hymn
+  of Response, which the API fills with their defaults when the location has
+  anything else. A populated field suppresses the cautious joint-service
+  fallback note for Brooklyn, and the defaults alone never do.
 
 ### Caching and refresh
 
@@ -1025,9 +1057,11 @@ English on the next, like every other row, such as `第413首 教會根基` over
 `AH 348 The Church Has One Foundation` for a typed `第413首 教會根基`
 (`formatSabbathSchoolHymnsForPrint_`). On one line, a long title wrapped
 mid-word. Each cell has one hymn in either language. Where the map has the
-other language by number, both print; otherwise the hymn prints once, as
-typed. A bare number is `第N首`. Two or more hymns are numbered `1.`, `2.`,
-`3.`, so a hymn's two lines read as one hymn, and a hymn in one language, such
+other language by number, both print. Otherwise the hymn prints once: as typed,
+except that a title alone gets its number from its own hymnal, such as
+`AH 2 All Creatures of Our God and King` for `All Creatures of Our God and
+King`, and a bare number prints as `第N首`. Two or more hymns are numbered `1.`,
+`2.`, `3.`, so a hymn's two lines read as one hymn, and a hymn in one language, such
 as `第12首 讚美上帝大君王` (the cross-reference table has no English match) or a song
 outside both hymnals, isn't taken for the translation of the hymn above or
 below it. The list is left-aligned, one paragraph a line, with a hanging
@@ -1207,7 +1241,7 @@ changes the URL and requires a coordinated mobile-app update.
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
 | A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |
-| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one |
+| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one. Until then, the bulletin shows that hymn's default |
 | A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
 | A roster cell is pale red | The same name is in another roster cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
 | No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Word Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
@@ -1257,8 +1291,9 @@ For header changes:
     one in the entry's `headers`, and in `BULLETIN_COLUMN_ALTERNATIVES` for the
     open-time alert and repair. The sheet can then be renamed any time after
     the deploy. Without the old name, that field is blank from the deploy until
-    the sheet is renamed, and the first open after the deploy adds the new name
-    as an empty column at the far right.
+    the sheet is renamed (the two service hymns get their defaults), and the
+    first open after the deploy adds the new name as an empty column at the far
+    right.
   - **`Sabbath Calendar`:** an entry has one `header` and no alternatives, so
     rename the column straight after approving the deploy. Until then, that
     one field is blank.
