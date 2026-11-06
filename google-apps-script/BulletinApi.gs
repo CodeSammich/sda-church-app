@@ -104,8 +104,10 @@ var DEFAULT_SERVICE_HYMNS = Object.freeze({
 });
 
 // The fields the app's isBulletinLocationEmpty (services/BulletinService.ts)
-// counts as content. test/apps-script-bulletin-merge.test.ts keeps the two
-// lists the same.
+// counts as content. They're the bulletin's field names, not sheet columns:
+// columns are found by their header in row 1, wherever they are (the schemas
+// below), so moving one changes nothing here.
+// test/apps-script-bulletin-merge.test.ts keeps this list the same as the app's.
 var BULLETIN_LOCATION_CONTENT_FIELDS = Object.freeze([
   'hymnOfPraise', 'sermonTitle', 'hymnOfResponse', 'bibleVerses', 'sabbathSchoolHymns',
   'specialMusicTitle', 'sermon', 'chairPastoralPrayer', 'offeringPrayer', 'translation',
@@ -1259,12 +1261,15 @@ function splitHymnCell_(value) {
 // A one-cell hymn typed in both languages, "English (中文)" or "中文 (English)",
 // such as a song no hymnal has, split into its two sides so it prints Chinese
 // over English (user, 2026-11-06). Only when one part is all English and the
-// other all Chinese, and there's no hymn number: anything else, such as
-// "Holy, Holy, Holy (Nicaea)" or "第5首 讚美上主 (Praise)", is filed whole as
-// before, and a number still finds its twin in the hymnal lookup.
+// other all Chinese, with no digit and no TBD: anything else, such as
+// "Holy, Holy, Holy (Nicaea)", "第5首 讚美上主 (Praise)" or "TBD (待定)", is
+// filed whole as before, and a number still finds its twin in the hymnal
+// lookup. Parentheses hold only the other language's title: a note in them,
+// such as "Amazing Grace (合唱)", would be read as the title (the staff rule
+// in docs/operations/bulletin-automation.md).
 function splitBilingualHymnTitle_(text) {
   var match = /^(.+?)\s*[(（]([^()（）]+)[)）]$/.exec(String(text).trim());
-  if (!match || /\d/.test(text)) {
+  if (!match || /\d/.test(text) || /TBD|待定|尚未確定|尚未确定/i.test(text)) {
     return null;
   }
   var outer = match[1].trim();

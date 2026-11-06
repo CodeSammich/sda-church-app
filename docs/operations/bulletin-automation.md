@@ -252,10 +252,14 @@ Rules:
 - A song typed in both languages in one of those two cells, `English (中文)` or
   `中文 (English)`, is split into its two sides (`splitBilingualHymnTitle_`), so
   it prints Chinese over English and the app shows the reader's language. Only
-  when one part is all English and the other all Chinese, with no hymn number:
-  `Holy, Holy, Holy (Nicaea)` or `第5首 讚美上主 (Praise to the Lord)` is filed
-  whole, as before. The Sabbath School cells aren't split this way, since each
-  prints on one line.
+  when one part is all English and the other all Chinese, with no digit and no
+  `TBD`, `待定` or `尚未確定`: `Holy, Holy, Holy (Nicaea)` or `第5首 讚美上主
+  (Praise to the Lord)` is filed whole, as before. **Use parentheses only for the
+  other language's title.** A note in them, such as `Amazing Grace (合唱)` or
+  `奇異恩典 (Piano)`, would be read as the title: 合唱 prints where the Chinese
+  title goes, which is easy to spot and fix in the cell. The Sabbath School cells
+  aren't split this way: a hymn typed in both languages there prints as typed, on
+  one line.
 - Left blank, `Hymn of Praise` is `AH 1 Praise to the Lord` and `Hymn of
   Response` is `AH 348 The Church Has One Foundation` (`DEFAULT_SERVICE_HYMNS` in
   `BulletinApi.gs`). The default is read as if typed. The printed bulletin shows

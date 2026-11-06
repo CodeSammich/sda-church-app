@@ -412,6 +412,13 @@ describe('Apps Script bulletin response merging', () => {
       hymnOfPraise: { english: '', chinese: 'Jesus 愛我 (Jesus Loves Me)' },
       hymnOfResponse: { english: 'AH 73 Holy, Holy, Holy', chinese: '' },
     });
+    // TBD in either language is never split, so it still prints as TBD.
+    row[8] = 'TBD (待定)';
+    row[10] = '尚未確定（tbd）';
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: '', chinese: 'TBD (待定)' },
+      hymnOfResponse: { english: '', chinese: '尚未確定（tbd）' },
+    });
   });
 
   it('reads several Sabbath School hymns typed in one cell, separated by semicolons, as one each', () => {
