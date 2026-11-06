@@ -152,7 +152,15 @@ describe('App Store shots', () => {
       '05-library-zh.png',
       '06-bible-cuvs-zh-cn.png',
       '07-bible-cuv-zh-dark.png',
+      '08-you-zh.png',
     ]);
+    // Every listing ends with the You tab (#681), and Simplified Chinese has its
+    // own set, with one Traditional shot as Traditional's has one Simplified.
+    for (const language of ['en-US', 'zh-Hant', 'zh-Hans']) {
+      expect(config.appStore[language].at(-1)).toMatch(/^you-/);
+    }
+    expect(config.appStore['zh-Hans'][0]).toBe('home-zh-cn');
+    expect(config.appStore['zh-Hans']).toContain('bible-cuv-cantonese-zh');
   });
 
   it('only names shots that are captured, up to the App Store’s ten', () => {
@@ -888,14 +896,17 @@ describe('iPad key screens (#324)', () => {
     expect(shotCost(ipad[0])).toBe(shotCost({ ...ipad[0], platform: 'ios' }) + 5);
   });
 
-  it('lists App Store iPad shots for the uploaded listing, at most 10, all captured on the iPad', () => {
-    expect(Object.keys(config.appStoreIpad)).toEqual(['en-US']);
-    const list = config.appStoreIpad['en-US'];
-    expect(list.length).toBeGreaterThan(0);
-    expect(list.length).toBeLessThanOrEqual(10);
-    for (const name of list) expect(ipadNames).toContain(name);
+  it('lists App Store iPad shots for each uploaded listing, at most 10, all captured on the iPad', () => {
+    // English, and Traditional and Simplified Chinese, each in its own interface (#681).
+    expect(Object.keys(config.appStoreIpad)).toEqual(['en-US', 'zh-Hant', 'zh-Hans']);
+    for (const list of Object.values(config.appStoreIpad) as string[][]) {
+      expect(list.length).toBeGreaterThan(0);
+      expect(list.length).toBeLessThanOrEqual(10);
+      for (const name of list) expect(ipadNames).toContain(name);
+      expect(list.at(-1)).toMatch(/^you-/);
+    }
     for (const copy of planStoreCopies(config, 'ipad')) {
-      expect(copy.file).toMatch(/^app-store-ipad\/en-US\/\d\d-.+\.png$/);
+      expect(copy.file).toMatch(/^app-store-ipad\/(en-US|zh-Hant|zh-Hans)\/\d\d-.+\.png$/);
       expect(copy.source).toBe(`ipad/${copy.name}.png`);
     }
   });
@@ -1411,14 +1422,15 @@ describe('Android key screens (#372)', () => {
     expect(phone.width / ((phone.density * display) / 160)).toBeGreaterThanOrEqual(320);
   });
 
-  it('lists Google Play shots in both store languages, at most 8 each, all captured on Android', () => {
+  it('lists Google Play shots in each store language, at most 8 each, all captured on Android', () => {
     const copies = planStoreCopies(config, 'android');
-    expect(Object.keys(config.googlePlay)).toEqual(['en-US', 'zh-TW']);
+    // zh-HK's listing shows zh-TW's set (#681).
+    expect(Object.keys(config.googlePlay)).toEqual(['en-US', 'zh-TW', 'zh-CN']);
     for (const list of Object.values(config.googlePlay) as string[][]) expect(list.length).toBeLessThanOrEqual(8);
     for (const copy of copies) {
       expect(names(android)).toContain(copy.name);
       expect(copy.source).toBe(`android/${copy.name}.png`);
-      expect(copy.file).toMatch(/^google-play\/(en-US|zh-TW)\/\d{2}-/);
+      expect(copy.file).toMatch(/^google-play\/(en-US|zh-TW|zh-CN)\/\d{2}-/);
     }
     expect(copies[0].file).toBe('google-play/en-US/01-home-default.png');
   });
