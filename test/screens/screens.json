@@ -155,7 +155,7 @@
         "audioReaders": { "cuv": "粵語 (WordProject)" }
       },
       "variants": ["zh"],
-      "ipadVariants": ["landscape-zh"],
+      "ipadVariants": ["landscape-zh", "zh"],
       "mustShowLines": ["粵語", "^\u8a69\u7bc7"]
     },
     {
@@ -175,7 +175,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cu1",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh-cn", "zh-cn-dark"],
-      "ipadVariants": ["landscape-zh-cn"],
+      "ipadVariants": ["landscape-zh-cn", "zh-cn"],
       "mustShowLines": ["国语", "^\u8bd7\u7bc7"]
     },
     {
@@ -356,7 +356,7 @@
       "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\". In Chinese the Library is 精選書庫 (hand-picked library), and the In-depth Bible Study card for the SDA Bible app shows below Spotify; it's Chinese only, since the app's commentary and nearly all its books are Chinese (#554).",
       "path": "explore",
       "variants": ["default", "dark", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
-      "ipadVariants": ["default", "landscape"],
+      "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
       "variantRules": {
         "default": { "mustNotShowLines": ["^In-depth Bible"] },
         "zh": { "mustShowLines": ["^精選書庫", "^深入研經"], "mustNotShowLines": ["圖書館"] },
@@ -748,9 +748,9 @@
     "zh-Hans": ["home-zh-cn", "bible-cuvs-zh-cn", "bible-cuv-cantonese-zh", "explore-zh-cn", "library-zh-cn", "bible-cuvs-zh-cn-dark", "you-zh-cn"]
   },
   "appStoreIpad": {
-    "en-US": ["home-default", "bible-dual-default", "bible-dual-landscape", "library-default", "home-landscape", "you-default"],
-    "zh-Hant": ["home-zh", "bible-cuv-cantonese-landscape-zh", "bible-pinyin-landscape-zh", "library-zh", "you-zh"],
-    "zh-Hans": ["home-zh-cn", "bible-cuvs-landscape-zh-cn", "library-zh-cn", "you-zh-cn"]
+    "en-US": ["home-default", "bible-dual-default", "explore-default", "library-default", "you-default"],
+    "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "explore-zh", "library-zh", "you-zh"],
+    "zh-Hans": ["home-zh-cn", "bible-cuvs-zh-cn", "explore-zh-cn", "library-zh-cn", "you-zh-cn"]
   },
   "googlePlay": {
     "en-US": ["home-default", "bible-dual-default", "bible-audio-settings-default", "bible-dual-dark", "explore-default", "library-default", "you-default"],
