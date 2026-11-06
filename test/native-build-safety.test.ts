@@ -552,6 +552,17 @@ describe('Android audio e2e', () => {
     expect(workflow).toContain("E2E_PRIMARY_BLOCKED: '1'");
     expect(workflow).toContain('scripts/e2e/android-bible-audio.sh');
   });
+
+  it('bounds the DNS tool install, so a hung Ubuntu mirror fails in minutes, not at the job limit', () => {
+    // On 2026-11-05 apt-get hung for 88 minutes, until the 90-minute job limit.
+    const start = workflow.indexOf("- name: Make the church's audio host unreachable");
+    const step = workflow.slice(start, workflow.indexOf('- name:', start + 1));
+    expect(step).toContain('timeout-minutes: 10');
+    expect(step).toContain('sudo timeout --kill-after=10 240 apt-get update -qq &&');
+    expect(step).toContain('sudo timeout --kill-after=10 240 apt-get install -y --no-install-recommends dnsmasq-base');
+    // One more try, and only one: two tries of 4 minutes fit in the step's 10.
+    expect(step).toMatch(/if ! install_dnsmasq; then\n[^]*?sleep 15\n\s+install_dnsmasq\n\s+fi/);
+  });
 });
 
 describe('iOS key screens', () => {
