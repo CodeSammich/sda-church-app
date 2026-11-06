@@ -14,14 +14,17 @@
  * - a device whose shots still pass PART_TARGET_BYTES is split into parts, in
  *   name order, each with the run's ocr.json, checks.json, and
  *   settle-times.json;
- * - the store copies are a download of their own, untouched, since they're
- *   uploaded as they are.
+ * - each store folder's copies are a download of their own, untouched, since
+ *   they're uploaded as they are: the App Store's iPhone copies (app-store),
+ *   its iPad copies (app-store-ipad), and Google Play's (google-play). With
+ *   1.7.1's English, Traditional and Simplified Chinese sets, the iPhone's and
+ *   iPad's together came to 52.6 MB (#681).
  *
  *   node scripts/pack-review-downloads.cjs --from <joined screens folder> --out <folder> \
  *     --devices ios,ipad --store app-store,app-store-ipad
  *
  * Writes <out>/<device>-<n>/screens/<platform>/*.png (iphone-1, ipad-1,
- * android-1, …) and <out>/store/screens/<store folder>/, which the workflows
+ * android-1, …) and <out>/<store folder>/screens/<store folder>/, which the workflows
  * upload, at most MAX_PARTS parts a device. Fails if a device needs more parts
  * than that, or a download passes 50 MB; see "Downloads under 50 MB"
  * in docs/operations/native-builds.md.
@@ -135,10 +138,9 @@ const pack = async ({ from, out, devices, store = [], budget = PART_TARGET_BYTES
     });
   }
 
-  const stores = store.filter((name) => existsSync(join(from, name)));
-  if (stores.length) {
-    for (const name of stores) cpSync(join(from, name), join(out, 'store', 'screens', name), { recursive: true });
-    downloads.push({ name: 'store', folders: stores, bytes: folderBytes(join(out, 'store')) });
+  for (const name of store.filter((each) => existsSync(join(from, each)))) {
+    cpSync(join(from, name), join(out, name, 'screens', name), { recursive: true });
+    downloads.push({ name, folders: [name], bytes: folderBytes(join(out, name)) });
   }
 
   for (const download of downloads) {

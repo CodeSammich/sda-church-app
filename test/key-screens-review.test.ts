@@ -41,7 +41,7 @@ type Api = {
   /** How each run's join job ended. */
   joins: Record<string, string>;
   /**
-   * Each name's newest matching download, by "<run> <iphone|ipad|app-store|app|android|google-play>",
+   * Each name's newest matching download, by "<run> <iphone|ipad|app-store|app-store-ipad|app|android|google-play>",
    * as "<id> <bytes>" lines, one per part, in name order.
    */
   artifacts: Record<string, string>;
@@ -74,7 +74,7 @@ else if (/\\/issues\\/\\d+\\/comments/.test(url)) print(data.reviews.join('\\n')
 else if ((match = /workflows\\/([^/]+)\\/runs/.exec(url))) print(data.runs[match[1]]);
 else if ((match = /runs\\/(\\d+)\\/jobs/.exec(url))) print(jq.includes('completed_at != null') ? '' : data.joins[match[1]]);
 else if ((match = /runs\\/(\\d+)\\/artifacts/.exec(url))) {
-  const kind = ['iphone', 'ipad', 'app-store', 'android', 'google-play'].find((name) => jq.includes('-' + name)) || 'app';
+  const kind = ['iphone', 'app-store-ipad', 'ipad', 'app-store', 'android', 'google-play'].find((name) => jq.includes('-' + name)) || 'app';
   print(data.artifacts[match[1] + ' ' + kind]);
 }
 `,
@@ -118,6 +118,7 @@ const api: Api = {
     '200 iphone': '901 25165824\n903 26214400',
     '200 ipad': '904 35651584',
     '200 app-store': '906 25165824',
+    '200 app-store-ipad': '910 27262976',
     '200 app': '902 40894464',
     '100 android': '905 29360128',
     '100 google-play': '907 7340032',
@@ -138,7 +139,9 @@ describe('refreshing the review comment from the Android run', () => {
     expect(patched).toContain(androidLink);
     expect(patched).toContain(`**Download** ${iphoneLinks}, [the iPad screenshots](https://github.com/org/repo/actions/runs/200/artifacts/904) (a zip of about 34 MB), and ${androidLink}`);
     expect(patched).toContain(
-      'The App Store copies are in [their own download](https://github.com/org/repo/actions/runs/200/artifacts/906) (a zip of about 24 MB): `screens/app-store/` and, for the iPad, `screens/app-store-ipad/`. ' +
+      // The iPhone's and the iPad's apart, each under 50 MB (#681).
+      'The App Store copies are in [the iPhone download](https://github.com/org/repo/actions/runs/200/artifacts/906) (a zip of about 24 MB), `screens/app-store/`, ' +
+        'and [the iPad download](https://github.com/org/repo/actions/runs/200/artifacts/910) (a zip of about 26 MB), `screens/app-store-ipad/`. ' +
         'The Google Play copies are in [theirs](https://github.com/org/repo/actions/runs/100/artifacts/907) (a zip of about 7 MB, from attempt 2 of its run): `screens/google-play/`.',
     );
     // The approval is still on the iPhone run.
@@ -187,7 +190,7 @@ describe('posting the review comment from the iPhone run', () => {
     const { posted } = postOrRefresh(iosRun, { ...api, joins: { 200: 'success', 100: 'not finished' } });
     expect(posted).toContain("the Android screenshots, which aren't ready: [their runs]");
     expect(posted).toContain('(iOS: success, Android: not finished)');
-    expect(posted).toContain('for the iPad, `screens/app-store-ipad/`. Each download stays under');
+    expect(posted).toContain('`screens/app-store-ipad/`. Each download stays under');
     expect(posted).not.toContain('Google Play copies are in');
   });
 
@@ -259,6 +262,7 @@ describe('the shared review comment workflow', () => {
       ['iphone', 'ios', 'iphone-[0-9]+'],
       ['ipad', 'ios', 'ipad-[0-9]+'],
       ['app_store', 'ios', 'app-store'],
+      ['app_store_ipad', 'ios', 'app-store-ipad'],
       ['android', 'android', 'android-[0-9]+'],
       ['google_play', 'android', 'google-play'],
     ]) {
@@ -269,6 +273,7 @@ describe('the shared review comment workflow', () => {
     expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-iphone-1\n");
     expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-ipad-1\n");
     expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-app-store\n");
+    expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-app-store-ipad\n");
     expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-1\n");
     expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play\n");
   });

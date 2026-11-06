@@ -168,10 +168,9 @@ export default function TabLayout() {
     inputRange: [0, 1],
     outputRange: [tabBarHeight + 16, 0],
   });
-  // The Bible's fixed reader dock owns the upper boundary on this tab. Keep
-  // this broad enough for native/router variants that expose `/bible/index`.
+  // The Bible's card draws the halo around itself and the capsule (#681).
+  // Keep this broad enough for native/router variants that expose `/bible/index`.
   const isBibleRoute = pathname === '/bible' || pathname.startsWith('/bible/');
-
   return (
     <BottomTabHeightContext.Provider value={tabBarHeight}>
       <TabBarClearanceContext.Provider value={tabBarHeight}>
@@ -200,8 +199,7 @@ export default function TabLayout() {
             <CapsuleTabBar
               {...props}
               bottomInset={bottomTabInset}
-              // The Bible's dock fades the page behind itself and the capsule.
-              fade={!isBibleRoute}
+              halo={!isBibleRoute}
               theme={theme}
               windowWidth={windowWidth}
             />

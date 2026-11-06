@@ -18,8 +18,10 @@ import {
   type NativeSyntheticEvent,
   ScrollView,
   type ScrollViewProps,
+  type StyleProp,
   StyleSheet,
   View,
+  type ViewStyle,
 } from 'react-native';
 
 /**
@@ -152,16 +154,17 @@ export function PopupScrollHints({ hints }: Readonly<{ hints: ReturnType<typeof 
 // Around a popup's ScrollView or FlatList and its hints: it shrinks to the
 // popup's height limit as the list alone did, and minHeight 0 lets it shrink
 // below its content on the web too.
-const frameStyle = { flexShrink: 1, minHeight: 0 } as const;
+const popupFrameStyle = { flexShrink: 1, minHeight: 0 } as const;
 
 /**
  * A popup's ScrollView, with the hints. Its style applies to the ScrollView, in
- * a frame that holds the hints.
+ * a frame that holds the hints. frameStyle adds to the frame's, such as
+ * first-launch setup's, which fills the screen above its buttons (#681).
  */
 type ScrollViewRef = ComponentRef<typeof ScrollView>;
 
-export const PopupScrollView = forwardRef<ScrollViewRef, ScrollViewProps>(function PopupScrollView(
-  { onLayout, onContentSizeChange, onScroll, scrollEventThrottle, ...props },
+export const PopupScrollView = forwardRef<ScrollViewRef, ScrollViewProps & { frameStyle?: StyleProp<ViewStyle> }>(function PopupScrollView(
+  { frameStyle, onLayout, onContentSizeChange, onScroll, scrollEventThrottle, ...props },
   ref,
 ) {
   const scrollRef = useRef<ScrollViewRef>(null);
@@ -173,7 +176,7 @@ export const PopupScrollView = forwardRef<ScrollViewRef, ScrollViewProps>(functi
   );
 
   return (
-    <View style={frameStyle}>
+    <View style={[popupFrameStyle, frameStyle]}>
       <ScrollView ref={scrollRef} {...props} {...scrollProps} />
       <PopupScrollHints hints={hints} />
     </View>
@@ -196,7 +199,7 @@ export function PopupFlatList<ItemT>({
   );
 
   return (
-    <View style={frameStyle}>
+    <View style={popupFrameStyle}>
       <FlatList ref={listRef} {...props} {...scrollProps} />
       <PopupScrollHints hints={hints} />
     </View>

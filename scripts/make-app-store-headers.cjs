@@ -1,7 +1,8 @@
 /**
  * Builds the App Store product page headers, one per listing language: a tagline and
  * a line of features over three iPhone store screenshots (Bible, Home, Explore) from
- * docs/store-assets/app-store/en-US/, on the church building photo tinted brand blue.
+ * the listing's own set in docs/store-assets/app-store/ (#681), English's for both
+ * Spanish listings, on the church building photo tinted brand blue.
  * The photo is the one Home and Explore show (CHURCH_BUILDING_IMAGE_URL in
  * constants/ExternalLinks.ts), downloaded each run.
  *
@@ -29,7 +30,7 @@ if (!fontsDir) {
 }
 const CHURCH_PHOTO_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/13221703/church_building.jpg';
-const shots = path.join(root, 'docs/store-assets/app-store/en-US');
+const shotsRoot = path.join(root, 'docs/store-assets/app-store');
 const outDir = outArg ? path.resolve(outArg) : path.join(root, 'docs/store-assets/app-store/header');
 const jakarta = path.join(root, 'assets/fonts/PlusJakartaSans-Bold.ttf');
 
@@ -38,8 +39,9 @@ const H = 1646;
 
 // The first line is the tagline; the second, smaller and light blue, names features.
 // Latin text uses the app's Plus Jakarta Sans.
-const BIBLE_EN = '02-bible-dual-default.png';
-const BIBLE_ZH = '03-bible-cuv-zh.png';
+// Each listing's set and its three shots, by name (the files are numbered in
+// upload order): left to right, the Bible, Home in the centre, then Explore.
+const ENGLISH = { set: 'en-US', phones: ['bible-dual-default', 'home-default', 'explore-default'] };
 const LISTINGS = [
   {
     id: 'en-US',
@@ -47,7 +49,7 @@ const LISTINGS = [
     font: 'Plus Jakarta Sans Bold',
     fontfile: jakarta,
     size: 124,
-    bible: BIBLE_EN,
+    ...ENGLISH,
   },
   {
     id: 'zh-Hant',
@@ -55,7 +57,8 @@ const LISTINGS = [
     font: 'Noto Sans TC Bold',
     fontfile: path.join(fontsDir, 'NotoSansTC-Bold.otf'),
     size: 140,
-    bible: BIBLE_ZH,
+    set: 'zh-Hant',
+    phones: ['bible-cuv-cantonese-zh', 'home-zh', 'explore-zh'],
   },
   {
     id: 'zh-Hans',
@@ -63,7 +66,8 @@ const LISTINGS = [
     font: 'Noto Sans SC Bold',
     fontfile: path.join(fontsDir, 'NotoSansSC-Bold.otf'),
     size: 140,
-    bible: BIBLE_ZH,
+    set: 'zh-Hans',
+    phones: ['bible-cuvs-zh-cn', 'home-zh-cn', 'explore-zh-cn'],
   },
   {
     // Both Spanish listings, Mexico and Spain.
@@ -72,11 +76,19 @@ const LISTINGS = [
     font: 'Plus Jakarta Sans Bold',
     fontfile: jakarta,
     size: 124,
-    bible: BIBLE_EN,
+    ...ENGLISH,
   },
 ];
-// Left to right: the Bible, Home in the centre, then Explore.
-const phonesFor = (listing) => [listing.bible, '01-home-default.png', '05-explore-default.png'];
+// A listing's three screenshot files, found by name in its set.
+const phonesFor = (listing) => {
+  const dir = path.join(shotsRoot, listing.set);
+  const files = fs.readdirSync(dir);
+  return listing.phones.map((name) => {
+    const file = files.find((each) => each.replace(/^\d\d-/, '') === `${name}.png`);
+    if (!file) throw new Error(`No ${name} in ${dir}.`);
+    return path.join(dir, file);
+  });
+};
 
 // Three phones: the centre one larger and higher, all running off the bottom edge.
 const SHOT_RATIO = 2622 / 1206;
@@ -103,7 +115,7 @@ const tightenCommas = (markup, size) =>
 
 async function phoneSvg(file, phone, index) {
   const screenH = Math.round(phone.screenW * SHOT_RATIO);
-  const image = await sharp(path.join(shots, file)).resize(phone.screenW, screenH).png().toBuffer();
+  const image = await sharp(file).resize(phone.screenW, screenH).png().toBuffer();
   const frameW = phone.screenW + 2 * BEZEL;
   const frameH = screenH + 2 * BEZEL;
   const radius = Math.round(phone.screenW * 0.125);

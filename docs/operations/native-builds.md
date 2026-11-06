@@ -635,8 +635,9 @@ failed batch's log says which group it took:
   more than one, which the review comment links as the iPhone screenshots: the key
   screens in `screens/ios/<screen>-<variant>.png` (described below), with the text checks.
 - `ios-key-screens-<number>-<run>-ipad-1` and so on: the iPad's, in `screens/ipad/`.
-- `ios-key-screens-<number>-<run>-app-store`: the App Store copies, in
-  `screens/app-store/` and `screens/app-store-ipad/`.
+- `ios-key-screens-<number>-<run>-app-store`: the App Store's iPhone copies, in
+  `screens/app-store/`, and `…-app-store-ipad`: its iPad copies, in
+  `screens/app-store-ipad/`.
 - The download ending in `-arm64`: the app, `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`,
   and a screenshot of its first screen, `…-arm64-first-screen.png`, named like the
   Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`. Chrome may block
@@ -814,7 +815,10 @@ palette PNGs: the same names and sizes, at about a quarter of the bytes. The app
 colours stay exact, and the photos are dithered, which looks the same at a glance. If a
 device's shots still pass 45 MB, it splits them, in name order, into parts of about equal
 size, each with the run's `ocr.json`, `checks.json`, and `settle-times.json`; a device's
-parts unzip into the same folders. The store copies are their own download, untouched.
+parts unzip into the same folders. Each store's copies are a download of their own,
+untouched: the App Store's iPhone copies, its iPad copies, and Google Play's. 1.7.1's
+English, Traditional and Simplified Chinese sets took the App Store's iPhone and iPad
+copies together to 52.6 MB, so they're apart (#681).
 The review comment links every part. On 1.7.0's run the downloads were:
 
 | Download | Shots | Zip |
@@ -870,7 +874,7 @@ iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
 1. It saves the settings the app reads at startup into the app's storage: setup
    finished, the language, theme, and text size for that shot, and the screen to
    open. Nothing on a build runner can tap the Simulator's screen, which rules out
-   both the first-launch setup dialog and the "Open in …?" prompt iOS shows before
+   both first-launch setup and the "Open in …?" prompt iOS shows before
    following a deep link. So the app reads the screen from its storage once at launch
    (`services/ScreenshotRoute.ts`) and forgets it. Only this Simulator build does
    that: its build step sets `EXPO_PUBLIC_KEY_SCREENS=1`, which Expo writes into the
@@ -967,7 +971,7 @@ every screen must show:
   down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header opened from Home uses
   them: its translation button must show both full names at 100%, and on the iPhone at
   150% and 200% too, while the Android phone's narrower screen may drop them there;
-- no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
+- no system prompt ("Open in"), setup screen ("Get Started"), or unfilled value
   ("undefined", "NaN").
 
 Each label counts only where it belongs, so "Read Verse" on Home isn't the verse button.
@@ -1133,7 +1137,11 @@ only with a read-only token and reads no secret.
   `screens/android/<screen>-w<width>.png`, and `check-screens.cjs --split <width>` checks
   the tab labels and verse button where the window puts them, no word cut short, the
   content column where the window is wider than it, and the Text size popup's width.
-  The screens' `mustShowLines` are written for the phone, so they're left out.
+  On the Bible's shots it also checks that no control crosses the Bible card's left or
+  right edge, from the card's colors just inside them (#681). The screens'
+  `mustShowLines` are written for the phone, so they're left out. A screen's
+  `variantRules` for a window, such as `w320`, add rules of its own, such as the book's
+  name in the Bible card's pill.
 - **Android key screens join** joins the batches into
   `android-key-screens-<pr>-<run>-android-1` (and `-android-2` and so on if the shots need
   more than one) and the Google Play copies, `android-key-screens-<pr>-<run>-google-play`,

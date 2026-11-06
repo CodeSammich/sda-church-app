@@ -152,7 +152,15 @@ describe('App Store shots', () => {
       '05-library-zh.png',
       '06-bible-cuvs-zh-cn.png',
       '07-bible-cuv-zh-dark.png',
+      '08-you-zh.png',
     ]);
+    // Every listing ends with the You tab (#681), and Simplified Chinese has its
+    // own set, with one Traditional shot as Traditional's has one Simplified.
+    for (const language of ['en-US', 'zh-Hant', 'zh-Hans']) {
+      expect(config.appStore[language].at(-1)).toMatch(/^you-/);
+    }
+    expect(config.appStore['zh-Hans'][0]).toBe('home-zh-cn');
+    expect(config.appStore['zh-Hans']).toContain('bible-cuv-cantonese-zh');
   });
 
   it('only names shots that are captured, up to the App Store’s ten', () => {
@@ -381,7 +389,8 @@ describe('iOS key screens', () => {
           `          path: \${{ runner.temp }}/review/${part}/\n`,
       );
     }
-    expect(merge).toContain('-app-store\n          path: ${{ runner.temp }}/review/store/\n');
+    expect(merge).toContain('-app-store\n          path: ${{ runner.temp }}/review/app-store/\n');
+    expect(merge).toContain('-app-store-ipad\n          path: ${{ runner.temp }}/review/app-store-ipad/\n');
     expect(merge).not.toContain('path: ${{ runner.temp }}/ios-key-screens/');
     expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
     expect(merge).toContain('--out "$SCREENS_OUT/screens"');
@@ -690,8 +699,10 @@ describe('iPad layout checks (#324)', () => {
     expect(await checkPopupWidth(textSize, wide)).toEqual(['the popup is about 1238 points wide, more than 560']);
     // A page with no popup is one colour edge to edge.
     expect(await checkPopupWidth(shot('home-landscape'), wide)).toEqual([]);
-    // Setup's popup has no popup= in its path, so the list marks it.
-    expect(await checkPopupWidth(shot('setup-landscape'), wide)).toHaveLength(1);
+    // The contrast question after an update has no popup= in its path, so the
+    // list marks it. First-launch setup fills the screen (#681): no popup.
+    expect(await checkPopupWidth(shot('whats-new-landscape'), wide)).toHaveLength(1);
+    expect(await checkPopupWidth(shot('setup-landscape'), wide)).toEqual([]);
     expect(await checkPopupWidth(shot('offline-bible-audio-narrator-landscape'), wide)).toHaveLength(1);
   });
 });
@@ -735,6 +746,57 @@ describe("Android shots at an iPad's split windows (#324)", () => {
     expect(checkIpadLayout(narrow, [{ text: 'Read Verse', box: [0.02, 0.5, 0.96, 0.02] }])).toEqual([]);
     // Its mustShowLines are the phone's, so they're left out.
     expect(planSplitChecks(config, 504).every((shot: { mustShowLines?: unknown }) => shot.mustShowLines === undefined)).toBe(true);
+  });
+
+  it("names the book in the Bible card's pill at 320 points, not only \"…\" (#681)", () => {
+    const bible = planSplitChecks(config, 320).find((shot: { screen: string }) => shot.screen === 'bible-dual');
+    expect(bible.mustShowLines).toEqual(['^Ps(alms)?\\b']);
+    const read = (pill: string) => [
+      { text: 'Home', box: [0.1, 1 - 58 / 744, 0.1, 0.02] },
+      { text: 'Bible', box: [0.3, 1 - 58 / 744, 0.1, 0.02] },
+      { text: 'Explore', box: [0.5, 1 - 58 / 744, 0.1, 0.02] },
+      { text: 'You', box: [0.7, 1 - 58 / 744, 0.1, 0.02] },
+      { text: pill, box: [0.2, 1 - 150 / 744, 0.2, 0.02] },
+      { text: 'Vs.', box: [0.6, 1 - 150 / 744, 0.1, 0.02] },
+    ];
+    expect(checkShot(bible, read('Psalms'))).toEqual([]);
+    expect(checkShot(bible, read('Ps'))).toEqual([]);
+    expect(checkShot(bible, read('…'))).toEqual(['no line matches /^Ps(alms)?\\b/']);
+  });
+
+  it("fails a control that crosses the Bible card's edge, as the sleep timer did at 320 points (#681)", async () => {
+    const { DOCK_CARD_MAX_WIDTH, checkDockCard } = require('../scripts/check-screens.cjs');
+    const bible = readFileSync(resolve(__dirname, '../app/(tabs)/bible/index.tsx'), 'utf8');
+    expect(bible).toContain(`const DOCK_CARD_MAX_WIDTH = ${DOCK_CARD_MAX_WIDTH};`);
+    expect(bible).toContain('viewportWidth - 32,');
+    const sharp = require('sharp');
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const dir = mkdtempSync(resolve(tmpdir(), 'dock-'));
+    // A 320 × 744 window at 2x: the warm page, the white card 16 points in
+    // from each side, 120 to 290 points up, and a blue button 50 points
+    // across in its audio row, at `left` points.
+    const window = async (file: string, left: number) => {
+      const button = await sharp({ create: { width: 100, height: 100, channels: 3, background: { r: 227, g: 242, b: 253 } } }).png().toBuffer();
+      const card = await sharp({ create: { width: 576, height: 340, channels: 3, background: { r: 255, g: 255, b: 255 } } })
+        .composite([{ input: button, top: 40, left: (left - 16) * 2 }])
+        .png()
+        .toBuffer();
+      await sharp({ create: { width: 640, height: 1488, channels: 3, background: { r: 242, g: 230, b: 223 } } })
+        .composite([{ input: card, top: (744 - 290) * 2, left: 32 }])
+        .png()
+        .toFile(file);
+    };
+    const inside = resolve(dir, 'inside.png');
+    const crossing = resolve(dir, 'crossing.png');
+    await window(inside, 240);
+    await window(crossing, 270);
+    const shot = planSplitChecks(config, 320).find((each: { screen: string }) => each.screen === 'bible-dual');
+    expect(await checkDockCard(shot, inside)).toEqual([]);
+    expect(await checkDockCard(shot, crossing)).toEqual(["a Bible card control crosses the card's right edge"]);
+    // Only the Bible's split shots have the card.
+    const home = planSplitChecks(config, 320).find((each: { screen: string }) => each.screen === 'home');
+    expect(await checkDockCard(home, crossing)).toEqual([]);
   });
 });
 
@@ -837,14 +899,17 @@ describe('iPad key screens (#324)', () => {
     expect(shotCost(ipad[0])).toBe(shotCost({ ...ipad[0], platform: 'ios' }) + 5);
   });
 
-  it('lists App Store iPad shots for the uploaded listing, at most 10, all captured on the iPad', () => {
-    expect(Object.keys(config.appStoreIpad)).toEqual(['en-US']);
-    const list = config.appStoreIpad['en-US'];
-    expect(list.length).toBeGreaterThan(0);
-    expect(list.length).toBeLessThanOrEqual(10);
-    for (const name of list) expect(ipadNames).toContain(name);
+  it('lists App Store iPad shots for each uploaded listing, at most 10, all captured on the iPad', () => {
+    // English, and Traditional and Simplified Chinese, each in its own interface (#681).
+    expect(Object.keys(config.appStoreIpad)).toEqual(['en-US', 'zh-Hant', 'zh-Hans']);
+    for (const list of Object.values(config.appStoreIpad) as string[][]) {
+      expect(list.length).toBeGreaterThan(0);
+      expect(list.length).toBeLessThanOrEqual(10);
+      for (const name of list) expect(ipadNames).toContain(name);
+      expect(list.at(-1)).toMatch(/^you-/);
+    }
     for (const copy of planStoreCopies(config, 'ipad')) {
-      expect(copy.file).toMatch(/^app-store-ipad\/en-US\/\d\d-.+\.png$/);
+      expect(copy.file).toMatch(/^app-store-ipad\/(en-US|zh-Hant|zh-Hans)\/\d\d-.+\.png$/);
       expect(copy.source).toBe(`ipad/${copy.name}.png`);
     }
   });
@@ -1360,14 +1425,15 @@ describe('Android key screens (#372)', () => {
     expect(phone.width / ((phone.density * display) / 160)).toBeGreaterThanOrEqual(320);
   });
 
-  it('lists Google Play shots in both store languages, at most 8 each, all captured on Android', () => {
+  it('lists Google Play shots in each store language, at most 8 each, all captured on Android', () => {
     const copies = planStoreCopies(config, 'android');
-    expect(Object.keys(config.googlePlay)).toEqual(['en-US', 'zh-TW']);
+    // zh-HK's listing shows zh-TW's set (#681).
+    expect(Object.keys(config.googlePlay)).toEqual(['en-US', 'zh-TW', 'zh-CN']);
     for (const list of Object.values(config.googlePlay) as string[][]) expect(list.length).toBeLessThanOrEqual(8);
     for (const copy of copies) {
       expect(names(android)).toContain(copy.name);
       expect(copy.source).toBe(`android/${copy.name}.png`);
-      expect(copy.file).toMatch(/^google-play\/(en-US|zh-TW)\/\d{2}-/);
+      expect(copy.file).toMatch(/^google-play\/(en-US|zh-TW|zh-CN)\/\d{2}-/);
     }
     expect(copies[0].file).toBe('google-play/en-US/01-home-default.png');
   });
@@ -1535,7 +1601,7 @@ describe('Android key screens workflow (#372)', () => {
     // Packed for Chrome as the iPhone's are, with the Google Play copies apart.
     expect(workflow).toContain('--devices android --store google-play');
     expect(workflow).toContain('-android-1\n          path: ${{ runner.temp }}/review/android-1/\n');
-    expect(workflow).toContain('-google-play\n          path: ${{ runner.temp }}/review/store/\n');
+    expect(workflow).toContain('-google-play\n          path: ${{ runner.temp }}/review/google-play/\n');
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
   });
 

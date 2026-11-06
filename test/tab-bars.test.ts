@@ -204,6 +204,29 @@ describe('the tab bars (#589)', () => {
     expect(readFileSync('components/CapsuleTabBar.tsx', 'utf8')).toContain('android_ripple={{ color: getSelectedTabTint(theme) }}');
   });
 
+  it('fades the page out only in a soft halo behind the capsule and the Bible card (#681)', () => {
+    // Before #681, a fade and a band of the page's colour hid the whole row.
+    const capsule = readFileSync('components/CapsuleTabBar.tsx', 'utf8');
+    expect(capsule).not.toContain('LinearGradient');
+    expect(capsule).not.toMatch(/ScrollEdgeFade|FADE_HEIGHT/);
+    expect(capsule).toContain('boxShadow: `0 0 ${HALO_BLUR}px ${HALO_SPREAD}px ${background}`');
+    expect(capsule).toContain('{halo && (');
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(bible).not.toContain('ScrollEdgeFade');
+    // The card's halo and the capsule's place below it, hugging them on every
+    // screen, phones included: the page shows beside them as it scrolls.
+    expect(bible.match(/<FloatingHalo\b/g)).toHaveLength(2);
+    expect(capsule).not.toMatch(/haloFillsRow|HALO_PAST_EDGE/);
+    expect(bible).not.toMatch(/haloFillsRow|HALO_PAST_EDGE/);
+    // The bar's wrapper has no background of its own.
+    const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
+    const wrapper = layout.match(/<Animated\.View\s+onLayout=\{handleTabBarLayout\}[\s\S]*?>/)?.[0] ?? '';
+    expect(wrapper).toContain("position: 'absolute'");
+    expect(wrapper).not.toContain('backgroundColor');
+    // On the Bible the card draws the capsule's halo, under the card.
+    expect(layout).toContain('halo={!isBibleRoute}');
+  });
+
 
   it("leaves room at the end of every tab page's scrolling for the capsule (TabBarSpacer)", () => {
     const pages = (readdirSync('app/(tabs)', { recursive: true }) as string[])

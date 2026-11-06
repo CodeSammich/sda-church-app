@@ -227,10 +227,18 @@ simple, blended colors.
   which the systems' own bars wouldn't. On iOS it sits partly within the home
   indicator's inset, as iOS's own bar does; on Android, wholly above the gesture bar or
   the three buttons, with Android's ripple when pressed (`getCapsuleBottomGap`).
-  - **Pages run to the bottom edge** and scroll under it. The page fades out just above
-    it (`ScrollEdgeFade`) rather than stopping at a line, and is solid below that, so no
-    fragments of text show around it. Every tab page ends with `TabBarSpacer`, so its
-    last lines can scroll clear of it.
+  - **Pages run to the bottom edge** and scroll under it, and under the Bible's card,
+    fading out in a soft halo of the page's own colour (`FloatingHalo`): about
+    three-quarters opaque at a bar's edge, half 6 points out, and gone about 25 points
+    out (#681).
+    - The halo hugs each bar on every screen, phones included, so covers, cards and
+      text show beside and below the bars as they scroll, and the bars float over the
+      page. On a phone the Bible's verses are no wider than its card, so little shows
+      beside it there.
+    - On the Bible, the card draws the halo around the capsule too, under the card.
+    - (Before #681, the page faded out above the bars and was solid below that, edge
+      to edge.) Every tab page
+    ends with `TabBarSpacer`, so its last lines can scroll clear of it.
   - **The Bible's audio and chapter controls float in a card of their own** above the
     capsule, as iOS puts a player above its tab bar: the same floating surface, as wide as
     the capsule on a phone and up to 640 points on a tablet, with its pills and round
@@ -240,6 +248,15 @@ simple, blended colors.
     edges stand out at least 3:1 (`getDockControlBorderColor`). While the sleep timer is
     on, its button fills in like the play button: blue with a white icon, or gold with a
     dark one. When the tab bar hides while reading, the card slides down into its place.
+    - **In a narrow card**, such as an iPad's 320-point Slide Over window at its 150%
+      text, everything still fits inside the card (#681). The audio row's five buttons
+      narrow the gaps between them, then shrink together, but never below 44 points
+      (`getAudioControlRowLayout`). The book, chapter and verse pills give up room in
+      order: "Verse" becomes "Vs.", then the pills drop their arrows, and only then
+      does the book's name become its published abbreviation, such as "Ps" or 詩, with
+      the arrows back if they fit beside it (`getDockPillLabels`,
+      `getBookPillAbbreviation`). Each pill stays at least 44 points wide, a tap
+      target. The book is always named, never cut to "…" alone.
   - **The header's buttons match the bars:** the back button, the page title, the search
     bar, and the Bible's translation, saved-verse, help and search buttons float on the
     same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a
@@ -267,6 +284,22 @@ simple, blended colors.
     - A designer's advice settled the default: contrast is usually the default, and the
       members it bothers, mostly younger, change it.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
+- **First-launch setup (#523, #681)** fills the screen in the page's colour, one question
+  a step: the language, the text size, the theme, then the contrast for light and for
+  dark mode. Each step's title is large, its choices scroll in a column at most 560
+  points wide, and Back and Next stay at the bottom, below five progress dots outlined
+  in blue (gold in the dark theme), the current one filled and wider.
+  - Members choose by pictures, not words alone, as with the contrast pictures:
+    - each language is a card with a picture of the tab bar in that language;
+    - each theme is a card with a picture of a page and its tab bar in it, light and dark
+      side by side for System and Sunrise/Sunset;
+    - the text size step shows John 3:16 at the chosen size, above the four sizes. Sizes
+      between them are under You → Text size, which the step says.
+  - The language and theme cards sit one a row, so their pictures have room.
+  - The You tab's Language and Theme popups show the same cards, with each choice's
+    description under its name (`components/SettingChoices.tsx`), as its Contrast popup
+    shows the contrast pictures. Each stays a popup, not a page of its own: one choice
+    doesn't need a page.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.

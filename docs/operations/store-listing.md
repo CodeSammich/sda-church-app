@@ -29,7 +29,7 @@ before adding anything. Each field below fits its store's limit.
 | Promotional text | Version page → Promotional Text | (none) | 170 |
 | Keywords | Version page → Keywords | (none) | 100 |
 | Description | Version page → Description | Main store listing → Full description | 4,000 |
-| What's new | Version page → What's New | Set automatically from the release PR's title | 4,000 / 500 |
+| What's new | Version page → What's New | Set automatically from the release PR's title for testers; the public text replaces it when promoting | 4,000 / 500 |
 | Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 PNG |
 
 In App Store Connect, add each language under **App Information → Localizable
@@ -83,7 +83,9 @@ bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio,nyc,mandarin,quee
 **Description** (both stores, up to 4,000). Kept general on purpose (1.4.1), as are the short
 descriptions and promotional text: they name no translations, hymnals, or app languages and
 give no counts, so adding one changes nothing here, and the App Store only lets a
-description change with a new version. Each version's What's New says what's new.
+description change with a new version. Each version's What's New says what's new: the
+version being released has its text, for both stores and every listing language, in
+[whats-new.md](../store-assets/whats-new.md).
 
 ```text
 The official app of the New York Chinese Seventh-day Adventist Church: the Bible, the weekly bulletin, and church life in Queens and Brooklyn, in Chinese, English, and more.
@@ -368,11 +370,19 @@ Copies of the uploaded screenshots, the feature graphic, and the App Store heade
 [`docs/store-assets/`](../store-assets/README.md), which also explains removing the
 transparency both stores reject. Replace them there whenever the stores get new ones.
 
+From 1.7.1, each listing language has its own screenshots, in its own interface (#681):
+English for the English and both Spanish listings; Traditional Chinese for the App
+Store's Chinese (Traditional) and Play's `zh-TW` and `zh-HK`; and Simplified Chinese for
+the App Store's Chinese (Simplified) and Play's `zh-CN`. Upload each set with that
+language selected, in App Store Connect on the version page, and in Play Console under
+**Main store listing → Manage translations**. A listing with no set of its own shows the
+default language's.
+
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and
   turn on Android's demo mode for a clean status bar. The current set comes from the
-  **Android key screens** run's Google Play batch (`screens/google-play/en-US/`), which
-  does both. Play also needs a 1024 × 500 feature
+  **Android key screens** run's Google Play batch (`screens/google-play/<language>/`),
+  which does both. Play also needs a 1024 × 500 feature
   graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
   and the 512 × 512 icon (`public/icon-512x512.png`).
 - **App Store:** iPhone screenshots only, at 1206 × 2622. App Store Connect's iPhone slot,
@@ -398,8 +408,8 @@ transparency both stores reject. Replace them there whenever the stores get new 
 - **App Store, iPad:** the app runs on iPad as an iPad app (`supportsTablet: true` in
   `app.json`, #324), so App Store Connect asks for at least one screenshot for **iPad
   13-inch display**, at 2064 × 2752 in portrait or 2752 × 2064 in landscape, and scales
-  them for smaller iPads. The set comes from the same run's iPad shots, in
-  `screens/app-store-ipad/en-US/` (see
+  them for smaller iPads. The sets come from the same run's iPad shots, in
+  `screens/app-store-ipad/<language>/` (see
   [iPad key screens](native-builds.md#ipad-key-screens)). Upload them with the first
   version whose build supports iPad. Apple doesn't let an update remove a device family
   once a version with it is released, so check that release on an iPad through

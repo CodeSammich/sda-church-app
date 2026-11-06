@@ -8,13 +8,16 @@ import {
   createReaderStyles,
   getBulletinVerseScrollOffset,
   getBibleDockLayout,
+  getAudioControlRowLayout,
   getBibleDockViewportLayout,
   getDockPillGrowth,
+  getDockPillLabels,
   getDockPillPaddingHorizontal,
+  MIN_TAP_TARGET,
   NARROW_DOCK_CARD,
-  shouldShortenVerseLabel,
   WIDE_DOCK_PILLS_ROW,
 } from '@/styles/ReaderStyles';
+import { getBookPillAbbreviation } from '@/services/BibleBookAbbreviations';
 import { StyleSheet } from 'react-native';
 
 describe('Bible reader text scaling', () => {
@@ -145,21 +148,111 @@ describe('Bible reader text scaling', () => {
 
   it('shortens the Verse label before the book name is cut short (#376)', () => {
     // Psalms 130 + 23 64 + Verse 100 + 2 gaps of 8 = 310, and 4 to spare.
-    const pills = { bookPillWidth: 130, chapterPillWidth: 64, versePillWidth: 100 };
-    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 340 })).toBe(false);
-    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 314 })).toBe(false);
+    const pills = {
+      bookPillWidth: 130,
+      shortBookPillWidth: 60,
+      chapterPillWidth: 64,
+      versePillWidth: 100,
+      shortVersePillWidth: 70,
+    };
+    const shortVerse = (rowWidth: number) => getDockPillLabels({ ...pills, rowWidth }).shortVerse;
+    expect(shortVerse(340)).toBe(false);
+    expect(shortVerse(314)).toBe(false);
     // Fitting by a point isn't enough: "Juan" became "Ju…" beside "Versículo".
-    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 311 })).toBe(true);
-    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 300 })).toBe(true);
+    expect(shortVerse(311)).toBe(true);
+    expect(shortVerse(300)).toBe(true);
     // Unmeasured: the full label.
-    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 0 })).toBe(false);
-    expect(shouldShortenVerseLabel({ ...pills, bookPillWidth: 0, rowWidth: 100 })).toBe(false);
+    expect(shortVerse(0)).toBe(false);
+    expect(getDockPillLabels({ ...pills, bookPillWidth: 0, rowWidth: 100 }).shortVerse).toBe(false);
     const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(source).toContain('{shortVerseLabel ? labels.verseShort : labels.verse}');
     expect(source).toContain("verseShort: 'Vs.',");
     expect(source).toContain("verseShort: 'Vers.',");
     // The pill still says "Verse" to screen readers.
     expect(source).toContain('accessibilityLabel={labels.verse}');
+  });
+
+  it('drops the chevrons, then abbreviates the book, rather than cut it to "…" (#681)', () => {
+    // An iPad's 320-point Slide Over window at its 150% text: the pills' row
+    // is about 166 points, where "23" and "Vs." left "Psalms" only "…".
+    const pills = {
+      bookPillWidth: 92,
+      shortBookPillWidth: 52,
+      chapterPillWidth: 54,
+      versePillWidth: 86,
+      shortVersePillWidth: 62,
+    };
+    const full = { shortVerse: false, chevrons: true, shortBook: false };
+    expect(getDockPillLabels({ ...pills, rowWidth: 300 })).toEqual(full);
+    expect(getDockPillLabels({ ...pills, rowWidth: 240 })).toEqual({ ...full, shortVerse: true });
+    // Without chevrons of 18: Psalms 74, 23 36 but kept to a 44-point tap
+    // target, Vs. 44, and 2 gaps of 8 + 4 = 182.
+    expect(getDockPillLabels({ ...pills, rowWidth: 182 })).toEqual({ shortVerse: true, chevrons: false, shortBook: false });
+    expect(getDockPillLabels({ ...pills, rowWidth: 181 })).toEqual({ shortVerse: true, chevrons: false, shortBook: true });
+    // With the abbreviation, the chevrons come back if they fit: "Deut" on a
+    // phone at 150%. Ps 52 + 23 54 + Vs. 62 + 2 gaps of 8 + 4 = 188.
+    expect(getDockPillLabels({ ...pills, bookPillWidth: 200, rowWidth: 188 })).toEqual({
+      shortVerse: true,
+      chevrons: true,
+      shortBook: true,
+    });
+    expect(MIN_TAP_TARGET).toBe(44);
+    // A book whose abbreviation is no shorter, like "Job", keeps its name.
+    expect(getDockPillLabels({ ...pills, shortBookPillWidth: 92, rowWidth: 120 }).shortBook).toBe(false);
+    const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(source).toContain('{dockPillLabels.shortBook ? bookAbbreviation : bookName}');
+    // Screen readers still hear the book's full name.
+    expect(source).toContain('accessibilityLabel={`${labels.book}: ${bookName}`}');
+    // Every shown pill's chevron goes with the others.
+    expect(source.match(/\{renderPillChevron\(\)\}/g)).toHaveLength(3);
+    // Each pill, and each hidden copy, is at least a tap target wide.
+    expect(source.match(/minWidth: MIN_TAP_TARGET,/g)).toHaveLength(4);
+  });
+
+  it("abbreviates a book the way its translation's own readers do (#681)", () => {
+    expect(getBookPillAbbreviation('PSA', 'en', 'Psalms')).toBe('Ps');
+    expect(getBookPillAbbreviation('1TH', 'en', '1 Thessalonians')).toBe('1 Thess');
+    expect(getBookPillAbbreviation('PSA', 'es', 'Salmos')).toBe('Sal');
+    expect(getBookPillAbbreviation('PSA', 'zh', '詩篇')).toBe('詩');
+    expect(getBookPillAbbreviation('PSA', 'zh-cn', '诗篇')).toBe('诗');
+    expect(getBookPillAbbreviation('1JN', 'zh-cn', '约翰一书')).toBe('约壹');
+    // The same in both scripts.
+    expect(getBookPillAbbreviation('EXO', 'zh-cn', '出埃及记')).toBe('出');
+    // The Reina-Valera has none for Job, and an unknown language none at all.
+    expect(getBookPillAbbreviation('JOB', 'es', 'Job')).toBe('Job');
+    expect(getBookPillAbbreviation('PSA', 'fr', 'Psaumes')).toBe('Psaumes');
+  });
+
+  it("keeps the audio row's five buttons inside the Bible card (#681)", () => {
+    // A phone's card has room: nothing changes.
+    expect(getAudioControlRowLayout({ rowWidth: 326, sideButtonSize: 48, iconSize: 26 })).toEqual({
+      gap: 8,
+      sideButtonSize: 48,
+      iconSize: 26,
+    });
+    // An iPad's Slide Over window at 150%: a 288-point card, a 262-point row.
+    // The buttons needed 2 × 53 + 3 × 33.8 + 52 + 4 gaps of 8 = 291.4.
+    const slideOver = getAudioControlRowLayout({ rowWidth: 262, sideButtonSize: 53, iconSize: 33.8 });
+    const width = ({ gap, sideButtonSize, iconSize }: typeof slideOver) =>
+      2 * sideButtonSize + 3 * iconSize + 52 + 4 * gap;
+    expect(width(slideOver)).toBeLessThanOrEqual(262);
+    expect(slideOver.sideButtonSize).toBeGreaterThanOrEqual(MIN_TAP_TARGET);
+    // The gaps narrow first, when that's enough.
+    expect(getAudioControlRowLayout({ rowWidth: 275, sideButtonSize: 53, iconSize: 33.8 })).toEqual({
+      gap: 3,
+      sideButtonSize: 53,
+      iconSize: 33.8,
+    });
+    // And with the iPad's own large text too.
+    const largeText = getAudioControlRowLayout({ rowWidth: 262, sideButtonSize: 66, iconSize: 33.8 });
+    expect(width(largeText)).toBeLessThanOrEqual(262);
+    // Never smaller than a 44-point tap target.
+    const tiny = getAudioControlRowLayout({ rowWidth: 150, sideButtonSize: 53, iconSize: 33.8 });
+    expect(tiny.sideButtonSize).toBe(MIN_TAP_TARGET);
+    expect(tiny.iconSize + 16).toBe(MIN_TAP_TARGET);
+    const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(source.match(/size=\{audioRowLayout\.iconSize\}/g)).toHaveLength(3);
+    expect(source.match(/audioSideButtonStyle,/g)).toHaveLength(2);
   });
 
   it("keeps \"Psalms\" and \"Versículo\" whole in a phone's floating card (#589)", () => {
@@ -326,7 +419,9 @@ describe("the chapter dock's pills on a wide row (#324)", () => {
   it('measures the chapter number alone on a wide row, so "Verse" isn\'t shortened for room it has', () => {
     const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(bible).toContain("renderPillMeasure(String(chapterNum), setChapterLabelWidth)");
-    expect(bible).toContain('chapterPillWidth: dockPillGrowth.chapter ? chapterLabelWidth : chapterPillWidth,');
+    // On every row: the shown pill loses its chevron when the row is short of
+    // room (#681), so measuring it would undo that.
+    expect(bible).toContain('chapterPillWidth: chapterLabelWidth,');
     expect(bible.match(/flexGrow: dockPillGrowth\.(book|chapter|verse),/g)).toHaveLength(3);
   });
 });
@@ -348,7 +443,9 @@ describe("the Bible's dock follows the tab bar's system (#589)", () => {
     expect(bible).toContain(
       'outputRange: [bottomDockInset, bottomDockInset + bottomTabContentHeight],',
     );
-    expect(bible).toMatch(/<ScrollEdgeFade\s+background=\{theme\.colors\.background\}/);
+    // Only a soft halo behind the card: the page shows around it (#681).
+    expect(bible).not.toContain('ScrollEdgeFade');
+    expect(bible).toContain('<FloatingHalo');
     // Raised a shade off the page like the capsule, with its pills and round buttons in the page's colour.
     expect(bible).toContain('<View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>');
     expect(bible.match(/backgroundColor: getDockControlColor\(theme\),/g)).toHaveLength(5);
