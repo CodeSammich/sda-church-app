@@ -1,5 +1,6 @@
 import {
   isTextScale,
+  TABLET_MIN_SCREEN_SIDE,
   TEXT_SCALE_OPTIONS,
   type TextScale,
 } from '@/constants/AppPreferences';
@@ -300,7 +301,11 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const { width: viewportWidth } = useWindowDimensions();
+  const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
+  // On a tablet, a step sits in the middle of the space above Back and Next,
+  // rather than at the top of a tall, mostly empty screen. On a phone it stays
+  // at the top, so each step's title is where the last one's was.
+  const tablet = Math.min(viewportWidth, viewportHeight) >= TABLET_MIN_SCREEN_SIDE;
   const [isSavingTextScale, setIsSavingTextScale] = useState(false);
   const [failedTextScale, setFailedTextScale] = useState<TextScale | null>(null);
   const textScaleWritePendingRef = useRef(false);
@@ -386,8 +391,11 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
       >
         {/* Keyed by step, so each step opens at its top. It fills the screen
             above the footer, so Back and Next stay at the bottom on every step. */}
-        <View style={styles.scroll}>
-        <PopupScrollView key={currentStep} contentContainerStyle={styles.content}>
+        <PopupScrollView
+          key={currentStep}
+          frameStyle={styles.scroll}
+          contentContainerStyle={[styles.content, tablet && styles.centredContent]}
+        >
           <View style={column}>
             {currentStep === 'language' && (
               <>
@@ -533,7 +541,6 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
             )}
           </View>
         </PopupScrollView>
-        </View>
 
         {/* Outside the scrolling part, so the way on is always in view. */}
         <View style={[styles.footer, column]}>
@@ -634,6 +641,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingTop: 32,
     paddingBottom: 16,
+  },
+  centredContent: {
+    justifyContent: 'center',
   },
   title: {
     fontWeight: 'bold',
