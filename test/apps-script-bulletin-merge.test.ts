@@ -406,7 +406,7 @@ describe('Apps Script bulletin response merging', () => {
     expect(getMissingColumns(shuffled)).toEqual([]);
   });
 
-  it('leaves a missing column blank and names it, without failing the rest', () => {
+  it('reads a missing column as blank, and gives a missing hymn column its default, and names it, without failing the rest', () => {
     const headers = WEEKLY_HEADERS.filter((header) => header !== 'Bible Verses');
     headers[headers.indexOf('Hymn of Praise')] = 'Opening Hymn';
     const row = ['2026-11-07', 'Queens', 'The Good Shepherd', '好牧人', '', '', '', 'AH 1', '', ''];

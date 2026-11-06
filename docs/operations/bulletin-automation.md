@@ -635,8 +635,8 @@ Property; the next **Create Word Doc…** deletes any left.
 Blank content remains blank in the API and renders as `TBD` in the app or as the
 bilingual printed placeholder. There are two exceptions:
 - a blank `Bible Verses`: the printed bulletin isn't made until it's filled in;
-- a blank `Hymn of Praise` or `Hymn of Response`: it gets its default hymn (see
-  [`Weekly Data`](#3-weekly-data)).
+- a blank `Hymn of Praise` or `Hymn of Response`: it gets its default hymn when
+  the location has anything else (see [`Weekly Data`](#3-weekly-data)).
 
 A missing schedule is different: the `Sabbath Calendar` tab, its `Date` column,
 or the Sabbath's row is gone, so there's no schedule record at all (#580).
@@ -1224,7 +1224,7 @@ changes the URL and requires a coordinated mobile-app update.
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
 | A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |
-| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one. Until then, an added `Hymn of Praise` or `Hymn of Response` column shows its default hymn |
+| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one. Until then, the bulletin shows that hymn's default |
 | A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
 | A roster cell is pale red | The same name is in another roster cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
 | No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Word Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
