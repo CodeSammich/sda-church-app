@@ -77,9 +77,9 @@ describe('InitialSetup', () => {
 
     // Four choices on each step.
     expect(screen.getAllByRole('radio')).toHaveLength(4);
-    expect(screen.getByRole('radio', { name: 'EN' }).props.accessibilityState)
+    expect(screen.getByRole('radio', { name: 'English' }).props.accessibilityState)
       .toMatchObject({ checked: true, disabled: false });
-    await fireEvent.press(screen.getByRole('radio', { name: '繁體' }));
+    await fireEvent.press(screen.getByRole('radio', { name: '繁體中文' }));
 
     await goOn(screen);
     expect(screen.getAllByRole('radio')).toHaveLength(4);

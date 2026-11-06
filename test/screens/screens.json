@@ -60,13 +60,12 @@
       "name": "setup",
       "group": "home",
       "tabs": false,
-      "popup": true,
-      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of four (#523, #669), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
+      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of five (#523, #669), the welcome and the language, full screen from 1.7.2 (#681), each language a card with a picture of the tab bar in it, and the step dots and Next at the bottom, below the scrolling part, so the way on stays in view. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
       "path": "",
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Welcome$", "^Language$", { "line": "^Next$", "platforms": ["ios"] }],
+      "mustShowLines": ["^Welcome$", "^Language$", "^English$", { "line": "^Next$", "platforms": ["ios"] }],
       "mustNotShowLines": ["^Appearance$", "^Text size$"],
       "variantRules": {
         "large": { "mustShowLines": ["^Next$"] }
@@ -627,29 +626,27 @@
       }
     },
     {
-      "$comment": "First-launch setup's other steps, which a key-screens build opens by the saved setupStep since the capture can't tap Next (#669), so each step has its shot: hard to reach by hand. The text size step, with Back and Next.",
+      "$comment": "First-launch setup's other steps, which a key-screens build opens by the saved setupStep since the capture can't tap Next (#669), so each step has its shot: hard to reach by hand. The text size step, with its sample verse at the chosen size, and Back and Next.",
       "name": "setup-text-size",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "textSize" },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Text size$", "^Choose a comfortable"],
+      "mustShowLines": ["^Text size$", "^Choose a comfortable", "^John ?3:16$"],
       "mustNotShowLines": ["^Welcome$", "^Appearance$"]
     },
     {
-      "$comment": "Setup's appearance step: the four themes. Each choice's icon can be read into its label, as a colon by RapidOCR or as letters by Vision (\"Lo System\", \"ội Light\"), so the labels are anchored only at their end.",
+      "$comment": "Setup's appearance step: the four themes, each a card with a picture of the page and tab bar in it (#681), one a row, so Dark sits below the fold on a phone. Each choice's icon can be read into its label, as a colon by RapidOCR or as letters by Vision (\"Lo System\", \"ội Light\"), so the labels are anchored only at their end.",
       "name": "setup-appearance",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "appearance" },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Appearance$", "\\bSystem$", "\\bLight$", "\\bDark$"],
+      "mustShowLines": ["^Appearance$", "^Choose how the app looks", "\\bSystem$", "\\bLight$"],
       "mustNotShowLines": ["^Welcome$", "^Text size$"]
     },
     {
@@ -657,7 +654,6 @@
       "name": "setup-contrast-light",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "contrastLight" },
       "variants": ["default", "zh"],
@@ -673,7 +669,6 @@
       "name": "setup-contrast-dark",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "contrastDark" },
       "variants": ["default", "zh"],
@@ -719,11 +714,21 @@
     {
       "name": "language",
       "group": "worship-and-you",
-      "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464). Its title is also on the You screen behind it, so the rules require the options' descriptions, which only the dialog shows.",
+      "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464), and each language a card with a picture of the tab bar in it (#681). Its title is also on the You screen behind it, so the rules require an option's description, which only the dialog shows. The pictures leave Simplified Chinese below the fold on a phone.",
       "path": "you?popup=language",
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Traditional Chinese", "^Simplified Chinese"],
+      "mustShowLines": ["^Traditional Chinese"],
+      "mustNotShowLines": ["^Close$"]
+    },
+    {
+      "name": "theme",
+      "group": "worship-and-you",
+      "$comment": "The Theme dialog, opened by popup=theme: each theme a card with a picture of a page and its tab bar in it, light and dark side by side for System and Sunrise/Sunset (#681), with an X beside its title. Its title is also on the You screen behind it, so the rules require System's description, which only the dialog shows.",
+      "path": "you?popup=theme",
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^Follow your device"],
       "mustNotShowLines": ["^Close$"]
     },
     {

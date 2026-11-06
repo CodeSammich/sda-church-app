@@ -18,8 +18,8 @@ describe('popup height limits', () => {
       .split('\n')
       .filter((file) => /\.tsx?$/.test(file));
     const ownLimits = files.filter((file) => /usePopupMaxHeight\([^)]/.test(readFileSync(file, 'utf8')));
-    // Only the first-launch setup, which can't be closed, sets its own.
-    expect(ownLimits).toEqual(['components/InitialSetup.tsx']);
+    // None sets its own: first-launch setup, which did, fills the screen (#681).
+    expect(ownLimits).toEqual([]);
   });
 
   it('are never percentages, which iOS measures against the popup instead of the screen', () => {

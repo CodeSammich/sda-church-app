@@ -870,7 +870,7 @@ iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
 1. It saves the settings the app reads at startup into the app's storage: setup
    finished, the language, theme, and text size for that shot, and the screen to
    open. Nothing on a build runner can tap the Simulator's screen, which rules out
-   both the first-launch setup dialog and the "Open in …?" prompt iOS shows before
+   both first-launch setup and the "Open in …?" prompt iOS shows before
    following a deep link. So the app reads the screen from its storage once at launch
    (`services/ScreenshotRoute.ts`) and forgets it. Only this Simulator build does
    that: its build step sets `EXPO_PUBLIC_KEY_SCREENS=1`, which Expo writes into the
