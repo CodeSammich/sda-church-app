@@ -35,19 +35,6 @@ export const HALO_SPREAD = 6;
 export const HALO_BLUR = 20;
 
 /**
- * The side gap at or below which a bar's halo runs edge to edge rather than
- * hugging it: a phone's, whose bars leave 16 points a side, or an iPad window
- * the bar nearly fills, such as Slide Over. Text scrolling past in a gap that
- * narrow only shows as fragments, so there the page shows above the bars but
- * not beside them; on a wider screen it shows beside them too (#681).
- */
-export const HALO_FILLS_ROW_GAP = 24;
-export const haloFillsRow = (sideGap: number) => sideGap <= HALO_FILLS_ROW_GAP;
-// How far past the screen's sides an edge-to-edge halo reaches, so its blurred
-// corners stay off the screen.
-export const HALO_PAST_EDGE = 32;
-
-/**
  * A soft halo of the page's colour around a floating bar's shape, drawn behind
  * it, so text scrolling under the bar fades out just around it rather than
  * across the whole row (#681). The caller places it, with the bar's corners.
@@ -76,9 +63,9 @@ export function FloatingHalo({
  * edge, as iOS's own bar does, raised a shade off the page with a hairline
  * and a soft shadow, with the selected tab in blue, or gold in the dark theme,
  * on its selection pill. Pages run to the bottom edge and scroll under it,
- * fading out in a soft halo (FloatingHalo): around it on a wide screen, so the
- * page shows beside it, and edge to edge on a phone (haloFillsRow, #681);
- * TabBarSpacer leaves room for their last lines. The Bible draws its card's halo around the capsule too, so
+ * fading out only in a soft halo around it (FloatingHalo), so the page shows
+ * beside it and below it on every screen, phones included, and it floats over
+ * the page (#681); TabBarSpacer leaves room for their last lines. The Bible draws its card's halo around the capsule too, so
  * there the capsule has none of its own (halo false). The icons and labels are
  * the app's own, so they follow its text size, which the systems' own bars
  * wouldn't.
@@ -96,18 +83,14 @@ export function CapsuleTabBar({
       {halo && (
         <FloatingHalo
           background={theme.colors.background}
-          style={
-            haloFillsRow((windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2)
-              ? { top: 0, bottom: 0, left: -HALO_PAST_EDGE, right: -HALO_PAST_EDGE }
-              : [
-                  styles.capsuleHalo,
-                  {
-                    bottom: getCapsuleBottomGap(bottomInset),
-                    left: (windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2,
-                    width: getCapsuleTabBarWidth(windowWidth),
-                  },
-                ]
-          }
+          style={[
+            styles.capsuleHalo,
+            {
+              bottom: getCapsuleBottomGap(bottomInset),
+              left: (windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2,
+              width: getCapsuleTabBarWidth(windowWidth),
+            },
+          ]}
         />
       )}
       <View

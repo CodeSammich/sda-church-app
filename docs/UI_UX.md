@@ -231,14 +231,13 @@ simple, blended colors.
     fading out in a soft halo of the page's own colour (`FloatingHalo`): about
     three-quarters opaque at a bar's edge, half 6 points out, and gone about 25 points
     out (#681).
-    - **On a phone**, whose bars leave 16 points a side, the halo runs edge to edge
-      (`haloFillsRow`), so text scrolling past shows above the bars but not beside or
-      below them, where only fragments would show. So does an iPad window the bars
-      nearly fill, such as Slide Over.
-    - **On a wider screen**, such as an iPad, it hugs each bar, so the page shows
-      beside them and they float over it. On the Bible, the card draws the halo around
-      the capsule too, under the card. (Before #681, the
-    page faded out above them and was solid below that, edge to edge.) Every tab page
+    - The halo hugs each bar on every screen, phones included, so covers, cards and
+      text show beside and below the bars as they scroll, and the bars float over the
+      page. On a phone the Bible's verses are no wider than its card, so little shows
+      beside it there.
+    - On the Bible, the card draws the halo around the capsule too, under the card.
+    - (Before #681, the page faded out above the bars and was solid below that, edge
+      to edge.) Every tab page
     ends with `TabBarSpacer`, so its last lines can scroll clear of it.
   - **The Bible's audio and chapter controls float in a card of their own** above the
     capsule, as iOS puts a player above its tab bar: the same floating surface, as wide as
