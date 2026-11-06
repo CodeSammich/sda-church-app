@@ -15,7 +15,7 @@ import { DESIGN_TOKENS, getBottomTabContentHeight } from '@/constants/Layout';
 import { getBottomTabTextScale, HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { Tabs, router, usePathname } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Platform, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -88,7 +88,6 @@ function TabBarLabel(props: {
 
 export default function TabLayout() {
   const theme = useAppTheme();
-  const pathname = usePathname();
   const { textScale } = useTextSize();
   const { fontScale, width: windowWidth } = useWindowDimensions();
   const tabContentHeight = getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale));
@@ -168,10 +167,6 @@ export default function TabLayout() {
     inputRange: [0, 1],
     outputRange: [tabBarHeight + 16, 0],
   });
-  // The Bible's fixed reader dock owns the upper boundary on this tab. Keep
-  // this broad enough for native/router variants that expose `/bible/index`.
-  const isBibleRoute = pathname === '/bible' || pathname.startsWith('/bible/');
-
   return (
     <BottomTabHeightContext.Provider value={tabBarHeight}>
       <TabBarClearanceContext.Provider value={tabBarHeight}>
@@ -200,8 +195,6 @@ export default function TabLayout() {
             <CapsuleTabBar
               {...props}
               bottomInset={bottomTabInset}
-              // The Bible's dock fades the page behind itself and the capsule.
-              fade={!isBibleRoute}
               theme={theme}
               windowWidth={windowWidth}
             />

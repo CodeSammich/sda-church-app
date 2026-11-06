@@ -204,6 +204,19 @@ describe('the tab bars (#589)', () => {
     expect(readFileSync('components/CapsuleTabBar.tsx', 'utf8')).toContain('android_ripple={{ color: getSelectedTabTint(theme) }}');
   });
 
+  it('paints nothing behind the capsule or the Bible card, so the page shows around them (#681)', () => {
+    // Before #681, a fade and a band of the page's colour hid the page there.
+    const capsule = readFileSync('components/CapsuleTabBar.tsx', 'utf8');
+    expect(capsule).not.toContain('LinearGradient');
+    expect(capsule).not.toMatch(/ScrollEdgeFade|FADE_HEIGHT/);
+    expect(readFileSync('app/(tabs)/bible/index.tsx', 'utf8')).not.toContain('ScrollEdgeFade');
+    // The bar's wrapper has no background of its own.
+    const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
+    const wrapper = layout.match(/<Animated\.View\s+onLayout=\{handleTabBarLayout\}[\s\S]*?>/)?.[0] ?? '';
+    expect(wrapper).toContain("position: 'absolute'");
+    expect(wrapper).not.toContain('backgroundColor');
+  });
+
 
   it("leaves room at the end of every tab page's scrolling for the capsule (TabBarSpacer)", () => {
     const pages = (readdirSync('app/(tabs)', { recursive: true }) as string[])

@@ -1,8 +1,7 @@
 import { getBarSurfaceColor, getSelectedTabTint, getTabItems, TABLET_TAB_BAR_MIN_WIDTH, type TabBarProps } from '@/components/TabBarItems';
 import type { AppTheme } from '@/constants/Themes';
-import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
 // The capsule's widest: about 130 points a tab, so the four stay near each
 // other rather than spread across a tablet.
@@ -29,55 +28,26 @@ export const getCapsuleTabBarWidth = (windowWidth: number) =>
 export const getCapsuleBottomGap = (bottomInset: number, os: string = Platform.OS) =>
   os === 'android' ? Math.max(bottomInset + 8, 12) : Math.max(Math.round(bottomInset * 0.6), 12);
 
-// How far above a floating bar the page starts to fade, so text scrolling
-// under it fades out rather than meeting a line.
-const FADE_HEIGHT = 32;
-
-// `color` with alpha 0, so a fade into it doesn't pass through grey.
-const transparent = (color: string) =>
-  /^#[0-9a-f]{6}$/i.test(color) ? `${color}00` : 'transparent';
-
-/**
- * The page's colour behind a floating bar, as iOS fades a page's edge under its
- * bars: clear at the top and solid from FADE_HEIGHT down, so text scrolling
- * under the bar fades out above it rather than meeting a line, and no faint
- * fragments of it show beside the bar, as they did beside the Bible's card on
- * an iPad, whose text column is wider. It reaches FADE_HEIGHT above the box
- * it's placed in.
- */
-export function ScrollEdgeFade({ background, style }: { background: string; style?: StyleProp<ViewStyle> }) {
-  return (
-    <View pointerEvents="none" style={[styles.fade, style]}>
-      <LinearGradient
-        colors={[transparent(background), background]}
-        style={styles.fadeGradient}
-      />
-      <View style={[styles.fadeSolid, { backgroundColor: background }]} />
-    </View>
-  );
-}
-
 /**
  * The tab bar on every system (#589, #324), one design on iPhone, iPad and
  * Android: the four tabs sit in a rounded capsule floating above the bottom
  * edge, as iOS's own bar does, raised a shade off the page with a hairline
  * and a soft shadow, with the selected tab in blue, or gold in the dark theme,
- * on its selection pill. Pages run to the bottom edge and scroll under it
- * (TabBarSpacer leaves room for their last lines). The icons and labels are
+ * on its selection pill. Pages run to the bottom edge and scroll under it,
+ * showing around and below it with nothing painted behind it, so it floats
+ * over the page (#681); TabBarSpacer leaves room for their last lines. The icons and labels are
  * the app's own, so they follow its text size, which the systems' own bars
  * wouldn't.
  */
 export function CapsuleTabBar({
   bottomInset,
-  fade = true,
   theme,
   windowWidth,
   ...props
-}: TabBarProps & { bottomInset: number; fade?: boolean; theme: AppTheme; windowWidth: number }) {
+}: TabBarProps & { bottomInset: number; theme: AppTheme; windowWidth: number }) {
   const tablet = windowWidth >= TABLET_TAB_BAR_MIN_WIDTH;
   return (
     <View style={[styles.outer, { paddingBottom: getCapsuleBottomGap(bottomInset) }]}>
-      {fade && <ScrollEdgeFade background={theme.colors.background} />}
       <View
         style={[
           styles.capsule,
@@ -130,19 +100,6 @@ export const getFloatingSurfaceStyle = (theme: AppTheme): ViewStyle => ({
 const styles = StyleSheet.create({
   outer: {
     alignItems: 'center',
-  },
-  fade: {
-    position: 'absolute',
-    top: -FADE_HEIGHT,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  fadeGradient: {
-    height: FADE_HEIGHT,
-  },
-  fadeSolid: {
-    flex: 1,
   },
   capsule: {
     borderRadius: 999,

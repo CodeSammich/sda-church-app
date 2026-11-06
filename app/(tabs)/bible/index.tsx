@@ -45,7 +45,6 @@ import {
   getCapsuleBottomGap,
   getCapsuleTabBarWidth,
   getFloatingSurfaceStyle,
-  ScrollEdgeFade,
 } from '@/components/CapsuleTabBar';
 import { getDockControlBorderColor, getDockControlColor, getDockControlContentColor } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -4135,13 +4134,6 @@ export default function BibleScreen() {
           },
         ]}
       >
-        {/* The page fades out under the card and the capsule, rather than
-            stopping at a line above them. */}
-        <ScrollEdgeFade
-          background={theme.colors.background}
-          style={{ left: -(viewportWidth - dockCardWidth) / 2, right: -(viewportWidth - dockCardWidth) / 2 }}
-        />
-
         <View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>
         <ScrollView
           style={styles.controlDockScroll}
