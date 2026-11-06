@@ -678,12 +678,14 @@ until you release it:
      [Store listings](store-listing.md) first, then paste them into each store.
 3. **Apple:** in App Store Connect, select **+** next to **iOS App** and add the new
    version, such as `0.43.0`. It must match the build's version. The previous version's
-   description, keywords, screenshots, URLs, and reviewer notes carry over. Write
-   **What's New in This Version** for each language, select the build, and **Add for
+   description, keywords, screenshots, URLs, and reviewer notes carry over. Paste
+   **What's New in This Version** for each language from
+   [whats-new.md](../store-assets/whats-new.md), select the build, and **Add for
    Review**. After approval, release it: the version is set to release manually.
 4. **Google Play:** Play Console → **Test and release → Internal testing** → promote
    the release to production. Promoting copies the testers' "What's new" text, so
-   rewrite it for the public first, in each language.
+   replace it with the public text in [whats-new.md](../store-assets/whats-new.md)
+   first, in each language.
 5. **Each January:** update the App Store **Copyright** year on the new version.
 
 The upload jobs, their `store-upload` secrets, what each result means, and how to
