@@ -4,15 +4,16 @@ Copies of the images uploaded to Google Play and the App Store, so the next upda
 starts from what's uploaded instead of from scratch. The What's New text for the version
 being released, for both stores, is in [whats-new.md](whats-new.md). From 1.7.1, each
 store has a set of phone screenshots in English, Traditional Chinese, and Simplified
-Chinese, each in its own interface, and the App Store an iPad set in each (#324, #681).
-The Spanish listings show the English sets. How each store's screenshots
-are captured, their sizes, and what they may show are in
+Chinese, and the App Store an iPad set in each (#324, #681). Each set is in its own
+interface, except that each Chinese phone set has one Bible shot in the other script,
+to show the app has both. The Spanish listings show the English sets. How each store's
+screenshots are captured, their sizes, and what they may show are in
 [Store listings](../operations/store-listing.md#screenshots).
 
 - `google-play/feature-graphic.png`: the 1024 × 500 feature graphic. It shows the app
   icon, the church's name in English and Traditional Chinese, a line of features, and
-  two of the phone screenshots below in phone frames on the brand blue (`#00405C`): the
-  Bible in the dark theme behind the Bible in English and Chinese.
+  two of the English phone screenshots below in phone frames on the brand blue
+  (`#00405C`): the Bible in the dark theme behind the Bible in English and Chinese.
   `scripts/make-play-feature-graphic.cjs` builds it from them, so run it again when
   they change. An AI assistant designed it and wrote that script, so declare it as
   AI-generated in Play Console; see
@@ -24,14 +25,16 @@ are captured, their sizes, and what they may show are in
     Spanish listings (`es-US`, `es-419`) show these too.
   - `zh-TW/`, for the `zh-TW` and `zh-HK` listings: with the Traditional Chinese
     interface, Home, the Bible with Cantonese audio, the Bible with pinyin, Explore, the
-    Library, the Bible in Simplified characters, the Bible in the dark theme, and You.
+    Library, the Bible in Simplified characters (with the Simplified interface), the
+    Bible in the dark theme, and You.
   - `zh-CN/`: with the Simplified Chinese interface, Home, the Bible in Simplified
-    characters, the Bible in Traditional characters with Cantonese audio, Explore, the
-    Library, the Simplified Bible in the dark theme, and You.
+    characters, the Bible in Traditional characters with Cantonese audio (with the
+    Traditional interface), Explore, the Library, the Simplified Bible in the dark theme,
+    and You.
 - `app-store/en-US/`, `app-store/zh-Hant/`, and `app-store/zh-Hans/`: the iPhone
   screenshots for each listing, in upload order, at 1206 × 2622, the size App Store
   Connect's iPhone slot takes. English's are Home, the Bible in English and Chinese,
-  the Bible with the Chinese interface, the Bible in the dark theme, Explore, the
+  the Bible with the Traditional Chinese interface, the Bible in the dark theme, Explore, the
   Library, and You; the two Chinese sets are Google Play's `zh-TW` and `zh-CN` sets.
   Home comes first: the first three appear on the App Store's install sheets, and Home
   shows what the app is. The Spanish listings show the English set.
@@ -57,23 +60,25 @@ are captured, their sizes, and what they may show are in
   building photo that Home and Explore show, tinted brand blue (`#00405C`). The tagline
   and phones sit in the middle, because the App Store crops the edges on some devices.
   `scripts/make-app-store-headers.cjs` builds each from its listing's own set, and the
-  Spanish one from `app-store/en-US/`, so run it again when those screenshots change. They leave out the logo, because the app icon
-  shows just below the header. Home and Explore show the YouTube, Spotify, and Zoom
+  Spanish one from `app-store/en-US/`, so run it again when those screenshots change.
+  They leave out the logo, because the app icon shows just below the header. Home and Explore show the YouTube, Spotify, and Zoom
   icons. That's allowed: Apple's rule against other platforms' logos (guideline 2.3.10)
   means other mobile platforms and app stores, such as Android or Google Play. If a
   header is ever rejected for them, swap Explore for the Library screenshot and Home
-  for the other Bible screenshot.
+  for another Bible screenshot from the same set.
 - `google-play/foreground-service-demo.mp4`: the original of the unlisted YouTube video
   that Play Console's foreground service declaration links to. If the YouTube video is
   ever deleted, upload this file again and update the link; see
   [Foreground service](../operations/play-console-answers.md#foreground-service).
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The screenshots
-and headers here are from the key-screen runs for 1.7.1 on November 6, 2026, with the floating
-tab bar and Bible card (#589) and the soft halo behind them (#681):
-[iOS](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839268) and [Android](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839380),
-on the release PR's final commit (#686, db050e58). The feature graphic was built from the
-English Google Play ones.
+and headers here are from the key-screen runs for 1.7.1 on November 6, 2026, with the
+floating tab bar and Bible card (#589) and the soft halo behind them (#681), on
+release PR #686's head when the shots were taken (db050e58):
+[iOS](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839268)
+and [Android](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839380).
+Every batch of both runs passed; the iOS join failed only its 50 MB download guard,
+which #690 fixes. The feature graphic was built from the English Google Play ones.
 
 Each run also saves numbered App Store copies, from the `appStore` and `appStoreIpad`
 lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):
