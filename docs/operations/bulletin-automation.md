@@ -258,8 +258,7 @@ Rules:
   other language's title.** A note in them, such as `Amazing Grace (合唱)` or
   `奇異恩典 (Piano)`, would be read as the title: 合唱 prints where the Chinese
   title goes, which is easy to spot and fix in the cell. The Sabbath School cells
-  aren't split this way: a hymn typed in both languages there prints as typed, on
-  one line.
+  aren't split this way.
 - Left blank, `Hymn of Praise` is `AH 1 Praise to the Lord` and `Hymn of
   Response` is `AH 348 The Church Has One Foundation` (`DEFAULT_SERVICE_HYMNS` in
   `BulletinApi.gs`). The default is read as if typed. The printed bulletin shows
@@ -1056,11 +1055,11 @@ English on the next, like every other row, such as `第413首 教會根基` over
 `AH 348 The Church Has One Foundation` for a typed `第413首 教會根基`
 (`formatSabbathSchoolHymnsForPrint_`). On one line, a long title wrapped
 mid-word. Each cell has one hymn in either language. Where the map has the
-other language by number, both print; otherwise the hymn prints once, as
-typed, or with its number and title where its own hymnal has it, such as
-`AH 2 All Creatures of Our God and King` for a typed title. A bare number is
-`第N首`. Two or more hymns are numbered `1.`, `2.`,
-`3.`, so a hymn's two lines read as one hymn, and a hymn in one language, such
+other language by number, both print. Otherwise the hymn prints once: as typed,
+except that a title alone gets its number from its own hymnal, such as
+`AH 2 All Creatures of Our God and King` for `All Creatures of Our God and
+King`, and a bare number prints as `第N首`. Two or more hymns are numbered `1.`,
+`2.`, `3.`, so a hymn's two lines read as one hymn, and a hymn in one language, such
 as `第12首 讚美上帝大君王` (the cross-reference table has no English match) or a song
 outside both hymnals, isn't taken for the translation of the hymn above or
 below it. The list is left-aligned, one paragraph a line, with a hanging
