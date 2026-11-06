@@ -2662,6 +2662,8 @@ describe('printed bulletin Apps Script helpers', () => {
           ]),
           englishOnly: formatSabbathSchoolHymnsForPrint_(['Amazing Love']),
           chineseOnly: formatSabbathSchoolHymnsForPrint_(['還要等多久']),
+          noTwin: formatSabbathSchoolHymnsForPrint_(['All Creatures of Our God and King', '8']),
+          noTwinAlone: formatSabbathSchoolHymnsForPrint_(['All Creatures of Our God and King']),
           blank: formatSabbathSchoolHymnsForPrint_(['', '  ']),
           missing: formatSabbathSchoolHymnsForPrint_(undefined),
           noHymnRows: getPrintedSabbathSchoolHymnRows_([], '開會詩歌', '結會詩歌'),
@@ -2686,6 +2688,10 @@ describe('printed bulletin Apps Script helpers', () => {
     // the label in that language.
     expect(output.englishOnly).toBe('—\nAmazing Love');
     expect(output.chineseOnly).toBe('還要等多久\n—');
+    // A hymnal hymn with no twin in the other hymnal prints its own side once,
+    // with its number, not that side again where the translation would go.
+    expect(output.noTwin).toBe('1. AH 2 All Creatures of Our God and King\n2. 第8首');
+    expect(output.noTwinAlone).toBe('—\nAH 2 All Creatures of Our God and King');
     expect(output.blank).toBe('尚未確定\nTBD');
     expect(output.missing).toBe('尚未確定\nTBD');
     // With no hymns, both rows say TBD rather than "the same as" nothing.

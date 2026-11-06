@@ -1057,7 +1057,9 @@ English on the next, like every other row, such as `第413首 教會根基` over
 (`formatSabbathSchoolHymnsForPrint_`). On one line, a long title wrapped
 mid-word. Each cell has one hymn in either language. Where the map has the
 other language by number, both print; otherwise the hymn prints once, as
-typed. A bare number is `第N首`. Two or more hymns are numbered `1.`, `2.`,
+typed, or with its number and title where its own hymnal has it, such as
+`AH 2 All Creatures of Our God and King` for a typed title. A bare number is
+`第N首`. Two or more hymns are numbered `1.`, `2.`,
 `3.`, so a hymn's two lines read as one hymn, and a hymn in one language, such
 as `第12首 讚美上帝大君王` (the cross-reference table has no English match) or a song
 outside both hymnals, isn't taken for the translation of the hymn above or

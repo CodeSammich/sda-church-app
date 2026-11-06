@@ -1919,9 +1919,10 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
 // Each Sabbath School hymn, as one entry: the Chinese, then the English on the
 // next line, as in every other row, where the hymnal map has the other one,
 // such as "第413首 教會根基" over "AH 348 The Church Has One Foundation" for a
-// typed "第413首 教會根基"; otherwise the hymn as typed, on one line. A bare
-// number is a Chinese hymnal number, and prints as 第N首. The other side gets
-// its number and title from resolvePrintedHymnText_ (#619).
+// typed "第413首 教會根基"; otherwise the hymn once, on one line, as typed or
+// with its number and title, never repeated where the translation would go. A
+// bare number is a Chinese hymnal number, and prints as 第N首. The other side
+// gets its number and title from resolvePrintedHymnText_ (#619).
 function getPrintedSabbathSchoolHymnLines_(hymns) {
   var lines = [];
   (hymns || []).forEach(function (value) {
@@ -1933,10 +1934,15 @@ function getPrintedSabbathSchoolHymnLines_(hymns) {
     var resolved = isEnglish
       ? resolvePrintedHymnText_(entry, '')
       : resolvePrintedHymnText_('', /^\d+$/.test(entry) ? '第' + entry + '首' : entry);
-    var english = resolved.english || entry;
-    var chinese = resolved.chinese || entry;
+    var english = resolved.english;
+    var chinese = resolved.chinese;
     // Both languages on their own lines: on one, a long title wrapped mid-word.
-    lines.push(english === chinese ? english : printedBilingualText_(english, chinese));
+    // A hymn with only one side prints that side once, not on both lines.
+    lines.push(
+      english && chinese && english !== chinese
+        ? printedBilingualText_(english, chinese)
+        : english || chinese || entry,
+    );
   });
   return lines;
 }
