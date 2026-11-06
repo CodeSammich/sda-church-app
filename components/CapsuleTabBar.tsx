@@ -28,10 +28,24 @@ export const getCapsuleTabBarWidth = (windowWidth: number) =>
 export const getCapsuleBottomGap = (bottomInset: number, os: string = Platform.OS) =>
   os === 'android' ? Math.max(bottomInset + 8, 12) : Math.max(Math.round(bottomInset * 0.6), 12);
 
-// The halo around a floating bar: solid for HALO_SPREAD points past its edge,
-// then fading out over about HALO_BLUR / 2 more.
+// The halo around a floating bar, a boxShadow in the page's colour: about
+// three-quarters opaque at the bar's edge, half HALO_SPREAD points out, and
+// gone about 25 points out (a blur of HALO_BLUR is a Gaussian of half that).
 export const HALO_SPREAD = 6;
 export const HALO_BLUR = 20;
+
+/**
+ * The side gap at or below which a bar's halo runs edge to edge rather than
+ * hugging it: a phone's, whose bars leave 16 points a side, or an iPad window
+ * the bar nearly fills, such as Slide Over. Text scrolling past in a gap that
+ * narrow only shows as fragments, so there the page shows above the bars but
+ * not beside them; on a wider screen it shows beside them too (#681).
+ */
+export const HALO_FILLS_ROW_GAP = 24;
+export const haloFillsRow = (sideGap: number) => sideGap <= HALO_FILLS_ROW_GAP;
+// How far past the screen's sides an edge-to-edge halo reaches, so its blurred
+// corners stay off the screen.
+export const HALO_PAST_EDGE = 32;
 
 /**
  * A soft halo of the page's colour around a floating bar's shape, drawn behind
@@ -62,9 +76,9 @@ export function FloatingHalo({
  * edge, as iOS's own bar does, raised a shade off the page with a hairline
  * and a soft shadow, with the selected tab in blue, or gold in the dark theme,
  * on its selection pill. Pages run to the bottom edge and scroll under it,
- * fading out only in a soft halo around it (FloatingHalo), so the rest of the
- * row shows and it floats over the page (#681); TabBarSpacer leaves room for
- * their last lines. The Bible draws its card's halo around the capsule too, so
+ * fading out in a soft halo (FloatingHalo): around it on a wide screen, so the
+ * page shows beside it, and edge to edge on a phone (haloFillsRow, #681);
+ * TabBarSpacer leaves room for their last lines. The Bible draws its card's halo around the capsule too, so
  * there the capsule has none of its own (halo false). The icons and labels are
  * the app's own, so they follow its text size, which the systems' own bars
  * wouldn't.
@@ -82,14 +96,18 @@ export function CapsuleTabBar({
       {halo && (
         <FloatingHalo
           background={theme.colors.background}
-          style={[
-            styles.capsuleHalo,
-            {
-              bottom: getCapsuleBottomGap(bottomInset),
-              left: (windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2,
-              width: getCapsuleTabBarWidth(windowWidth),
-            },
-          ]}
+          style={
+            haloFillsRow((windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2)
+              ? { top: 0, bottom: 0, left: -HALO_PAST_EDGE, right: -HALO_PAST_EDGE }
+              : [
+                  styles.capsuleHalo,
+                  {
+                    bottom: getCapsuleBottomGap(bottomInset),
+                    left: (windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2,
+                    width: getCapsuleTabBarWidth(windowWidth),
+                  },
+                ]
+          }
         />
       )}
       <View
