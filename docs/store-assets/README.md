@@ -2,9 +2,10 @@
 
 Copies of the images uploaded to Google Play and the App Store, so the next update
 starts from what's uploaded instead of from scratch. The What's New text for the version
-being released, for both stores, is in [whats-new.md](whats-new.md). Each store has one set of six
-phone screenshots, which every listing language shows, and the App Store one set of
-iPad screenshots (#324). How each store's screenshots
+being released, for both stores, is in [whats-new.md](whats-new.md). From 1.7.1, each
+store has a set of phone screenshots in English, Traditional Chinese, and Simplified
+Chinese, each in its own interface, and the App Store an iPad set in each (#324, #681).
+The Spanish listings show the English sets. How each store's screenshots
 are captured, their sizes, and what they may show are in
 [Store listings](../operations/store-listing.md#screenshots).
 
@@ -16,23 +17,37 @@ are captured, their sizes, and what they may show are in
   they change. An AI assistant designed it and wrote that script, so declare it as
   AI-generated in Play Console; see
   [Store listing assets](../operations/play-console-answers.md#store-listing-assets).
-- `google-play/phone/en-US/`: the six phone screenshots, in upload order, at 1080 × 1920:
-  Home, the Bible in English and Chinese, the audio settings with the CUV's audio
-  languages, the Bible in the dark theme, Explore, and the Library. The other languages'
-  listings show these too.
-- `app-store/en-US/`: the six iPhone screenshots, in upload order, at 1206 × 2622, the
-  size App Store Connect's iPhone slot takes: Home, the Bible in English and Chinese, the Bible in Chinese and
-  English with the Chinese interface, the Bible in the dark theme, Explore, and the
-  Library. Home comes first: the first three appear on the App Store's install sheets,
-  and Home shows what the app is. The other languages' listings show these too.
-- `app-store/ipad/en-US/`: the iPad screenshots, in upload order, at 2064 × 2752 (or
-  2752 × 2064 in landscape), the size App Store Connect's **iPad 13-inch display** slot
-  takes: Home, the Bible in English and Chinese, the Bible in landscape, the Library,
-  and Home in landscape. They're the key screens' 13-inch iPad shots, at the iPad's own
-  150% text, copied from a run's `screens/app-store-ipad/en-US/` when the app first ran
-  on iPad (#324), with the floating tab bar and Bible card (#589), November 5, 2026. Upload
-  them with 1.7.0, the first release that supports iPad, and copy a newer run's set here only when the iPad's layout changes; a different
-  day's verse on Home isn't a reason. The other languages' listings show these too.
+- `google-play/phone/`: the phone screenshots, in upload order, at 1080 × 1920, one
+  set per listing language, each ending with the You tab:
+  - `en-US/`: Home, the Bible in English and Chinese, the audio settings with the CUV's
+    audio languages, the Bible in the dark theme, Explore, the Library, and You. The
+    Spanish listings (`es-US`, `es-419`) show these too.
+  - `zh-TW/`, for the `zh-TW` and `zh-HK` listings: with the Traditional Chinese
+    interface, Home, the Bible with Cantonese audio, the Bible with pinyin, Explore, the
+    Library, the Bible in Simplified characters, the Bible in the dark theme, and You.
+  - `zh-CN/`: with the Simplified Chinese interface, Home, the Bible in Simplified
+    characters, the Bible in Traditional characters with Cantonese audio, Explore, the
+    Library, the Simplified Bible in the dark theme, and You.
+- `app-store/en-US/`, `app-store/zh-Hant/`, and `app-store/zh-Hans/`: the iPhone
+  screenshots for each listing, in upload order, at 1206 × 2622, the size App Store
+  Connect's iPhone slot takes. English's are Home, the Bible in English and Chinese,
+  the Bible with the Chinese interface, the Bible in the dark theme, Explore, the
+  Library, and You; the two Chinese sets are Google Play's `zh-TW` and `zh-CN` sets.
+  Home comes first: the first three appear on the App Store's install sheets, and Home
+  shows what the app is. The Spanish listings show the English set.
+- `app-store/ipad/`: the iPad screenshots for each listing, in upload order, at
+  2064 × 2752 in portrait, the size App Store Connect's **iPad
+  13-inch display** slot takes. They're the key screens' 13-inch iPad shots, at the
+  iPad's own 150% text:
+  - `en-US/`: Home, the Bible in English and Chinese, Explore, the Library, and You.
+  - `zh-Hant/`: Home, the Bible with Cantonese audio, Explore, the Library, and You.
+  - `zh-Hans/`: Home, the Simplified Bible, Explore, the Library, and You.
+
+  All portrait (#681): the App Store shows a set's iPad screenshots in one row, where
+  a landscape shot among portrait ones shows smaller.
+
+  Copy a newer run's sets here only when the iPad's layout changes; a different day's
+  verse on Home isn't a reason.
 - `app-store/header/`: the App Store product page headers, one per listing language:
   `en-US.png`, `zh-Hant.png`, `zh-Hans.png`, and `es.png` for both Spanish listings.
   Each is a 3840 × 1646 (21:9) PNG with no transparency. App Store Connect's header
@@ -41,8 +56,8 @@ are captured, their sizes, and what they may show are in
   three iPhone screenshots: the Bible, Home, and Explore. Behind them is the church
   building photo that Home and Explore show, tinted brand blue (`#00405C`). The tagline
   and phones sit in the middle, because the App Store crops the edges on some devices.
-  `scripts/make-app-store-headers.cjs` builds them from `app-store/en-US/`, so run it
-  again when those screenshots change. They leave out the logo, because the app icon
+  `scripts/make-app-store-headers.cjs` builds each from its listing's own set, and the
+  Spanish one from `app-store/en-US/`, so run it again when those screenshots change. They leave out the logo, because the app icon
   shows just below the header. Home and Explore show the YouTube, Spotify, and Zoom
   icons. That's allowed: Apple's rule against other platforms' logos (guideline 2.3.10)
   means other mobile platforms and app stores, such as Android or Google Play. If a
@@ -54,33 +69,25 @@ are captured, their sizes, and what they may show are in
   [Foreground service](../operations/play-console-answers.md#foreground-service).
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The screenshots
-and headers here are from the key-screen runs for 1.7.0 on November 5, 2026, the first
-with the floating tab bar and Bible card on every system (#589), white or night blue
-for older eyes, the card's pills in the selected tab's blue or gold, and Home's
-three-line countdown:
-[iOS](https://github.com/CodeSammich/sda-church-app/actions/runs/42003610581) and
-[Android](https://github.com/CodeSammich/sda-church-app/actions/runs/42003614621). The
-feature graphic was built from the Google Play ones.
+and headers here are from the key-screen runs for 1.7.1 on November 6, 2026, with the floating
+tab bar and Bible card (#589) and the soft halo behind them (#681):
+[iOS](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839268) and [Android](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839380),
+on the release PR's final commit (#686, db050e58). The feature graphic was built from the
+English Google Play ones.
 
-Each run also saves numbered App Store copies in its App Store download,
-`ios-key-screens-<number>-<run>-app-store`, under `screens/app-store/`, from the
-`appStore` lists in `test/screens/screens.json`:
+Each run also saves numbered App Store copies, from the `appStore` and `appStoreIpad`
+lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):
 
-- `screens/app-store/en-US/`: the uploaded set, in upload order: Home, the Bible in
-  English and Chinese, the Bible with the Chinese interface (`bible-cuv-zh`), the Bible
-  in the dark theme, Explore, and the Library.
-- `screens/app-store/zh-Hant/`: seven shots with the Chinese interface, which aren't
-  uploaded.
-- `screens/app-store-ipad/en-US/`: the iPad set to upload, from the `appStoreIpad`
-  list.
+- `ios-key-screens-<number>-<run>-app-store`, under `screens/app-store/en-US/`,
+  `zh-Hant/`, and `zh-Hans/`: each listing's iPhone set, in upload order.
+- `ios-key-screens-<number>-<run>-app-store-ipad`, under `screens/app-store-ipad/en-US/`,
+  `zh-Hant/`, and `zh-Hans/`: each listing's iPad set.
 
 Each run saves numbered Google Play copies too, in its Google Play download,
-`android-key-screens-<pr>-<run>-google-play`, under `screens/google-play/en-US/` and
-`screens/google-play/zh-TW/`, from the `googlePlay` lists, on an emulator of Google
-Play's size (1080 × 1920), without transparency (#372). `en-US` is the uploaded set, in
-upload order: Home, the Bible in English and Chinese, the audio settings with the CUV's
-audio languages (`bible-audio-settings-default`), the Bible in the dark theme, Explore,
-and the Library. So for a new set, copy a run's two `en-US` folders here.
+`android-key-screens-<pr>-<run>-google-play`, under `screens/google-play/en-US/`,
+`zh-TW/`, and `zh-CN/`, from the `googlePlay` lists, on an emulator of Google Play's
+size (1080 × 1920), without transparency (#372). So for new sets, copy each of a run's
+folders here, then run both scripts above.
 
 **No transparency.** Both stores reject screenshots with an alpha channel: Google Play
 takes JPEG or 24-bit PNG, and App Store Connect refuses images with transparency. The
