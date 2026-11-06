@@ -1,7 +1,7 @@
 import { AppIcon } from '@/components/AppIcon';
 import { LibraryCoverImage } from '@/components/LibraryCoverImage';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
-import { contentColumnStyle, DESIGN_TOKENS, getContentSideInset } from '@/constants/Layout';
+import { DESIGN_TOKENS, getContentSideInset } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useContentColumnScale } from '@/hooks/useContentColumnScale';
@@ -28,19 +28,21 @@ type LibraryShelfRowProps = Readonly<{
  * One shelf of the library page: its title, a link to the whole shelf, and
  * its covers in a row that scrolls sideways. A longer shelf makes the row
  * longer, not the page. On a wide screen the row still spans the screen, and
- * its first cover lines up with the content column the title is in.
+ * its first cover lines up with the content column the title is in. See all
+ * sits at the screen's right edge, where the row ends, as on a phone, not at
+ * the column's, above the middle of a row that runs past it (#681).
  */
 export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: LibraryShelfRowProps) {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
   const { width } = useWindowDimensions();
   const columnScale = useContentColumnScale();
-  const styles = useMemo(() => createStyles(textScale, columnScale), [columnScale, textScale]);
+  const styles = useMemo(() => createStyles(textScale), [textScale]);
   const sideInset = getContentSideInset(width, columnScale);
 
   return (
     <View style={styles.row}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingLeft: 20 + sideInset }]}>
         <Text
           accessibilityRole="header"
           style={[styles.title, { color: theme.colors.onSurface }]}
@@ -111,16 +113,12 @@ export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: Library
   );
 }
 
-const createStyles = (
-  textScale: Parameters<typeof scaleTypographyMetric>[1],
-  columnScale: number,
-) =>
+const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
   StyleSheet.create({
     row: {
       marginBottom: 28,
     },
     header: {
-      ...contentColumnStyle(columnScale),
       alignItems: 'center',
       flexDirection: 'row',
       gap: 12,
