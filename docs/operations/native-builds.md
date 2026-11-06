@@ -967,7 +967,7 @@ every screen must show:
   down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header opened from Home uses
   them: its translation button must show both full names at 100%, and on the iPhone at
   150% and 200% too, while the Android phone's narrower screen may drop them there;
-- no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
+- no system prompt ("Open in"), setup screen ("Get Started"), or unfilled value
   ("undefined", "NaN").
 
 Each label counts only where it belongs, so "Read Verse" on Home isn't the verse button.
