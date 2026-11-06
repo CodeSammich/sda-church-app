@@ -78,9 +78,25 @@ describe('pack', () => {
     }
     const copy = await sharp(join(out, 'iphone-1', 'screens', 'ios', 'bible-default.png')).metadata();
     expect(copy).toMatchObject({ format: 'png', width: 120, height: 200, isPalette: true });
+    // Each store folder is a download of its own, so the App Store's iPhone and
+    // iPad copies each stay under 50 MB (#681).
     const store = 'app-store/en-US/01-home-default.png';
-    expect(readFileSync(join(out, 'store', 'screens', store))).toEqual(readFileSync(join(from, store)));
-    expect(downloads.at(-1)).toMatchObject({ name: 'store', folders: ['app-store'] });
+    expect(readFileSync(join(out, 'app-store', 'screens', store))).toEqual(readFileSync(join(from, store)));
+    expect(downloads.at(-1)).toMatchObject({ name: 'app-store', folders: ['app-store'] });
+  });
+
+  it("makes the App Store's iPhone and iPad copies separate downloads (#681)", async () => {
+    const { from, out } = await joined();
+    mkdirSync(join(from, 'app-store-ipad', 'en-US'), { recursive: true });
+    writeFileSync(join(from, 'app-store-ipad', 'en-US', '01-home-default.png'), 'ipad');
+    const { downloads, problems } = await pack({ from, out, devices: ['ios'], store: ['app-store', 'app-store-ipad'] });
+    expect(problems).toEqual([]);
+    expect(downloads.filter((download: { folders?: string[] }) => download.folders)).toEqual([
+      expect.objectContaining({ name: 'app-store', folders: ['app-store'] }),
+      expect.objectContaining({ name: 'app-store-ipad', folders: ['app-store-ipad'] }),
+    ]);
+    expect(existsSync(join(out, 'app-store-ipad', 'screens', 'app-store-ipad', 'en-US', '01-home-default.png'))).toBe(true);
+    expect(existsSync(join(out, 'app-store', 'screens', 'app-store-ipad'))).toBe(false);
   });
 
   it('says so when a device needs more parts than the workflow uploads', async () => {

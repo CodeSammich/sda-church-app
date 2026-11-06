@@ -389,7 +389,8 @@ describe('iOS key screens', () => {
           `          path: \${{ runner.temp }}/review/${part}/\n`,
       );
     }
-    expect(merge).toContain('-app-store\n          path: ${{ runner.temp }}/review/store/\n');
+    expect(merge).toContain('-app-store\n          path: ${{ runner.temp }}/review/app-store/\n');
+    expect(merge).toContain('-app-store-ipad\n          path: ${{ runner.temp }}/review/app-store-ipad/\n');
     expect(merge).not.toContain('path: ${{ runner.temp }}/ios-key-screens/');
     expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
     expect(merge).toContain('--out "$SCREENS_OUT/screens"');
@@ -1600,7 +1601,7 @@ describe('Android key screens workflow (#372)', () => {
     // Packed for Chrome as the iPhone's are, with the Google Play copies apart.
     expect(workflow).toContain('--devices android --store google-play');
     expect(workflow).toContain('-android-1\n          path: ${{ runner.temp }}/review/android-1/\n');
-    expect(workflow).toContain('-google-play\n          path: ${{ runner.temp }}/review/store/\n');
+    expect(workflow).toContain('-google-play\n          path: ${{ runner.temp }}/review/google-play/\n');
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
   });
 

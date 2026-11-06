@@ -635,8 +635,9 @@ failed batch's log says which group it took:
   more than one, which the review comment links as the iPhone screenshots: the key
   screens in `screens/ios/<screen>-<variant>.png` (described below), with the text checks.
 - `ios-key-screens-<number>-<run>-ipad-1` and so on: the iPad's, in `screens/ipad/`.
-- `ios-key-screens-<number>-<run>-app-store`: the App Store copies, in
-  `screens/app-store/` and `screens/app-store-ipad/`.
+- `ios-key-screens-<number>-<run>-app-store`: the App Store's iPhone copies, in
+  `screens/app-store/`, and `…-app-store-ipad`: its iPad copies, in
+  `screens/app-store-ipad/`.
 - The download ending in `-arm64`: the app, `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`,
   and a screenshot of its first screen, `…-arm64-first-screen.png`, named like the
   Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`. Chrome may block
@@ -814,7 +815,10 @@ palette PNGs: the same names and sizes, at about a quarter of the bytes. The app
 colours stay exact, and the photos are dithered, which looks the same at a glance. If a
 device's shots still pass 45 MB, it splits them, in name order, into parts of about equal
 size, each with the run's `ocr.json`, `checks.json`, and `settle-times.json`; a device's
-parts unzip into the same folders. The store copies are their own download, untouched.
+parts unzip into the same folders. Each store's copies are a download of their own,
+untouched: the App Store's iPhone copies, its iPad copies, and Google Play's. 1.7.1's
+English, Traditional and Simplified Chinese sets took the App Store's iPhone and iPad
+copies together to 52.6 MB, so they're apart (#681).
 The review comment links every part. On 1.7.0's run the downloads were:
 
 | Download | Shots | Zip |

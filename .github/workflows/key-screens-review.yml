@@ -160,15 +160,16 @@ jobs:
           run_url="https://github.com/$REPO/actions/runs/$ios_run"
           iphone="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-iphone-[0-9]+$")' 'the iPhone screenshots')"
           ipad="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-ipad-[0-9]+$")' 'the iPad screenshots')"
-          app_store="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-app-store$")' 'their own download')"
+          app_store="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-app-store$")' 'the iPhone download')"
+          app_store_ipad="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-app-store-ipad$")' 'the iPad download')"
           app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iOS Simulator app')"
           if [ -n "$android_run" ] && [ "$android_checks" != "not finished" ]; then
             android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-android-[0-9]+$")' 'the Android screenshots')"
             google_play="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-google-play$")' 'theirs')"
-            stores="The App Store copies are in $app_store: \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`. The Google Play copies are in $google_play: \`screens/google-play/\`."
+            stores="The App Store copies are in $app_store, \`screens/app-store/\`, and $app_store_ipad, \`screens/app-store-ipad/\`. The Google Play copies are in $google_play: \`screens/google-play/\`."
           else
             android="the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
-            stores="The App Store copies are in $app_store: \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`."
+            stores="The App Store copies are in $app_store, \`screens/app-store/\`, and $app_store_ipad, \`screens/app-store-ipad/\`."
           fi
           if [ "$ios_checks" = success ] && [ "$android_checks" = success ]; then
             checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
