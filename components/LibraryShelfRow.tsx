@@ -10,6 +10,7 @@ import { useMemo } from 'react';
 import {
   FlatList,
   Platform,
+  Pressable,
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
@@ -31,6 +32,11 @@ type LibraryShelfRowProps = Readonly<{
  * its first cover lines up with the content column the title is in. See all
  * sits at the screen's right edge, where the row ends, as on a phone, not at
  * the column's, above the middle of a row that runs past it (#681).
+ *
+ * The whole heading row opens the shelf, not only See all, as Apple's own
+ * apps' section headings do, so the target is as big as the heading. Screen
+ * readers still find the title as a heading and See all as its own button:
+ * the row itself isn't an accessibility element.
  */
 export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: LibraryShelfRowProps) {
   const theme = useAppTheme();
@@ -42,7 +48,12 @@ export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: Library
 
   return (
     <View style={styles.row}>
-      <View style={[styles.header, { paddingLeft: 20 + sideInset }]}>
+      <Pressable
+        accessible={false}
+        onPress={onSeeAll}
+        style={[styles.header, { paddingLeft: 20 + sideInset }, Platform.OS === 'web' ? styles.webPressable : null]}
+        testID="library-shelf-heading"
+      >
         <Text
           accessibilityRole="header"
           style={[styles.title, { color: theme.colors.onSurface }]}
@@ -65,7 +76,7 @@ export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: Library
             color={theme.colors.primary}
           />
         </TouchableOpacity>
-      </View>
+      </Pressable>
       <FlatList
         contentContainerStyle={[styles.books, { paddingHorizontal: 20 + sideInset }]}
         data={books}
