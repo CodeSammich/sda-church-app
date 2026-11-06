@@ -249,6 +249,15 @@ Rules:
   language where it can. A tab that still has the older `English …` and
   `Chinese …` columns for either hymn is read too, and a supplied side is never
   overwritten.
+- Left blank, `Hymn of Praise` is `AH 1 Praise to the Lord` and `Hymn of
+  Response` is `AH 348 The Church Has One Foundation` (`DEFAULT_SERVICE_HYMNS` in
+  `BulletinApi.gs`). The default is read as if typed, so the app and the printed
+  bulletin show its Chinese title too: 第5首 讚美上主 and 第413首 教會基礎. Type
+  `TBD` to show TBD instead. There's no default in three cases:
+  - a week with no row;
+  - a location with nothing else filled in, here or in the `Sabbath Calendar`,
+    so an empty Brooklyn still shows the app's joint-service note;
+  - a renamed or deleted hymn column, which opening the sheet reports.
 - `Bible Verses` stores the reference used by Church at Study and the digital
   bulletin's Today's Verse. It may be a same-chapter range or supported
   semicolon-separated references, such as `John 3:16-18; Psalm 23`. The printed
@@ -620,8 +629,10 @@ until 1.6.1, which saved a print-only verse in a `PRINTED_BIBLE_VERSE_*` Script
 Property; the next **Create Word Doc…** deletes any left.
 
 Blank content remains blank in the API and renders as `TBD` in the app or as the
-bilingual printed placeholder. The exception is a blank `Bible Verses`: the
-printed bulletin isn't made until it's filled in.
+bilingual printed placeholder. There are two exceptions:
+- a blank `Bible Verses`: the printed bulletin isn't made until it's filled in;
+- a blank `Hymn of Praise` or `Hymn of Response`: it gets its default hymn (see
+  [`Weekly Data`](#3-weekly-data)).
 
 A missing schedule is different: the `Sabbath Calendar` tab, its `Date` column,
 or the Sabbath's row is gone, so there's no schedule record at all (#580).
@@ -752,8 +763,10 @@ preview surface, not the canonical release channel.
 - Brooklyn uses the label `Sabbath Encouragement`, not `Sabbath Message`.
 - The bulletin doesn't link to the master spreadsheet, which only church
   accounts can open (#553).
-- Every blank content field displays `TBD`; a populated field suppresses the
-  cautious joint-service fallback note for Brooklyn.
+- Every blank content field displays `TBD`, except the Hymn of Praise and Hymn
+  of Response, which the API fills with their defaults when the location has
+  anything else. A populated field suppresses the cautious joint-service
+  fallback note for Brooklyn, and the defaults alone never do.
 
 ### Caching and refresh
 

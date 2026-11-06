@@ -87,7 +87,11 @@ The hymn of praise and the hymn of response have one cell each too. The Apps Scr
 files that cell under `english` or `chinese` by the same rule (`getBulletinHymnLanguage_`
 in `BulletinApi.gs`), so the API still returns both sides, one of them blank, and the
 app needs no change. A tab that still has the older English and Chinese columns is read
-as before.
+as before. When a week's row leaves either cell blank, and the location has anything else, the
+Apps Script files its default (`DEFAULT_SERVICE_HYMNS`: AH 1 and AH 348) the same way,
+so the app resolves it like any typed hymn. An empty location stays empty
+(`bulletinLocationHasContent_`, which counts content as the app's
+`isBulletinLocationEmpty` does).
 
 ## Adding another bulletin hymn field
 

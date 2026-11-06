@@ -83,6 +83,20 @@ describe('the printed hymn lookup (#619)', () => {
       ),
     );
 
+  it('prints the default Hymn of Praise and Hymn of Response with their Chinese titles', () => {
+    const context = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs']);
+    const defaults = JSON.parse(runInContext('JSON.stringify(DEFAULT_SERVICE_HYMNS)', context));
+
+    expect(resolve(context, defaults.hymnOfPraise, '')).toEqual({
+      english: 'AH 1 Praise to the Lord',
+      chinese: '第5首 讚美上主',
+    });
+    expect(resolve(context, defaults.hymnOfResponse, '')).toEqual({
+      english: 'AH 348 The Church Has One Foundation',
+      chinese: '第413首 教會基礎',
+    });
+  });
+
   it("fills in the other hymnal's number and title", () => {
     const context = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs']);
 

@@ -78,11 +78,11 @@ const getMissingColumns = (
 };
 
 // The Weekly Data fields read from one row under these headers.
-const readWeeklyRow = (headers: string[], row: string[]) => {
+const readWeeklyRows = (headers: string[], rows: string[][]) => {
   const context = loadBulletinApi({
     testSpreadsheet: {
       getSheetByName: (name: string) =>
-        name === 'Weekly Data' ? createSheet(name, headers, [row]) : null,
+        name === 'Weekly Data' ? createSheet(name, headers, rows) : null,
     },
   });
   return JSON.parse(
@@ -99,6 +99,8 @@ const readWeeklyRow = (headers: string[], row: string[]) => {
     ) as string,
   );
 };
+
+const readWeeklyRow = (headers: string[], row: string[]) => readWeeklyRows(headers, [row]);
 
 describe('Apps Script bulletin response merging', () => {
   it('maps the Sabbath School opening prayer under its explicit API field', () => {
@@ -322,6 +324,63 @@ describe('Apps Script bulletin response merging', () => {
     });
   });
 
+  it('gives a blank Hymn of Praise and Hymn of Response their defaults, as if typed', () => {
+    const row = ['2026-11-07', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人', '', '', '', '', '', ''];
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: 'AH 1 Praise to the Lord', chinese: '' },
+      hymnOfResponse: { english: 'AH 348 The Church Has One Foundation', chinese: '' },
+    });
+    // A typed hymn, in either language, or TBD is kept.
+    row[8] = '第5首 讚美上主';
+    row[10] = 'TBD';
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: '', chinese: '第5首 讚美上主' },
+      hymnOfResponse: { english: 'TBD', chinese: '' },
+    });
+    // A hymn typed in a duplicate row wins over the blank one.
+    row[8] = '';
+    row[10] = '';
+    const duplicate = [...row.slice(0, 8), 'AH 86 How Great Thou Art', '', '第452首 遵命有福'];
+    expect(readWeeklyRows(WEEKLY_HEADERS, [row, duplicate])).toMatchObject({
+      hymnOfPraise: { english: 'AH 86 How Great Thou Art', chinese: '' },
+      hymnOfResponse: { english: '', chinese: '第452首 遵命有福' },
+    });
+    // With no row for the week, there's no cell to default.
+    expect(readWeeklyRow(WEEKLY_HEADERS, ['2026-11-14', 'Queens', '', '', '', '', '', '', '', '', ''])).toMatchObject({
+      hymnOfPraise: { english: '', chinese: '' },
+      hymnOfResponse: { english: '', chinese: '' },
+    });
+  });
+
+  it("gives a week with nothing else in it no defaults, so an empty Brooklyn keeps the app's joint-service note", () => {
+    const empty = ['2026-11-07', 'Queens', '', '', '', '', '', '', '', '', ''];
+    expect(readWeeklyRow(WEEKLY_HEADERS, empty)).toMatchObject({
+      hymnOfPraise: { english: '', chinese: '' },
+      hymnOfResponse: { english: '', chinese: '' },
+    });
+    // TBD isn't content either, as in the app.
+    const tbd = ['2026-11-07', 'Queens', 'TBD', 'tbd', '', '', '', '', '', '', ''];
+    expect(readWeeklyRow(WEEKLY_HEADERS, tbd).hymnOfPraise).toEqual({ english: '', chinese: '' });
+    // One filled cell is enough, even a Sabbath School hymn.
+    const oneHymn = ['2026-11-07', 'Queens', '', '', '', '第12首', '', '', '', '', ''];
+    expect(readWeeklyRow(WEEKLY_HEADERS, oneHymn)).toMatchObject({
+      hymnOfPraise: { english: 'AH 1 Praise to the Lord', chinese: '' },
+      hymnOfResponse: { english: 'AH 348 The Church Has One Foundation', chinese: '' },
+    });
+  });
+
+  it('counts a location as having content just as the app does', () => {
+    const context = loadBulletinApi();
+    const hasContent = (location: object) =>
+      runInContext(`bulletinLocationHasContent_(${JSON.stringify(location)})`, context);
+    expect(hasContent({ hymnOfPraise: { english: '', chinese: '' }, sabbathSchoolHymns: [], announcements: '' })).toBe(false);
+    // Announcements print only, and the app doesn't count them.
+    expect(hasContent({ announcements: 'Potluck after service', sermon: ' TBD ' })).toBe(false);
+    expect(hasContent({ sermon: 'Name withheld' })).toBe(true);
+    expect(hasContent({ sabbathSchoolHymns: ['', '205'] })).toBe(true);
+    expect(hasContent({ sermonTitle: { english: '', chinese: '好牧人' } })).toBe(true);
+  });
+
   it('reads each column by its name, wherever it is', () => {
     const shuffled = [...WEEKLY_HEADERS, 'Notes'].reverse();
     const row = ['2026-11-07', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人',
@@ -341,10 +400,13 @@ describe('Apps Script bulletin response merging', () => {
     const headers = WEEKLY_HEADERS.filter((header) => header !== 'Bible Verses');
     headers[headers.indexOf('Hymn of Praise')] = 'Opening Hymn';
     const row = ['2026-11-07', 'Queens', 'The Good Shepherd', '好牧人', '', '', '', 'AH 1', '', ''];
+    // A renamed Hymn of Praise column gets no default: the hymn may be under
+    // its new name. Hymn of Response, still there and blank, gets its own.
     expect(readWeeklyRow(headers, row)).toMatchObject({
       bibleVerses: '',
       sermonTitle: { english: 'The Good Shepherd', chinese: '好牧人' },
       hymnOfPraise: { english: '', chinese: '' },
+      hymnOfResponse: { english: 'AH 348 The Church Has One Foundation', chinese: '' },
     });
     expect(getMissingColumns(headers)).toEqual([
       'Weekly Data: Bible Verses',
@@ -370,6 +432,14 @@ describe('Apps Script bulletin response merging', () => {
       hymnOfPraise: { english: 'AH 1', chinese: '第5首' },
       hymnOfResponse: { english: '', chinese: '413' },
       bibleVerses: 'John 3:16',
+    });
+    // One side supplied is enough; both blank gets the default.
+    row[2] = '';
+    expect(readWeeklyRow(INTAKE_HEADERS, row).hymnOfPraise).toEqual({ english: '', chinese: '第5首' });
+    row[3] = '';
+    expect(readWeeklyRow(INTAKE_HEADERS, row).hymnOfPraise).toEqual({
+      english: 'AH 1 Praise to the Lord',
+      chinese: '',
     });
   });
 

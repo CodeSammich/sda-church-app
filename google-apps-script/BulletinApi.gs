@@ -93,6 +93,16 @@ var SAFE_SINGLE_VALUES = Object.freeze([
 
 var PRIVATE_NAME_PLACEHOLDER = 'Name withheld';
 
+// The hymns a week gets when its row leaves the cell blank (user, 2026-11-06).
+// Each is filed and looked up like a typed entry, so its Chinese title comes
+// from the hymnal lookup. Typing TBD still prints TBD. A location with nothing
+// else in it gets none, so it stays empty: an empty Brooklyn shows the app's
+// joint-service note.
+var DEFAULT_SERVICE_HYMNS = Object.freeze({
+  hymnOfPraise: 'AH 1 Praise to the Lord',
+  hymnOfResponse: 'AH 348 The Church Has One Foundation',
+});
+
 // Weekly Data is the reviewed, staff-managed source for sermon content.
 // These headers are intentionally concise so final owners can correct a week's
 // content directly without an append-only response workflow.
@@ -988,6 +998,21 @@ function populateBulletinIntake_(location, intakeRows) {
       );
     });
   });
+  // A blank Hymn of Praise or Hymn of Response gets its default, but only
+  // where the tab has that hymn's column: a renamed or deleted column, which
+  // opening the sheet reports, never prints the default in place of the hymn
+  // staff typed under the new name.
+  var hasContent = bulletinLocationHasContent_(location);
+  Object.keys(DEFAULT_SERVICE_HYMNS).forEach(function (key) {
+    var hasColumn = BULLETIN_INTAKE_SCHEMA.some(function (field) {
+      return field.path[0] === key && findFirstHeaderIndex_(intakeRows.headers, field.headers) !== -1;
+    });
+    if (hasContent && hasColumn && isBlank_(location[key].english) && isBlank_(location[key].chinese)) {
+      var text = DEFAULT_SERVICE_HYMNS[key];
+      setPath_(location, [key, getBulletinHymnLanguage_(text)], text);
+    }
+  });
+
   // Keep the entered hymns in order, without the blank cells between them.
   var hymns = [];
   for (var index = 0; index < location.sabbathSchoolHymns.length; index += 1) {
@@ -996,6 +1021,27 @@ function populateBulletinIntake_(location, intakeRows) {
     }
   }
   location.sabbathSchoolHymns = hymns;
+}
+
+// Whether a location has anything to show, decided as the app's
+// isBulletinLocationEmpty (services/BulletinService.ts) does: any value but a
+// blank or TBD. Announcements print only, so they don't count.
+function bulletinLocationHasContent_(location) {
+  var has = function (value) {
+    if (value && typeof value === 'object') {
+      return Object.keys(value).some(function (key) {
+        return has(value[key]);
+      });
+    }
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      return false;
+    }
+    var text = String(value).trim();
+    return text !== '' && text.toUpperCase() !== 'TBD';
+  };
+  return Object.keys(location).some(function (key) {
+    return key !== 'announcements' && has(location[key]);
+  });
 }
 
 function getBulletinIntakeRows_(spreadsheet, requestedDate, location) {
