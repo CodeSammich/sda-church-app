@@ -2,7 +2,7 @@ import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import {
   type AccessibilityRole,
   type AccessibilityState,
@@ -11,10 +11,34 @@ import {
   type StyleProp,
   StyleSheet,
   Text,
+  type TextLayoutEvent,
   type TextStyle,
   useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
+
+/**
+ * A label split into two even lines, for a label that wrapped with its second
+ * line less than half as long as its first (#681): 發送電子郵件 wrapped as five
+ * characters and one on a Pixel 9a. Text with spaces splits at the space
+ * nearest its middle; Chinese, whose characters are all one width, at its
+ * middle character, without starting the second line with punctuation.
+ */
+export const balanceLabel = (label: string) => {
+  const middle = label.length / 2;
+  const spaces = [...label.matchAll(/ /g)].map((match) => match.index ?? 0);
+  if (spaces.length) {
+    const at = spaces.reduce((best, index) => (Math.abs(index - middle) < Math.abs(best - middle) ? index : best));
+    return `${label.slice(0, at)}\n${label.slice(at + 1)}`;
+  }
+  let at = Math.ceil(middle);
+  while (at < label.length - 1 && /[、，。：；！？）」』]/.test(label[at])) at += 1;
+  return `${label.slice(0, at)}\n${label.slice(at)}`;
+};
+
+/** Whether a label's two lines are uneven enough to balance: the second less than half the first. */
+export const isUnevenWrap = (lines: readonly { text: string }[]) =>
+  lines.length === 2 && lines[1].text.trim().length * 2 < lines[0].text.trim().length;
 
 interface WrappingButtonProps {
   accessibilityHint?: string;
@@ -53,7 +77,7 @@ export const WrappingButton = ({
 }: WrappingButtonProps) => {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
   const styles = useMemo(
     () => createStyles(textScale, Math.max(1, fontScale * textScale), compact),
     [compact, fontScale, textScale],
@@ -81,6 +105,19 @@ export const WrappingButton = ({
   const spokenLabel =
     accessibilityLabel ?? (typeof children === 'string' ? children : undefined);
   const isDisabled = disabled || !onPress;
+  // A label that wrapped unevenly, split in two even lines, for this window
+  // width and text size. Turning the phone or changing the size measures it
+  // afresh, as it may fit on one line then. Not the button's own width: a
+  // button as wide as its label narrows once the label is balanced.
+  const [balanced, setBalanced] = useState<{ key: string; text: string } | null>(null);
+  const label = typeof children === 'string' ? children : null;
+  const key = `${label}|${windowWidth}|${textScale}|${fontScale}`;
+  const shownLabel = balanced && balanced.key === key ? balanced.text : children;
+  const onTextLayout = (event: TextLayoutEvent) => {
+    if (label && shownLabel === label && isUnevenWrap(event.nativeEvent.lines)) {
+      setBalanced({ key, text: balanceLabel(label) });
+    }
+  };
 
   return (
     <Pressable
@@ -112,10 +149,13 @@ export const WrappingButton = ({
         />
       ) : null}
       <Text
+        onTextLayout={label ? onTextLayout : undefined}
         pointerEvents="none"
         style={[styles.label, { color: resolvedTextColor }, labelStyle]}
+        // Android balances a wrapped label's lines itself.
+        textBreakStrategy="balanced"
       >
-        {children}
+        {shownLabel}
       </Text>
     </Pressable>
   );

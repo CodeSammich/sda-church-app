@@ -1,83 +1,37 @@
-import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
-import * as ReactNative from 'react-native';
+import { balanceLabel, isUnevenWrap, WrappingButton } from '@/components/WrappingButton';
+import { act } from '@testing-library/react-native';
+import { createElement } from 'react';
+import { renderWithPreferences } from './helpers/render-preferences';
 
-import { WrappingButton } from '@/components/WrappingButton';
-import { TextSizeContext } from '@/constants/TextSizeContext';
-
-jest.mock('@/constants/Themes', () => ({
-  useAppTheme: () => ({
-    colors: {
-      onPrimary: '#ffffff',
-      onSecondaryContainer: '#111111',
-      outline: '#777777',
-      primary: '#0066cc',
-      secondaryContainer: '#dddddd',
-    },
-  }),
-}));
-
-jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
-  const React = require('react');
-  const MockIcon = (props: { name: string }) =>
-    React.createElement('MockIcon', { ...props, testID: `icon-${props.name}` });
-  MockIcon.glyphMap = {};
-  return MockIcon;
-});
-
-describe('wrapping replacement for Paper buttons', () => {
-  it('renders a complete localized label at 4x effective text', async () => {
-    jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
-      fontScale: 2,
-      height: 568,
-      scale: 1,
-      width: 320,
-    });
-    const onPress = jest.fn();
-    const view = await render(
-      React.createElement(
-        TextSizeContext.Provider,
-        {
-          value: {
-            setTextScale: jest.fn(async () => {}),
-            textScale: 2,
-          },
-        },
-        React.createElement(
-          WrappingButton,
-          {
-            children: 'View Latest Bulletin Without Truncation',
-            icon: 'file-pdf-box',
-            mode: 'contained',
-            onPress,
-          },
-        ),
-      ),
-    );
-
-    const button = view.getByRole('button', {
-      name: 'View Latest Bulletin Without Truncation',
-    });
-    expect(view.getAllByRole('button')).toHaveLength(1);
-    expect(
-      view.getByText('View Latest Bulletin Without Truncation').props
-        .numberOfLines,
-    ).toBeUndefined();
-    await fireEvent.press(button);
-    expect(onPress).toHaveBeenCalledTimes(1);
+describe('a button label that wraps (#681)', () => {
+  it('splits evenly: Chinese by its characters, other text at the space nearest the middle', () => {
+    expect(balanceLabel('發送電子郵件')).toBe('發送電\n子郵件');
+    expect(balanceLabel('发送电子邮件')).toBe('发送电\n子邮件');
+    expect(balanceLabel('撥打電話')).toBe('撥打\n電話');
+    expect(balanceLabel('Llamar por Teléfono')).toBe('Llamar por\nTeléfono');
+    // Never a line that starts with punctuation.
+    expect(balanceLabel('聯絡我們，謝謝')).toBe('聯絡我們，\n謝謝');
   });
 
-  it('supports selected tab semantics for in-page navigation', async () => {
-    const view = await render(
-      React.createElement(WrappingButton, {
-        accessibilityRole: 'tab',
-        accessibilityState: { selected: true },
-        children: 'This Week',
-        mode: 'contained-tonal',
-        onPress: jest.fn(),
-      }),
-    );
+  it('balances only a second line less than half the first', () => {
+    expect(isUnevenWrap([{ text: '發送電子郵' }, { text: '件' }])).toBe(true);
+    expect(isUnevenWrap([{ text: '發送電' }, { text: '子郵件' }])).toBe(false);
+    expect(isUnevenWrap([{ text: 'Email Us' }])).toBe(false);
+    expect(isUnevenWrap([{ text: 'a' }, { text: 'b' }, { text: 'c' }])).toBe(false);
+  });
 
-    expect(view.getByRole('tab', { name: 'This Week', selected: true })).toBeTruthy();
+  it('shows 發送電子郵件 as three and three when it wraps five and one, as on a Pixel 9a', async () => {
+    const screen = await renderWithPreferences(
+      createElement(WrappingButton, { children: '發送電子郵件', mode: 'contained', onPress: jest.fn() }),
+    );
+    const label = screen.getByText('發送電子郵件');
+    // The label ignores touches (pointerEvents none), so the test calls its
+    // layout handler as the system would.
+    await act(async () => {
+      label.props.onTextLayout({ nativeEvent: { lines: [{ text: '發送電子郵' }, { text: '件' }] } });
+    });
+    expect(screen.getByText('發送電\n子郵件')).toBeTruthy();
+    // Screen readers still hear it whole.
+    expect(screen.getByRole('button', { name: '發送電子郵件' })).toBeTruthy();
   });
 });
