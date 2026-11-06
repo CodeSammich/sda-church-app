@@ -1,5 +1,6 @@
 import { PopupHeader } from '@/components/PopupHeader';
 import { PopupScrollView } from '@/components/PopupScrollView';
+import { ChoiceCard, THEME_ICONS, THEME_PREVIEW_KINDS, ThemePreview } from '@/components/SettingChoices';
 import { LanguageContext } from '@/constants/LanguageContext';
 import {
   THEME_DARK,
@@ -12,8 +13,8 @@ import {
 } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Dialog, Portal, RadioButton, Text } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Dialog, Portal, Text } from 'react-native-paper';
 
 type ThemeDialogProps = Readonly<{ onDismiss: () => void; visible: boolean }>;
 
@@ -90,7 +91,7 @@ const copy = {
 
 export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
   const { language } = useContext(LanguageContext);
-  const { themeMode, setThemeMode } = useContext(ThemeContext);
+  const { contrastModes, themeMode, setThemeMode } = useContext(ThemeContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight();
@@ -119,55 +120,25 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
             >
               {labels.description}
             </Text>
+            {/* Each a picture of the theme, one above another (#681). */}
             <View accessibilityRole="radiogroup" style={styles.options}>
               {OPTIONS.map((option) => {
-                const selected = option.value === themeMode;
                 const optionLabels = option.labels[optionLanguage as keyof typeof option.labels];
-
                 return (
-                  <Pressable
+                  <ChoiceCard
                     key={option.value}
                     accessibilityLabel={`${optionLabels.label}, ${optionLabels.description}`}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
+                    description={optionLabels.description}
+                    icon={THEME_ICONS[option.value]}
+                    label={optionLabels.label}
                     onPress={() => {
                       void setThemeMode(option.value);
                       onDismiss();
                     }}
-                    style={({ pressed }) => [
-                      styles.option,
-                      {
-                        backgroundColor: selected
-                          ? theme.colors.primaryContainer
-                          : theme.colors.surfaceVariant,
-                        borderColor: selected
-                          ? theme.colors.primary
-                          : theme.colors.outlineVariant,
-                        opacity: pressed ? 0.78 : 1,
-                      },
-                    ]}
+                    selected={option.value === themeMode}
                   >
-                    <View style={styles.optionText}>
-                      <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
-                        {optionLabels.label}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {optionLabels.description}
-                      </Text>
-                    </View>
-                    <View
-                      accessibilityElementsHidden
-                      importantForAccessibility="no-hide-descendants"
-                      pointerEvents="none"
-                    >
-                      <RadioButton.Android
-                        value={option.value}
-                        status={selected ? 'checked' : 'unchecked'}
-                        color={theme.colors.primary}
-                        uncheckedColor={theme.colors.onSurfaceVariant}
-                      />
-                    </View>
-                  </Pressable>
+                    <ThemePreview contrastModes={contrastModes} kinds={THEME_PREVIEW_KINDS[option.value]} />
+                  </ChoiceCard>
                 );
               })}
             </View>
@@ -190,23 +161,8 @@ const styles = StyleSheet.create({
     paddingLeft: 24,
     paddingRight: 12,
   },
-  option: {
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
-    minHeight: 68,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
   options: {
     gap: 10,
-  },
-  optionText: {
-    flex: 1,
-    gap: 2,
   },
   scrollArea: {
     borderBottomWidth: 0,

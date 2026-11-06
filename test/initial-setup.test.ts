@@ -19,17 +19,17 @@ const languageCases = [
     language: 'zh' as const,
     next: '下一步',
     title: '歡迎',
-    textSize: '字體大小',
-    option: '125% 字體大小',
-    saving: '正在儲存字體大小…',
+    textSize: '文字大小',
+    option: '125% 文字大小',
+    saving: '正在儲存文字大小…',
   },
   {
     language: 'zh-cn' as const,
     next: '下一步',
     title: '欢迎',
-    textSize: '字体大小',
-    option: '125% 字体大小',
-    saving: '正在保存字体大小…',
+    textSize: '文字大小',
+    option: '125% 文字大小',
+    saving: '正在保存文字大小…',
   },
   {
     language: 'es' as const,
@@ -77,9 +77,9 @@ describe('InitialSetup', () => {
 
     // Four choices on each step.
     expect(screen.getAllByRole('radio')).toHaveLength(4);
-    expect(screen.getByRole('radio', { name: 'EN' }).props.accessibilityState)
+    expect(screen.getByRole('radio', { name: 'English' }).props.accessibilityState)
       .toMatchObject({ checked: true, disabled: false });
-    await fireEvent.press(screen.getByRole('radio', { name: '繁體' }));
+    await fireEvent.press(screen.getByRole('radio', { name: '繁體中文' }));
 
     await goOn(screen);
     expect(screen.getAllByRole('radio')).toHaveLength(4);

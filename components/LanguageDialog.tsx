@@ -1,11 +1,12 @@
 import { PopupHeader } from '@/components/PopupHeader';
 import { PopupScrollView } from '@/components/PopupScrollView';
+import { ChoiceCard, TabBarPreview } from '@/components/SettingChoices';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Dialog, Portal, RadioButton, Text } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Dialog, Portal, Text } from 'react-native-paper';
 
 type LanguageDialogProps = Readonly<{ onDismiss: () => void; visible: boolean }>;
 
@@ -24,25 +25,21 @@ const copy = {
   en: {
     title: 'Language',
     description: 'Choose the language used throughout the app.',
-    selected: 'Selected',
     close: 'Close',
   },
   zh: {
     title: '語言',
     description: '選擇整個應用程式使用的語言。',
-    selected: '已選擇',
     close: '關閉',
   },
   'zh-cn': {
     title: '语言',
     description: '选择整个应用使用的语言。',
-    selected: '已选择',
     close: '关闭',
   },
   es: {
     title: 'Idioma',
     description: 'Elige el idioma que se usará en toda la aplicación.',
-    selected: 'Seleccionado',
     close: 'Cerrar',
   },
 } as const;
@@ -84,64 +81,23 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
             >
               {labels.description}
             </Text>
+            {/* Each a picture of the tab bar in it, one above another (#681). */}
             <View accessibilityRole="radiogroup" style={styles.options}>
-              {OPTIONS.map((option) => {
-                const selected = option.value === language;
-                const accessibilityLabel = `${option.label}, ${option.description}`;
-
-                return (
-                  <Pressable
-                    key={option.value}
-                    accessibilityLabel={accessibilityLabel}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
-                    onPress={() => {
-                      setLanguage(option.value);
-                      onDismiss();
-                    }}
-                    style={({ pressed }) => [
-                      styles.option,
-                      {
-                        backgroundColor: selected
-                          ? theme.colors.primaryContainer
-                          : theme.colors.surfaceVariant,
-                        borderColor: selected
-                          ? theme.colors.primary
-                          : theme.colors.outlineVariant,
-                        opacity: pressed ? 0.78 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={styles.optionText}>
-                      <Text
-                        variant="titleMedium"
-                        style={{ color: theme.colors.onSurface }}
-                      >
-                        {option.label}
-                      </Text>
-                      <Text
-                        variant="bodySmall"
-                        style={{ color: theme.colors.onSurfaceVariant }}
-                      >
-                        {option.description}
-                        {selected ? ` · ${labels.selected}` : ''}
-                      </Text>
-                    </View>
-                    <View
-                      accessibilityElementsHidden
-                      importantForAccessibility="no-hide-descendants"
-                      pointerEvents="none"
-                    >
-                      <RadioButton.Android
-                        value={option.value}
-                        status={selected ? 'checked' : 'unchecked'}
-                        color={theme.colors.primary}
-                        uncheckedColor={theme.colors.onSurfaceVariant}
-                      />
-                    </View>
-                  </Pressable>
-                );
-              })}
+              {OPTIONS.map((option) => (
+                <ChoiceCard
+                  key={option.value}
+                  accessibilityLabel={`${option.label}, ${option.description}`}
+                  description={option.description}
+                  label={option.label}
+                  onPress={() => {
+                    setLanguage(option.value);
+                    onDismiss();
+                  }}
+                  selected={option.value === language}
+                >
+                  <TabBarPreview language={option.value} />
+                </ChoiceCard>
+              ))}
             </View>
           </PopupScrollView>
         </Dialog.ScrollArea>
@@ -162,23 +118,8 @@ const styles = StyleSheet.create({
     paddingLeft: 24,
     paddingRight: 12,
   },
-  option: {
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
-    minHeight: 68,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
   options: {
     gap: 10,
-  },
-  optionText: {
-    flex: 1,
-    gap: 2,
   },
   scrollArea: {
     borderBottomWidth: 0,

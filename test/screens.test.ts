@@ -698,8 +698,10 @@ describe('iPad layout checks (#324)', () => {
     expect(await checkPopupWidth(textSize, wide)).toEqual(['the popup is about 1238 points wide, more than 560']);
     // A page with no popup is one colour edge to edge.
     expect(await checkPopupWidth(shot('home-landscape'), wide)).toEqual([]);
-    // Setup's popup has no popup= in its path, so the list marks it.
-    expect(await checkPopupWidth(shot('setup-landscape'), wide)).toHaveLength(1);
+    // The contrast question after an update has no popup= in its path, so the
+    // list marks it. First-launch setup fills the screen (#681): no popup.
+    expect(await checkPopupWidth(shot('whats-new-landscape'), wide)).toHaveLength(1);
+    expect(await checkPopupWidth(shot('setup-landscape'), wide)).toEqual([]);
     expect(await checkPopupWidth(shot('offline-bible-audio-narrator-landscape'), wide)).toHaveLength(1);
   });
 });

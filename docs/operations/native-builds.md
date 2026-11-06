@@ -870,7 +870,7 @@ iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
 1. It saves the settings the app reads at startup into the app's storage: setup
    finished, the language, theme, and text size for that shot, and the screen to
    open. Nothing on a build runner can tap the Simulator's screen, which rules out
-   both the first-launch setup dialog and the "Open in …?" prompt iOS shows before
+   both first-launch setup and the "Open in …?" prompt iOS shows before
    following a deep link. So the app reads the screen from its storage once at launch
    (`services/ScreenshotRoute.ts`) and forgets it. Only this Simulator build does
    that: its build step sets `EXPO_PUBLIC_KEY_SCREENS=1`, which Expo writes into the
@@ -967,7 +967,7 @@ every screen must show:
   down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header opened from Home uses
   them: its translation button must show both full names at 100%, and on the iPhone at
   150% and 200% too, while the Android phone's narrower screen may drop them there;
-- no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
+- no system prompt ("Open in"), setup screen ("Get Started"), or unfilled value
   ("undefined", "NaN").
 
 Each label counts only where it belongs, so "Read Verse" on Home isn't the verse button.

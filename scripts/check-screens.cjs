@@ -25,7 +25,8 @@
  *   no text touches the screen's left or right edge, and a popup is no wider
  *   than POPUP_MAX_WIDTH, measured from its surface's colour, since on iOS a
  *   popup could fill the screen with its text still in the middle. A screen
- *   with `wideContent`, such as a web page the app shows, skips the first two;
+ *   with `wideContent`, such as a web page the app shows, or the Library, whose
+ *   shelves scroll sideways to the screen's edge, skips the first two;
  * - at the iPad's split window widths on Android, no Bible card control
  *   crosses the card's edge (#681), and a screen's `variantRules` for that
  *   window, such as `w320`, apply, such as the book's name in its pill.

@@ -60,13 +60,12 @@
       "name": "setup",
       "group": "home",
       "tabs": false,
-      "popup": true,
-      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of four (#523, #669), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
+      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of five (#523, #669), the welcome and the language, full screen from 1.7.2 (#681), each language a card with a picture of the tab bar in it, and the step dots and Next at the bottom, below the scrolling part, so the way on stays in view. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
       "path": "",
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Welcome$", "^Language$", { "line": "^Next$", "platforms": ["ios"] }],
+      "mustShowLines": ["^Welcome$", "^Language$", "^English$", { "line": "^Next$", "platforms": ["ios"] }],
       "mustNotShowLines": ["^Appearance$", "^Text size$"],
       "variantRules": {
         "large": { "mustShowLines": ["^Next$"] }
@@ -156,7 +155,7 @@
         "audioReaders": { "cuv": "粵語 (WordProject)" }
       },
       "variants": ["zh"],
-      "ipadVariants": ["landscape-zh"],
+      "ipadVariants": ["landscape-zh", "zh"],
       "mustShowLines": ["粵語", "^\u8a69\u7bc7"]
     },
     {
@@ -176,7 +175,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cu1",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh-cn", "zh-cn-dark"],
-      "ipadVariants": ["landscape-zh-cn"],
+      "ipadVariants": ["landscape-zh-cn", "zh-cn"],
       "mustShowLines": ["国语", "^\u8bd7\u7bc7"]
     },
     {
@@ -357,7 +356,7 @@
       "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\". In Chinese the Library is 精選書庫 (hand-picked library), and the In-depth Bible Study card for the SDA Bible app shows below Spotify; it's Chinese only, since the app's commentary and nearly all its books are Chinese (#554).",
       "path": "explore",
       "variants": ["default", "dark", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
-      "ipadVariants": ["default", "landscape"],
+      "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
       "variantRules": {
         "default": { "mustNotShowLines": ["^In-depth Bible"] },
         "zh": { "mustShowLines": ["^精選書庫", "^深入研經"], "mustNotShowLines": ["圖書館"] },
@@ -369,8 +368,9 @@
     {
       "name": "library",
       "group": "library",
-      "$comment": "The featured carousel's arrows sit beside its dots, under the carousel, so they never cover its first book's title (#447): The Bruised Reed in every language, whole on one line, right of the cover. The shelf below wraps the same title after The Bruised, so only the carousel's line matches. Vision isn't asked to read the arrows: a chevron alone in a circle is no reliable text.",
+      "$comment": "The featured carousel's arrows sit beside its dots, under the carousel, so they never cover its first book's title (#447): The Bruised Reed in every language, whole on one line, right of the cover. The shelf below wraps the same title after The Bruised, so only the carousel's line matches. Vision isn't asked to read the arrows: a chevron alone in a circle is no reliable text. Each shelf's row scrolls sideways past the content column to the screen's edge on purpose, so a shelf longer than the column, such as the Chinese Christian Classics' six, shows a cover cut off at the edge: wideContent skips the iPad's column and edge checks (#681).",
       "path": "explore/library",
+      "wideContent": true,
       "variants": ["default", "dark", "zh", "zh-cn", "es"],
       "ipadVariants": ["default", "landscape", "landscape-xl", "zh", "zh-cn"],
       "mustShowLines": [
@@ -627,29 +627,27 @@
       }
     },
     {
-      "$comment": "First-launch setup's other steps, which a key-screens build opens by the saved setupStep since the capture can't tap Next (#669), so each step has its shot: hard to reach by hand. The text size step, with Back and Next.",
+      "$comment": "First-launch setup's other steps, which a key-screens build opens by the saved setupStep since the capture can't tap Next (#669), so each step has its shot: hard to reach by hand. The text size step, with its sample verse at the chosen size, and Back and Next.",
       "name": "setup-text-size",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "textSize" },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Text size$", "^Choose a comfortable"],
+      "mustShowLines": ["^Text size$", "^Choose a comfortable", "^John ?3:16$"],
       "mustNotShowLines": ["^Welcome$", "^Appearance$"]
     },
     {
-      "$comment": "Setup's appearance step: the four themes. Each choice's icon can be read into its label, as a colon by RapidOCR or as letters by Vision (\"Lo System\", \"ội Light\"), so the labels are anchored only at their end.",
+      "$comment": "Setup's appearance step: the four themes, each a card with a picture of the page and tab bar in it (#681), one a row, so Dark sits below the fold on a phone. Each choice's icon can be read into its label, as a colon by RapidOCR or as letters by Vision (\"Lo System\", \"ội Light\"), so the labels are anchored only at their end.",
       "name": "setup-appearance",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "appearance" },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Appearance$", "\\bSystem$", "\\bLight$", "\\bDark$"],
+      "mustShowLines": ["^Appearance$", "^Choose how the app looks", "\\bSystem$", "\\bLight$"],
       "mustNotShowLines": ["^Welcome$", "^Text size$"]
     },
     {
@@ -657,7 +655,6 @@
       "name": "setup-contrast-light",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "contrastLight" },
       "variants": ["default", "zh"],
@@ -673,7 +670,6 @@
       "name": "setup-contrast-dark",
       "group": "home",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "setupDone": false, "setupStep": "contrastDark" },
       "variants": ["default", "zh"],
@@ -719,11 +715,21 @@
     {
       "name": "language",
       "group": "worship-and-you",
-      "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464). Its title is also on the You screen behind it, so the rules require the options' descriptions, which only the dialog shows.",
+      "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464), and each language a card with a picture of the tab bar in it (#681). Its title is also on the You screen behind it, so the rules require an option's description, which only the dialog shows. The pictures leave Simplified Chinese below the fold on a phone.",
       "path": "you?popup=language",
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Traditional Chinese", "^Simplified Chinese"],
+      "mustShowLines": ["^Traditional Chinese"],
+      "mustNotShowLines": ["^Close$"]
+    },
+    {
+      "name": "theme",
+      "group": "worship-and-you",
+      "$comment": "The Theme dialog, opened by popup=theme: each theme a card with a picture of a page and its tab bar in it, light and dark side by side for System and Sunrise/Sunset (#681), with an X beside its title. Its title is also on the You screen behind it, so the rules require System's description, which only the dialog shows.",
+      "path": "you?popup=theme",
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^Follow your device"],
       "mustNotShowLines": ["^Close$"]
     },
     {
@@ -742,9 +748,9 @@
     "zh-Hans": ["home-zh-cn", "bible-cuvs-zh-cn", "bible-cuv-cantonese-zh", "explore-zh-cn", "library-zh-cn", "bible-cuvs-zh-cn-dark", "you-zh-cn"]
   },
   "appStoreIpad": {
-    "en-US": ["home-default", "bible-dual-default", "bible-dual-landscape", "library-default", "home-landscape", "you-default"],
-    "zh-Hant": ["home-zh", "bible-cuv-cantonese-landscape-zh", "bible-pinyin-landscape-zh", "library-zh", "you-zh"],
-    "zh-Hans": ["home-zh-cn", "bible-cuvs-landscape-zh-cn", "library-zh-cn", "you-zh-cn"]
+    "en-US": ["home-default", "bible-dual-default", "explore-default", "library-default", "you-default"],
+    "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "explore-zh", "library-zh", "you-zh"],
+    "zh-Hans": ["home-zh-cn", "bible-cuvs-zh-cn", "explore-zh-cn", "library-zh-cn", "you-zh-cn"]
   },
   "googlePlay": {
     "en-US": ["home-default", "bible-dual-default", "bible-audio-settings-default", "bible-dual-dark", "explore-default", "library-default", "you-default"],

@@ -330,7 +330,7 @@ describe('rules for one platform (#372)', () => {
 
   it("skip a line only the iPhone's reader can read, and keep it on the iPhone", () => {
     // RapidOCR reads setup's Next button as "Net" on the Android phone.
-    const setup = [line('Welcome', 0.3), line('Language', 0.4), line('Net', 0.9)];
+    const setup = [line('Welcome', 0.3), line('Language', 0.4), line('English', 0.5), line('Net', 0.9)];
     expect(checkShot(androidShot('setup-default'), setup)).toEqual([]);
     expect(checkShot(shot('setup-default'), setup)).toEqual(['no line matches /^Next$/']);
   });

@@ -285,6 +285,22 @@ simple, blended colors.
     - A designer's advice settled the default: contrast is usually the default, and the
       members it bothers, mostly younger, change it.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
+- **First-launch setup (#523, #681)** fills the screen in the page's colour, one question
+  a step: the language, the text size, the theme, then the contrast for light and for
+  dark mode. Each step's title is large, its choices scroll in a column at most 560
+  points wide, and Back and Next stay at the bottom, below five progress dots outlined
+  in blue (gold in the dark theme), the current one filled and wider.
+  - Members choose by pictures, not words alone, as with the contrast pictures:
+    - each language is a card with a picture of the tab bar in that language;
+    - each theme is a card with a picture of a page and its tab bar in it, light and dark
+      side by side for System and Sunrise/Sunset;
+    - the text size step shows John 3:16 at the chosen size, above the four sizes. Sizes
+      between them are under You → Text size, which the step says.
+  - The language and theme cards sit one a row, so their pictures have room.
+  - The You tab's Language and Theme popups show the same cards, with each choice's
+    description under its name (`components/SettingChoices.tsx`), as its Contrast popup
+    shows the contrast pictures. Each stays a popup, not a page of its own: one choice
+    doesn't need a page.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.
