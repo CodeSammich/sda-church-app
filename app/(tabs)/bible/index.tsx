@@ -44,8 +44,10 @@ import {
   CAPSULE_STACK_GAP,
   getCapsuleBottomGap,
   getCapsuleTabBarWidth,
+  FloatingHalo,
   getFloatingSurfaceStyle,
-  ScrollEdgeFade,
+  HALO_PAST_EDGE,
+  haloFillsRow,
 } from '@/components/CapsuleTabBar';
 import { getDockControlBorderColor, getDockControlColor, getDockControlContentColor } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -4135,13 +4137,40 @@ export default function BibleScreen() {
           },
         ]}
       >
-        {/* The page fades out under the card and the capsule, rather than
-            stopping at a line above them. */}
-        <ScrollEdgeFade
-          background={theme.colors.background}
-          style={{ left: -(viewportWidth - dockCardWidth) / 2, right: -(viewportWidth - dockCardWidth) / 2 }}
-        />
-
+        {/* A soft halo of the page's colour behind the card and the
+            capsule's place below it (#681). On a phone, whose card leaves 16
+            points a side, it runs edge to edge, so verses scrolling past show
+            only above the card. On a wider screen it hugs the card and the
+            capsule, so verses show beside them. The capsule has none of its own
+            here: drawn over the page, it would wash over the card. */}
+        {haloFillsRow((viewportWidth - dockCardWidth) / 2) ? (
+          <FloatingHalo
+            background={theme.colors.background}
+            style={{
+              top: 0,
+              bottom: 0,
+              left: -(viewportWidth - dockCardWidth) / 2 - HALO_PAST_EDGE,
+              right: -(viewportWidth - dockCardWidth) / 2 - HALO_PAST_EDGE,
+            }}
+          />
+        ) : (
+          <>
+            <FloatingHalo
+              background={theme.colors.background}
+              style={{ borderRadius: 24, top: 0, left: 0, right: 0, bottom: animatedDockBottomClearance }}
+            />
+            <FloatingHalo
+              background={theme.colors.background}
+              style={{
+                borderRadius: 999,
+                bottom: 0,
+                height: Animated.add(animatedDockBottomClearance, 24),
+                left: (dockCardWidth - getCapsuleTabBarWidth(viewportWidth)) / 2,
+                right: (dockCardWidth - getCapsuleTabBarWidth(viewportWidth)) / 2,
+              }}
+            />
+          </>
+        )}
         <View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>
         <ScrollView
           style={styles.controlDockScroll}

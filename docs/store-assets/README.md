@@ -1,7 +1,8 @@
 # Store assets
 
 Copies of the images uploaded to Google Play and the App Store, so the next update
-starts from what's uploaded instead of from scratch. Each store has one set of six
+starts from what's uploaded instead of from scratch. The What's New text for the version
+being released, for both stores, is in [whats-new.md](whats-new.md). Each store has one set of six
 phone screenshots, which every listing language shows, and the App Store one set of
 iPad screenshots (#324). How each store's screenshots
 are captured, their sizes, and what they may show are in

@@ -204,6 +204,43 @@ describe('the tab bars (#589)', () => {
     expect(readFileSync('components/CapsuleTabBar.tsx', 'utf8')).toContain('android_ripple={{ color: getSelectedTabTint(theme) }}');
   });
 
+  it("runs the bars' halo edge to edge on a phone, and hugs them on a wider screen (#681)", () => {
+    const { haloFillsRow, getCapsuleTabBarWidth } = require('@/components/CapsuleTabBar');
+    const gap = (width: number, bar: number) => (width - bar) / 2;
+    // A phone's capsule and card leave 16 points a side.
+    expect(haloFillsRow(gap(402, getCapsuleTabBarWidth(402)))).toBe(true);
+    expect(haloFillsRow(gap(384, 352))).toBe(true);
+    // An iPad window the card nearly fills: Slide Over, or a 678-point Split View.
+    expect(haloFillsRow(gap(320, 288))).toBe(true);
+    expect(haloFillsRow(gap(678, 640))).toBe(true);
+    // The 13-inch iPad: the card is at most 640 and the capsule 520.
+    expect(haloFillsRow(gap(1032, 640))).toBe(false);
+    expect(haloFillsRow(gap(1032, getCapsuleTabBarWidth(1032)))).toBe(false);
+  });
+
+  it('fades the page out only in a soft halo behind the capsule and the Bible card (#681)', () => {
+    // Before #681, a fade and a band of the page's colour hid the whole row.
+    const capsule = readFileSync('components/CapsuleTabBar.tsx', 'utf8');
+    expect(capsule).not.toContain('LinearGradient');
+    expect(capsule).not.toMatch(/ScrollEdgeFade|FADE_HEIGHT/);
+    expect(capsule).toContain('boxShadow: `0 0 ${HALO_BLUR}px ${HALO_SPREAD}px ${background}`');
+    expect(capsule).toContain('{halo && (');
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(bible).not.toContain('ScrollEdgeFade');
+    // Edge to edge on a phone; on a wider screen, the card's halo and the
+    // capsule's place below it.
+    expect(bible.match(/<FloatingHalo\b/g)).toHaveLength(3);
+    expect(bible).toContain('haloFillsRow((viewportWidth - dockCardWidth) / 2) ? (');
+    expect(capsule).toContain('haloFillsRow((windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2)');
+    // The bar's wrapper has no background of its own.
+    const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
+    const wrapper = layout.match(/<Animated\.View\s+onLayout=\{handleTabBarLayout\}[\s\S]*?>/)?.[0] ?? '';
+    expect(wrapper).toContain("position: 'absolute'");
+    expect(wrapper).not.toContain('backgroundColor');
+    // On the Bible the card draws the capsule's halo, under the card.
+    expect(layout).toContain('halo={!isBibleRoute}');
+  });
+
 
   it("leaves room at the end of every tab page's scrolling for the capsule (TabBarSpacer)", () => {
     const pages = (readdirSync('app/(tabs)', { recursive: true }) as string[])

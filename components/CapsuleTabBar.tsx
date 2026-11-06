@@ -1,8 +1,7 @@
 import { getBarSurfaceColor, getSelectedTabTint, getTabItems, TABLET_TAB_BAR_MIN_WIDTH, type TabBarProps } from '@/components/TabBarItems';
 import type { AppTheme } from '@/constants/Themes';
-import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 // The capsule's widest: about 130 points a tab, so the four stay near each
 // other rather than spread across a tablet.
@@ -29,31 +28,45 @@ export const getCapsuleTabBarWidth = (windowWidth: number) =>
 export const getCapsuleBottomGap = (bottomInset: number, os: string = Platform.OS) =>
   os === 'android' ? Math.max(bottomInset + 8, 12) : Math.max(Math.round(bottomInset * 0.6), 12);
 
-// How far above a floating bar the page starts to fade, so text scrolling
-// under it fades out rather than meeting a line.
-const FADE_HEIGHT = 32;
-
-// `color` with alpha 0, so a fade into it doesn't pass through grey.
-const transparent = (color: string) =>
-  /^#[0-9a-f]{6}$/i.test(color) ? `${color}00` : 'transparent';
+// The halo around a floating bar, a boxShadow in the page's colour: about
+// three-quarters opaque at the bar's edge, half HALO_SPREAD points out, and
+// gone about 25 points out (a blur of HALO_BLUR is a Gaussian of half that).
+export const HALO_SPREAD = 6;
+export const HALO_BLUR = 20;
 
 /**
- * The page's colour behind a floating bar, as iOS fades a page's edge under its
- * bars: clear at the top and solid from FADE_HEIGHT down, so text scrolling
- * under the bar fades out above it rather than meeting a line, and no faint
- * fragments of it show beside the bar, as they did beside the Bible's card on
- * an iPad, whose text column is wider. It reaches FADE_HEIGHT above the box
- * it's placed in.
+ * The side gap at or below which a bar's halo runs edge to edge rather than
+ * hugging it: a phone's, whose bars leave 16 points a side, or an iPad window
+ * the bar nearly fills, such as Slide Over. Text scrolling past in a gap that
+ * narrow only shows as fragments, so there the page shows above the bars but
+ * not beside them; on a wider screen it shows beside them too (#681).
  */
-export function ScrollEdgeFade({ background, style }: { background: string; style?: StyleProp<ViewStyle> }) {
+export const HALO_FILLS_ROW_GAP = 24;
+export const haloFillsRow = (sideGap: number) => sideGap <= HALO_FILLS_ROW_GAP;
+// How far past the screen's sides an edge-to-edge halo reaches, so its blurred
+// corners stay off the screen.
+export const HALO_PAST_EDGE = 32;
+
+/**
+ * A soft halo of the page's colour around a floating bar's shape, drawn behind
+ * it, so text scrolling under the bar fades out just around it rather than
+ * across the whole row (#681). The caller places it, with the bar's corners.
+ */
+export function FloatingHalo({
+  background,
+  style,
+}: {
+  background: string;
+  style?: Animated.WithAnimatedValue<StyleProp<ViewStyle>>;
+}) {
   return (
-    <View pointerEvents="none" style={[styles.fade, style]}>
-      <LinearGradient
-        colors={[transparent(background), background]}
-        style={styles.fadeGradient}
-      />
-      <View style={[styles.fadeSolid, { backgroundColor: background }]} />
-    </View>
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        { position: 'absolute', backgroundColor: background, boxShadow: `0 0 ${HALO_BLUR}px ${HALO_SPREAD}px ${background}` },
+        style,
+      ]}
+    />
   );
 }
 
@@ -62,22 +75,41 @@ export function ScrollEdgeFade({ background, style }: { background: string; styl
  * Android: the four tabs sit in a rounded capsule floating above the bottom
  * edge, as iOS's own bar does, raised a shade off the page with a hairline
  * and a soft shadow, with the selected tab in blue, or gold in the dark theme,
- * on its selection pill. Pages run to the bottom edge and scroll under it
- * (TabBarSpacer leaves room for their last lines). The icons and labels are
+ * on its selection pill. Pages run to the bottom edge and scroll under it,
+ * fading out in a soft halo (FloatingHalo): around it on a wide screen, so the
+ * page shows beside it, and edge to edge on a phone (haloFillsRow, #681);
+ * TabBarSpacer leaves room for their last lines. The Bible draws its card's halo around the capsule too, so
+ * there the capsule has none of its own (halo false). The icons and labels are
  * the app's own, so they follow its text size, which the systems' own bars
  * wouldn't.
  */
 export function CapsuleTabBar({
   bottomInset,
-  fade = true,
+  halo = true,
   theme,
   windowWidth,
   ...props
-}: TabBarProps & { bottomInset: number; fade?: boolean; theme: AppTheme; windowWidth: number }) {
+}: TabBarProps & { bottomInset: number; halo?: boolean; theme: AppTheme; windowWidth: number }) {
   const tablet = windowWidth >= TABLET_TAB_BAR_MIN_WIDTH;
   return (
     <View style={[styles.outer, { paddingBottom: getCapsuleBottomGap(bottomInset) }]}>
-      {fade && <ScrollEdgeFade background={theme.colors.background} />}
+      {halo && (
+        <FloatingHalo
+          background={theme.colors.background}
+          style={
+            haloFillsRow((windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2)
+              ? { top: 0, bottom: 0, left: -HALO_PAST_EDGE, right: -HALO_PAST_EDGE }
+              : [
+                  styles.capsuleHalo,
+                  {
+                    bottom: getCapsuleBottomGap(bottomInset),
+                    left: (windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2,
+                    width: getCapsuleTabBarWidth(windowWidth),
+                  },
+                ]
+          }
+        />
+      )}
       <View
         style={[
           styles.capsule,
@@ -131,18 +163,9 @@ const styles = StyleSheet.create({
   outer: {
     alignItems: 'center',
   },
-  fade: {
-    position: 'absolute',
-    top: -FADE_HEIGHT,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  fadeGradient: {
-    height: FADE_HEIGHT,
-  },
-  fadeSolid: {
-    flex: 1,
+  capsuleHalo: {
+    borderRadius: 999,
+    top: 0,
   },
   capsule: {
     borderRadius: 999,
