@@ -251,13 +251,17 @@ Rules:
   overwritten.
 - Left blank, `Hymn of Praise` is `AH 1 Praise to the Lord` and `Hymn of
   Response` is `AH 348 The Church Has One Foundation` (`DEFAULT_SERVICE_HYMNS` in
-  `BulletinApi.gs`). The default is read as if typed, so the app and the printed
-  bulletin show its Chinese title too: 第5首 讚美上主 and 第413首 教會基礎. Type
-  `TBD` to show TBD instead. There's no default in three cases:
-  - a week with no row;
-  - a location with nothing else filled in, here or in the `Sabbath Calendar`,
-    so an empty Brooklyn still shows the app's joint-service note;
-  - a renamed or deleted hymn column, which opening the sheet reports.
+  `BulletinApi.gs`). The default is read as if typed. The printed bulletin shows
+  its Chinese title too (第5首 讚美上主, 第413首 教會基礎), and the app in Chinese
+  shows hymns 5 and 413 of the Chinese hymnal.
+  - **To show TBD instead,** type `TBD`. The API sends it out blank, so the app
+    shows its own TBD in the reader's language, with no YouTube search, and the
+    printed bulletin prints its bilingual TBD.
+  - **A week with no row gets no default.**
+  - **A location with nothing else filled in gets no default,** here or in the
+    `Sabbath Calendar`, counted as the app counts it
+    (`BULLETIN_LOCATION_CONTENT_FIELDS`). So an empty Brooklyn still shows the
+    app's joint-service note.
 - `Bible Verses` stores the reference used by Church at Study and the digital
   bulletin's Today's Verse. It may be a same-chapter range or supported
   semicolon-separated references, such as `John 3:16-18; Psalm 23`. The printed
@@ -1220,7 +1224,7 @@ changes the URL and requires a coordinated mobile-app update.
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
 | A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |
-| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one |
+| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one. Until then, an added `Hymn of Praise` or `Hymn of Response` column shows its default hymn |
 | A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
 | A roster cell is pale red | The same name is in another roster cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
 | No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Word Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
@@ -1270,8 +1274,9 @@ For header changes:
     one in the entry's `headers`, and in `BULLETIN_COLUMN_ALTERNATIVES` for the
     open-time alert and repair. The sheet can then be renamed any time after
     the deploy. Without the old name, that field is blank from the deploy until
-    the sheet is renamed, and the first open after the deploy adds the new name
-    as an empty column at the far right.
+    the sheet is renamed (the two service hymns get their defaults), and the
+    first open after the deploy adds the new name as an empty column at the far
+    right.
   - **`Sabbath Calendar`:** an entry has one `header` and no alternatives, so
     rename the column straight after approving the deploy. Until then, that
     one field is blank.

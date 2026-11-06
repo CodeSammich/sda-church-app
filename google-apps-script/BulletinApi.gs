@@ -94,14 +94,26 @@ var SAFE_SINGLE_VALUES = Object.freeze([
 var PRIVATE_NAME_PLACEHOLDER = 'Name withheld';
 
 // The hymns a week gets when its row leaves the cell blank (user, 2026-11-06).
-// Each is filed and looked up like a typed entry, so its Chinese title comes
-// from the hymnal lookup. Typing TBD still prints TBD. A location with nothing
-// else in it gets none, so it stays empty: an empty Brooklyn shows the app's
-// joint-service note.
+// Each is filed and looked up like a typed entry, so the printed bulletin finds
+// its Chinese title, and the app its Chinese hymnal number. A location with
+// nothing else in it gets none, so it stays empty: an empty Brooklyn shows the
+// app's joint-service note.
 var DEFAULT_SERVICE_HYMNS = Object.freeze({
   hymnOfPraise: 'AH 1 Praise to the Lord',
   hymnOfResponse: 'AH 348 The Church Has One Foundation',
 });
+
+// The fields the app's isBulletinLocationEmpty (services/BulletinService.ts)
+// counts as content. test/apps-script-bulletin-merge.test.ts keeps the two
+// lists the same.
+var BULLETIN_LOCATION_CONTENT_FIELDS = Object.freeze([
+  'hymnOfPraise', 'sermonTitle', 'hymnOfResponse', 'bibleVerses', 'sabbathSchoolHymns',
+  'specialMusicTitle', 'sermon', 'chairPastoralPrayer', 'offeringPrayer', 'translation',
+  'chineseTeacher', 'englishTeacher', 'youthTeacher', 'kidsTeacher', 'specialMusic',
+  'pianist', 'ssChair', 'ssOpeningPrayer', 'closingPrayer', 'flowerOffering',
+  'sabbathSchool', 'chair', 'songLeader', 'sabbathMessage', 'sabbathMessageTitle',
+  'technician', 'encouragement',
+]);
 
 // Weekly Data is the reviewed, staff-managed source for sermon content.
 // These headers are intentionally concise so final owners can correct a week's
@@ -998,16 +1010,21 @@ function populateBulletinIntake_(location, intakeRows) {
       );
     });
   });
-  // A blank Hymn of Praise or Hymn of Response gets its default, but only
-  // where the tab has that hymn's column: a renamed or deleted column, which
-  // opening the sheet reports, never prints the default in place of the hymn
-  // staff typed under the new name.
+  // A blank Hymn of Praise or Hymn of Response gets its default. A typed TBD
+  // goes out blank instead, so the app shows its own TBD in the reader's
+  // language, with no YouTube search for "TBD", and the printed bulletin its
+  // bilingual one.
   var hasContent = bulletinLocationHasContent_(location);
   Object.keys(DEFAULT_SERVICE_HYMNS).forEach(function (key) {
-    var hasColumn = BULLETIN_INTAKE_SCHEMA.some(function (field) {
-      return field.path[0] === key && findFirstHeaderIndex_(intakeRows.headers, field.headers) !== -1;
+    var hymn = location[key];
+    var tbd = ['english', 'chinese'].filter(function (side) {
+      return String(hymn[side] || '').trim().toUpperCase() === 'TBD';
     });
-    if (hasContent && hasColumn && isBlank_(location[key].english) && isBlank_(location[key].chinese)) {
+    if (tbd.length) {
+      tbd.forEach(function (side) {
+        hymn[side] = '';
+      });
+    } else if (hasContent && isBlank_(hymn.english) && isBlank_(hymn.chinese)) {
       var text = DEFAULT_SERVICE_HYMNS[key];
       setPath_(location, [key, getBulletinHymnLanguage_(text)], text);
     }
@@ -1024,8 +1041,8 @@ function populateBulletinIntake_(location, intakeRows) {
 }
 
 // Whether a location has anything to show, decided as the app's
-// isBulletinLocationEmpty (services/BulletinService.ts) does: any value but a
-// blank or TBD. Announcements print only, so they don't count.
+// isBulletinLocationEmpty does: any of its content fields with a value but a
+// blank or TBD.
 function bulletinLocationHasContent_(location) {
   var has = function (value) {
     if (value && typeof value === 'object') {
@@ -1039,8 +1056,8 @@ function bulletinLocationHasContent_(location) {
     var text = String(value).trim();
     return text !== '' && text.toUpperCase() !== 'TBD';
   };
-  return Object.keys(location).some(function (key) {
-    return key !== 'announcements' && has(location[key]);
+  return BULLETIN_LOCATION_CONTENT_FIELDS.some(function (key) {
+    return has(location[key]);
   });
 }
 

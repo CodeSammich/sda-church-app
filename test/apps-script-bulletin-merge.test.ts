@@ -330,12 +330,13 @@ describe('Apps Script bulletin response merging', () => {
       hymnOfPraise: { english: 'AH 1 Praise to the Lord', chinese: '' },
       hymnOfResponse: { english: 'AH 348 The Church Has One Foundation', chinese: '' },
     });
-    // A typed hymn, in either language, or TBD is kept.
+    // A typed hymn is kept, in either language. A typed TBD goes out blank,
+    // with no default: the app shows its own TBD, and the print its bilingual one.
     row[8] = '第5首 讚美上主';
-    row[10] = 'TBD';
+    row[10] = ' tbd ';
     expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
       hymnOfPraise: { english: '', chinese: '第5首 讚美上主' },
-      hymnOfResponse: { english: 'TBD', chinese: '' },
+      hymnOfResponse: { english: '', chinese: '' },
     });
     // A hymn typed in a duplicate row wins over the blank one.
     row[8] = '';
@@ -371,11 +372,20 @@ describe('Apps Script bulletin response merging', () => {
 
   it('counts a location as having content just as the app does', () => {
     const context = loadBulletinApi();
+    // The same fields as the app's isBulletinLocationEmpty.
+    const app = readFileSync(join(process.cwd(), 'services/BulletinService.ts'), 'utf8');
+    const appCheck = app.slice(app.indexOf('export const isBulletinLocationEmpty'));
+    const appFields = [...appCheck.slice(0, appCheck.indexOf('.some(hasBulletinValue)')).matchAll(/location\.(\w+)/g)]
+      .map((match) => match[1]);
+    expect(appFields.length).toBeGreaterThan(20);
+    expect(JSON.parse(runInContext('JSON.stringify(BULLETIN_LOCATION_CONTENT_FIELDS)', context)).sort())
+      .toEqual([...new Set(appFields)].sort());
+
     const hasContent = (location: object) =>
       runInContext(`bulletinLocationHasContent_(${JSON.stringify(location)})`, context);
     expect(hasContent({ hymnOfPraise: { english: '', chinese: '' }, sabbathSchoolHymns: [], announcements: '' })).toBe(false);
-    // Announcements print only, and the app doesn't count them.
-    expect(hasContent({ announcements: 'Potluck after service', sermon: ' TBD ' })).toBe(false);
+    // Fields the app doesn't count, such as announcements and a sunset time, don't count here.
+    expect(hasContent({ announcements: 'Potluck after service', sunsetTime: '4:39 PM', sermon: ' TBD ' })).toBe(false);
     expect(hasContent({ sermon: 'Name withheld' })).toBe(true);
     expect(hasContent({ sabbathSchoolHymns: ['', '205'] })).toBe(true);
     expect(hasContent({ sermonTitle: { english: '', chinese: '好牧人' } })).toBe(true);
@@ -400,12 +410,12 @@ describe('Apps Script bulletin response merging', () => {
     const headers = WEEKLY_HEADERS.filter((header) => header !== 'Bible Verses');
     headers[headers.indexOf('Hymn of Praise')] = 'Opening Hymn';
     const row = ['2026-11-07', 'Queens', 'The Good Shepherd', '好牧人', '', '', '', 'AH 1', '', ''];
-    // A renamed Hymn of Praise column gets no default: the hymn may be under
-    // its new name. Hymn of Response, still there and blank, gets its own.
+    // A missing hymn column reads as blank, like any other, so it gets its
+    // default. Opening the sheet puts the column back and names it.
     expect(readWeeklyRow(headers, row)).toMatchObject({
       bibleVerses: '',
       sermonTitle: { english: 'The Good Shepherd', chinese: '好牧人' },
-      hymnOfPraise: { english: '', chinese: '' },
+      hymnOfPraise: { english: 'AH 1 Praise to the Lord', chinese: '' },
       hymnOfResponse: { english: 'AH 348 The Church Has One Foundation', chinese: '' },
     });
     expect(getMissingColumns(headers)).toEqual([

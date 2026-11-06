@@ -89,9 +89,10 @@ in `BulletinApi.gs`), so the API still returns both sides, one of them blank, an
 app needs no change. A tab that still has the older English and Chinese columns is read
 as before. When a week's row leaves either cell blank, and the location has anything else, the
 Apps Script files its default (`DEFAULT_SERVICE_HYMNS`: AH 1 and AH 348) the same way,
-so the app resolves it like any typed hymn. An empty location stays empty
-(`bulletinLocationHasContent_`, which counts content as the app's
-`isBulletinLocationEmpty` does).
+so the app resolves it like any typed hymn. An empty location stays empty: its content
+fields, `BULLETIN_LOCATION_CONTENT_FIELDS`, are the ones the app's
+`isBulletinLocationEmpty` counts, and a test keeps the two lists the same. A typed `TBD`
+in either cell goes out blank, so the app shows its own TBD and no YouTube search.
 
 ## Adding another bulletin hymn field
 
