@@ -157,35 +157,108 @@ export const getDockPillPaddingHorizontal = ({
   textScale: number;
 }) => (cardWidth < NARROW_DOCK_CARD && dockTextScale > 1 ? 6 : textScale >= 1.75 ? 8 : 10);
 
+/** A dock pill's chevron, 14 points, and the 4-point gap before it. */
+export const DOCK_PILL_CHEVRON_WIDTH = 18;
+
 /**
- * Whether the chapter dock's verse pill shows its short label ("Vs.") rather
- * than its full one ("Verse"): only when the book, chapter, and verse pills
- * can't all fit at their full widths. The verse label shortens before the book
- * name is cut short with "…" (#376). Widths are 0 until measured, so it starts
- * with the full label. The full label needs a few points to spare: the shown
- * pills round their widths, so on a row that fit by a point, "Juan" became
- * "Ju…" beside "Versículo" in a phone's floating card (#589).
+ * The narrowest a Bible card control gets: Apple's 44-point tap target. A
+ * chapter pill without its chevron, such as "3", is otherwise about 36.
  */
-export const shouldShortenVerseLabel = ({
+export const MIN_TAP_TARGET = 44;
+
+export type DockPillLabels = Readonly<{
+  /** The verse pill says "Vs." rather than "Verse". */
+  shortVerse: boolean;
+  /** The pills keep their chevrons. */
+  chevrons: boolean;
+  /** The book pill shows the book's abbreviation, "Ps" for "Psalms". */
+  shortBook: boolean;
+}>;
+
+/**
+ * How the chapter dock's book, chapter, and verse pills fit their row. When
+ * all three don't fit in full, the verse label shortens ("Vs.") first (#376),
+ * then the pills drop their chevrons, and only then does the book pill show
+ * the book's abbreviation, with the chevrons back if they fit beside it, so
+ * the book is always named rather than cut to "…" (#681): an iPad's 320-point
+ * Slide Over window, at its 150% text, left the book pill room for nothing
+ * else. Widths are each pill's in full, with its
+ * chevron, from hidden copies; they're 0 until measured, so the row starts in
+ * full. Each step needs a few points to spare: the shown pills round their
+ * widths, so on a row that fit by a point, "Juan" became "Ju…" beside
+ * "Versículo" in a phone's floating card (#589).
+ */
+export const getDockPillLabels = ({
   rowWidth,
   bookPillWidth,
+  shortBookPillWidth,
   chapterPillWidth,
   versePillWidth,
+  shortVersePillWidth,
   gap = 8,
   slack = 4,
 }: {
   rowWidth: number;
   bookPillWidth: number;
+  shortBookPillWidth: number;
   chapterPillWidth: number;
   versePillWidth: number;
+  shortVersePillWidth: number;
   gap?: number;
   slack?: number;
-}) =>
-  rowWidth > 0 &&
-  bookPillWidth > 0 &&
-  chapterPillWidth > 0 &&
-  versePillWidth > 0 &&
-  bookPillWidth + chapterPillWidth + versePillWidth + 2 * gap + slack > rowWidth;
+}): DockPillLabels => {
+  const full = { shortVerse: false, chevrons: true, shortBook: false };
+  if (!(rowWidth > 0 && bookPillWidth > 0 && chapterPillWidth > 0 && versePillWidth > 0)) return full;
+  // Without its chevron, a pill is never narrower than a tap target.
+  const pill = (width: number, chevrons: boolean) =>
+    chevrons ? width : Math.max(MIN_TAP_TARGET, width - DOCK_PILL_CHEVRON_WIDTH);
+  const fits = (book: number, verse: number, chevrons: boolean) =>
+    pill(book, chevrons) + pill(chapterPillWidth, chevrons) + pill(verse, chevrons) + 2 * gap + slack <= rowWidth;
+  if (fits(bookPillWidth, versePillWidth, true)) return full;
+  const verse = shortVersePillWidth > 0 ? shortVersePillWidth : versePillWidth;
+  if (fits(bookPillWidth, verse, true)) return { shortVerse: true, chevrons: true, shortBook: false };
+  if (fits(bookPillWidth, verse, false)) return { shortVerse: true, chevrons: false, shortBook: false };
+  if (!(shortBookPillWidth > 0 && shortBookPillWidth < bookPillWidth)) {
+    return { shortVerse: true, chevrons: false, shortBook: false };
+  }
+  return { shortVerse: true, chevrons: fits(shortBookPillWidth, verse, true), shortBook: true };
+};
+
+/**
+ * The Bible card's audio row: the narrator and sleep-timer buttons at its
+ * ends, and back 10, play, and forward 30 between them, each of the three an
+ * icon in Paper's 8-point padding a side, play with 2 more. With 8 points
+ * between them, at the dock's largest text they need about 290 points. An
+ * iPad's 320-point Slide Over window leaves the card's row about 262, so the
+ * sleep timer ran past the card's edge (#681). When they don't fit, the gaps
+ * narrow first, to 2 points, and then all five buttons shrink together, never
+ * below MIN_TAP_TARGET across. A row that's 0, not yet known, keeps them in
+ * full.
+ */
+export const getAudioControlRowLayout = ({
+  rowWidth,
+  sideButtonSize,
+  iconSize,
+}: {
+  rowWidth: number;
+  sideButtonSize: number;
+  iconSize: number;
+}) => {
+  const padding = 3 * 2 * 8 + 2 * 2;
+  const gaps = 4;
+  const width = (gap: number, side: number, icon: number) => 2 * side + 3 * icon + padding + gaps * gap;
+  if (!(rowWidth > 0) || width(8, sideButtonSize, iconSize) <= rowWidth) {
+    return { gap: 8, sideButtonSize, iconSize };
+  }
+  const gap = Math.floor((rowWidth - width(0, sideButtonSize, iconSize)) / gaps);
+  if (gap >= 2) return { gap, sideButtonSize, iconSize };
+  const scale = (rowWidth - padding - gaps * 2) / (2 * sideButtonSize + 3 * iconSize);
+  return {
+    gap: 2,
+    sideButtonSize: Math.max(MIN_TAP_TARGET, Math.floor(sideButtonSize * scale)),
+    iconSize: Math.max(MIN_TAP_TARGET - 16, Math.floor(iconSize * scale * 10) / 10),
+  };
+};
 
 /**
  * Shared styles for the Bible Reader and other immersive reading components.

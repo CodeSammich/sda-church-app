@@ -736,6 +736,57 @@ describe("Android shots at an iPad's split windows (#324)", () => {
     // Its mustShowLines are the phone's, so they're left out.
     expect(planSplitChecks(config, 504).every((shot: { mustShowLines?: unknown }) => shot.mustShowLines === undefined)).toBe(true);
   });
+
+  it("names the book in the Bible card's pill at 320 points, not only \"…\" (#681)", () => {
+    const bible = planSplitChecks(config, 320).find((shot: { screen: string }) => shot.screen === 'bible-dual');
+    expect(bible.mustShowLines).toEqual(['^Ps(alms)?\\b']);
+    const read = (pill: string) => [
+      { text: 'Home', box: [0.1, 1 - 58 / 744, 0.1, 0.02] },
+      { text: 'Bible', box: [0.3, 1 - 58 / 744, 0.1, 0.02] },
+      { text: 'Explore', box: [0.5, 1 - 58 / 744, 0.1, 0.02] },
+      { text: 'You', box: [0.7, 1 - 58 / 744, 0.1, 0.02] },
+      { text: pill, box: [0.2, 1 - 150 / 744, 0.2, 0.02] },
+      { text: 'Vs.', box: [0.6, 1 - 150 / 744, 0.1, 0.02] },
+    ];
+    expect(checkShot(bible, read('Psalms'))).toEqual([]);
+    expect(checkShot(bible, read('Ps'))).toEqual([]);
+    expect(checkShot(bible, read('…'))).toEqual(['no line matches /^Ps(alms)?\\b/']);
+  });
+
+  it("fails a control that crosses the Bible card's edge, as the sleep timer did at 320 points (#681)", async () => {
+    const { DOCK_CARD_MAX_WIDTH, checkDockCard } = require('../scripts/check-screens.cjs');
+    const bible = readFileSync(resolve(__dirname, '../app/(tabs)/bible/index.tsx'), 'utf8');
+    expect(bible).toContain(`const DOCK_CARD_MAX_WIDTH = ${DOCK_CARD_MAX_WIDTH};`);
+    expect(bible).toContain('viewportWidth - 32,');
+    const sharp = require('sharp');
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const dir = mkdtempSync(resolve(tmpdir(), 'dock-'));
+    // A 320 × 744 window at 2x: the warm page, the white card 16 points in
+    // from each side, 120 to 290 points up, and a blue button 50 points
+    // across in its audio row, at `left` points.
+    const window = async (file: string, left: number) => {
+      const button = await sharp({ create: { width: 100, height: 100, channels: 3, background: { r: 227, g: 242, b: 253 } } }).png().toBuffer();
+      const card = await sharp({ create: { width: 576, height: 340, channels: 3, background: { r: 255, g: 255, b: 255 } } })
+        .composite([{ input: button, top: 40, left: (left - 16) * 2 }])
+        .png()
+        .toBuffer();
+      await sharp({ create: { width: 640, height: 1488, channels: 3, background: { r: 242, g: 230, b: 223 } } })
+        .composite([{ input: card, top: (744 - 290) * 2, left: 32 }])
+        .png()
+        .toFile(file);
+    };
+    const inside = resolve(dir, 'inside.png');
+    const crossing = resolve(dir, 'crossing.png');
+    await window(inside, 240);
+    await window(crossing, 270);
+    const shot = planSplitChecks(config, 320).find((each: { screen: string }) => each.screen === 'bible-dual');
+    expect(await checkDockCard(shot, inside)).toEqual([]);
+    expect(await checkDockCard(shot, crossing)).toEqual(["a Bible card control crosses the card's right edge"]);
+    // Only the Bible's split shots have the card.
+    const home = planSplitChecks(config, 320).find((each: { screen: string }) => each.screen === 'home');
+    expect(await checkDockCard(home, crossing)).toEqual([]);
+  });
 });
 
 describe('iPad key screens (#324)', () => {

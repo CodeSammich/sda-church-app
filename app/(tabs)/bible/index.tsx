@@ -119,6 +119,7 @@ import {
 } from '@/services/BibleAudioSourceController';
 import { BibleAudioScrubGesture } from '@/services/BibleAudioScrubGesture';
 import { BibleAudioSeekController } from '@/services/BibleAudioSeekController';
+import { getBookPillAbbreviation } from '@/services/BibleBookAbbreviations';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
   getParallelStructuralContent,
@@ -169,8 +170,10 @@ import {
   getBibleDockViewportLayout,
   getBulletinVerseScrollOffset,
   getDockPillGrowth,
+  getAudioControlRowLayout,
+  getDockPillLabels,
   getDockPillPaddingHorizontal,
-  shouldShortenVerseLabel,
+  MIN_TAP_TARGET,
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
@@ -628,24 +631,42 @@ export default function BibleScreen() {
     () => getBibleDockLayout(dockCardWidth, dockTextScale),
     [columnScale, dockCardWidth, dockTextScale, viewportWidth],
   );
-  // The verse pill says "Vs." rather than "Verse" only when the book, chapter,
-  // and verse pills can't all fit at full width, so the book name is cut short
-  // last (#376). Hidden copies measure the book and verse pills in full.
+  // When the book, chapter, and verse pills can't all fit in full, the verse
+  // pill says "Vs." rather than "Verse", then the pills drop their chevrons,
+  // and only then does the book pill show the book's abbreviation, so the book
+  // is always named (#376, #681). Hidden copies measure each pill in full,
+  // with its chevron, so what they measure doesn't change with the choice. The
+  // chapter's copy measures its number alone: on a wide row the pills share its
+  // spare room (getDockPillGrowth).
   const [dockPillsWidth, setDockPillsWidth] = useState(0);
   const [bookPillWidth, setBookPillWidth] = useState(0);
-  const [chapterPillWidth, setChapterPillWidth] = useState(0);
-  const [versePillWidth, setVersePillWidth] = useState(0);
-  // On a wide row the pills share its spare room (getDockPillGrowth), so the
-  // chapter pill's own width there includes its share: a hidden copy measures
-  // its number alone.
+  const [shortBookPillWidth, setShortBookPillWidth] = useState(0);
   const [chapterLabelWidth, setChapterLabelWidth] = useState(0);
+  const [versePillWidth, setVersePillWidth] = useState(0);
+  const [shortVersePillWidth, setShortVersePillWidth] = useState(0);
   const dockPillGrowth = getDockPillGrowth(dockPillsWidth);
-  const shortVerseLabel = shouldShortenVerseLabel({
+  const dockPillLabels = getDockPillLabels({
     rowWidth: dockPillsWidth,
     bookPillWidth,
-    chapterPillWidth: dockPillGrowth.chapter ? chapterLabelWidth : chapterPillWidth,
+    shortBookPillWidth,
+    chapterPillWidth: chapterLabelWidth,
     versePillWidth,
+    shortVersePillWidth,
   });
+  const shortVerseLabel = dockPillLabels.shortVerse;
+  // The audio row's five buttons narrow their gaps, then shrink, when the card
+  // is too narrow for them (#681). The row is the card less the audio dock's
+  // 12 points a side and the card's border.
+  const audioRowLayout = getAudioControlRowLayout({
+    rowWidth: dockCardWidth - 2 * 12 - 2,
+    sideButtonSize: dockLayout.stackControls ? Math.max(48, dockLayout.controlHeight) : 48,
+    iconSize: scaleTypographyMetric(26, bibleUiTextScale),
+  });
+  const audioSideButtonStyle = {
+    borderRadius: audioRowLayout.sideButtonSize / 2,
+    height: audioRowLayout.sideButtonSize,
+    width: audioRowLayout.sideButtonSize,
+  };
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight(true);
   const fullscreenEdgeInset =
@@ -3807,6 +3828,7 @@ export default function BibleScreen() {
           borderWidth: 1,
           minHeight: dockLayout.controlHeight,
           paddingHorizontal: chipPaddingHorizontal,
+          minWidth: MIN_TAP_TARGET,
           position: 'absolute',
           left: 0,
           top: 0,
@@ -3821,6 +3843,20 @@ export default function BibleScreen() {
     </View>
   );
 
+  const bookName = book?.name || '...';
+  const bookAbbreviation = book ? getBookPillAbbreviation(book.id, supportedTranslation.lang, book.name) : bookName;
+  // A shown pill's chevron, dropped when the row is short of room.
+  const renderPillChevron = () =>
+    dockPillLabels.chevrons ? (
+      <AppIcon
+        pointerEvents="none"
+        name="chevron-down"
+        size={14}
+        scaleWithText={false}
+        color={theme.colors.primary}
+      />
+    ) : null;
+
   const renderChapterSelectors = () => (
     <View
       onLayout={(event) => setDockPillsWidth(Math.floor(event.nativeEvent.layout.width))}
@@ -3829,9 +3865,11 @@ export default function BibleScreen() {
         stackChapterControls && styles.stackedPillsContainer,
       ]}
     >
-      {renderPillMeasure(book?.name || '...', setBookPillWidth)}
+      {renderPillMeasure(bookName, setBookPillWidth)}
+      {renderPillMeasure(bookAbbreviation, setShortBookPillWidth)}
       {renderPillMeasure(String(chapterNum), setChapterLabelWidth)}
       {renderPillMeasure(labels.verse, setVersePillWidth)}
+      {renderPillMeasure(labels.verseShort, setShortVersePillWidth)}
       <TouchableOpacity
         style={[
           ReaderStyles.pill,
@@ -3848,6 +3886,7 @@ export default function BibleScreen() {
             // Narrower side padding than other pills leaves room for "Psalms",
             // "119", and "Verse" on most iPhones.
             paddingHorizontal: chipPaddingHorizontal,
+            minWidth: MIN_TAP_TARGET,
             flexBasis: 'auto',
             flexGrow: dockPillGrowth.book,
             flexShrink: 1,
@@ -3855,7 +3894,7 @@ export default function BibleScreen() {
         ]}
         onPress={() => setModalType('book')}
         accessibilityRole="button"
-        accessibilityLabel={`${labels.book}: ${book?.name || '...'}`}
+        accessibilityLabel={`${labels.book}: ${bookName}`}
       >
         <Text
           maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
@@ -3864,15 +3903,9 @@ export default function BibleScreen() {
           ellipsizeMode="tail"
           style={[ReaderStyles.pillText, { color: getDockControlContentColor(theme) }]}
         >
-          {book?.name || '...'}
+          {dockPillLabels.shortBook ? bookAbbreviation : bookName}
         </Text>
-        <AppIcon
-          pointerEvents="none"
-          name="chevron-down"
-          size={14}
-          scaleWithText={false}
-          color={theme.colors.primary}
-        />
+        {renderPillChevron()}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -3885,13 +3918,13 @@ export default function BibleScreen() {
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
+            minWidth: MIN_TAP_TARGET,
             flexBasis: 'auto',
             flexGrow: dockPillGrowth.chapter,
             flexShrink: 0,
             maxWidth: '30%',
           },
         ]}
-        onLayout={(event) => setChapterPillWidth(Math.ceil(event.nativeEvent.layout.width))}
         onPress={() => setModalType('chapter')}
         accessibilityRole="button"
         accessibilityLabel={`${labels.chapter}: ${chapterNum}`}
@@ -3905,13 +3938,7 @@ export default function BibleScreen() {
         >
           {chapterNum}
         </Text>
-        <AppIcon
-          pointerEvents="none"
-          name="chevron-down"
-          size={14}
-          scaleWithText={false}
-          color={theme.colors.primary}
-        />
+        {renderPillChevron()}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -3924,6 +3951,7 @@ export default function BibleScreen() {
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
+            minWidth: MIN_TAP_TARGET,
             flexBasis: 'auto',
             flexGrow: dockPillGrowth.verse,
             flexShrink: 0,
@@ -3946,13 +3974,7 @@ export default function BibleScreen() {
         >
           {shortVerseLabel ? labels.verseShort : labels.verse}
         </Text>
-        <AppIcon
-          pointerEvents="none"
-          name="chevron-down"
-          size={14}
-          scaleWithText={false}
-          color={theme.colors.primary}
-        />
+        {renderPillChevron()}
       </TouchableOpacity>
     </View>
   );
@@ -4198,6 +4220,7 @@ export default function BibleScreen() {
                 style={[
                   ReaderStyles.audioControlRow,
                   dockLayout.stackControls && styles.stackedAudioControlRow,
+                  { gap: audioRowLayout.gap },
                 ]}
               >
                 <TouchableOpacity
@@ -4215,10 +4238,7 @@ export default function BibleScreen() {
                   }, ${labels.audioSource}`}
                   style={[
                     ReaderStyles.audioSideControl,
-                    dockLayout.stackControls && {
-                      minHeight: dockLayout.controlHeight,
-                      minWidth: dockLayout.controlHeight,
-                    },
+                    audioSideButtonStyle,
                     {
                       backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
@@ -4254,11 +4274,11 @@ export default function BibleScreen() {
                   />
                 </TouchableOpacity>
 
-                <View style={ReaderStyles.audioTransportControls}>
+                <View style={[ReaderStyles.audioTransportControls, { gap: audioRowLayout.gap }]}>
                   <IconButton
                     icon="rewind-10"
                     iconColor={theme.colors.onSurface}
-                    size={scaleTypographyMetric(26, bibleUiTextScale)}
+                    size={audioRowLayout.iconSize}
                     onPress={() => skipAudio(-10000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
                     accessibilityLabel={labels.back10}
@@ -4269,7 +4289,7 @@ export default function BibleScreen() {
                     mode="contained"
                     containerColor={theme.colors.tertiary}
                     iconColor={theme.colors.onPrimary}
-                    size={scaleTypographyMetric(26, bibleUiTextScale)}
+                    size={audioRowLayout.iconSize}
                     onPress={toggleAudio}
                     disabled={isAudioLoading && !loadedAudioUrlRef.current}
                     accessibilityLabel={labels.audioPlayer}
@@ -4278,7 +4298,7 @@ export default function BibleScreen() {
                   <IconButton
                     icon="fast-forward-30"
                     iconColor={theme.colors.onSurface}
-                    size={scaleTypographyMetric(26, bibleUiTextScale)}
+                    size={audioRowLayout.iconSize}
                     onPress={() => skipAudio(30000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
                     accessibilityLabel={labels.forward30}
@@ -4293,10 +4313,7 @@ export default function BibleScreen() {
                   accessibilityState={{ selected: sleepTimerSetting !== null }}
                   style={[
                     ReaderStyles.audioSideControl,
-                    dockLayout.stackControls && {
-                      minHeight: dockLayout.controlHeight,
-                      minWidth: dockLayout.controlHeight,
-                    },
+                    audioSideButtonStyle,
                     {
                       backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
@@ -5710,7 +5727,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       alignSelf: 'stretch',
       flexWrap: 'nowrap',
       justifyContent: 'space-between',
-      gap: 8,
       paddingVertical: 8,
     },
     stackedAudioTimelineRow: {
