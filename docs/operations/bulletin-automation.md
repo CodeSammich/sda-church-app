@@ -249,6 +249,13 @@ Rules:
   language where it can. A tab that still has the older `English …` and
   `Chinese …` columns for either hymn is read too, and a supplied side is never
   overwritten.
+- A song typed in both languages in one of those two cells, `English (中文)` or
+  `中文 (English)`, is split into its two sides (`splitBilingualHymnTitle_`), so
+  it prints Chinese over English and the app shows the reader's language. Only
+  when one part is all English and the other all Chinese, with no hymn number:
+  `Holy, Holy, Holy (Nicaea)` or `第5首 讚美上主 (Praise to the Lord)` is filed
+  whole, as before. The Sabbath School cells aren't split this way, since each
+  prints on one line.
 - Left blank, `Hymn of Praise` is `AH 1 Praise to the Lord` and `Hymn of
   Response` is `AH 348 The Church Has One Foundation` (`DEFAULT_SERVICE_HYMNS` in
   `BulletinApi.gs`). The default is read as if typed. The printed bulletin shows
@@ -272,9 +279,12 @@ Rules:
 - `Sabbath School Hymn 1` to `3` each hold one opening hymn, typed in either
   language as a number, a title, or both, such as `第12首 讚美上帝大君王`,
   `AH 73 Holy, Holy, Holy`, or `還要等多久`. Chinese text or a bare number is
-  read as a Chinese hymnal number. Leave unused cells blank. There's no
-  closing-hymn column: the closing repeats every opening hymn, so both
-  bulletins show them once, as the opening and closing hymns.
+  read as a Chinese hymnal number. Leave unused cells blank. Several hymns typed
+  in one cell, separated by semicolons (`;` or `；`), are read as one each, in
+  order (`splitHymnCell_`); a semicolon inside parentheses or a line break
+  doesn't split. One hymn per cell is still best. There's no closing-hymn
+  column: the closing repeats every opening hymn, so both bulletins show them
+  once, as the opening and closing hymns.
 - The [`Hymn Bank` tab](#the-hymn-bank-tab) has every hymn written this way,
   ready to copy into any of the hymn cells.
 - `Special Music Title` is the piece performed. Who performs it stays in the

@@ -391,6 +391,49 @@ describe('Apps Script bulletin response merging', () => {
     expect(hasContent({ sermonTitle: { english: '', chinese: '好牧人' } })).toBe(true);
   });
 
+  it('splits a service hymn typed in both languages, either way round, into its two sides', () => {
+    const row = ['2026-11-07', 'Queens', '', 'The Good Shepherd', '', '', '', '',
+      'How Long Do We Have To Wait? (还要等多久?)', '', '奇妙的愛（Amazing Love）'];
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: 'How Long Do We Have To Wait?', chinese: '还要等多久?' },
+      hymnOfResponse: { english: 'Amazing Love', chinese: '奇妙的愛' },
+    });
+    // Anything else is filed whole, as before: parentheses in one language,
+    // a hymn number, or both languages on one side.
+    row[8] = 'Holy, Holy, Holy (Nicaea)';
+    row[10] = '第5首 讚美上主 (Praise to the Lord)';
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: 'Holy, Holy, Holy (Nicaea)', chinese: '' },
+      hymnOfResponse: { english: '', chinese: '第5首 讚美上主 (Praise to the Lord)' },
+    });
+    row[8] = 'Jesus 愛我 (Jesus Loves Me)';
+    row[10] = 'AH 73 Holy, Holy, Holy';
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: '', chinese: 'Jesus 愛我 (Jesus Loves Me)' },
+      hymnOfResponse: { english: 'AH 73 Holy, Holy, Holy', chinese: '' },
+    });
+  });
+
+  it('reads several Sabbath School hymns typed in one cell, separated by semicolons, as one each', () => {
+    const row = ['2026-11-07', 'Queens', '', '', '', '第12首',
+      'When the King Comes In (蒙召赴宴); Trust and Obey (信而从主)；',
+      "I'll Soar Like An Eagle (如鹰展翅)", '', '', ''];
+    expect(readWeeklyRow(WEEKLY_HEADERS, row).sabbathSchoolHymns).toEqual([
+      '第12首',
+      'When the King Comes In (蒙召赴宴)',
+      'Trust and Obey (信而从主)',
+      "I'll Soar Like An Eagle (如鹰展翅)",
+    ]);
+    // A semicolon inside parentheses, and a line break, don't split a hymn.
+    row[6] = 'AH 73 Holy, Holy, Holy (verses 1; 3)';
+    row[7] = 'Amazing Grace\n奇異恩典';
+    expect(readWeeklyRow(WEEKLY_HEADERS, row).sabbathSchoolHymns).toEqual([
+      '第12首',
+      'AH 73 Holy, Holy, Holy (verses 1; 3)',
+      'Amazing Grace\n奇異恩典',
+    ]);
+  });
+
   it('reads each column by its name, wherever it is', () => {
     const shuffled = [...WEEKLY_HEADERS, 'Notes'].reverse();
     const row = ['2026-11-07', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人',

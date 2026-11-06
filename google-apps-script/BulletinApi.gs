@@ -1003,6 +1003,12 @@ function populateBulletinIntake_(location, intakeRows) {
         return;
       }
       var text = displayValue_(value);
+      var sides = field.hymn ? splitBilingualHymnTitle_(text) : null;
+      if (sides) {
+        setPath_(location, field.path.concat('english'), sides.english);
+        setPath_(location, field.path.concat('chinese'), sides.chinese);
+        return;
+      }
       setPath_(
         location,
         field.hymn ? field.path.concat(getBulletinHymnLanguage_(text)) : field.path,
@@ -1030,12 +1036,14 @@ function populateBulletinIntake_(location, intakeRows) {
     }
   });
 
-  // Keep the entered hymns in order, without the blank cells between them.
+  // Keep the entered hymns in order, without the blank cells between them. A
+  // cell may hold several separated by semicolons, as staff have typed them
+  // (2026-11-06): each becomes its own (splitHymnCell_).
   var hymns = [];
   for (var index = 0; index < location.sabbathSchoolHymns.length; index += 1) {
-    if (!isBlank_(location.sabbathSchoolHymns[index])) {
-      hymns.push(location.sabbathSchoolHymns[index]);
-    }
+    splitHymnCell_(location.sabbathSchoolHymns[index]).forEach(function (part) {
+      hymns.push(part);
+    });
   }
   location.sabbathSchoolHymns = hymns;
 }
@@ -1215,6 +1223,65 @@ function findScheduleColumn_(headers, header, location, occurrence) {
 // a bare number for the Chinese hymnal, is Chinese.
 function getBulletinHymnLanguage_(text) {
   return /[A-Za-z]/.test(text) && !/[\u3400-\u9fff]/.test(text) ? 'english' : 'chinese';
+}
+
+// The hymns in one Sabbath School cell, split at each semicolon (; or ；)
+// outside parentheses. No hymnal title has a semicolon, and a note such as
+// "(verses 1; 3)" stays whole. A cell with no semicolon is one hymn, as
+// before; a line break isn't a separator, since one hymn may be typed with
+// its English and Chinese titles on two lines.
+function splitHymnCell_(value) {
+  var text = String(value || '');
+  var parts = [];
+  var depth = 0;
+  var start = 0;
+  for (var index = 0; index < text.length; index += 1) {
+    var character = text.charAt(index);
+    if (character === '(' || character === '（') {
+      depth += 1;
+    } else if ((character === ')' || character === '）') && depth > 0) {
+      depth -= 1;
+    } else if ((character === ';' || character === '；') && depth === 0) {
+      parts.push(text.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts
+    .map(function (part) {
+      return part.trim();
+    })
+    .filter(function (part) {
+      return part !== '';
+    });
+}
+
+// A one-cell hymn typed in both languages, "English (中文)" or "中文 (English)",
+// such as a song no hymnal has, split into its two sides so it prints Chinese
+// over English (user, 2026-11-06). Only when one part is all English and the
+// other all Chinese, and there's no hymn number: anything else, such as
+// "Holy, Holy, Holy (Nicaea)" or "第5首 讚美上主 (Praise)", is filed whole as
+// before, and a number still finds its twin in the hymnal lookup.
+function splitBilingualHymnTitle_(text) {
+  var match = /^(.+?)\s*[(（]([^()（）]+)[)）]$/.exec(String(text).trim());
+  if (!match || /\d/.test(text)) {
+    return null;
+  }
+  var outer = match[1].trim();
+  var inner = match[2].trim();
+  var isEnglish = function (part) {
+    return /[A-Za-z]/.test(part) && !/[\u3400-\u9fff]/.test(part);
+  };
+  var isChinese = function (part) {
+    return /[\u3400-\u9fff]/.test(part) && !/[A-Za-z]/.test(part);
+  };
+  if (isEnglish(outer) && isChinese(inner)) {
+    return { english: outer, chinese: inner };
+  }
+  if (isChinese(outer) && isEnglish(inner)) {
+    return { english: inner, chinese: outer };
+  }
+  return null;
 }
 
 function valueForAliases_(headers, row, aliases) {
