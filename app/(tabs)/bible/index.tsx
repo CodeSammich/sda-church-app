@@ -44,6 +44,7 @@ import {
   CAPSULE_STACK_GAP,
   getCapsuleBottomGap,
   getCapsuleTabBarWidth,
+  FloatingHalo,
   getFloatingSurfaceStyle,
 } from '@/components/CapsuleTabBar';
 import { getDockControlBorderColor, getDockControlColor, getDockControlContentColor } from '@/components/TabBarItems';
@@ -4134,6 +4135,24 @@ export default function BibleScreen() {
           },
         ]}
       >
+        {/* A soft halo of the page's colour around the card, and around the
+            capsule's place below it, so the page fades out just around them
+            and shows across the rest of the row (#681). The capsule has none of
+            its own here: drawn over the page, it would wash over the card. */}
+        <FloatingHalo
+          background={theme.colors.background}
+          style={{ borderRadius: 24, top: 0, left: 0, right: 0, bottom: animatedDockBottomClearance }}
+        />
+        <FloatingHalo
+          background={theme.colors.background}
+          style={{
+            borderRadius: 999,
+            bottom: 0,
+            height: Animated.add(animatedDockBottomClearance, 24),
+            left: (dockCardWidth - getCapsuleTabBarWidth(viewportWidth)) / 2,
+            right: (dockCardWidth - getCapsuleTabBarWidth(viewportWidth)) / 2,
+          }}
+        />
         <View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>
         <ScrollView
           style={styles.controlDockScroll}

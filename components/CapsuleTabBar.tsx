@@ -1,7 +1,7 @@
 import { getBarSurfaceColor, getSelectedTabTint, getTabItems, TABLET_TAB_BAR_MIN_WIDTH, type TabBarProps } from '@/components/TabBarItems';
 import type { AppTheme } from '@/constants/Themes';
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 // The capsule's widest: about 130 points a tab, so the four stay near each
 // other rather than spread across a tablet.
@@ -28,26 +28,70 @@ export const getCapsuleTabBarWidth = (windowWidth: number) =>
 export const getCapsuleBottomGap = (bottomInset: number, os: string = Platform.OS) =>
   os === 'android' ? Math.max(bottomInset + 8, 12) : Math.max(Math.round(bottomInset * 0.6), 12);
 
+// The halo around a floating bar: solid for HALO_SPREAD points past its edge,
+// then fading out over about HALO_BLUR / 2 more.
+export const HALO_SPREAD = 6;
+export const HALO_BLUR = 20;
+
+/**
+ * A soft halo of the page's colour around a floating bar's shape, drawn behind
+ * it, so text scrolling under the bar fades out just around it rather than
+ * across the whole row (#681). The caller places it, with the bar's corners.
+ */
+export function FloatingHalo({
+  background,
+  style,
+}: {
+  background: string;
+  style?: Animated.WithAnimatedValue<StyleProp<ViewStyle>>;
+}) {
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        { position: 'absolute', backgroundColor: background, boxShadow: `0 0 ${HALO_BLUR}px ${HALO_SPREAD}px ${background}` },
+        style,
+      ]}
+    />
+  );
+}
+
 /**
  * The tab bar on every system (#589, #324), one design on iPhone, iPad and
  * Android: the four tabs sit in a rounded capsule floating above the bottom
  * edge, as iOS's own bar does, raised a shade off the page with a hairline
  * and a soft shadow, with the selected tab in blue, or gold in the dark theme,
  * on its selection pill. Pages run to the bottom edge and scroll under it,
- * showing around and below it with nothing painted behind it, so it floats
- * over the page (#681); TabBarSpacer leaves room for their last lines. The icons and labels are
+ * fading out only in a soft halo around it (FloatingHalo), so the rest of the
+ * row shows and it floats over the page (#681); TabBarSpacer leaves room for
+ * their last lines. The Bible draws its card's halo around the capsule too, so
+ * there the capsule has none of its own (halo false). The icons and labels are
  * the app's own, so they follow its text size, which the systems' own bars
  * wouldn't.
  */
 export function CapsuleTabBar({
   bottomInset,
+  halo = true,
   theme,
   windowWidth,
   ...props
-}: TabBarProps & { bottomInset: number; theme: AppTheme; windowWidth: number }) {
+}: TabBarProps & { bottomInset: number; halo?: boolean; theme: AppTheme; windowWidth: number }) {
   const tablet = windowWidth >= TABLET_TAB_BAR_MIN_WIDTH;
   return (
     <View style={[styles.outer, { paddingBottom: getCapsuleBottomGap(bottomInset) }]}>
+      {halo && (
+        <FloatingHalo
+          background={theme.colors.background}
+          style={[
+            styles.capsuleHalo,
+            {
+              bottom: getCapsuleBottomGap(bottomInset),
+              left: (windowWidth - getCapsuleTabBarWidth(windowWidth)) / 2,
+              width: getCapsuleTabBarWidth(windowWidth),
+            },
+          ]}
+        />
+      )}
       <View
         style={[
           styles.capsule,
@@ -100,6 +144,10 @@ export const getFloatingSurfaceStyle = (theme: AppTheme): ViewStyle => ({
 const styles = StyleSheet.create({
   outer: {
     alignItems: 'center',
+  },
+  capsuleHalo: {
+    borderRadius: 999,
+    top: 0,
   },
   capsule: {
     borderRadius: 999,

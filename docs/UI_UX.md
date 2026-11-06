@@ -227,11 +227,13 @@ simple, blended colors.
   which the systems' own bars wouldn't. On iOS it sits partly within the home
   indicator's inset, as iOS's own bar does; on Android, wholly above the gesture bar or
   the three buttons, with Android's ripple when pressed (`getCapsuleBottomGap`).
-  - **Pages run to the bottom edge** and scroll under it, and under the Bible's card, with
-    nothing painted behind them (#681): the page shows around and below them, so they
-    float over it. (Before #681, the page faded out above them and was solid below
-    that.) Every tab page ends with `TabBarSpacer`, so its last lines can scroll clear
-    of it.
+  - **Pages run to the bottom edge** and scroll under it, and under the Bible's card. The
+    page fades out only in a soft halo of its own colour around each of them
+    (`FloatingHalo`, solid for 6 points past the edge and gone about 10 points further),
+    and shows across the rest of the row, so they float over it (#681). On the Bible,
+    the card draws the halo around the capsule too, under the card. (Before #681, the
+    page faded out above them and was solid below that, edge to edge.) Every tab page
+    ends with `TabBarSpacer`, so its last lines can scroll clear of it.
   - **The Bible's audio and chapter controls float in a card of their own** above the
     capsule, as iOS puts a player above its tab bar: the same floating surface, as wide as
     the capsule on a phone and up to 640 points on a tablet, with its pills and round
