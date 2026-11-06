@@ -240,6 +240,15 @@ simple, blended colors.
     edges stand out at least 3:1 (`getDockControlBorderColor`). While the sleep timer is
     on, its button fills in like the play button: blue with a white icon, or gold with a
     dark one. When the tab bar hides while reading, the card slides down into its place.
+    - **In a narrow card**, such as an iPad's 320-point Slide Over window at its 150%
+      text, everything still fits inside the card (#681). The audio row's five buttons
+      narrow the gaps between them, then shrink together, but never below 44 points
+      (`getAudioControlRowLayout`). The book, chapter and verse pills give up room in
+      order: "Verse" becomes "Vs.", then the pills drop their arrows, and only then
+      does the book's name become its published abbreviation, such as "Ps" or 詩, with
+      the arrows back if they fit beside it (`getDockPillLabels`,
+      `getBookPillAbbreviation`). Each pill stays at least 44 points wide, a tap
+      target. The book is always named, never cut to "…" alone.
   - **The header's buttons match the bars:** the back button, the page title, the search
     bar, and the Bible's translation, saved-verse, help and search buttons float on the
     same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a

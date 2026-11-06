@@ -106,6 +106,26 @@ const CHINESE_UNION_VERSION: AbbreviationList = {
 
 const SOURCES = [SBL, BIBLE_GATEWAY, REINA_VALERA, CHINESE_UNION_VERSION];
 
+/**
+ * The short form the Bible card's book pill shows when the book's full name
+ * doesn't fit (#681), in its translation's language: SBL's for English ("Ps",
+ * "1 Thess"), the Reina-Valera's for Spanish ("Sal"), and the Chinese Union
+ * Version's for Chinese (詩, 林前), its Simplified form for Simplified
+ * translations. A book with none, such as Job in Spanish, keeps its full name.
+ */
+export const getBookPillAbbreviation = (bookId: string, language: string, fullName: string) => {
+  // Each Chinese list starts with the Traditional form, then the Simplified
+  // one where it differs.
+  const chinese = CHINESE_UNION_VERSION[bookId] ?? [];
+  const forms: Record<string, string | undefined> = {
+    en: SBL[bookId]?.[0],
+    es: REINA_VALERA[bookId]?.[0],
+    zh: chinese[0],
+    'zh-cn': chinese[1] ?? chinese[0],
+  };
+  return forms[language] ?? fullName;
+};
+
 /** Every published short form of each book, by its USFM code. */
 export const BIBLE_BOOK_ABBREVIATIONS: Record<string, readonly string[]> = Object.fromEntries(
   Object.keys(SBL).map((bookId) => [

@@ -1133,7 +1133,11 @@ only with a read-only token and reads no secret.
   `screens/android/<screen>-w<width>.png`, and `check-screens.cjs --split <width>` checks
   the tab labels and verse button where the window puts them, no word cut short, the
   content column where the window is wider than it, and the Text size popup's width.
-  The screens' `mustShowLines` are written for the phone, so they're left out.
+  On the Bible's shots it also checks that no control crosses the Bible card's left or
+  right edge, from the card's colors just inside them (#681). The screens'
+  `mustShowLines` are written for the phone, so they're left out. A screen's
+  `variantRules` for a window, such as `w320`, add rules of its own, such as the book's
+  name in the Bible card's pill.
 - **Android key screens join** joins the batches into
   `android-key-screens-<pr>-<run>-android-1` (and `-android-2` and so on if the shots need
   more than one) and the Google Play copies, `android-key-screens-<pr>-<run>-google-play`,

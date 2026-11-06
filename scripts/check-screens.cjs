@@ -25,7 +25,10 @@
  *   no text touches the screen's left or right edge, and a popup is no wider
  *   than POPUP_MAX_WIDTH, measured from its surface's colour, since on iOS a
  *   popup could fill the screen with its text still in the middle. A screen
- *   with `wideContent`, such as a web page the app shows, skips the first two.
+ *   with `wideContent`, such as a web page the app shows, skips the first two;
+ * - at the iPad's split window widths on Android, no Bible card control
+ *   crosses the card's edge (#681), and a screen's `variantRules` for that
+ *   window, such as `w320`, apply, such as the book's name in its pill.
  *
  * Where a label is missing, it takes a closer look at that strip of the screen,
  * enlarged and with more contrast, before reporting it.
@@ -425,6 +428,44 @@ const checkPopupWidth = async (shot, file) => {
     : [];
 };
 
+// The Bible card's widest, DOCK_CARD_MAX_WIDTH in app/(tabs)/bible/index.tsx,
+// which test/screens.test.ts keeps in step. In a split window it's the window
+// less 16 points a side, up to that.
+const DOCK_CARD_MAX_WIDTH = 640;
+
+/**
+ * Whether a control crosses the Bible card's left or right edge in an Android
+ * split window (#681): at 320 points the audio row's sleep timer ran past the
+ * card's right edge, which cut it off. The card is white, and what's around it
+ * warm or grey, so blue just inside an edge, a control's fill or icon, means
+ * one crosses it. It looks from 110 to 300 points up from the window's bottom,
+ * where the card sits with or without the tab bar below it. Light theme only,
+ * as the split shots are.
+ */
+const checkDockCard = async (shot, file) => {
+  if (!shot.split || !shot.route.startsWith('bible') || showsPopup(shot) || shot.settings.theme === 'dark') return [];
+  const sharp = require('sharp');
+  const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = shot.split;
+  const scale = info.width / width;
+  const card = Math.min(width - 32, DOCK_CARD_MAX_WIDTH);
+  const left = (width - card) / 2;
+  const insides = { left: [left + 1.5, left + 2.5], right: [left + card - 2.5, left + card - 1.5] };
+  const problems = [];
+  for (const [side, columns] of Object.entries(insides)) {
+    let blue = 0;
+    for (let up = 300; up >= 110; up--) {
+      const y = Math.round((height - up) * scale);
+      for (const x of columns) {
+        const index = (y * info.width + Math.round(x * scale)) * 3;
+        if (data[index + 2] - data[index] > 16) blue++;
+      }
+    }
+    if (blue >= 4) problems.push(`a Bible card control crosses the card's ${side} edge`);
+  }
+  return problems;
+};
+
 /** Both lists of rules, or undefined when neither has any. */
 const joinRules = (screenRules, variantRules) =>
   screenRules || variantRules ? [...(screenRules || []), ...(variantRules || [])] : undefined;
@@ -454,17 +495,20 @@ const planChecks = (config, platform = 'ios') =>
  * doesn't depend on the window's size: the tab labels, the verse button, the
  * screen's mustNotShowLines (no word cut short), and the layout checks. Its
  * mustShowLines are written for the phone, where a narrower window may leave
- * a line below the fold, so they're left out.
+ * a line below the fold, so they're left out; its `variantRules` for the
+ * window, such as `w320`, add rules of its own (#681).
  */
 const planSplitChecks = (config, width) =>
   planSplitCaptures(config, width).map((shot) => {
     const screen = config.screens.find((candidate) => candidate.name === shot.screen);
+    const forWindow = screen.variantRules?.[`w${width}`] || {};
     return {
       ...shot,
       tabs: screen.tabs,
       ...(screen.wideContent ? { wideContent: true } : {}),
       ...(screen.popup ? { popup: true } : {}),
-      mustNotShowLines: screen.mustNotShowLines,
+      mustShowLines: forWindow.mustShowLines,
+      mustNotShowLines: joinRules(screen.mustNotShowLines, forWindow.mustNotShowLines),
     };
   });
 
@@ -614,6 +658,7 @@ const main = async () => {
             ...checkAdvance(shot, lines, later),
             ...checkIpadLayout(shot, lines),
             ...(await checkPopupWidth(shot, file)),
+            ...(await checkDockCard(shot, file)),
           ]
         : ['no screenshot'],
     });
@@ -654,6 +699,7 @@ module.exports = {
   checkAdvance,
   checkIpadLayout,
   checkPopupWidth,
+  checkDockCard,
   columnEdges,
   surfaceWidth,
   CONTENT_MAX_WIDTH,
@@ -661,6 +707,7 @@ module.exports = {
   TABLET_TEXT_SCALE,
   POPUP_MAX_WIDTH,
   POPUP_SURFACE,
+  DOCK_CARD_MAX_WIDTH,
   planChecks,
   planSplitChecks,
   splitRegions,
