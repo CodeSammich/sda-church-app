@@ -248,7 +248,8 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
   var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '讚美'), printedBilingualText_('AH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Invocation', '獻禱'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
+    // The sermon speaker gives the invocation, as in Queens (#707).
+    [printedBilingualText_('Invocation', '獻禱'), '', printValue_(location.sermon)],
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [
       printedBilingualText_('Bible Readings', '讀經'),

@@ -121,7 +121,8 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
   var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '頌讚'), printedBilingualText_('SDAH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Invocation', '宣召'), '', printValue_(location.chairPastoralPrayer)],
+    // The sermon speaker gives the invocation, as in the app (#707).
+    [printedBilingualText_('Invocation', '宣召'), '', printValue_(location.sermon)],
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [
       printedBilingualText_('Bible Reading', '讀經'),

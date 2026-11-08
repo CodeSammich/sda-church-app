@@ -1634,6 +1634,75 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(renderWorshipEnding(false)).toEqual(['table']);
   });
 
+  it.each([
+    ['Queens', 'appendWorshipPanel_', true],
+    ['Queens Communion', 'appendWorshipPanel_', false],
+    ['Brooklyn', 'appendBrooklynWorshipPanel_', true],
+  ])('prints the sermon speaker in the %s Invocation row, as in the sermon row', (_name, panel, closing) => {
+    const context = loadAppsScript({});
+    const rows = JSON.parse(
+      runInContext(
+        `var rows = [];
+         appendPanelHeading_ = appendCenteredText_ = appendHalfSpacer_ = function () {};
+         appendCompactItalicCenteredText_ = appendSilentPrayerHeading_ = appendSpacer_ = function () {};
+         appendProgramTable_ = appendBrooklynProgramTable_ = function (cell, table) {
+           rows = rows.concat(table);
+         };
+         appendSermonRow_ = function (cell, row) { rows.push(row); };
+         var dictionary = {
+           englishToChinese: { 'paul wen': '溫保羅', 'mark sun': '孫馬可', 'ruth ho': '何路得' },
+           chineseToEnglish: { '溫保羅': 'Paul Wen', '孫馬可': 'Mark Sun', '何路得': 'Ruth Ho' },
+           titles: { 'paul wen': { english: 'Pastor', chinese: '牧師' } }
+         };
+         var location = { sermon: 'Paul Wen', chairPastoralPrayer: 'Mark Sun', chair: 'Ruth Ho' };
+         var bulletin = preparePrintedBulletinForPrint_(
+           { queens: location, brooklyn: JSON.parse(JSON.stringify(location)) },
+           dictionary
+         );
+         ${panel}('worship', bulletin, ${closing});
+         JSON.stringify(rows)`,
+        context,
+      ) as string,
+    );
+    const person = (label: string) =>
+      rows.find(([first]: string[]) => first.split('\n').pop() === label)?.[2];
+
+    // The same person, with the same Leadership title, as the sermon row.
+    expect(person('Sermon')).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(person('Invocation')).toBe(person('Sermon'));
+    // The chair and the pastoral prayer keep their own people.
+    expect(person('Pastoral Prayer')).toBe('孫馬可\nMark Sun');
+    expect(person('Chairman')).toBe(
+      panel === 'appendBrooklynWorshipPanel_' ? '何路得\nRuth Ho' : '孫馬可\nMark Sun',
+    );
+  });
+
+  it.each([
+    ['Queens', 'appendWorshipPanel_'],
+    ['Brooklyn', 'appendBrooklynWorshipPanel_'],
+  ])('prints TBD in the %s Invocation row with no sermon speaker', (_name, panel) => {
+    const context = loadAppsScript({});
+    const rows = JSON.parse(
+      runInContext(
+        `var rows = [];
+         appendPanelHeading_ = appendCenteredText_ = appendHalfSpacer_ = function () {};
+         appendCompactItalicCenteredText_ = appendSilentPrayerHeading_ = appendSpacer_ = function () {};
+         appendSermonRow_ = function () {};
+         appendProgramTable_ = appendBrooklynProgramTable_ = function (cell, table) {
+           rows = rows.concat(table);
+         };
+         var location = { chairPastoralPrayer: '孫馬可\\nMark Sun', chair: '何路得\\nRuth Ho' };
+         ${panel}('worship', { queens: location, brooklyn: location }, true);
+         JSON.stringify(rows)`,
+        context,
+      ) as string,
+    );
+    const invocation = rows.find(([first]: string[]) => first.endsWith('\nInvocation'));
+
+    // Never the chair in the sermon speaker's place.
+    expect(invocation?.[2]).toBe('尚未確定\nTBD');
+  });
+
   it('keeps the giving text in from the sheet edge without padding the QR cells', () => {
     const makeCell = () => {
       const cell = {
