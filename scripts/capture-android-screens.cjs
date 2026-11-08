@@ -7,7 +7,10 @@
  * android.phone in screens.json names, the best-selling Android phone where
  * most Adventists live. Google Play takes no screenshot taller than 2:1, so its
  * shots are taken separately (--store), on an emulator of android.googlePlay's
- * size, and saved, numbered in upload order, to google-play/<language>/.
+ * size, and saved, numbered in upload order, to google-play/<language>/. The
+ * Android tablet's (--tablet, #695) are taken on an emulator of
+ * android.tablet's size, named android-tablet/<screen>-<variant>.png, and the
+ * Google Play tablet copies saved to google-play-tablet/<language>/.
  *
  * Like the iPhone capture, it saves the settings the app reads at startup, and
  * the screen to open (services/ScreenshotRoute.ts), before each launch. Android
@@ -25,6 +28,9 @@
  *   node scripts/capture-android-screens.cjs --out <dir> --split 504      The shots at an iPad's split window
  *                                                                         504 points wide (#324), on an emulator
  *                                                                         that size (android.splitWindows)
+ *   node scripts/capture-android-screens.cjs --out <dir> --tablet         The Android tablet's shots and its Google
+ *                                                                         Play copies (#695), on an emulator of
+ *                                                                         android.tablet's size
  *
  * The key-screens preview build (EXPO_PUBLIC_KEY_SCREENS=1) must already be
  * installed on the only connected emulator. ADB names the adb to use (default
@@ -145,12 +151,14 @@ const pullStorage = (pkg, dir) => {
 /**
  * The emulator settings a shot needs: night mode, font scale, and density, the
  * phone's own times the shot's display size. The density is always set, so the
- * phone's holds even where the emulator rounded its own.
+ * phone's holds even where the emulator rounded its own. On the tablet, which
+ * turns (#695), also its rotation: 0 upright, 1 turned a quarter to landscape.
  */
 const deviceSettings = (settings, phoneDensity) => ({
   night: settings.theme === 'dark' ? 'yes' : 'no',
   fontScale: String(settings.fontScale),
   density: String(Math.round(phoneDensity * settings.displayScale)),
+  ...(settings.orientation ? { rotation: settings.orientation === 'landscape' ? '1' : '0' } : {}),
 });
 
 /** Throws unless the emulator's screen is the size the device in screens.json gives. */
@@ -181,12 +189,21 @@ const fixStatusBar = () => {
   demo('notifications -e visible false');
 };
 
-/** Changes the emulator settings that differ from the last shot's. */
+/**
+ * Changes the emulator settings that differ from the last shot's. The rotation
+ * is fixed, not left to the emulator's sensor, which the app follows on a
+ * tablet (plugins/withAndroidPhonePortrait.js).
+ */
 const applyDeviceSettings = (wanted, current) => {
   if (wanted.night !== current.night) shell(`cmd uimode night ${wanted.night}`);
   if (wanted.fontScale !== current.fontScale) shell(`settings put system font_scale ${wanted.fontScale}`);
   if (wanted.density !== current.density) shell(`wm density ${wanted.density}`);
-  if (wanted.fontScale !== current.fontScale || wanted.density !== current.density) fixStatusBar();
+  if (wanted.rotation !== undefined && wanted.rotation !== current.rotation) {
+    shell('settings put system accelerometer_rotation 0');
+    shell(`settings put system user_rotation ${wanted.rotation}`);
+  }
+  const changed = (name) => wanted[name] !== current[name];
+  if (changed('fontScale') || changed('density') || changed('rotation')) fixStatusBar();
   return wanted;
 };
 
@@ -239,14 +256,21 @@ const screenshot = (file) => {
   writeFileSync(file, result.stdout);
 };
 
+/** Which way a screenshot is turned: portrait, or landscape if it's wider than tall. */
+const orientationOf = async (file) => {
+  const { width, height } = await require('sharp')(file).metadata();
+  return width > height ? 'landscape' : 'portrait';
+};
+
 const isRunning = (pkg) => spawnSync(ADB, ['shell', `pidof ${pkg}`], { encoding: 'utf8' }).stdout.trim() !== '';
 
 /**
- * The shots to take: a group's, every one, each Google Play shot once, or a
- * split window's.
+ * The shots to take: a group's, every one, each Google Play shot once, a
+ * split window's, or the tablet's.
  */
-const planShots = (config, { group, store, split }) => {
+const planShots = (config, { group, store, split, tablet }) => {
   if (split) return planSplitCaptures(config, split);
+  if (tablet) return planCaptures(config, 'android-tablet');
   const shots = planCaptures(config, 'android');
   if (!store) return takeGroup(shots, group, config);
   const names = new Set(planStoreCopies(config, 'android').map((copy) => copy.name));
@@ -254,11 +278,12 @@ const planShots = (config, { group, store, split }) => {
 };
 
 /**
- * The emulator a capture runs on: the phone, Google Play's size, or an iPad's
- * split window, in points at 2x (320 dpi).
+ * The emulator a capture runs on: the phone, Google Play's size, an iPad's
+ * split window, in points at 2x (320 dpi), or the tablet.
  */
 const SPLIT_DENSITY = 320;
-const deviceFor = (config, { store, split }) => {
+const deviceFor = (config, { store, split, tablet }) => {
+  if (tablet) return config.android.tablet;
   if (split) {
     const window = config.android.splitWindows.find((each) => each.width === split);
     if (!window) throw new Error(`No split window ${split} points wide in android.splitWindows.`);
@@ -272,9 +297,20 @@ const deviceFor = (config, { store, split }) => {
   return store ? config.android.googlePlay : config.android.phone;
 };
 
-const capture = async (outDir, { group, store, split }) => {
+/**
+ * The store copies a capture makes, and the size they must be: Google Play's
+ * phone shots on its own emulator (--store), and its tablet shots on the
+ * tablet's (#695).
+ */
+const storeCopiesFor = (config, { store, tablet }) => {
+  if (store) return { copies: planStoreCopies(config, 'android'), size: config.android.googlePlay, sizeName: 'android.googlePlay' };
+  if (tablet) return { copies: planStoreCopies(config, 'android-tablet'), size: config.android.tablet, sizeName: 'android.tablet' };
+  return { copies: [] };
+};
+
+const capture = async (outDir, { group, store, split, tablet }) => {
   const config = loadConfig();
-  const device = deviceFor(config, { store, split });
+  const device = deviceFor(config, { store, split, tablet });
   const pkg = previewPackage();
   await becomeRoot();
   prepareEmulator();
@@ -296,7 +332,7 @@ const capture = async (outDir, { group, store, split }) => {
   const timings = [];
   const started = Date.now();
 
-  for (const shot of planShots(config, { group, store, split })) {
+  for (const shot of planShots(config, { group, store, split, tablet })) {
     // A stuck launch gets another (LAUNCHES in capture-ios-screens.cjs).
     for (let launch = 1; launch <= LAUNCHES; launch++) {
       shell(`am force-stop ${pkg}`);
@@ -341,6 +377,8 @@ const capture = async (outDir, { group, store, split }) => {
       }
       if (await looksBlank(file)) problems.push('the screen is blank');
       else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
+      const turned = shot.settings.orientation && (await orientationOf(file));
+      if (turned && turned !== shot.settings.orientation) problems.push(`the screen is in ${turned}, not ${shot.settings.orientation}`);
       if (problems.length && launch < LAUNCHES) {
         relaunched.push(`${shot.file}: ${problems.join(', ')}, after ${finalSeconds}s`);
         console.log(`${shot.file} <- ${shot.url}  (${problems.join(', ')} after ${finalSeconds}s; launching again)`);
@@ -361,29 +399,32 @@ const capture = async (outDir, { group, store, split }) => {
     }
   }
   shell(`am force-stop ${pkg}`);
-  applyDeviceSettings({ ...current, night: 'no', fontScale: '1' }, current);
+  applyDeviceSettings({ ...current, night: 'no', fontScale: '1', ...(current.rotation ? { rotation: '0' } : {}) }, current);
   shell('wm density reset');
 
-  for (const copy of store ? planStoreCopies(config, 'android') : []) {
+  const { copies, size, sizeName } = storeCopiesFor(config, { store, tablet });
+  for (const copy of copies) {
     if (!captured.has(copy.name)) {
       failures.push(`${copy.file}: its shot "${copy.name}" wasn't captured`);
       continue;
     }
     const file = join(outDir, copy.file);
     mkdirSync(dirname(file), { recursive: true });
-    await writePlayCopy(join(shotDir, copy.source), file, config.android.googlePlay);
+    await writePlayCopy(join(shotDir, copy.source), file, size, sizeName);
   }
   rmSync(workDir, { recursive: true, force: true });
   if (!store) writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
-  const part = store ? ', Google Play shots' : split ? ', split window' : group ? `, group ${group}` : '';
+  const part = store ? ', Google Play shots' : split ? ', split window' : tablet ? ', tablet' : group ? `, group ${group}` : '';
   const summary = [
     `### Android key screens (${device.name}, ${device.width} × ${device.height} at ${device.density} dpi${part})`,
     '',
     store
       ? `${captured.size} captured in ${minutes} minutes, and copied into \`screens/google-play/\`.`
-      : group || split
+      : tablet
+        ? `${captured.size} captured in ${minutes} minutes, with the Google Play tablet copies in \`screens/google-play-tablet/\`.`
+        : group || split
         ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
         : `${captured.size} captured in ${minutes} minutes, in \`screens/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
@@ -404,15 +445,16 @@ const capture = async (outDir, { group, store, split }) => {
 
 /**
  * Writes a Google Play copy of a screenshot, at the size android.googlePlay
- * gives and with no alpha channel, which Play rejects. The emulator's screen is
- * that size already, so a shot of any other size is an error rather than
- * something to stretch.
+ * (or, for the tablet's, android.tablet) gives and with no alpha channel,
+ * which Play rejects. The emulator's screen is that size already, so a shot of
+ * any other size, such as a tablet shot turned to landscape, is an error
+ * rather than something to stretch.
  */
-const writePlayCopy = async (source, destination, size) => {
+const writePlayCopy = async (source, destination, size, sizeName = 'android.googlePlay') => {
   const sharp = require('sharp');
   const { width, height } = await sharp(source).metadata();
   if (width !== size.width || height !== size.height) {
-    throw new Error(`${source} is ${width} × ${height}, not Google Play's ${size.width} × ${size.height}; check android.googlePlay in test/screens/screens.json.`);
+    throw new Error(`${source} is ${width} × ${height}, not Google Play's ${size.width} × ${size.height}; check ${sizeName} in test/screens/screens.json.`);
   }
   // Already Google Play's size, so only the transparency goes.
   await writeOpaqueCopy(source, destination);
@@ -425,11 +467,12 @@ if (require.main === module) {
   };
   const outDir = argument('--out');
   if (!outDir) {
-    console.error('Usage: node scripts/capture-android-screens.cjs --out <dir> [--group <group> | --store | --split <width>]');
+    console.error('Usage: node scripts/capture-android-screens.cjs --out <dir> [--group <group> | --store | --split <width> | --tablet]');
     process.exit(2);
   }
   const split = argument('--split') && Number(argument('--split'));
-  capture(resolve(outDir), { group: argument('--group'), store: process.argv.includes('--store'), split }).catch((error) => {
+  const tablet = process.argv.includes('--tablet');
+  capture(resolve(outDir), { group: argument('--group'), store: process.argv.includes('--store'), split, tablet }).catch((error) => {
     console.error(error);
     process.exit(1);
   });
@@ -443,6 +486,8 @@ module.exports = {
   STATUS_BAR_REGIONS,
   planShots,
   deviceFor,
+  storeCopiesFor,
+  orientationOf,
   checkScreenSize,
   previewPackage,
   writeStorage,

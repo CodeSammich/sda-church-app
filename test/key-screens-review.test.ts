@@ -41,7 +41,8 @@ type Api = {
   /** How each run's join job ended. */
   joins: Record<string, string>;
   /**
-   * Each name's newest matching download, by "<run> <iphone|ipad|app-store|app-store-ipad|app|android|google-play>",
+   * Each name's newest matching download, by
+   * "<run> <iphone|ipad|app-store|app-store-ipad|app|android|android-tablet|google-play|google-play-tablet>",
    * as "<id> <bytes>" lines, one per part, in name order.
    */
   artifacts: Record<string, string>;
@@ -74,7 +75,8 @@ else if (/\\/issues\\/\\d+\\/comments/.test(url)) print(data.reviews.join('\\n')
 else if ((match = /workflows\\/([^/]+)\\/runs/.exec(url))) print(data.runs[match[1]]);
 else if ((match = /runs\\/(\\d+)\\/jobs/.exec(url))) print(jq.includes('completed_at != null') ? '' : data.joins[match[1]]);
 else if ((match = /runs\\/(\\d+)\\/artifacts/.exec(url))) {
-  const kind = ['iphone', 'app-store-ipad', 'ipad', 'app-store', 'android', 'google-play'].find((name) => jq.includes('-' + name)) || 'app';
+  const kind = ['iphone', 'app-store-ipad', 'ipad', 'app-store', 'android-tablet', 'android', 'google-play-tablet', 'google-play']
+    .find((name) => jq.includes('-' + name)) || 'app';
   print(data.artifacts[match[1] + ' ' + kind]);
 }
 `,
@@ -121,11 +123,16 @@ const api: Api = {
     '200 app-store-ipad': '910 27262976',
     '200 app': '902 40894464',
     '100 android': '905 29360128',
+    '100 android-tablet': '911 11534336',
     '100 google-play': '907 7340032',
+    '100 google-play-tablet': '912 31457280',
   },
 };
 const androidLink =
   '[the Android screenshots](https://github.com/org/repo/actions/runs/100/artifacts/905) (a zip of about 28 MB, from attempt 2 of its run)';
+// The Android tablet's (#695), from the same run.
+const tabletLink =
+  '[the Android tablet screenshots](https://github.com/org/repo/actions/runs/100/artifacts/911) (a zip of about 11 MB, from attempt 2 of its run)';
 const iphoneLinks =
   'the iPhone screenshots ([part 1](https://github.com/org/repo/actions/runs/200/artifacts/901), about 24 MB; [part 2](https://github.com/org/repo/actions/runs/200/artifacts/903), about 25 MB)';
 
@@ -137,12 +144,16 @@ describe('refreshing the review comment from the Android run', () => {
     expect(patched.startsWith(`<!-- key-screens-review sha=${SHA} -->\n`)).toBe(true);
     expect(patched).toContain('✅ The automatic checks passed on both platforms');
     expect(patched).toContain(androidLink);
-    expect(patched).toContain(`**Download** ${iphoneLinks}, [the iPad screenshots](https://github.com/org/repo/actions/runs/200/artifacts/904) (a zip of about 34 MB), and ${androidLink}`);
+    expect(patched).toContain(
+      `**Download** ${iphoneLinks}, [the iPad screenshots](https://github.com/org/repo/actions/runs/200/artifacts/904) (a zip of about 34 MB), ${androidLink}, and ${tabletLink}, ` +
+        'and open their `screens/ios/` (iPhone), `screens/ipad/`, `screens/android/`, and `screens/android-tablet/` folders.',
+    );
     expect(patched).toContain(
       // The iPhone's and the iPad's apart, each under 50 MB (#681).
       'The App Store copies are in [the iPhone download](https://github.com/org/repo/actions/runs/200/artifacts/906) (a zip of about 24 MB), `screens/app-store/`, ' +
         'and [the iPad download](https://github.com/org/repo/actions/runs/200/artifacts/910) (a zip of about 26 MB), `screens/app-store-ipad/`. ' +
-        'The Google Play copies are in [theirs](https://github.com/org/repo/actions/runs/100/artifacts/907) (a zip of about 7 MB, from attempt 2 of its run): `screens/google-play/`.',
+        'The Google Play copies are in [theirs](https://github.com/org/repo/actions/runs/100/artifacts/907) (a zip of about 7 MB, from attempt 2 of its run): `screens/google-play/`, ' +
+        "and the tablet's in [the tablet download](https://github.com/org/repo/actions/runs/100/artifacts/912) (a zip of about 30 MB, from attempt 2 of its run), `screens/google-play-tablet/`.",
     );
     // The approval is still on the iPhone run.
     expect(patched).toContain('opens [this run](https://github.com/org/repo/actions/runs/200), clicks **Review deployments**');
@@ -192,6 +203,7 @@ describe('posting the review comment from the iPhone run', () => {
     expect(posted).toContain('(iOS: success, Android: not finished)');
     expect(posted).toContain('`screens/app-store-ipad/`. Each download stays under');
     expect(posted).not.toContain('Google Play copies are in');
+    expect(posted).not.toContain('tablet screenshots](');
   });
 
   it('lists every part, and says which attempt they came from', () => {
@@ -264,7 +276,9 @@ describe('the shared review comment workflow', () => {
       ['app_store', 'ios', 'app-store'],
       ['app_store_ipad', 'ios', 'app-store-ipad'],
       ['android', 'android', 'android-[0-9]+'],
+      ['android_tablet', 'android', 'android-tablet-[0-9]+'],
       ['google_play', 'android', 'google-play'],
+      ['google_play_tablet', 'android', 'google-play-tablet'],
     ]) {
       expect(review).toContain(
         `${variable}="$(screenshots "$${run}_run" "$${run}_attempt" '.name | test("^${run}-key-screens-(manual|[0-9]+)-[0-9]+-${suffix}$")'`,
@@ -276,6 +290,8 @@ describe('the shared review comment workflow', () => {
     expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-app-store-ipad\n");
     expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-1\n");
     expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play\n");
+    expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-tablet-1\n");
+    expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play-tablet\n");
   });
 
   it("reads each run's result from its join job, in its newest attempt", () => {

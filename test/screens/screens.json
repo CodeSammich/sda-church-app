@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, appStoreIpad the iPad's, from the screens that list ipadVariants (#324), and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 8 minutes on the iPhone, or 7 on the iPad. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. Every download a reviewer opens stays under the 50 MB Chrome looks inside, with no app in it: Chrome blocked the one download that held the screenshots and the unsigned app (#484), and called 1.7.0's 349 MB of iPhone and iPad shots dangerous. scripts/pack-review-downloads.cjs packs each device's shots as palette PNGs, in parts if need be, and fails the join if they'd need more parts than the workflow uploads (\"Downloads under 50 MB\" in docs/operations/native-builds.md).",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, appStoreIpad the iPad's, from the screens that list ipadVariants (#324), googlePlay, per Google Play language, the Android ones (at most 8), and googlePlayTablet the Android tablet's, from the screens that list androidTabletVariants (#695), which a later language's tablet set can join. Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 8 minutes on the iPhone, or 7 on the iPad. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. Every download a reviewer opens stays under the 50 MB Chrome looks inside, with no app in it: Chrome blocked the one download that held the screenshots and the unsigned app (#484), and called 1.7.0's 349 MB of iPhone and iPad shots dangerous. scripts/pack-review-downloads.cjs packs each device's shots as palette PNGs, in parts if need be, and fails the join if they'd need more parts than the workflow uploads (\"Downloads under 50 MB\" in docs/operations/native-builds.md).",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -9,10 +9,11 @@
     "points": { "width": 1032, "height": 1376 }
   },
   "android": {
-    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
+    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. tablet is a 10-inch tablet held upright (#695), 800 dp wide as the Pixel Tablet and other 10-inch tablets at 1280 × 800 dp are, but 9:16 rather than their 16:10, the shape Google Play's tablet screenshots take: 1620 × 2880 at 324 dpi, 800 × 1422 dp. The app's tablet layout follows the screen's width and its shorter side, never its height, so it lays out as on a real tablet, with a little more of each page in view, and the one emulator takes both the tablet's checks and its Google Play shots. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
     "systemImage": "system-images;android-36;google_apis;x86_64",
     "phone": { "name": "Samsung Galaxy A07 4G", "width": 720, "height": 1600, "density": 300 },
     "googlePlay": { "name": "Google Play screenshot size", "width": 1080, "height": 1920, "density": 420 },
+    "tablet": { "name": "10-inch tablet at Google Play's 9:16", "width": 1620, "height": 2880, "density": 324 },
     "splitWindows": [
       { "$comment": "The iPad's Split View and Slide Over windows, in points (dp at 2x, 320 dpi), taken on their own emulators (#324): Slide Over, and the 11-inch iPad's half, the 13-inch iPad's half in portrait, and its two-thirds in landscape.", "width": 320, "height": 744 },
       { "width": 504, "height": 1194 },
@@ -65,6 +66,7 @@
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
       "ipadVariants": ["landscape"],
+      "androidTabletVariants": ["default", "landscape"],
       "mustShowLines": ["^Welcome$", "^Language$", "^English$", { "line": "^Next$", "platforms": ["ios"] }],
       "mustNotShowLines": ["^Appearance$", "^Text size$"],
       "variantRules": {
@@ -78,6 +80,7 @@
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "landscape", "landscape-xl", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
         "xl-ios-large-text": {
           "mustShowLines": ["^Today.s Verse$"],
@@ -113,6 +116,7 @@
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "ios-large-text", "landscape"],
+      "androidTabletVariants": ["default", "landscape"],
       "mustShowLines": ["\\bEN\\b", "BSB", "[Cc]UV", "^Psalms(\\b|v$)"],
       "variantRules": {
         "w320": { "mustShowLines": ["^Ps(alms)?\\b"] }
@@ -156,6 +160,7 @@
       },
       "variants": ["zh"],
       "ipadVariants": ["landscape-zh", "zh"],
+      "androidTabletVariants": ["zh"],
       "mustShowLines": ["粵語", "^\u8a69\u7bc7"]
     },
     {
@@ -176,6 +181,7 @@
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh-cn", "zh-cn-dark"],
       "ipadVariants": ["landscape-zh-cn", "zh-cn"],
+      "androidTabletVariants": ["zh-cn"],
       "mustShowLines": ["国语", "^\u8bd7\u7bc7"]
     },
     {
@@ -357,6 +363,7 @@
       "path": "explore",
       "variants": ["default", "dark", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
       "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
         "default": { "mustNotShowLines": ["^In-depth Bible"] },
         "zh": { "mustShowLines": ["^精選書庫", "^深入研經"], "mustNotShowLines": ["圖書館"] },
@@ -373,6 +380,7 @@
       "wideContent": true,
       "variants": ["default", "dark", "zh", "zh-cn", "es"],
       "ipadVariants": ["default", "landscape", "landscape-xl", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "mustShowLines": [
         { "line": "^The Bruised Reed$", "minLeft": 0.3, "platforms": ["ios", "android"] },
         { "line": "^The Bruised Reed$", "minLeft": 0.2, "platforms": ["ipad"] }
@@ -581,6 +589,7 @@
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "zh-cn", "android-display-large"],
       "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
         "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$"] },
         "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$"] }
@@ -756,5 +765,10 @@
     "en-US": ["home-default", "bible-dual-default", "bible-audio-settings-default", "bible-dual-dark", "explore-default", "library-default", "you-default"],
     "zh-TW": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark", "you-zh"],
     "zh-CN": ["home-zh-cn", "bible-cuvs-zh-cn", "bible-cuv-cantonese-zh", "explore-zh-cn", "library-zh-cn", "bible-cuvs-zh-cn-dark", "you-zh-cn"]
+  },
+  "googlePlayTablet": {
+    "en-US": ["home-default", "bible-dual-default", "explore-default", "library-default", "you-default"],
+    "zh-TW": ["home-zh", "bible-cuv-cantonese-zh", "explore-zh", "library-zh", "you-zh"],
+    "zh-CN": ["home-zh-cn", "bible-cuvs-zh-cn", "explore-zh-cn", "library-zh-cn", "you-zh-cn"]
   }
 }
