@@ -100,8 +100,9 @@ These choices exist to keep the app free and within every provider's limits:
   as the phone's downloader runs them (#556, #611)
   ([how the app fetches audio](adventist-connect-media.md#how-the-app-fetches-audio)).
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
-  for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual
-  refresh has a 5-minute cooldown. Most bulletin opens never reach Apps Script.
+  for 2 minutes, the app keeps each Sabbath's bulletin on the device and asks again
+  only once its copy is more than 30 minutes old (#702), and manual refresh has a
+  2-minute cooldown. Most bulletin opens never reach Apps Script.
 - **Nothing billable.** Cloudflare R2 and paid object storage were rejected because
   usage-based billing can't be ruled out
   ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
@@ -177,17 +178,37 @@ request from every phone counts against that one account's
 - 6 minutes per execution and 6 hours of trigger runtime a day, far above what the
   API uses.
 
-*Measured* latency is about 1.5 s warm and 5.7 s cold, so the account can serve
-roughly 20 requests a second before hitting the 30-execution ceiling. Caching keeps
-real traffic far below that: the 2-minute server cache, the per-Sabbath device cache,
-and the manual-refresh cooldown mean each phone asks about once per Sabbath. At
-congregation and heavy-use scale this is well under 1 request a second. Wide
-adoption, with thousands opening the bulletin in the same few minutes, is the one
-case that could approach the ceiling. When a request fails, the app shows the last
-copy it stored for that Sabbath, even an outdated one, with the error and a retry
-button; only phones that never loaded that Sabbath see a failed load until traffic
-drops. The daily [dependency monitor](external-dependency-monitor.md) checks the
-public bulletin response.
+The 30-execution limit is per account, not per script, and the same for Gmail and
+Workspace accounts. *Measured* latency is about 1.5 s warm and 5.7 s cold, so the
+account can serve roughly 20 requests a second before hitting the ceiling. The
+2-minute server cache saves the sheet read, but a cached answer still runs the
+script, so it still counts. On the phone, a stored copy stays current for 30 minutes
+(#702), so a phone asks at most about twice an hour for each week it shows, plus any
+refreshes, which wait 2 minutes between them. Phones with the bulletin open when the
+Sabbath begins ask again at random moments over the next 5 minutes, not all in the
+same second. Sabbath morning is the peak:
+
+| Phones using the app | Opening the bulletin within | Requests a second | Share of the limit |
+| --- | --- | --- | --- |
+| 200 (one congregation) | 10 minutes | 0.3 | 2% |
+| 600 (three congregations) | 10 minutes | 1 | 5% |
+| 600 | the same minute | 10 | 50% |
+
+Real opens spread over an hour or more, so one church family stays far below the
+limit. What decides capacity as the app spreads is which account deploys each copy
+of the script, not how many spreadsheets there are. A church family that deploys
+its own copy from its own Google account gets its own limit of 30. Every church
+whose copy one account deploys shares that account's 30: ours plus five more church
+families of 600 phones each is 3,600 phones, and if they all opened the bulletin
+within the same 3 minutes, that would be the whole limit. So each church family
+deploys from its own account
+([#596](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/596)).
+
+When a request fails, the app shows the last copy it stored for that Sabbath, even
+an outdated one, with the error and a retry button; only phones that never loaded
+that Sabbath see a failed load until traffic drops. The daily
+[dependency monitor](external-dependency-monitor.md) checks the public bulletin
+response.
 
 Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a concern.
 
