@@ -684,6 +684,8 @@ const turnDevice = async (udid, orientation) => {
 
 const capture = async (outDir, { group, platform = 'ios' } = {}) => {
   const config = loadConfig();
+  // A group may have no shots, as in a one-off run (#692), and still writes its results.
+  mkdirSync(outDir, { recursive: true });
   const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
   const device = pickDevice(config, platform);
   const { udid } = device;

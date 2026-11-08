@@ -673,7 +673,9 @@ until you release it:
      revisit** table: [App Store](app-store-connect-answers.md#when-to-revisit) and
      [Google Play](play-console-answers.md#when-to-revisit).
    - If it changes how the app looks, retake the screenshots, and replace the copies in
-     [`docs/store-assets/`](../store-assets/README.md).
+     [`docs/store-assets/`](../store-assets/README.md). The release PR's run retakes
+     English's and Chinese's; Spanish's are one-off, so start a
+     [one-off run](native-builds.md#one-off-store-sets) if the change shows in them.
    - If it adds or removes a feature, update the descriptions in
      [Store listings](store-listing.md) first, then paste them into each store.
 3. **Apple:** in App Store Connect, select **+** next to **iOS App** and add the new

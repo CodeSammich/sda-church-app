@@ -371,20 +371,24 @@ Copies of the uploaded screenshots, the feature graphic, and the App Store heade
 transparency both stores reject. Replace them there whenever the stores get new ones.
 
 From 1.7.1, each listing language has its own screenshots, in its own interface (#681):
-English for the English and both Spanish listings; Traditional Chinese for the App
-Store's Chinese (Traditional) and Play's `zh-TW` and `zh-HK`; and Simplified Chinese for
-the App Store's Chinese (Simplified) and Play's `zh-CN`. Upload each set with that
-language selected, in App Store Connect on the version page, and in Play Console under
-**Main store listing → Manage translations**. A listing with no set of its own shows the
-default language's.
+English for the English listings; Traditional Chinese for the App Store's Chinese
+(Traditional) and Play's `zh-TW` and `zh-HK`; and Simplified Chinese for the App Store's
+Chinese (Simplified) and Play's `zh-CN`. Spanish's, for the App Store's Spanish (Mexico)
+and Spanish (Spain) and Play's `es-US` and `es-419`, are **one-off** sets (#692): taken
+once, by hand, in a [one-off run](native-builds.md#one-off-store-sets), not on every
+release PR, so they stay as taken until someone runs one again. Every language added
+later gets its sets the same way. Upload each set with that language selected, in App
+Store Connect on the version page, and in Play Console under **Main store listing →
+Manage translations**. A listing with no set of its own shows the default language's.
 
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and
-  turn on Android's demo mode for a clean status bar. The current set comes from the
+  turn on Android's demo mode for a clean status bar. The current sets come from the
   **Android key screens** run's Google Play batch (`screens/google-play/<language>/`),
-  which does both. Play also needs a 1024 × 500 feature
-  graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
-  and the 512 × 512 icon (`public/icon-512x512.png`).
+  which does both, Spanish's from a one-off run's. Play also needs a 1024 × 500 feature
+  graphic, Spanish's with its line of features in Spanish, described in
+  [Store listing assets](play-console-answers.md#store-listing-assets), and the
+  512 × 512 icon (`public/icon-512x512.png`).
 - **Google Play, tablets:** Play has its own slots for **7-inch tablet** and **10-inch
   tablet** screenshots, each 4 to 8 of them, at 9:16 upright or 16:9 turned, each side
   1,080 to 7,680 pixels; the app needs at least four at 1080 × 1920 or more to be

@@ -1,8 +1,8 @@
 /**
  * Builds the App Store product page headers, one per listing language: a tagline and
  * a line of features over three iPhone store screenshots (Bible, Home, Explore) from
- * the listing's own set in docs/store-assets/app-store/ (#681), English's for both
- * Spanish listings, on the church building photo tinted brand blue.
+ * the listing's own set in docs/store-assets/app-store/ (#681), Spanish's one-off set
+ * for both Spanish listings (#692), on the church building photo tinted brand blue.
  * The photo is the one Home and Explore show (CHURCH_BUILDING_IMAGE_URL in
  * constants/ExternalLinks.ts), downloaded each run.
  *
@@ -41,7 +41,6 @@ const H = 1646;
 // Latin text uses the app's Plus Jakarta Sans.
 // Each listing's set and its three shots, by name (the files are numbered in
 // upload order): left to right, the Bible, Home in the centre, then Explore.
-const ENGLISH = { set: 'en-US', phones: ['bible-dual-default', 'home-default', 'explore-default'] };
 const LISTINGS = [
   {
     id: 'en-US',
@@ -49,7 +48,8 @@ const LISTINGS = [
     font: 'Plus Jakarta Sans Bold',
     fontfile: jakarta,
     size: 124,
-    ...ENGLISH,
+    set: 'en-US',
+    phones: ['bible-dual-default', 'home-default', 'explore-default'],
   },
   {
     id: 'zh-Hant',
@@ -70,13 +70,14 @@ const LISTINGS = [
     phones: ['bible-cuvs-zh-cn', 'home-zh-cn', 'explore-zh-cn'],
   },
   {
-    // Both Spanish listings, Mexico and Spain.
+    // Both Spanish listings, Mexico and Spain, from Spanish's one-off set (#692).
     id: 'es',
     lines: ['Tu iglesia, toda la semana', 'Biblia  ·  Transmisión  ·  Clases  ·  Biblioteca'],
     font: 'Plus Jakarta Sans Bold',
     fontfile: jakarta,
     size: 124,
-    ...ENGLISH,
+    set: 'es',
+    phones: ['bible-spanish-dual-es', 'home-es', 'explore-es'],
   },
 ];
 // A listing's three screenshot files, found by name in its set.

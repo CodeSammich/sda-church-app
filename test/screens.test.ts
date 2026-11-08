@@ -26,7 +26,8 @@ const {
 } = require('../scripts/capture-ios-screens.cjs');
 
 const repoFile = (path: string) => readFileSync(resolve(__dirname, '..', path), 'utf8');
-const config = loadConfig();
+// The routine list, even if a one-off run's KEY_SCREENS_ONE_OFF is set (#692).
+const config = loadConfig(undefined, { oneOff: '' });
 const shots = planCaptures(config);
 
 describe('key screen list (test/screens/screens.json)', () => {
@@ -169,6 +170,140 @@ describe('App Store shots', () => {
     for (const list of Object.values(config.appStore) as string[][]) {
       expect(list.length).toBeGreaterThanOrEqual(3);
       expect(list.length).toBeLessThanOrEqual(10);
+    }
+  });
+});
+
+describe('one-off store sets (#692)', () => {
+  const {
+    ONE_OFF_ENV,
+    allScreens,
+    oneOffSet,
+    planSplitCaptures,
+    splitShotName,
+  } = require('../scripts/capture-ios-screens.cjs');
+  const { planChecks } = require('../scripts/check-screens.cjs');
+  const spanish = loadConfig(undefined, { oneOff: 'es' });
+  const names = (list: Array<{ name: string }>) => list.map((each) => each.name);
+
+  it('stay out of every routine run', () => {
+    expect(config.oneOffRun).toBeUndefined();
+    // A screen only one-off sets use has no variants of its own to take.
+    for (const screen of config.oneOff.screens) {
+      expect(screen).not.toHaveProperty('variants');
+      expect(screen).not.toHaveProperty('ipadVariants');
+      expect(config.screens.map((each: { name: string }) => each.name)).not.toContain(screen.name);
+    }
+    for (const platform of ['ios', 'ipad', 'android']) {
+      for (const shot of planCaptures(config, platform)) expect(shot.screen).not.toBe('bible-spanish-dual');
+    }
+    expect(planStoreCopies(config).filter((copy: { file: string }) => copy.file.includes('/es/'))).toEqual([]);
+    // The routine store lists name no one-off language.
+    for (const list of ['appStore', 'appStoreIpad', 'googlePlay']) {
+      for (const language of Object.keys(config.oneOff.languages)) expect(config[list]).not.toHaveProperty(language);
+    }
+  });
+
+  it('take Spanish with the same screens and order as English, each ending with You', () => {
+    expect(oneOffSet(spanish, 'es', 'appStore')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'bible-cuv-zh',
+      'bible-spanish-dual-es-dark',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    expect(oneOffSet(spanish, 'es', 'appStoreIpad')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    expect(oneOffSet(spanish, 'es', 'googlePlay')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'bible-audio-settings-es',
+      'bible-spanish-dual-es-dark',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    for (const list of ['appStore', 'appStoreIpad', 'googlePlay']) {
+      const set = oneOffSet(spanish, 'es', list);
+      expect(set).toHaveLength(config[list]['en-US'].length);
+      expect(set.at(-1)).toBe('you-es');
+    }
+  });
+
+  it('plans only their shots, in Spanish, with no split windows, and copies them in upload order', () => {
+    const iphone = planCaptures(spanish, 'ios');
+    expect(names(iphone)).toEqual(oneOffSet(spanish, 'es', 'appStore'));
+    // Only English's Chinese-interface Bible keeps its language, to show the app has Chinese.
+    for (const shot of iphone) expect([shot.name, shot.settings.language]).toEqual([shot.name, shot.name === 'bible-cuv-zh' ? 'zh' : 'es']);
+    const dark = iphone.find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es-dark');
+    expect(dark.settings).toMatchObject({ theme: 'dark', language: 'es', supportingTranslation: 'BSB' });
+    expect(dark.url).toBe('sdachurchapp://bible?bookId=PSA&chapter=23&translationId=spa_r09');
+    // The iPad's in portrait, at its own 150% text, as the App Store takes them.
+    const ipad = planCaptures(spanish, 'ipad');
+    expect(names(ipad)).toEqual(oneOffSet(spanish, 'es', 'appStoreIpad'));
+    for (const shot of ipad) expect(shot.settings).toMatchObject({ orientation: 'portrait', textScale: null });
+    expect(names(planCaptures(spanish, 'android'))).toEqual(oneOffSet(spanish, 'es', 'googlePlay'));
+    for (const window of spanish.android.splitWindows) expect(planSplitCaptures(spanish, window.width)).toEqual([]);
+    expect(planStoreCopies(spanish, 'ios')[1]).toEqual({
+      name: 'bible-spanish-dual-es',
+      platform: 'ios',
+      source: 'ios/bible-spanish-dual-es.png',
+      file: 'app-store/es/02-bible-spanish-dual-es.png',
+    });
+    expect(planStoreCopies(spanish, 'ipad').at(-1).file).toBe('app-store-ipad/es/05-you-es.png');
+    expect(planStoreCopies(spanish, 'android')[2].file).toBe('google-play/es/03-bible-audio-settings-es.png');
+  });
+
+  it("checks each shot's text with its screen's rules, the Spanish Bible's in RVR09 and BSB", () => {
+    for (const platform of ['ios', 'ipad', 'android']) {
+      const checks = planChecks(spanish, platform);
+      expect(names(checks)).toEqual(names(planCaptures(spanish, platform)));
+      const bible = checks.find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es');
+      expect(bible.mustShowLines).toEqual(['RVR09', 'BSB', '^Salmos(\\b|v$)']);
+      const you = checks.find((shot: { name: string }) => shot.name === 'you-es');
+      expect(you.mustShowLines).toEqual(['^Contraste$', '^Alto contraste$']);
+    }
+    const audio = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'bible-audio-settings-es');
+    expect(audio.mustNotShowLines).toContain('^Cerrar$');
+  });
+
+  it('gives a store list added later, such as Google Play tablets (#695), its one-off set with no change', () => {
+    const tablet = { ...spanish, googlePlayTablet: { 'en-US': ['home-default', 'bible-dual-default', 'you-default'] } };
+    expect(oneOffSet(tablet, 'es', 'googlePlayTablet')).toEqual(['home-es', 'bible-spanish-dual-es', 'you-es']);
+    expect(oneOffSet(tablet, 'es', 'noSuchList')).toEqual([]);
+  });
+
+  it('reads its languages from the workflows, and refuses one screens.json lacks', () => {
+    const previous = process.env[ONE_OFF_ENV];
+    try {
+      process.env[ONE_OFF_ENV] = 'es';
+      expect(loadConfig().oneOffRun).toEqual(['es']);
+      process.env[ONE_OFF_ENV] = '';
+      expect(loadConfig().oneOffRun).toBeUndefined();
+    } finally {
+      if (previous === undefined) delete process.env[ONE_OFF_ENV];
+      else process.env[ONE_OFF_ENV] = previous;
+    }
+    expect(() => loadConfig(undefined, { oneOff: 'ko' })).toThrow('No one-off language "ko"');
+    expect(() => splitShotName(config, 'home-nope')).toThrow('make the shot "home-nope"');
+    expect(splitShotName(spanish, 'bible-spanish-dual-es-dark')).toMatchObject({ variant: 'es-dark' });
+    expect(allScreens(spanish).at(-1).name).toBe('bible-spanish-dual');
+    // Both workflows take the languages by hand, and pass them to every step;
+    // a pull request has no inputs, so the release PR's runs stay as they were.
+    for (const file of ['ios-key-screens.yml', 'android-key-screens.yml']) {
+      const workflow = repoFile(`.github/workflows/${file}`);
+      const trigger = workflow.slice(workflow.indexOf('\non:'), workflow.indexOf('\npermissions:'));
+      expect(trigger).toMatch(/\n  workflow_dispatch:\n    inputs:\n      one_off:\n/);
+      expect(trigger).toMatch(/\n        type: string\n        default: ''\n/);
+      expect(workflow).toContain(`\nenv:\n  ${ONE_OFF_ENV}: \${{ inputs.one_off }}\n`);
+      expect(workflow).not.toMatch(/run:[^\n]*inputs\.one_off/);
     }
   });
 });

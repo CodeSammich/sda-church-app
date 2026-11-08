@@ -58,7 +58,7 @@
  * summary. Exits 1 if any rule fails.
  */
 const { execFileSync } = require('node:child_process');
-const { appendFileSync, existsSync, mkdtempSync, writeFileSync } = require('node:fs');
+const { appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const { PLATFORMS, allScreens, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup } = require('./capture-ios-screens.cjs');
@@ -691,6 +691,8 @@ const main = async () => {
     ? planSplitChecks(config, split)
     : takeGroup(platforms.flatMap((each) => planChecks(config, each)), argument('--group'), config);
   const text = await readText(dir, shots);
+  // A group may have no shots, as in a one-off run (#692), and no folder of its own.
+  mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'ocr.json'), JSON.stringify(text, null, 1));
 
   const results = [];
