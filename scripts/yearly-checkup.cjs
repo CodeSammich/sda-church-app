@@ -116,7 +116,7 @@ const CHECKLIST = [
         'what-the-monitor-cant-check',
       ],
       [
-        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Priority Label, iOS compile cache, and Maintenance Release Reminder. GitHub turns schedules off after 60 days without a commit to main; the reminder opens a tracking issue and a version pull request for a maintenance release at 45 days, and an issue if it finds one turned off.',
+        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Triage Label, iOS compile cache, and Maintenance Release Reminder. GitHub turns schedules off after 60 days without a commit to main; the reminder opens a tracking issue and a version pull request for a maintenance release at 45 days, and an issue if it finds one turned off.',
         'docs/operations/admin-runbook.md',
         'maintenance-releases',
       ],

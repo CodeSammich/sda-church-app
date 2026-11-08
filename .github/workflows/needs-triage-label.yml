@@ -1,11 +1,13 @@
-name: Needs Priority Label
+name: Needs Triage Label
 
 # GitHub Mobile can't set the Priority issue field yet, so an issue opened there
-# gets the red "needs priority" label until someone gives it a Priority on
+# gets the red "needs triage" label until someone gives it a Priority on
 # desktop. The daily run also labels issues the monitors open, because their
 # built-in token doesn't trigger this workflow, and takes the label off once an
-# issue has a Priority. The rules are in scripts/needs-priority-label.cjs. It
-# uses no credentials beyond labeling issues.
+# issue has a Priority, since it no longer needs triage. If the label is
+# missing, it's made red, with its description, rather than GitHub's grey. The
+# rules are in scripts/needs-triage-label.cjs. It uses no credentials beyond
+# labeling issues.
 
 on:
   issues:
@@ -21,7 +23,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: needs-priority-label
+  group: needs-triage-label
   cancel-in-progress: false
 
 jobs:
@@ -38,9 +40,9 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
-            const priorities = require(`${process.env.GITHUB_WORKSPACE}/scripts/needs-priority-label.cjs`);
+            const triage = require(`${process.env.GITHUB_WORKSPACE}/scripts/needs-triage-label.cjs`);
             if (context.eventName === 'issues') {
-              const result = await priorities.labelNewIssue({
+              const result = await triage.labelNewIssue({
                 github,
                 context,
                 core,
@@ -48,6 +50,6 @@ jobs:
               });
               core.info(`#${result.number}: ${result.action}`);
             } else {
-              const { labeled, unlabeled } = await priorities.sweep({ github, context });
+              const { labeled, unlabeled } = await triage.sweep({ github, context });
               core.info(`Labeled: ${labeled.join(', ') || 'none'}. Unlabeled: ${unlabeled.join(', ') || 'none'}.`);
             }

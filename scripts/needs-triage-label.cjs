@@ -1,19 +1,27 @@
 /**
- * Keeps the red "needs priority" label in step with the organization's Priority
+ * Keeps the red "needs triage" label in step with the organization's Priority
  * issue field (Urgent, High, Medium, Low). GitHub Mobile can't set issue fields
  * yet, so an issue opened there gets the label, which stands out on desktop
- * until someone gives the issue a Priority. The daily sweep then takes it off.
+ * until someone gives the issue a Priority. An issue with a Priority no longer
+ * needs triage, so the label comes off.
  *
- * - A new or reopened issue: labeled unless it already has a Priority.
+ * - A new or reopened issue: labeled unless it already has a Priority, and
+ *   unlabeled if it has both.
  * - The daily sweep: labels every open issue without a Priority, and unlabels
  *   every one that has one. Issues the monitors open with the built-in Actions
  *   token don't trigger workflows, so the sweep is what labels those.
  *
+ * If the repository has no "needs triage" label, it's made red, with its
+ * description, before the first issue gets it. Otherwise GitHub would make a
+ * grey one without a description.
+ *
  * Called from actions/github-script, which passes its `github`, `context`, and
  * `core` objects in:
- *   const priorities = require(`${process.env.GITHUB_WORKSPACE}/scripts/needs-priority-label.cjs`);
+ *   const triage = require(`${process.env.GITHUB_WORKSPACE}/scripts/needs-triage-label.cjs`);
  */
-const LABEL = 'needs priority';
+const LABEL = 'needs triage';
+const LABEL_COLOR = 'B60205';
+const LABEL_DESCRIPTION = 'Set a Priority (Urgent, High, Medium, Low) on desktop, then remove this label.';
 const PRIORITY_FIELD = 'Priority';
 
 // Whether the token can see issue fields at all. Without that, every issue
@@ -57,19 +65,55 @@ const hasPriority = (issue) =>
 
 const hasLabel = (issue) => issue.labels.nodes.some((label) => label.name === LABEL);
 
-const addLabel = (github, context, number) =>
-  github.rest.issues.addLabels({ ...context.repo, issue_number: number, labels: [LABEL] });
+/**
+ * Makes the label, red and with its description, if the repository doesn't
+ * have it. An existing label is left as it is, so a colour or description
+ * someone changed by hand stays.
+ */
+const ensureLabel = async (github, context) => {
+  try {
+    await github.rest.issues.getLabel({ ...context.repo, name: LABEL });
+    return;
+  } catch (error) {
+    if (error.status !== 404) throw error;
+  }
+  try {
+    await github.rest.issues.createLabel({
+      ...context.repo,
+      name: LABEL,
+      color: LABEL_COLOR,
+      description: LABEL_DESCRIPTION,
+    });
+  } catch (error) {
+    // 422: another run made it in the meantime.
+    if (error.status !== 422) throw error;
+  }
+};
+
+/**
+ * Returns a function that adds the label to an issue. Before the first one, it
+ * makes sure the label exists, so addLabels never makes a grey one.
+ */
+const labeler = (github, context) => {
+  let ready;
+  return async (number) => {
+    ready = ready || ensureLabel(github, context);
+    await ready;
+    await github.rest.issues.addLabels({ ...context.repo, issue_number: number, labels: [LABEL] });
+  };
+};
 
 const removeLabel = (github, context, number) =>
   github.rest.issues.removeLabel({ ...context.repo, issue_number: number, name: LABEL });
 
 /**
- * Labels a new or reopened issue unless it has a Priority. When GitHub won't
- * show the issue's fields, it labels the issue anyway, because a label that
- * shouldn't be there is easier to notice than one that's missing.
- * Returns what happened, for logging and tests.
+ * Labels a new or reopened issue unless it has a Priority, and unlabels one
+ * that has both. When GitHub won't show the issue's fields, it labels the issue
+ * anyway, because a label that shouldn't be there is easier to notice than one
+ * that's missing. Returns what happened, for logging and tests.
  */
 const labelNewIssue = async ({ github, context, core, number }) => {
+  const addLabel = labeler(github, context);
   let repository;
   try {
     ({ repository } = await github.graphql(ONE_ISSUE_QUERY, { ...context.repo, number }));
@@ -77,13 +121,19 @@ const labelNewIssue = async ({ github, context, core, number }) => {
     core.warning(`Could not read #${number}'s Priority: ${error.message}`);
   }
   if (!repository || !canSeePriority(repository)) {
-    await addLabel(github, context, number);
+    await addLabel(number);
     return { action: 'labeled-unchecked', number };
   }
-  if (hasPriority(repository.issue) || hasLabel(repository.issue)) {
+  const prioritized = hasPriority(repository.issue);
+  const flagged = hasLabel(repository.issue);
+  if (prioritized && flagged) {
+    await removeLabel(github, context, number);
+    return { action: 'unlabeled', number };
+  }
+  if (prioritized || flagged) {
     return { action: 'none', number };
   }
-  await addLabel(github, context, number);
+  await addLabel(number);
   return { action: 'labeled', number };
 };
 
@@ -94,6 +144,7 @@ const labelNewIssue = async ({ github, context, core, number }) => {
  * Returns the issue numbers it labeled and unlabeled.
  */
 const sweep = async ({ github, context }) => {
+  const addLabel = labeler(github, context);
   const labeled = [];
   const unlabeled = [];
   let after = null;
@@ -106,7 +157,7 @@ const sweep = async ({ github, context }) => {
       const prioritized = hasPriority(issue);
       const flagged = hasLabel(issue);
       if (!prioritized && !flagged) {
-        await addLabel(github, context, issue.number);
+        await addLabel(issue.number);
         labeled.push(issue.number);
       } else if (prioritized && flagged) {
         await removeLabel(github, context, issue.number);

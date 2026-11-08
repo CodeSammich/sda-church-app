@@ -1153,11 +1153,15 @@ Each issue's importance is the organization's **Priority** issue field: Urgent, 
 Medium, or Low. Urgent means it goes into the next release. The old `critical` label was
 retired in October 2026; no label stands for a priority.
 
-GitHub Mobile can't set issue fields yet. So **Needs Priority Label**
-(`needs-priority-label.yml`) adds the red **needs priority** label to an issue opened or
+GitHub Mobile can't set issue fields yet. So **Needs Triage Label**
+(`needs-triage-label.yml`) adds the red **needs triage** label to an issue opened or
 reopened without a Priority. Once a day it also labels any other open issue without one,
 such as a monitor's alert, because issues the built-in Actions token opens don't trigger
-workflows. Give the issue a Priority on desktop, and the next daily run removes the label.
+workflows. An issue with a Priority no longer needs triage: give it a Priority on
+desktop and remove the label, or the next daily run removes it. If the label has been
+deleted, the workflow makes it again before adding it, red and with its description,
+"Set a Priority (Urgent, High, Medium, Low) on desktop, then remove this label.", rather
+than letting GitHub make a grey one.
 
 ### Maintenance issues
 
@@ -1182,15 +1186,15 @@ Dependabot's have only the label. Add the label by hand to other upkeep, such as
 store requirement you file yourself. The label and the starting priorities are set in
 `scripts/monitor-alert-issue.cjs` and the scripts and workflows that call it. If GitHub
 won't let a workflow set the Priority, the issue still opens and the run logs a
-warning, and the daily run gives it the **needs priority** label.
+warning, and the daily run gives it the **needs triage** label.
 
 To groom, search
-`is:issue state:open (label:"needs priority" OR field.priority:urgent,high)`.
+`is:issue state:open (label:"needs triage" OR field.priority:urgent,high)`.
 
 If the daily run fails with "can't see the Priority issue field", the Actions token has
 lost access to issue fields. It changes no labels then, so it can't mislabel every issue.
-The rules are in `scripts/needs-priority-label.cjs`, covered by
-`test/needs-priority-label.test.ts`.
+The rules are in `scripts/needs-triage-label.cjs`, covered by
+`test/needs-triage-label.test.ts`.
 
 ## Updating pastors and elders
 
