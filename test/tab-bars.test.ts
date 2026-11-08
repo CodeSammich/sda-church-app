@@ -1,7 +1,7 @@
 import React from 'react';
 import { readdirSync, readFileSync } from 'node:fs';
-import { fireEvent, render } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { AccessibilityInfo, Animated, StyleSheet, Text } from 'react-native';
 
 import {
   CAPSULE_TAB_BAR_MAX_WIDTH,
@@ -9,6 +9,8 @@ import {
   getCapsuleBottomGap,
   getCapsuleTabBarWidth,
   getFloatingSurfaceStyle,
+  TAB_PRESS_SETTLE_MS,
+  TAB_SLIDE_MS,
 } from '@/components/CapsuleTabBar';
 import {
   getBarSurfaceColor,
@@ -44,23 +46,22 @@ const descriptors = {
 // What Expo Router's tabs pass a custom bar: an emitter and navigateToTab,
 // not React Navigation's `navigation`, which 1.7.0's first builds called and
 // crashed on every tab press.
-const renderBar = (
+const barElement = (
   emit: () => { defaultPrevented: boolean },
   navigateToTab: (routeKey: string) => void,
   index = 0,
   windowWidth = 1032,
 ) =>
-  render(
-    React.createElement(CapsuleTabBar as any, {
-      bottomInset: 20,
-      descriptors,
-      emitter: { emit },
-      navigateToTab,
-      state: { index, routes },
-      theme: customLightTheme,
-      windowWidth,
-    }),
-  );
+  React.createElement(CapsuleTabBar as any, {
+    bottomInset: 20,
+    descriptors,
+    emitter: { emit },
+    navigateToTab,
+    state: { index, routes },
+    theme: customLightTheme,
+    windowWidth,
+  });
+const renderBar = (...args: Parameters<typeof barElement>) => render(barElement(...args));
 
 describe('the tab bars (#589)', () => {
   it('is white, or the brand blue in the dark theme, with the selected tab on its own pill', () => {
@@ -200,8 +201,106 @@ describe('the tab bars (#589)', () => {
     expect(layout).not.toContain('BottomTabBar ');
     expect(layout).toContain('paddingBottom: 0,');
     expect(layout).toContain('<TabBarClearanceContext.Provider value={tabBarHeight}>');
-    // Android's touch ripple, kept within each tab's pill.
-    expect(readFileSync('components/CapsuleTabBar.tsx', 'utf8')).toContain('android_ripple={{ color: getSelectedTabTint(theme) }}');
+  });
+
+  describe("the selected tab's pill (#704)", () => {
+    const tint = getSelectedTabTint(customLightTheme);
+    const noop = () => ({ defaultPrevented: false });
+    // The three tabs' places in the row, as onLayout reports them.
+    const layOut = async (tabs: ReturnType<Awaited<ReturnType<typeof renderBar>>['getAllByRole']>) => {
+      for (const [i, tab] of tabs.entries()) {
+        await fireEvent(tab, 'layout', { nativeEvent: { layout: { x: i * 117, y: 0, width: 117, height: 60 } } });
+      }
+    };
+    const pillStyle = (screen: Awaited<ReturnType<typeof renderBar>>) =>
+      StyleSheet.flatten(screen.getByTestId('tab-selection-pill').props.style);
+    const tabBackgrounds = (screen: Awaited<ReturnType<typeof renderBar>>) =>
+      screen.getAllByRole('tab').map((tab) => StyleSheet.flatten(tab.props.style).backgroundColor);
+    // React Native's own mock of it is a jest.fn, which restoreMocks leaves
+    // as the last test set it.
+    beforeEach(() => {
+      jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+    });
+
+    it('has no Android ripple, which flashed a square behind a pressed tab', () => {
+      expect(readFileSync('components/CapsuleTabBar.tsx', 'utf8')).not.toMatch(/android_ripple=/);
+    });
+
+    it('slides to a tab the moment it is pressed, on the native driver', async () => {
+      const timing = jest.spyOn(Animated, 'timing');
+      const navigateToTab = jest.fn();
+      const screen = await renderBar(noop, navigateToTab, 0, 390);
+      // Until the tabs are measured, the selected tab draws its own pill.
+      expect(tabBackgrounds(screen)).toEqual([tint, undefined, undefined]);
+      expect(pillStyle(screen)).toMatchObject({ opacity: 0 });
+      await layOut(screen.getAllByRole('tab'));
+      // Then one pill behind the tabs, the selected tab's size and place.
+      expect(tabBackgrounds(screen)).toEqual([undefined, undefined, undefined]);
+      expect(pillStyle(screen)).toMatchObject({ backgroundColor: tint, borderRadius: 999, opacity: 1, transform: [{ translateX: 0 }], width: 117 });
+      await fireEvent.press(screen.getAllByRole('tab')[1]);
+      // It starts sliding before the router switches tabs.
+      expect(timing).toHaveBeenCalledTimes(1);
+      expect(timing.mock.calls[0][1]).toMatchObject({ toValue: 117, duration: TAB_SLIDE_MS, useNativeDriver: true });
+      expect(navigateToTab).toHaveBeenCalledWith('bible-1');
+      // The router's switch to the tab doesn't slide it again.
+      await screen.rerender(barElement(noop, navigateToTab, 2, 390));
+      expect(timing).toHaveBeenCalledTimes(1);
+      // Pressing the selected tab leaves it where it is.
+      await fireEvent.press(screen.getAllByRole('tab')[1]);
+      expect(timing).toHaveBeenCalledTimes(1);
+    });
+
+    it('moves at once with Reduce Motion or Remove animations on', async () => {
+      jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+      const timing = jest.spyOn(Animated, 'timing');
+      const screen = await renderBar(noop, jest.fn(), 0, 390);
+      await act(async () => {});
+      await layOut(screen.getAllByRole('tab'));
+      await fireEvent.press(screen.getAllByRole('tab')[2]);
+      expect(timing).not.toHaveBeenCalled();
+      expect(pillStyle(screen)).toMatchObject({ opacity: 1, transform: [{ translateX: 234 }] });
+    });
+
+    it("waits on the pressed tab while the router switches, and goes back if it doesn't", async () => {
+      jest.useFakeTimers();
+      try {
+        const timing = jest.spyOn(Animated, 'timing');
+        const screen = await renderBar(noop, jest.fn(), 0, 390);
+        await layOut(screen.getAllByRole('tab'));
+        await fireEvent.press(screen.getAllByRole('tab')[2]);
+        expect(timing.mock.calls.map((call) => call[1].toValue)).toEqual([234]);
+        // A render while the router is still on Home doesn't slide it back.
+        await screen.rerender(barElement(noop, jest.fn(), 0, 390));
+        expect(timing.mock.calls.map((call) => call[1].toValue)).toEqual([234]);
+        // But if the router never switches, it goes back to the selected tab.
+        await act(async () => {
+          jest.advanceTimersByTime(TAB_PRESS_SETTLE_MS);
+        });
+        expect(timing.mock.calls.map((call) => call[1].toValue)).toEqual([234, 0]);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it("isn't shown on Home's own pages, where no tab is selected, and appears without sliding", async () => {
+      const timing = jest.spyOn(Animated, 'timing');
+      // The hidden `home` route, as on the bulletin.
+      const screen = await renderBar(noop, jest.fn(), 1, 390);
+      await layOut(screen.getAllByRole('tab'));
+      expect(tabBackgrounds(screen)).toEqual([undefined, undefined, undefined]);
+      expect(pillStyle(screen)).toMatchObject({ opacity: 0 });
+      await fireEvent.press(screen.getAllByRole('tab')[1]);
+      expect(timing).not.toHaveBeenCalled();
+      expect(pillStyle(screen)).toMatchObject({ opacity: 1, transform: [{ translateX: 117 }], width: 117 });
+    });
+
+    it('keeps to its tab when the tabs change size, as with a new text size', async () => {
+      const screen = await renderBar(noop, jest.fn(), 2, 390);
+      await layOut(screen.getAllByRole('tab'));
+      expect(pillStyle(screen)).toMatchObject({ transform: [{ translateX: 117 }], width: 117 });
+      await fireEvent(screen.getAllByRole('tab')[1], 'layout', { nativeEvent: { layout: { x: 100, y: 0, width: 100, height: 80 } } });
+      expect(pillStyle(screen)).toMatchObject({ transform: [{ translateX: 100 }], width: 100 });
+    });
   });
 
   it('fades the page out only in a soft halo behind the capsule and the Bible card (#681)', () => {

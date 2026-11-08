@@ -226,7 +226,13 @@ simple, blended colors.
   others take the muted ink. Its icons and labels follow the app's text size,
   which the systems' own bars wouldn't. On iOS it sits partly within the home
   indicator's inset, as iOS's own bar does; on Android, wholly above the gesture bar or
-  the three buttons, with Android's ripple when pressed (`getCapsuleBottomGap`).
+  the three buttons (`getCapsuleBottomGap`).
+  - **Pressing a tab slides the selected tab's pill to it** in a quarter of a second, on
+    the native driver, before the tab's page has drawn (#704). With Reduce Motion (iOS)
+    or Remove animations (Android) on, it moves at once. On Home's own pages no tab is
+    selected and there's no pill; the next tab pressed gets it without a slide. There's
+    no Android ripple: it ignored the pill's round ends and flashed a square behind the
+    tab.
   - **Pages run to the bottom edge** and scroll under it, and under the Bible's card,
     fading out in a soft halo of the page's own colour (`FloatingHalo`): about
     three-quarters opaque at a bar's edge, half 6 points out, and gone about 25 points
