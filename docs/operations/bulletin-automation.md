@@ -1029,9 +1029,12 @@ a little, such as to 1.1. If tall characters look clipped, raise it, such as to
 Each worship row names its person from the location's `Sabbath Calendar`
 columns:
 
-- **Invocation, Sermon, and Benediction:** the sermon speaker (`Queens Sermon`
-  or `Brooklyn Sermon`), with any `Leadership` title (#707). The Queens
-  Communion booklet's Benediction is the Communion pastor instead.
+- **Sermon and Benediction:** the sermon speaker (`Queens Sermon` or `Brooklyn
+  Sermon`), with any `Leadership` title. The Queens Communion booklet's
+  Benediction is the Communion pastor instead.
+- **Invocation:** the two locations differ, on purpose (#707). Queens prints
+  the sermon speaker, as in the Sermon row. Brooklyn prints its chair, as in
+  its Chairman row.
 - **Chairman:** Queens's `Chair/Pastoral Prayer`. Brooklyn's is `Brooklyn
   Chair` when the sheet has that column and it's filled in, or else Brooklyn's
   `Chair/Pastoral Prayer`.
