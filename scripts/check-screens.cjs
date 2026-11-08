@@ -61,7 +61,7 @@ const { execFileSync } = require('node:child_process');
 const { appendFileSync, existsSync, mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
-const { PLATFORMS, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup, variantsOn } = require('./capture-ios-screens.cjs');
+const { PLATFORMS, allScreens, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup } = require('./capture-ios-screens.cjs');
 
 // Vision's languages for each app language, most important first. Bible screens
 // in English also show Chinese, so English reads both.
@@ -522,9 +522,8 @@ const pointsFor = (config, platform) => {
 /** Adds each screen's rules, and its variant's, to one platform's shots. */
 const planChecks = (config, platform = 'ios') =>
   planCaptures(config, platform).map((shot) => {
-    const screen = config.screens.find((candidate) =>
-      variantsOn(candidate, platform).some((variant) => `${candidate.name}-${variant}` === shot.name),
-    );
+    // Its screen may be one that only one-off sets use (#692).
+    const screen = allScreens(config).find((candidate) => candidate.name === shot.screen);
     const variant = shot.name.slice(screen.name.length + 1);
     const forVariant = screen.variantRules?.[variant] || {};
     return {

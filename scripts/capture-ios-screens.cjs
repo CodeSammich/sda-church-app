@@ -24,6 +24,12 @@
  *                                                        The same on the iPad in screens.json, for the
  *                                                        screens that list ipadVariants (#324)
  *
+ *   KEY_SCREENS_ONE_OFF=es node scripts/capture-ios-screens.cjs --out <dir> [--group …] [--platform ipad]
+ *                                                        A one-off run (#692): only Spanish's App Store
+ *                                                        sets (oneOff in screens.json), in place of the
+ *                                                        routine shots; every script that plans the shots
+ *                                                        reads it, so the check and the join follow
+ *
  * The app must already be installed on that iPhone or iPad. The Simulator only
  * runs on macOS with Xcode. Nothing in simctl turns the Simulator sideways, so
  * the iPad's landscape shots use serve-sim (SERVE_SIM), which does.
@@ -147,8 +153,59 @@ const ROUTE_KEY = 'screenshot-route';
 const SERVE_SIM = join(__dirname, '..', 'node_modules', '.bin', 'serve-sim');
 const SERVE_SIM_ORIENTATIONS = { portrait: 'portrait', landscape: 'landscape_left' };
 
-const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
-  JSON.parse(readFileSync(file, 'utf8'));
+// A one-off run (#692) names its languages here, such as "es": the key-screens
+// workflows set it from their one_off input. It takes only those languages'
+// store sets (oneOff in screens.json), in place of every routine shot.
+const ONE_OFF_ENV = 'KEY_SCREENS_ONE_OFF';
+
+/**
+ * The screen list. In a one-off run (`oneOff`, from KEY_SCREENS_ONE_OFF unless
+ * given), it also names the run's languages, as `oneOffRun`, after checking
+ * that screens.json's oneOff has each.
+ */
+const loadConfig = (file = join(projectRoot, 'test/screens/screens.json'), { oneOff = process.env[ONE_OFF_ENV] } = {}) => {
+  const config = JSON.parse(readFileSync(file, 'utf8'));
+  const languages = [...new Set(String(oneOff || '').split(/[\s,]+/).filter(Boolean))];
+  if (!languages.length) return config;
+  const known = Object.keys(config.oneOff?.languages || {});
+  for (const language of languages) {
+    if (!known.includes(language)) {
+      throw new Error(`No one-off language "${language}"; oneOff.languages in screens.json has ${known.join(', ') || 'none'}.`);
+    }
+  }
+  return { ...config, oneOffRun: languages };
+};
+
+/** Every screen: the routine ones, and those only one-off sets use (#692). */
+const allScreens = (config) => [...config.screens, ...(config.oneOff?.screens || [])];
+
+/**
+ * The screen and variant a shot's name is made of, such as bible-dual and dark
+ * for bible-dual-dark: the longest screen name it starts with, followed by a
+ * known variant.
+ */
+const splitShotName = (config, name) => {
+  const [screen] = allScreens(config)
+    .filter((each) => name.startsWith(`${each.name}-`) && Object.hasOwn(config.variants, name.slice(each.name.length + 1)))
+    .sort((a, b) => b.name.length - a.name.length);
+  if (!screen) throw new Error(`No screen and variant in screens.json make the shot "${name}".`);
+  return { screen, variant: name.slice(screen.name.length + 1) };
+};
+
+/**
+ * A one-off language's set for one store list (#692): the list's `from` set,
+ * English's, in the same order, each shot's screen and variant swapped for the
+ * language's own where its `screens` and `variants` name one. So a store list
+ * added later, such as Google Play's tablet sets (#695), gets its one-off sets
+ * with no change here. Empty if the list has no `from` set.
+ */
+const oneOffSet = (config, language, list) => {
+  const { from, screens = {}, variants = {} } = config.oneOff.languages[language];
+  return (config[list]?.[from] || []).map((name) => {
+    const { screen, variant } = splitShotName(config, name);
+    return `${screens[screen.name] || screen.name}-${variants[variant] || variant}`;
+  });
+};
 
 // A shot's rough cost in seconds: its wait, the time its record usually takes
 // after that, and any later shot's, plus about 5 to relaunch the app and take
@@ -193,39 +250,60 @@ const variantsOn = (screen, platform) => {
 };
 
 /**
+ * One screen's shot in one variant on one platform, or none if the variant
+ * changes another platform's device settings.
+ */
+const shotFor = (config, screen, variant, platform) => {
+  const overrides = config.variants[variant];
+  if (!overrides) throw new Error(`Screen "${screen.name}" uses unknown variant "${variant}".`);
+  if (!variantSuits(overrides, platform)) return null;
+  return {
+    platform,
+    screen: screen.name,
+    group: screen.group,
+    name: `${screen.name}-${variant}`,
+    file: `${platform}/${screen.name}-${variant}.png`,
+    route: screen.path,
+    url: `${SCHEME}://${screen.path}`,
+    settings: { ...BASE_SETTINGS[platform], ...(screen.settings || {}), ...overrides },
+    checks: screen.checks || [],
+    wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
+    // A record the app saves of what it did, for a check of its own
+    // (key-screen-records.cjs), and a second screenshot `later` seconds
+    // after the first, as for audio that must keep playing (#551).
+    ...(screen.record ? { record: screen.record } : {}),
+    ...(screen.later
+      ? { later: screen.later, laterFile: `${platform}/${screen.name}-${variant}-later.png` }
+      : {}),
+  };
+};
+
+/**
+ * A one-off run's shots on one platform (#692): each shot its store sets
+ * name, once, from whichever screen and variant make it, though the screen's
+ * routine variants leave it out.
+ */
+const planOneOffCaptures = (config, platform) =>
+  [...new Set(planStoreCopies(config, platform).map((copy) => copy.name))].map((name) => {
+    const { screen, variant } = splitShotName(config, name);
+    const shot = shotFor(config, screen, variant, platform);
+    if (!shot) throw new Error(`The one-off shot "${name}" sets another platform's device settings, so ${platform} can't take it.`);
+    return shot;
+  });
+
+/**
  * Lists every shot on one platform: its name, file, deep link, settings, and
  * checks. A variant is taken only on the platform whose device settings it
  * changes, if any. The iPad's and the Android tablet's portrait shots come
- * first, so the Simulator or emulator turns only once.
+ * first, so the Simulator or emulator turns only once. A one-off run lists
+ * only its store sets' shots.
  */
 const planCaptures = (config, platform = 'ios') => {
   if (!PLATFORMS.includes(platform)) throw new Error(`No platform "${platform}"; use ${PLATFORMS.join(' or ')}.`);
-  const shots = config.screens
-    .flatMap((screen) =>
-      variantsOn(screen, platform).flatMap((variant) => {
-        const overrides = config.variants[variant];
-        if (!overrides) throw new Error(`Screen "${screen.name}" uses unknown variant "${variant}".`);
-        if (!variantSuits(overrides, platform)) return [];
-        return [{
-          platform,
-          screen: screen.name,
-          group: screen.group,
-          name: `${screen.name}-${variant}`,
-          file: `${platform}/${screen.name}-${variant}.png`,
-          route: screen.path,
-          url: `${SCHEME}://${screen.path}`,
-          settings: { ...BASE_SETTINGS[platform], ...(screen.settings || {}), ...overrides },
-          checks: screen.checks || [],
-          wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
-          // A record the app saves of what it did, for a check of its own
-          // (key-screen-records.cjs), and a second screenshot `later` seconds
-          // after the first, as for audio that must keep playing (#551).
-          ...(screen.record ? { record: screen.record } : {}),
-          ...(screen.later
-            ? { later: screen.later, laterFile: `${platform}/${screen.name}-${variant}-later.png` }
-            : {}),
-        }];
-      }),
+  const shots = config.oneOffRun
+    ? planOneOffCaptures(config, platform)
+    : config.screens.flatMap((screen) =>
+      variantsOn(screen, platform).flatMap((variant) => shotFor(config, screen, variant, platform) || []),
     );
   const landscape = (shot) => (shot.settings.orientation === 'landscape' ? 1 : 0);
   return shots.sort((a, b) => landscape(a) - landscape(b));
@@ -245,6 +323,8 @@ const planSplitCaptures = (config, width) => {
   if (!window) {
     throw new Error(`No split window ${width} points wide; screens.json has ${(config.android.splitWindows || []).map((each) => each.width).join(', ')}.`);
   }
+  // A one-off run takes only store sets (#692).
+  if (config.oneOffRun) return [];
   return config.screens
     .filter((screen) => (screen.ipadVariants || []).includes('default'))
     .map((screen) => ({
@@ -336,7 +416,8 @@ const STORE_COPY_WRITERS = { ios: writeAppStoreCopy, ipad: writeIpadAppStoreCopy
  * app-store/<language>/<NN>-<shot>.png, and from the iPad shots, as
  * app-store-ipad/<language>/<NN>-<shot>.png (#324), and Google Play's from the
  * Android ones, as google-play/<language>/<NN>-<shot>.png (#372), and from the
- * Android tablet's, as google-play-tablet/<language>/<NN>-<shot>.png (#695).
+ * Android tablet's, as google-play-tablet/<language>/<NN>-<shot>.png (#695). A
+ * one-off run's are its languages' sets (oneOffSet), in the same folders (#692).
  */
 const STORES = [
   { list: 'appStore', folder: 'app-store', platform: 'ios' },
@@ -344,9 +425,13 @@ const STORES = [
   { list: 'googlePlay', folder: 'google-play', platform: 'android' },
   { list: 'googlePlayTablet', folder: 'google-play-tablet', platform: 'android-tablet' },
 ];
+const storeSets = (config, list) =>
+  config.oneOffRun
+    ? config.oneOffRun.map((language) => [language, oneOffSet(config, language, list)])
+    : Object.entries(config[list] || {});
 const planStoreCopies = (config, platform) =>
   STORES.filter((store) => !platform || store.platform === platform).flatMap((store) =>
-    Object.entries(config[store.list] || {}).flatMap(([language, names]) =>
+    storeSets(config, store.list).flatMap(([language, names]) =>
       names.map((name, index) => ({
         name,
         platform: store.platform,
@@ -781,7 +866,8 @@ const findTabs = (lines) =>
  * press in <outDir>/<platform>-tabs/.
  */
 const pressTabs = async (outDir, { platform = 'ios' } = {}) => {
-  const config = loadConfig();
+  // The routine list, whose English Bible shot it opens, in a one-off run too.
+  const config = loadConfig(undefined, { oneOff: '' });
   const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
   const { udid, name } = pickDevice(config, platform);
   spawnSync('xcrun', ['simctl', 'boot', udid]); // Already booted is fine.
@@ -870,6 +956,10 @@ if (require.main === module) {
 }
 
 module.exports = {
+  ONE_OFF_ENV,
+  allScreens,
+  splitShotName,
+  oneOffSet,
   findTabs,
   TAB_PRESS_ORDER,
   shotCost,

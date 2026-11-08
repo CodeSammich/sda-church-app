@@ -36,6 +36,7 @@
     "es": { "language": "es" },
     "zh-dark": { "language": "zh", "theme": "dark" },
     "zh-cn-dark": { "language": "zh-cn", "theme": "dark" },
+    "es-dark": { "language": "es", "theme": "dark" },
     "xl-ios-large-text": { "textScale": 2, "iosTextSize": "accessibility-large" },
     "es-xl-ios-large-text": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-large" },
     "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" },
@@ -240,7 +241,8 @@
       "mustShowLines": ["^WordProject$"],
       "variantRules": {
         "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
-        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] }
+        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] },
+        "es": { "mustShowLines": [{ "line": "^Ajustes de audio$", "maxTop": 0.4 }, "^Idioma del audio$", "^Escuchar sin conexi.n$"], "mustNotShowLines": ["^Cerrar$", "^Toda la Biblia$"] }
       }
     },
     {
@@ -592,7 +594,8 @@
       "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
         "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$", { "line": "^Current: 150%$", "platforms": ["android-tablet"] }] },
-        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$", { "line": "^目前：150%$", "platforms": ["android-tablet"] }] }
+        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$", { "line": "^目前：150%$", "platforms": ["android-tablet"] }] },
+        "es": { "mustShowLines": ["^Contraste$", "^Alto contraste$", { "line": "^Actual: 150%$", "platforms": ["android-tablet"] }] }
       }
     },
     {
@@ -770,5 +773,26 @@
     "en-US": ["home-default", "bible-dual-default", "explore-default", "library-default", "you-default"],
     "zh-TW": ["home-zh", "bible-cuv-cantonese-zh", "explore-zh", "library-zh", "you-zh"],
     "zh-CN": ["home-zh-cn", "bible-cuvs-zh-cn", "explore-zh-cn", "library-zh-cn", "you-zh-cn"]
+  },
+  "oneOff": {
+    "$comment": "Store sets taken once, by hand, never in a routine run (#692): a language added after English and Chinese gets its store screenshots this way, and no shots in routine CI (#241). Start iOS key screens and Android key screens by hand with one_off set to its key here, such as es: the run then takes only that language's sets, in place of every routine shot, and checks their text. Each store list's set for it is the list's from set, English's, in the same order and ending with You, each shot's screen and variant swapped through screens and variants, so a store list added later, such as Google Play's tablet sets (#695), needs only another run. Its copies go to the same downloads as the routine ones, under <store>/<language>/. screens here are taken only in one-off sets. See \"One-off store sets\" in docs/operations/native-builds.md.",
+    "screens": [
+      {
+        "name": "bible-spanish-dual",
+        "group": "bible-text",
+        "$comment": "The Spanish set's Bible in two languages, as a Spanish reader first sees it: Reina-Valera 1909 (RVR09) with the BSB beside it (getDefaultSupportingTranslationId), as English's shows BSB with the CUV. Psalm 23, as English's.",
+        "path": "bible?bookId=PSA&chapter=23&translationId=spa_r09",
+        "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+        "mustShowLines": ["RVR09", "BSB", "^Salmos(\\b|v$)"]
+      }
+    ],
+    "languages": {
+      "es": {
+        "$comment": "Both App Store Spanish listings (es-MX, es-ES) and both Google Play ones (es-US, es-419). The Bible shots read Spanish; the App Store's third keeps English's Bible in the Traditional Chinese interface, to show the app has Chinese.",
+        "from": "en-US",
+        "screens": { "bible-dual": "bible-spanish-dual" },
+        "variants": { "default": "es", "dark": "es-dark" }
+      }
+    }
   }
 }
