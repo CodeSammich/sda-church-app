@@ -16,17 +16,16 @@
  */
 var PRINTED_QUEENS_LAYOUT = Object.freeze({
   // The Sabbath School's middle column is 10 points (one Chinese character)
-  // wider, and its names column that much narrower, so a hymn with its
+  // wider, and its label column that much narrower, so a hymn with its
   // translation in brackets fits on one line.
-  studyColumnWidths: Object.freeze([105, 170, 85]),
+  studyColumnWidths: Object.freeze([95, 170, 95]),
   // Two points more under each Sabbath School row, so each label's Chinese
   // and English lines read as one item.
   studyRowPaddingBottom: 2.5,
   // Half a point between the numbered Sabbath School hymns. The label and
   // Congregation lines beside them keep their spacing.
   studyHymnGap: 0.5,
-  // The worship middle column starts 10 points (one Chinese character)
-  // further left, and its label column is that much narrower.
+  // The same for the worship tables.
   worshipColumnWidths: Object.freeze([95, 170, 95]),
 });
 

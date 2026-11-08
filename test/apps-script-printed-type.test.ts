@@ -599,8 +599,9 @@ describe('the Queens Sabbath School and worship tables after a test print (#706)
   ])('widens the Sabbath School middle column and spaces its rows, in the Queens %s bulletin', (_name, format) => {
     const study = tableWith(renderTables(bulletin(), format, 'queens'), '安息日學主席\nSS Chair');
 
-    // 10 points from the names column to the hymns and lesson.
-    expect(study.widths).toEqual([105, 170, 85]);
+    // 10 points from the label column to the hymns and lesson, as in the
+    // worship tables; the names column keeps its 95.
+    expect(study.widths).toEqual([95, 170, 95]);
     // Two and a half points under each row, where other tables have half a point.
     expect(bottomPadding(study)).toEqual(new Set([2.5]));
   });
@@ -632,7 +633,7 @@ describe('the Queens Sabbath School and worship tables after a test print (#706)
     expect(box?.widths).toEqual([360]);
   });
 
-  it('fits a hymn and its bracketed translation on one line, and still fits the narrower columns', () => {
+  it('fits a hymn and its bracketed translation on one line, and every label in the narrower label column', () => {
     const data = bulletin();
     Object.assign(data.queens as Record<string, unknown>, {
       sabbathSchoolHymns: ['Standing on the Promises (站在應許)', 'Trust and Obey (信而順從)', 'Amazing Grace (奇異恩典)'],
@@ -648,20 +649,17 @@ describe('the Queens Sabbath School and worship tables after a test print (#706)
     expect(printedWidth(first.text)).toBeGreaterThan(room(160));
     expect(first.indentFirstLine + printedWidth(first.text)).toBeLessThanOrEqual(room(study.widths[1]));
 
-    // The names column still holds Congregation, TBD, and this week's names
-    // on one line each.
-    const names = study.rows.flatMap((row) => textOf(row[2]).split('\n'));
-    expect(names).toEqual(expect.arrayContaining(['會眾', 'Congregation', 'Mingde Wang']));
-    for (const line of [...names, '尚未安排', 'TBD']) {
-      expect(printedWidth(line)).toBeLessThanOrEqual(room(study.widths[2]));
-    }
-
-    // Each worship label, Hymn of Response the widest at 76.7 points, fits the
-    // narrower label column with 1.5 points to spare.
+    // Each label line fits the 95-point label column on one line with 1.5
+    // points to spare. The widest are Hymn of Response (76.7 points) in
+    // worship and Opening Hymns (65.8) in the Sabbath School.
     const { row, after } = sermonTables(tables);
-    const labels = [tableWith(tables, '主席\nChairman'), row, after]
-      .flatMap((table) => table.rows.flatMap((row) => textOf(row[0]).split('\n')));
-    expect(labels).toEqual(expect.arrayContaining(['Tithe & Offering', 'Hymn of Response', '十一奉獻']));
+    const labels = [study, tableWith(tables, '主席\nChairman'), row, after].flatMap((table) => {
+      expect(table.widths[0]).toBe(95);
+      return table.rows.flatMap((row) => textOf(row[0]).split('\n'));
+    });
+    expect(labels).toEqual(
+      expect.arrayContaining(['安息日學主席', 'Opening Hymns', '課程／學習', 'Lesson / Study', 'Closing Prayer', 'Tithe & Offering', 'Hymn of Response']),
+    );
     for (const label of labels) {
       expect(printedWidth(label)).toBeLessThanOrEqual(room(95) - 1.5);
     }
