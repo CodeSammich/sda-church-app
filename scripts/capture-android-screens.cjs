@@ -425,8 +425,8 @@ const capture = async (outDir, { group, store, split, tablet }) => {
       : tablet
         ? `${captured.size} captured in ${minutes} minutes, with the Google Play tablet copies in \`screens/google-play-tablet/\`.`
         : group || split
-        ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
-        : `${captured.size} captured in ${minutes} minutes, in \`screens/\`.`,
+          ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
+          : `${captured.size} captured in ${minutes} minutes, in \`screens/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
     ...relaunchLines(relaunched),
     '',

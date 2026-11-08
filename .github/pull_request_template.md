@@ -22,8 +22,10 @@ docs/operations/native-builds.md):
   iPhone's or Android's own largest text, or another language;
 - add text checks that fail if it breaks: mustShowLines, mustNotShowLines, or
   variantRules for one variant;
-- give it ipadVariants: every screen takes the iPad in landscape;
-- update appStore, appStoreIpad, or googlePlay if the store screenshots should change.
+- give it ipadVariants: every screen takes the iPad in landscape; and
+  androidTabletVariants if the Android tablet's layout changes it;
+- update appStore, appStoreIpad, googlePlay, or googlePlayTablet if the store
+  screenshots should change.
 Give a new screen the group for its part of the app (group in screens.json). Prefer a
 check on an existing shot to a new shot, since each shot lengthens its group's runner
 and the release PR waits for the slowest group, and replace checks that no longer earn

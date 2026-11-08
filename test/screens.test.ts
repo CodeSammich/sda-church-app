@@ -1633,6 +1633,10 @@ describe('Android tablet key screens (#695)', () => {
     expect(right - left).toBeCloseTo(864 / 1422.2, 3);
     expect(checkIpadLayout(shot('home-landscape'), [{ text: 'Read Verse', box: [0.05, 0.5, 0.2, 0.02] }])).toHaveLength(1);
     expect(checkIpadLayout(shot('home-landscape'), [{ text: 'Read Verse', box: [0.3, 0.5, 0.2, 0.02] }])).toEqual([]);
+    // The Bible's header spans the screen, as on the iPad: its translation
+    // button sat 49 points down, at 79% to 88% across, on the first run.
+    expect(checkIpadLayout(shot('bible-dual-landscape'), [{ text: 'BSB +', box: [0.788, 0.061, 0.041, 0.028] }])).toEqual([]);
+    expect(checkIpadLayout(shot('bible-dual-landscape'), [{ text: 'He leads me', box: [0.788, 0.3, 0.1, 0.03] }])).toHaveLength(1);
   });
 
   it("checks the Bible card's edges on the tablet's Bible shots", async () => {

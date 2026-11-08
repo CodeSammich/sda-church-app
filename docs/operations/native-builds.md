@@ -1142,11 +1142,17 @@ only with a read-only token and reads no secret.
   `mustShowLines` are written for the phone, so they're left out. A screen's
   `variantRules` for a window, such as `w320`, add rules of its own, such as the book's
   name in the Bible card's pill.
+- **Android key screens batch 11** (`tablet`) takes the Android tablet's shots, on an
+  emulator of a 10-inch tablet's size (below): the screens that list
+  `androidTabletVariants`, upright and then turned. `capture-android-screens.cjs
+  --tablet` saves `screens/android-tablet/<screen>-<variant>.png` and the Google Play
+  tablet copies, and `check-screens.cjs --platform android-tablet` checks them.
 - **Android key screens join** joins the batches into
   `android-key-screens-<pr>-<run>-android-1` (and `-android-2` and so on if the shots need
-  more than one) and the Google Play copies, `android-key-screens-<pr>-<run>-google-play`,
-  each under 50 MB ([Downloads under 50 MB](#downloads-under-50-mb)), and fails if any
-  group failed.
+  more than one), the tablet's `-android-tablet-1`, and the Google Play copies,
+  `android-key-screens-<pr>-<run>-google-play` for the phone and `-google-play-tablet`
+  for the tablet, each under 50 MB ([Downloads under 50 MB](#downloads-under-50-mb)), and
+  fails if any group failed.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
 workflow's run on the same commit. It then links every download of both, says whether both
@@ -1186,6 +1192,32 @@ numbers.
 phone's is 2.22:1. So the Play shots listed under `googlePlay` are taken on a second
 emulator, 1080 × 1920 at 420 dpi (`android.googlePlay`), by
 `capture-android-screens.cjs --store`.
+
+**The tablet (#695).** On Android, as on the iPad, the app's tablet layout switches on
+when the screen's shorter side is at least 600 dp (`TABLET_MIN_SCREEN_SIDE`): the
+tablet's larger capsule, the content column, text that starts at 150%, and a screen that
+turns. The phone, Play's size, and the split windows don't show it as a member's tablet
+does, so batch 11 has an emulator of its own, `android.tablet`: a 10-inch tablet held
+upright, 800 dp wide as the Pixel Tablet and other 10-inch tablets at 1280 × 800 dp are,
+but 9:16 rather than their 16:10, at 1620 × 2880 and 324 dpi (800 × 1422 dp). Google
+Play's tablet and Chromebook screenshots take 9:16 upright or 16:9 turned, each side
+1,080 to 7,680 pixels, and the app needs at least four at 1080 × 1920 or more to be
+recommended ([preview assets](https://support.google.com/googleplay/android-developer/answer/9866151)).
+The app's tablet layout follows the screen's width and its shorter side, never its
+height, so one emulator does both jobs: it lays out as a real tablet does, with a little
+more of each page in view, and its upright shots are the store copies, checked by the
+same rules.
+
+It takes the screens the tablet layout changes most, as on the iPad: Home, the Bible
+with its card, Explore, the Library, You, and setup. Each is upright in every language the
+Google Play sets need, and then turned to landscape (`user_rotation`, since the app
+turns on a tablet), 22 shots in all, about the time of the busiest group. The capture
+fails a shot that isn't turned the way its variant asks. The checks are each screen's
+rules, with the tab labels and chapter controls where the split windows put them,
+measured up from the bottom, and the iPad's layout checks: the content column, which
+fills the screen upright and is centred when turned, no text at the screen's edge, and
+no control crossing the Bible card's edges. A rule written for `["ios", "android"]`
+leaves the tablet out; add `"android-tablet"` where it applies.
 
 **Settings before each shot.** Android keeps the app's storage in a SQLite database,
 `databases/RKStorage` in the app's private folder, not in a file the runner can write.
@@ -1232,18 +1264,23 @@ The phone's screen holds less than the iPhone's, so a few lines fall below the f
 there, such as the Sabbath School age groups. A rule written
 `{ "line": …, "platforms": ["ios"] }` applies on those platforms only.
 
-**Google Play screenshots.** The shots listed under `googlePlay` (`en-US` and `zh-TW`,
-at most 8 each) are saved, numbered in upload order, to
+**Google Play screenshots.** The shots listed under `googlePlay` (`en-US`, `zh-TW`,
+and `zh-CN`, at most 8 each) are saved, numbered in upload order, to
 `screens/google-play/<language>/`, at 1080 × 1920 and without transparency. Their
 emulator's screen is that size, so a copy is the shot itself; a shot of another size
-fails rather than being stretched.
+fails rather than being stretched. The tablet's, listed under `googlePlayTablet` in the
+same languages (4 to 8 each, upright, each ending with You), go the same way to
+`screens/google-play-tablet/<language>/` at 1620 × 2880; a turned shot fails there.
+A later language's tablet set is one more list under `googlePlayTablet`, with that
+language's variant in its screens' `androidTabletVariants`.
 
 **On your own emulator.** With a `google_apis` image (Android Studio's "Google APIs",
 not "Google Play") and the phone's screen size and density (the capture refuses any
 other size), build with `EXPO_PUBLIC_KEY_SCREENS=1 npm run
 build:android:apk:debug:intel`, install it, and run `node
 scripts/capture-android-screens.cjs --out <folder> [--group <group>]`, or `--store` on a
-1080 × 1920 emulator for the Google Play shots. `ADB` names the
+1080 × 1920 emulator for the Google Play shots, or `--tablet` on a 1620 × 2880 one at
+324 dpi for the tablet's. `ADB` names the
 adb to use, such as `adb.exe` from WSL. On a reused `android/` folder, delete
 `android/app/build/generated/assets/react/release` first: Gradle doesn't notice a
 changed `EXPO_PUBLIC_*` value and keeps the old JavaScript.

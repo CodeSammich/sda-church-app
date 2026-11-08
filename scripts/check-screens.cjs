@@ -203,18 +203,24 @@ const forPlatform = (rules, platform) =>
  * Where the labels sit in an Android split window (#324), or on the Android
  * tablet (#695), measured in points from its bottom on the emulators at each
  * width: the tab labels about 58 up, the chapter controls about 148, or 72
- * while reading. A page's content runs from below the status bar to the tab
- * bar.
+ * while reading. A page's content runs from `contentTop` points down to the
+ * tab bar: below the status bar in a split window, whose header fits in the
+ * column, and below the header too on the tablet, whose header's buttons
+ * span the screen when it's turned, as on the iPad.
  */
-const splitRegions = ({ height }) => {
+const splitRegions = ({ height }, contentTop = 40) => {
   const up = (points) => 1 - points / height;
   return {
     tabs: [up(80), up(8)],
     chapterControls: [up(175), up(120)],
     chapterControlsReading: [up(100), up(50)],
-    content: [40 / height, up(80)],
+    content: [contentTop / height, up(80)],
   };
 };
+
+// The Android tablet's status bar and header, in points: its header's text
+// sat 49 to 71 points down when turned (#695).
+const TABLET_HEADER_BOTTOM = 96;
 
 /**
  * An Android shot's window in points, as the shot was turned: a split
@@ -230,7 +236,8 @@ const androidWindow = (shot) => {
 /** Where a shot's labels belong: its device's regions, turned as the shot was. */
 const regionsFor = (shot) => {
   const window = androidWindow(shot);
-  return window ? splitRegions(window) : REGIONS_BY_PLATFORM[screenOf(shot)];
+  if (!window) return REGIONS_BY_PLATFORM[screenOf(shot)];
+  return shot.split ? splitRegions(window) : splitRegions(window, TABLET_HEADER_BOTTOM);
 };
 
 /** Returns what's wrong with one shot, given the lines of text read from it. */
