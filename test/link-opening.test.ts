@@ -62,8 +62,26 @@ describe('where links open', () => {
     await open();
     expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(
       expect.stringMatching(/^https:\/\//),
+      expect.objectContaining({ createTask: false }),
     );
     expect(Linking.openURL).not.toHaveBeenCalled();
+  });
+
+  it('opens each website in a new tab on top of the app on Android (#705)', async () => {
+    // In a task of its own (expo-web-browser's default), a tab someone left
+    // without closing stayed open, and the next link brought back its old page
+    // instead of opening the new one. In the app's own task, every link opens
+    // a new tab with its own page.
+    await openCurrentSabbathSchool('en');
+    await openHymnal(1);
+    const calls = (WebBrowser.openBrowserAsync as jest.Mock).mock.calls;
+    expect(calls.map(([url]) => new URL(url).host)).toEqual([
+      'sabbath-school.adventech.io',
+      'hymnsforworship.org',
+    ]);
+    for (const [, options] of calls) {
+      expect(options).toEqual(expect.objectContaining({ createTask: false }));
+    }
   });
 
   it.each([

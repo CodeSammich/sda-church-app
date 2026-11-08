@@ -14,6 +14,7 @@ import {
   CHURCH_EIN,
   CHURCH_LEGAL_NAME,
   DAF_SPONSORS,
+  IN_APP_BROWSER_OPTIONS,
   OTHER_DAF_SPONSORS,
   PREFERRED_DAF_SPONSOR,
 } from '@/constants/ExternalLinks';
@@ -119,6 +120,7 @@ describe('the Tithe & Offering page’s donor-advised fund card (#646)', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Fidelity Charitable' }));
     expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(
       expect.stringMatching(/^https:\/\/charitablegift\.fidelity\.com\/.*[?&]Npo_Id=113004814\b/),
+      IN_APP_BROWSER_OPTIONS,
     );
   });
 
@@ -150,7 +152,7 @@ describe('the Other Sponsors popup (#646)', () => {
       expect(row.props.accessibilityRole).toBe('link');
       expect(view.getByText(sponsor.name)).toBeTruthy();
       await fireEvent.press(row);
-      expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(sponsor.url);
+      expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(sponsor.url, IN_APP_BROWSER_OPTIONS);
     }
     expect(view.getByText('Formerly Schwab Charitable')).toBeTruthy();
     expect(view.getByText('dafgiving360.org')).toBeTruthy();
