@@ -789,6 +789,12 @@ preview surface, not the canonical release channel.
 
 ### Caching and refresh
 
+The app's side is in [`services/BulletinService.ts`](../../services/BulletinService.ts)
+(`isBulletinCacheFresh`, `readCachedBulletin`, `cacheBulletin`) and
+[`app/(tabs)/home/bulletin.tsx`](../../app/%28tabs%29/home/bulletin.tsx) (`loadWeek`,
+`refreshWeek`, `REFRESH_COOLDOWN_MS`, `SABBATH_START_SPREAD_MS`); the API's is
+`cacheSeconds` in [`BulletinApi.gs`](../../google-apps-script/BulletinApi.gs).
+
 - The API caches privacy-filtered responses for 120 seconds. A response for an
   app from 1.6.0, which may come without its schedule, is cached apart from one
   for older apps and the API checks.
@@ -798,7 +804,8 @@ preview surface, not the canonical release channel.
 - A stored copy is out of date once it's more than 30 minutes old, counted from
   its download, automatic or by **Refresh**; once its Sabbath has begun, if it
   was downloaded before then; and when another app version saved it, so an app
-  update shows what the new version reads (#702).
+  update shows what the new version reads
+  ([#702](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/702)).
 - The app checks the stored copy's age when the bulletin opens, when the app
   comes back to the foreground (including unlocking the phone), and when
   switching between This Week and Next Week. It shows the stored copy at once.
@@ -812,8 +819,11 @@ preview surface, not the canonical release channel.
   error. It doesn't make the copy any newer, so the next check asks again.
 - Next Week loads lazily when opened.
 - **Refresh** downloads a new copy whatever the stored copy's age, then waits 2
-  minutes before it can be tapped again. That matches the API's own 2-minute
+  minutes before it can be tapped again. That matches the API's 120-second
   cache, so a refresh after the wait can always get a newer copy.
+- What this means for the API's limits is under
+  [Bulletin API](service-limits-and-costs.md#bulletin-api-apps-script) in Service
+  limits and costs.
 
 ### Bible references
 
