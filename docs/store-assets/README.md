@@ -93,7 +93,10 @@ release PR #686's head when the shots were taken (db050e58):
 [iOS](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839268)
 and [Android](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839380).
 Every batch of both runs passed; the iOS join failed only its 50 MB download guard,
-which #690 fixes. The feature graphic was built from the English Google Play ones.
+which #690 fixes. The feature graphic was built from the English Google Play ones. The
+Google Play tablet sets are from the Android key screens run on November 8, 2026 on the
+branch that added them (#695), at 42ed22b2, on a fork
+([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42533621560)), where every batch passed.
 
 Each run also saves numbered App Store copies, from the `appStore` and `appStoreIpad`
 lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):

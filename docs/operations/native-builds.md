@@ -829,6 +829,10 @@ The review comment links every part. On 1.7.0's run the downloads were:
 | Android | 167 | 27 MB |
 | Google Play copies | 13 | 7 MB |
 
+The Android tablet's (#695) are two more: its 22 shots came to 8.3 MB and its 15 Google
+Play copies to 19.8 MB on their first full run, apart from the phone's 14.0 MB of copies
+so neither passes 50 MB as sets are added.
+
 Each workflow uploads at most three parts a device. The join fails if a device would need
 a fourth, or a download would pass 50 MB. Then add an upload step for the next part in
 `ios-key-screens.yml` or `android-key-screens.yml`, and raise `MAX_PARTS` in
@@ -1203,21 +1207,23 @@ but 9:16 rather than their 16:10, at 1620 × 2880 and 324 dpi (800 × 1422 dp). 
 Play's tablet and Chromebook screenshots take 9:16 upright or 16:9 turned, each side
 1,080 to 7,680 pixels, and the app needs at least four at 1080 × 1920 or more to be
 recommended ([preview assets](https://support.google.com/googleplay/android-developer/answer/9866151)).
-The app's tablet layout follows the screen's width and its shorter side, never its
+The app's tablet layout follows the screen's width and its shorter side, not its
 height, so one emulator does both jobs: it lays out as a real tablet does, with a little
 more of each page in view, and its upright shots are the store copies, checked by the
 same rules.
 
 It takes the screens the tablet layout changes most, as on the iPad: Home, the Bible
-with its card, Explore, the Library, You, and setup. Each is upright in every language the
-Google Play sets need, and then turned to landscape (`user_rotation`, since the app
-turns on a tablet), 22 shots in all, about the time of the busiest group. The capture
+with its card, Explore, the Library, You, and setup. Each is taken upright in the
+languages the Google Play sets need (setup in English only), and then turned to
+landscape in English (`user_rotation`, since the app turns on a tablet): 22 shots, about
+as long as the busiest group takes. The capture
 fails a shot that isn't turned the way its variant asks. The checks are each screen's
 rules, with the tab labels and chapter controls where the split windows put them,
 measured up from the bottom, and the iPad's layout checks: the content column, which
 fills the screen upright and is centred when turned, no text at the screen's edge, and
-no control crossing the Bible card's edges. A rule written for `["ios", "android"]`
-leaves the tablet out; add `"android-tablet"` where it applies.
+no control crossing the Bible card's edges. You must show Text size at 150%, the size a
+tablet starts at, since the tablet's shots save none. A rule written for
+`["ios", "android"]` leaves the tablet out; add `"android-tablet"` where it applies.
 
 **Settings before each shot.** Android keeps the app's storage in a SQLite database,
 `databases/RKStorage` in the app's private folder, not in a file the runner can write.

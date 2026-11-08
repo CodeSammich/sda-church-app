@@ -1547,6 +1547,11 @@ describe('Android tablet key screens (#695)', () => {
     expect(deviceSettings(tablet[0].settings, 324).rotation).toBe('0');
     // The phone is never turned.
     expect(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1 }, 300)).not.toHaveProperty('rotation');
+    // The You tab confirms the 150%, on the tablet only.
+    const you = planChecks(config, 'android-tablet').find((each: { name: string }) => each.name === 'you-default');
+    expect(checkShot(you, [{ text: 'Current: 125%', box: [0.1, 0.3, 0.2, 0.02] }])).toContain('no line matches /^Current: 150%$/');
+    const phoneYou = planChecks(config, 'android').find((each: { name: string }) => each.name === 'you-default');
+    expect(checkShot(phoneYou, []).join()).not.toContain('150%');
   });
 
   it("runs on an emulator of Google Play's tablet shape, as wide as a 10-inch tablet", () => {

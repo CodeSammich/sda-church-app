@@ -9,7 +9,7 @@
     "points": { "width": 1032, "height": 1376 }
   },
   "android": {
-    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. tablet is a 10-inch tablet held upright (#695), 800 dp wide as the Pixel Tablet and other 10-inch tablets at 1280 × 800 dp are, but 9:16 rather than their 16:10, the shape Google Play's tablet screenshots take: 1620 × 2880 at 324 dpi, 800 × 1422 dp. The app's tablet layout follows the screen's width and its shorter side, never its height, so it lays out as on a real tablet, with a little more of each page in view, and the one emulator takes both the tablet's checks and its Google Play shots. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
+    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. tablet is a 10-inch tablet held upright (#695), 800 dp wide as the Pixel Tablet and other 10-inch tablets at 1280 × 800 dp are, but 9:16 rather than their 16:10, the shape Google Play's tablet screenshots take: 1620 × 2880 at 324 dpi, 800 × 1422 dp. The app's tablet layout follows the screen's width and its shorter side, not its height, so it lays out as on a real tablet, with a little more of each page in view, and the one emulator takes both the tablet's checks and its Google Play shots. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
     "systemImage": "system-images;android-36;google_apis;x86_64",
     "phone": { "name": "Samsung Galaxy A07 4G", "width": 720, "height": 1600, "density": 300 },
     "googlePlay": { "name": "Google Play screenshot size", "width": 1080, "height": 1920, "density": 420 },
@@ -585,14 +585,14 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup.",
+      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup. The Android tablet saves no text size, so Text size must read 150%, the size a tablet starts at (#695).",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "zh-cn", "android-display-large"],
       "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
       "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$"] },
-        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$"] }
+        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$", { "line": "^Current: 150%$", "platforms": ["android-tablet"] }] },
+        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$", { "line": "^目前：150%$", "platforms": ["android-tablet"] }] }
       }
     },
     {
