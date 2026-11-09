@@ -890,7 +890,7 @@ iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
    opens the popup for `verseStart` once the chapter loads, or its
    `popup=audio-settings`, once the chapter has audio (#372), or its
    `popup=audio-download-tip`, the same popup as the tip opens it when playback keeps
-   stopping to load (#595), or Sabbath School's
+   stopping to load (#595), or its `popup=book`, the book list (#723), or Sabbath School's
    `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
    a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens

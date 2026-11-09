@@ -159,7 +159,9 @@ describe('closer look at a strip', () => {
     // The first pass missed 您 here; the other three labels still show Chinese.
     const lines = samples.clean['library-zh'] as Line[];
     expect(checkShot(shot('library-zh'), lines)).toEqual([]);
-    expect(checkShot(shot('bible-pinyin-zh'), [line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)])).toEqual([]);
+    expect(
+      checkShot(shot('bible-pinyin-zh'), [line('約翰福音', 0.86), line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)]),
+    ).toEqual([]);
   });
 });
 
@@ -222,12 +224,24 @@ describe('screen rules', () => {
   });
 
   it("catches the previous Bible's book names after a link opens the CUV (#373)", () => {
-    const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.944));
+    // The book list, which names the CUV's books with the app's English in
+    // parentheses since #723; the pill names the book in English whichever
+    // names are loaded.
     const after = shot('bible-cuv-after-spanish-default');
-    // What the release run read: Vision, reading English first, misses 詩篇.
-    expect(checkShot(after, [...tabs, line('23 v', 0.86), line('Verse v', 0.86)])).toEqual([]);
-    expect(checkShot(after, [...tabs, line('Salmos v', 0.86), line('Verse v', 0.86)])).toEqual([
-      '"Salmos v" matches /Salmos/, which must not show',
+    const list = (names: string[]) => names.map((name, index) => line(name, 0.3 + index * 0.06));
+    expect(checkShot(after, list(['創世記 (Genesis)', '出埃及記 (Exodus)', '利未記 (Leviticus)']))).toEqual([]);
+    // Vision, reading English first, may miss the Chinese.
+    expect(checkShot(after, list(['(Genesis)', '(Exodus)', '(Leviticus)', '(Numbers)']))).toEqual([]);
+    // The Spanish names, kept after the link.
+    expect(checkShot(after, list(['Génesis (Genesis)', 'Éxodo (Exodus)', 'Levítico (Leviticus)']))).toEqual([
+      '"Éxodo (Exodus)" matches /^[EÉ]xodo\\b/, which must not show',
+      '"Levítico (Leviticus)" matches /^Lev[ií]tico\\b/, which must not show',
+    ]);
+    // The list before #723, with no English.
+    expect(checkShot(after, list(['創世記', '出埃及記', '利未記']))).toEqual([
+      'no line matches /[(（]Genesis\\b/',
+      'no line matches /[(（]Exodus\\b/',
+      'no line matches /[(（]Leviticus\\b/',
     ]);
   });
 

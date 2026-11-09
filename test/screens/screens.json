@@ -166,12 +166,13 @@
     {
       "name": "bible-cuv-after-spanish",
       "group": "bible-text",
-      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed, so Vision reads the dock in English first and misses 詩篇; it reads a stale Salmos reliably.",
-      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=book",
       "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["Salmos"]
+      "mustShowLines": ["[(（]Genesis\\b", "[(（]Exodus\\b", "[(（]Leviticus\\b"],
+      "mustNotShowLines": ["Salmos", "^[EÉ]xodo\\b", "^Lev[ií]tico\\b", "^N[uú]meros\\b"]
     },
     {
       "name": "bible-cuvs",
@@ -187,10 +188,16 @@
     {
       "name": "bible-pinyin",
       "group": "bible-text",
+      "$comment": "The CUV with pinyin. The book pill names the book in the app's language (#723): John in English, at 100% and 150%, though the CUV is read; 約翰福音 in Chinese, as the CUV names it.",
       "path": "bible?bookId=JHN&chapter=3&translationId=cmn_cuv",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": true },
       "variants": ["default", "zh", "large"],
-      "ipadVariants": ["landscape-zh"]
+      "ipadVariants": ["landscape-zh"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^John\\b"] },
+        "large": { "mustShowLines": ["^John\\b"] },
+        "zh": { "mustShowLines": ["^約翰福音"] }
+      }
     },
     {
       "name": "bible-scrolled",

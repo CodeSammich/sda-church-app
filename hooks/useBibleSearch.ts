@@ -18,7 +18,11 @@ import {
 export type BibleSearchOptions = Readonly<{
   /** The translations on screen: the main one, then the second in dual-language reading. */
   translationIds: readonly string[];
-  /** The main translation's books, for their names and chapter counts. */
+  /**
+   * The main translation's books, for their chapter counts and the names the
+   * results show: in its language, and the app's in parentheses when that's
+   * another (#723), as services/BibleNames.ts names them.
+   */
   books: readonly Readonly<{ id: string; name: string; numberOfChapters: number }>[];
   bookId?: string;
   chapter?: number;
