@@ -228,10 +228,11 @@ export default function YouScreen() {
             >
               {labels.settings}
             </Text>
+            {/* A globe, not 文A: no script of its own, so it suits every language (#725). */}
             <MenuCard
               title={labels.language}
               description={labels.languageSub}
-              icon="translate"
+              icon="web"
               iconColor={theme.colors.tertiary}
               onPress={() => setShowLanguage(true)}
             />

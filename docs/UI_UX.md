@@ -575,7 +575,9 @@ are on Home, not here.
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, **Theme** (System, Sunrise/Sunset, Light, or Dark), and,
 on a phone, **Offline Bible Audio**, where Bible audio is downloaded to listen offline,
-and deleted, by book, section, Testament, or the whole Bible (#556).
+and deleted, by book, section, Testament, or the whole Bible (#556). Language's icon is
+a globe, not the usual 文A, whose Chinese character looked out of place in the other
+languages (#725).
 **About & Support** starts with **Share the App** (#555): a popup with a QR code a
 friend can scan with their phone's camera to reach the download page
 (`https://app.nyccsda.org/download`, which sends them to their app store), the address,

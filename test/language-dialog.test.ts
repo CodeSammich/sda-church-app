@@ -1,5 +1,6 @@
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { fireEvent } from '@testing-library/react-native';
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { StyleSheet } from 'react-native';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
@@ -45,5 +46,11 @@ describe('LanguageDialog', () => {
 
     expect(setLanguage).toHaveBeenCalledWith('zh-cn');
     expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens from a Language row with a globe, not 文A, which has a Chinese character in it (#725)', () => {
+    const you = readFileSync('app/(tabs)/you/index.tsx', 'utf8');
+    expect(you).toMatch(/title=\{labels\.language\}\s*description=\{labels\.languageSub\}\s*icon="web"/);
+    expect(you).not.toContain('icon="translate"');
   });
 });

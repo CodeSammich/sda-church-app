@@ -585,7 +585,7 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup. The Android tablet saves no text size, so Text size must read 150%, the size a tablet starts at (#695).",
+      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup. The Android tablet saves no text size, so Text size must read 150%, the size a tablet starts at (#695). Language's icon is a globe, not 文A, whose Chinese character looked out of place in the other languages (#725): RapidOCR read 文A on every Android You shot, and Vision as XA on some iPhone and iPad ones, so neither reading may show.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "zh-cn", "android-display-large"],
       "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
@@ -593,7 +593,8 @@
       "variantRules": {
         "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$", { "line": "^Current: 150%$", "platforms": ["android-tablet"] }] },
         "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$", { "line": "^目前：150%$", "platforms": ["android-tablet"] }] }
-      }
+      },
+      "mustNotShowLines": ["^(文|X)A$"]
     },
     {
       "name": "share-app",
