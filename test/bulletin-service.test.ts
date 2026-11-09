@@ -8,6 +8,7 @@ jest.mock('expo-constants', () => ({
 }));
 
 import {
+  BULLETIN_MAX_AGE_MS,
   Bulletin,
   BulletinLocation,
   cacheBulletin,
@@ -20,7 +21,9 @@ import {
   hasBulletinValue,
   isBulletinCacheFresh,
   isBulletinLocationEmpty,
+  readCachedBulletin,
 } from '@/services/BulletinService';
+import { writeCachedText } from '@/services/CacheStore';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -69,13 +72,61 @@ describe('bulletin service', () => {
     await expect(fetchBulletin('2026-08-08')).rejects.toThrow('No schedule found');
   });
 
+  // A copy of the 2026-08-08 bulletin, as this app version (1.6.0) saves it.
+  const copy = (fetchedAt: number, appVersion = '1.6.0') => ({
+    bulletin: { date: '2026-08-08', queens: emptyLocation(), brooklyn: emptyLocation() } as Bulletin,
+    fetchedAt,
+    appVersion,
+  });
+
   it('expires a future bulletin when its Sabbath begins', () => {
-    const friday = new Date(2026, 7, 7, 20).getTime();
+    const fridayNight = new Date(2026, 7, 7, 23, 50).getTime();
+    const sabbathStart = new Date(2026, 7, 8, 0, 0).getTime();
     const sabbathMorning = new Date(2026, 7, 8, 8).getTime();
 
-    expect(isBulletinCacheFresh('2026-08-08', friday, friday)).toBe(true);
-    expect(isBulletinCacheFresh('2026-08-08', friday, sabbathMorning)).toBe(false);
-    expect(isBulletinCacheFresh('2026-08-08', sabbathMorning, sabbathMorning)).toBe(true);
+    expect(isBulletinCacheFresh(copy(fridayNight), fridayNight)).toBe(true);
+    // Ten minutes old, but downloaded before the Sabbath began.
+    expect(isBulletinCacheFresh(copy(fridayNight), sabbathStart + 1)).toBe(false);
+    expect(isBulletinCacheFresh(copy(sabbathMorning), sabbathMorning)).toBe(true);
+  });
+
+  it('expires a copy once it is 30 minutes old (#702)', () => {
+    const tuesday = new Date(2026, 7, 4, 10).getTime();
+
+    expect(BULLETIN_MAX_AGE_MS).toBe(30 * 60 * 1000);
+    expect(isBulletinCacheFresh(copy(tuesday), tuesday + 29 * 60 * 1000)).toBe(true);
+    expect(isBulletinCacheFresh(copy(tuesday), tuesday + 30 * 60 * 1000)).toBe(false);
+    // A copy from the phone's future, after its clock moved back, is out of date too.
+    expect(isBulletinCacheFresh(copy(tuesday + 60 * 1000), tuesday)).toBe(false);
+  });
+
+  it('expires a copy that another app version saved, or one saved before versions were kept (#702)', async () => {
+    const tuesday = new Date(2026, 7, 4, 10).getTime();
+
+    expect(isBulletinCacheFresh(copy(tuesday, '1.5.0'), tuesday)).toBe(false);
+    expect(isBulletinCacheFresh({ ...copy(tuesday), appVersion: undefined }, tuesday)).toBe(false);
+
+    // Every copy stored before #702 looks like this.
+    const { appVersion: _, ...old } = copy(tuesday);
+    await writeCachedText(
+      { folder: 'bulletins', name: '2026-08-08.json', key: 'bulletin-cache-v2:2026-08-08' },
+      JSON.stringify(old),
+    );
+    expect(await readCachedBulletin('2026-08-08', tuesday)).toEqual({ bulletin: old.bulletin, fresh: false });
+    expect(await getCachedBulletin('2026-08-08', tuesday)).toBeUndefined();
+    expect(await getCachedBulletin('2026-08-08', tuesday, { allowStale: true })).toEqual(old.bulletin);
+  });
+
+  it('stores the app version with each copy, so that version finds it current', async () => {
+    const tuesday = new Date(2026, 7, 4, 10).getTime();
+    await cacheBulletin(copy(tuesday).bulletin, tuesday);
+
+    expect(JSON.parse(mockFiles.get('cache/bulletins/2026-08-08.json')!)).toEqual(copy(tuesday));
+    expect(await readCachedBulletin('2026-08-08', tuesday + 60 * 1000)).toEqual({
+      bulletin: copy(tuesday).bulletin,
+      fresh: true,
+    });
+    expect(await getCachedBulletin('2026-08-08', tuesday + 60 * 1000)).toEqual(copy(tuesday).bulletin);
   });
 
   it('returns an outdated cached bulletin only when asked for a fallback', async () => {

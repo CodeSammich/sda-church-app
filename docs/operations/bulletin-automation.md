@@ -789,17 +789,41 @@ preview surface, not the canonical release channel.
 
 ### Caching and refresh
 
+The app's side is in [`services/BulletinService.ts`](../../services/BulletinService.ts)
+(`isBulletinCacheFresh`, `readCachedBulletin`, `cacheBulletin`) and
+[`app/(tabs)/home/bulletin.tsx`](../../app/%28tabs%29/home/bulletin.tsx) (`loadWeek`,
+`refreshWeek`, `REFRESH_COOLDOWN_MS`, `SABBATH_START_SPREAD_MS`); the API's is
+`cacheSeconds` in [`BulletinApi.gs`](../../google-apps-script/BulletinApi.gs).
+
 - The API caches privacy-filtered responses for 120 seconds. A response for an
   app from 1.6.0, which may come without its schedule, is cached apart from one
   for older apps and the API checks.
-- The app caches successful bulletin responses per Sabbath date on the device,
-  except one without its schedule (`scheduleNotSet`), which never replaces a
-  stored copy.
+- The app stores each successful bulletin response per Sabbath date on the
+  device, with when it downloaded it and the app's version, except one without
+  its schedule (`scheduleNotSet`), which never replaces a stored copy.
+- A stored copy is out of date once it's more than 30 minutes old, counted from
+  its download, automatic or by **Refresh**; once its Sabbath has begun, if it
+  was downloaded before then; and when another app version saved it, so an app
+  update shows what the new version reads
+  ([#702](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/702)).
+- The app checks the stored copy's age when the bulletin opens, when the app
+  comes back to the foreground (including unlocking the phone), and when
+  switching between This Week and Next Week. It shows the stored copy at once.
+  If that copy is out of date, it downloads a newer one in the background and
+  swaps it in. The spinner shows only when the phone has no copy yet, or for a
+  **Refresh**.
+- Nothing checks on a timer while the page stays open, except when the Sabbath
+  begins: then each phone with the page open asks again at a random moment in
+  the next 5 minutes, so they don't all ask in the same second.
+- A failed download keeps the stored copy, even an outdated one, and shows the
+  error. It doesn't make the copy any newer, so the next check asks again.
 - Next Week loads lazily when opened.
-- A manual refresh bypasses the device cache but still observes the server's
-  two-minute Apps Script cache and enters a five-minute local cooldown.
-- A cached future bulletin becomes stale when its Sabbath begins. Entry,
-  foreground resume, and the Sabbath boundary recheck the date.
+- **Refresh** downloads a new copy whatever the stored copy's age, then waits 2
+  minutes before it can be tapped again. That matches the API's 120-second
+  cache, so a refresh after the wait can always get a newer copy.
+- What this means for the API's limits is under
+  [Bulletin API](service-limits-and-costs.md#bulletin-api-apps-script) in Service
+  limits and costs.
 
 ### Bible references
 

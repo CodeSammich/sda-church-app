@@ -69,7 +69,7 @@ Per-use costs, *measured*:
 | Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
 | Bible text in the app | ~26 MB, about 6.8 MB compressed: the four translations and the Hebrew and Greek | No request: it ships with the app |
-| Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
+| Bulletin API | < 1 KB to a few KB | About 2 s cached, 3.5 to 4.7 s when it reads the sheet ([measured 2026-11-08](#bulletin-api-apps-script)) |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
 | Adventech quarterly index | ~1 MB, about 235 KB compressed (English) | CDN-cached; on a phone, about once a week per quarterly lesson, when it's tapped: twice when the catalog's dates are off, and at each tap while a new quarter's lessons are late |
 
@@ -100,8 +100,12 @@ These choices exist to keep the app free and within every provider's limits:
   as the phone's downloader runs them (#556, #611)
   ([how the app fetches audio](adventist-connect-media.md#how-the-app-fetches-audio)).
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
-  for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual
-  refresh has a 5-minute cooldown. Most bulletin opens never reach Apps Script.
+  for 2 minutes, the app keeps each Sabbath's bulletin on the device and asks again
+  only once its copy is more than 30 minutes old (#702), and manual refresh has a
+  2-minute cooldown, so a phone asks at most about twice an hour for each week it
+  shows, plus any refreshes
+  ([Caching and refresh](bulletin-automation.md#caching-and-refresh),
+  [Bulletin API](#bulletin-api-apps-script)).
 - **Nothing billable.** Cloudflare R2 and paid object storage were rejected because
   usage-based billing can't be ruled out
   ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
@@ -168,26 +172,87 @@ than choosing another narrator.
 ### Bulletin API (Apps Script)
 
 The church's own Apps Script web app. Free under Google Workspace for Nonprofits.
-It runs as the deploying account (`executeAs: USER_DEPLOYING`), so **every anonymous
-request from every phone counts against that one account's
-[Apps Script quotas](https://developers.google.com/apps-script/guides/services/quotas)**:
+It's deployed to execute as the account that deploys it (`executeAs: USER_DEPLOYING`
+in [`appsscript.json`](../../google-apps-script/appsscript.json)).
 
-- **30 simultaneous executions per user.** Requests beyond that fail with an error;
-  there is no charge.
-- 6 minutes per execution and 6 hours of trigger runtime a day, far above what the
-  API uses.
+What Google's documentation says, page by page:
 
-*Measured* latency is about 1.5 s warm and 5.7 s cold, so the account can serve
-roughly 20 requests a second before hitting the 30-execution ceiling. Caching keeps
-real traffic far below that: the 2-minute server cache, the per-Sabbath device cache,
-and the manual-refresh cooldown mean each phone asks about once per Sabbath. At
-congregation and heavy-use scale this is well under 1 request a second. Wide
-adoption, with thousands opening the bulletin in the same few minutes, is the one
-case that could approach the ceiling. When a request fails, the app shows the last
-copy it stored for that Sabbath, even an outdated one, with the error and a retry
-button; only phones that never loaded that Sabbath see a failed load until traffic
-drops. The daily [dependency monitor](external-dependency-monitor.md) checks the
-public bulletin response.
+- **Who a web app runs as.** Google's
+  [web app guide](https://developers.google.com/apps-script/guides/web#permissions)
+  says that with "Execute the app as me", "the script always executes as you, the
+  owner of the script, no matter who accesses the web app". In a shared drive, it
+  executes "under the authority of the user that deployed it (since there is no
+  script owner)". The
+  [manifest reference](https://developers.google.com/apps-script/manifest/web-app-api-executable#webapp)
+  says of `USER_DEPLOYING`: "The web app runs as the user who deployed it."
+- **30 simultaneous executions per user.** The limitations table on Google's
+  [quotas page](https://developers.google.com/apps-script/guides/services/quotas#current_limitations) lists "Simultaneous executions per user" as
+  "30 / user", and "Simultaneous executions per script" as "1,000", the same for
+  consumer (Gmail) and Google Workspace accounts. The
+  [same page](https://developers.google.com/apps-script/guides/services/quotas) says at the top that past a quota or limitation "your script
+  throws an exception and execution stops". Its
+  [exception messages](https://developers.google.com/apps-script/guides/services/quotas#exception_messages) include "There are too many scripts
+  running simultaneously for this Google user account", which "indicates that you
+  have too many scripts executing at once, although not necessarily the same
+  script".
+- **Runtime.** The [limitations table](https://developers.google.com/apps-script/guides/services/quotas#current_limitations) lists "Script
+  runtime" as "6 min / execution", and the [quotas table](https://developers.google.com/apps-script/guides/services/quotas#current_quotas) lists
+  "Triggers total runtime" as "6 hr / day" for Google Workspace accounts. The API's
+  requests take seconds (below) and don't run on triggers.
+
+**Our conclusion from those two pages, not a sentence from Google:** Google doesn't
+say in one place which account an anonymous web app's executions count against.
+The [web app guide](https://developers.google.com/apps-script/guides/web#permissions)
+says the web app runs as the deploying account whoever visits it, and the
+[quotas page](https://developers.google.com/apps-script/guides/services/quotas#current_limitations) counts simultaneous executions per user
+account ("Simultaneous executions per user", and the error "for this Google user
+account"). Together, they mean **every anonymous request from every phone counts
+against that one deploying account's 30**. So the ceiling is per deploying account,
+not per script, and the account's 30 fill up long before the script's 1,000.
+
+How long each request holds one of those 30 depends on how long the script runs.
+In twelve timed requests to the public API from a home connection on 8 November
+2026, a cached answer took about 2 s (1.6 to 3.5 s), and one that read the sheet
+3.5 to 4.7 s. Nearly all of that is the leg on `script.google.com`, where the
+script runs; fetching its answer from `googleusercontent.com` after it took 0.2 to
+0.4 s. At 2 s a request, the account can serve roughly 15 requests a second before
+hitting the ceiling. (The September 2026 review,
+[#259](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/pull/259),
+gave 1.5 s warm and 5.7 s cold, or about 20 a second, without recording how it
+measured them.) The 2-minute server cache (`cacheSeconds: 120` in
+[`BulletinApi.gs`](../../google-apps-script/BulletinApi.gs)) saves the sheet read,
+but a cached answer still runs the script, so it still counts.
+
+On the phone, a stored copy stays current for 30 minutes (#702; `isBulletinCacheFresh`
+in [`services/BulletinService.ts`](../../services/BulletinService.ts), and
+[Caching and refresh](bulletin-automation.md#caching-and-refresh)). So a phone asks
+at most about twice an hour for each week it shows, plus any refreshes, which wait
+2 minutes between them. Phones with the bulletin open when the Sabbath begins ask
+again at random moments over the next 5 minutes, not all in the same second.
+Sabbath morning is the peak. This table is arithmetic, not a measurement: one
+request per phone, spread evenly, against the 15 a second above.
+
+| Phones using the app | Opening the bulletin within | Requests a second | Share of the limit |
+| --- | --- | --- | --- |
+| 200 (one congregation) | 10 minutes | 0.3 | 2% |
+| 600 (three congregations) | 10 minutes | 1 | 7% |
+| 600 | the same minute | 10 | 67% |
+
+If real opens spread over an hour or so, as the [load model](#load-model) assumes,
+one church family stays far below the limit. What decides capacity as the app spreads is which account deploys each copy
+of the script, not how many spreadsheets there are. A church family that deploys
+its own copy from its own Google account gets its own limit of 30. Every church
+whose copy one account deploys shares that account's 30: ours plus five more church
+families of 600 phones each is 3,600 phones, and if they all opened the bulletin
+within the same 4 minutes, that would be the whole limit. So each church family
+deploys from its own account
+([#596](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/596)).
+
+When a request fails, the app shows the last copy it stored for that Sabbath, even
+an outdated one, with the error and a retry button; only phones that never loaded
+that Sabbath see a failed load until traffic drops. The daily
+[dependency monitor](external-dependency-monitor.md) checks the public bulletin
+response.
 
 Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a concern.
 
@@ -375,6 +440,6 @@ Found while writing this page and resolved in
   native fallback is fixed too
   ([#262](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/262)).
 - **The bulletin API's execution ceiling.** Accepted: caching keeps real traffic well
-  under 1 request a second, against a ceiling of about 20. The dependency monitor
+  under 1 request a second, against a ceiling of about 15. The dependency monitor
   checks the API daily, and a failed request now falls back to the last stored copy.
   Revisit if the app reaches thousands of simultaneous Sabbath-morning users.
