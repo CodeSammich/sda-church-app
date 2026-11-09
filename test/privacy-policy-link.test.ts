@@ -2,7 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as WebBrowser from 'expo-web-browser';
 
-import { PRIVACY_POLICY_URL, openPrivacyPolicy } from '@/constants/ExternalLinks';
+import {
+  IN_APP_BROWSER_OPTIONS,
+  PRIVACY_POLICY_URL,
+  openPrivacyPolicy,
+} from '@/constants/ExternalLinks';
 
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn() }));
 
@@ -15,6 +19,7 @@ describe('the privacy policy link', () => {
     await openPrivacyPolicy();
     expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(
       'https://app.nyccsda.org/privacy-policy.html',
+      IN_APP_BROWSER_OPTIONS,
     );
   });
 

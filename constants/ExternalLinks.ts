@@ -74,6 +74,19 @@ export const LINK_ERROR_MESSAGE: LocalizedText = {
 };
 
 /**
+ * How the in-app browser opens. On Android, the Custom Tab opens inside the
+ * app's own task, on top of the app, so every link opens a new tab with its own
+ * page (#705). expo-web-browser's default puts the tab in a task of its own
+ * instead. That task stays open when someone leaves the page without closing
+ * it, such as by switching back to the app or tapping the app's icon. The next
+ * link then only brought that task back to the front, and showed the old page
+ * instead of the new one. iOS ignores this option.
+ */
+export const IN_APP_BROWSER_OPTIONS: WebBrowser.WebBrowserOpenOptions = {
+  createTask: false,
+};
+
+/**
  * Opens a website in the in-app browser, which slides up over the app and
  * closes back to it: Safari View Controller on iOS, a Custom Tab on Android.
  * On web it opens a new tab. Every website link uses this, so they all open the
@@ -88,7 +101,7 @@ export const openURL = async (
     if (Platform.OS === 'web') {
       await Linking.openURL(url);
     } else {
-      await WebBrowser.openBrowserAsync(url);
+      await WebBrowser.openBrowserAsync(url, IN_APP_BROWSER_OPTIONS);
     }
   } catch (error) {
     showAppAlert(errorTitle, errorMessage);

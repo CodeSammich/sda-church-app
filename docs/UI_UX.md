@@ -111,6 +111,10 @@ brand-guideline review before adding it.
 
 Websites open in the in-app browser, which slides up over the app and closes back to
 it: Safari View Controller on iOS, a Custom Tab on Android, and a new tab on the web.
+On Android the Custom Tab opens inside the app's own task, on top of the app, so each
+link opens a new tab with its own page. In a task of its own, a page someone left
+without closing it stayed open, and the next link showed that page again instead of
+its own ([#705](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/705)).
 Links that belong to another app open that app instead: phone numbers, email addresses,
 YouTube, Spotify, Zoom, Google Maps, and the App Store and Google Play. A phone without
 that app opens them in its own browser. Every link goes through `openURL` (websites) or
