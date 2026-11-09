@@ -118,14 +118,18 @@ which #690 fixes. The feature graphic was built from the English Google Play one
 Google Play tablet sets are from the Android key screens run on November 8, 2026 on the
 branch that added them (#695), at 42ed22b2, on a fork
 ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42533621560)), where every batch passed.
-Spanish's sets, its header, and its feature graphic are from one-off runs on
-November 8, 2026 (#692), on the code then live in the stores: 1.7.1's app, which 1.7.2
-didn't change. Spanish's tablet set came later the same day, once the tablet batch
-existed (#695), and its third shots, the Spanish Bible's audio settings, on November 9,
-when Spanish's sets dropped every Chinese word. Both came from
-one-off runs on `release-candidate` as it stood after #715, with unreleased app changes
-(#715, #717, #718). None of them shows: Spanish's phone shots from those runs match the
-ones here but for a pixel's shift in the tab bar's pill, and the day's verse on Home.
+Spanish's sets are from one-off runs (#692):
+- From November 8, 2026, on the code then live in the stores (1.7.1's app, which 1.7.2
+  didn't change): the Google Play phone set but its third shot, and the iPad's You.
+- From November 8 and 9, on `release-candidate` as it stood after #715, with unreleased
+  app changes (#715, #717, #718): the tablet set, once the tablet batch existed (#695),
+  and, once Spanish's sets dropped every Chinese word, the Play phone's third shot, the
+  App Store iPhone set, and the iPad's other four. The iPad's You came from the earlier
+  run because the later one's iPad timed out on it. The header was built from that
+  iPhone set, and the feature graphic from the Play phone set.
+
+None of the unreleased changes shows: Spanish's phone shots from the later runs match the
+earlier ones but for a pixel's shift in the tab bar's pill, and the day's verse on Home.
 
 Each run also saves numbered App Store copies, from the `appStore` and `appStoreIpad`
 lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):
