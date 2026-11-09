@@ -172,24 +172,43 @@ than choosing another narrator.
 ### Bulletin API (Apps Script)
 
 The church's own Apps Script web app. Free under Google Workspace for Nonprofits.
-It runs as the deploying account (`executeAs: USER_DEPLOYING` in
-[`appsscript.json`](../../google-apps-script/appsscript.json)). Google's
-[web app guide](https://developers.google.com/apps-script/guides/web#permissions)
-says a web app set to execute as me "always executes as you, the owner of the
-script, no matter who accesses the web app", and in a shared drive as the user who
-deployed it. So **every anonymous request from every phone counts against that one
-account's
-[Apps Script quotas](https://developers.google.com/apps-script/guides/services/quotas)**:
+It's deployed to execute as the account that deploys it (`executeAs: USER_DEPLOYING`
+in [`appsscript.json`](../../google-apps-script/appsscript.json)).
 
-- **30 simultaneous executions per user.** Requests beyond that fail with an error
-  ("your script throws an exception and execution stops"); there is no charge.
-- 6 minutes per execution and 6 hours of trigger runtime a day, far above what the
-  API uses.
+What Google's documentation says, page by page:
 
-The quotas page lists "Simultaneous executions per user: 30 / user" and
-"Simultaneous executions per script: 1,000", the same for consumer (Gmail) and
-Google Workspace accounts. The per-user limit is the one an anonymous web app
-reaches first, so the ceiling is per deploying account, not per script.
+- **Who a web app runs as.** Google's
+  [web app guide](https://developers.google.com/apps-script/guides/web#permissions)
+  says that with "Execute the app as me", "the script always executes as you, the
+  owner of the script, no matter who accesses the web app". In a shared drive, it
+  executes "under the authority of the user that deployed it (since there is no
+  script owner)". The
+  [manifest reference](https://developers.google.com/apps-script/manifest/web-app-api-executable#webapp)
+  says of `USER_DEPLOYING`: "The web app runs as the user who deployed it."
+- **30 simultaneous executions per user.** The limitations table on Google's
+  [quotas page](https://developers.google.com/apps-script/guides/services/quotas#current_limitations) lists "Simultaneous executions per user" as
+  "30 / user", and "Simultaneous executions per script" as "1,000", the same for
+  consumer (Gmail) and Google Workspace accounts. The
+  [same page](https://developers.google.com/apps-script/guides/services/quotas) says at the top that past a quota or limitation "your script
+  throws an exception and execution stops". Its
+  [exception messages](https://developers.google.com/apps-script/guides/services/quotas#exception_messages) include "There are too many scripts
+  running simultaneously for this Google user account", which "indicates that you
+  have too many scripts executing at once, although not necessarily the same
+  script".
+- **Runtime.** The [limitations table](https://developers.google.com/apps-script/guides/services/quotas#current_limitations) lists "Script
+  runtime" as "6 min / execution", and the [quotas table](https://developers.google.com/apps-script/guides/services/quotas#current_quotas) lists
+  "Triggers total runtime" as "6 hr / day" for Google Workspace accounts. The API's
+  requests take seconds (below) and don't run on triggers.
+
+**Our conclusion from those two pages, not a sentence from Google:** Google doesn't
+say in one place which account an anonymous web app's executions count against.
+The [web app guide](https://developers.google.com/apps-script/guides/web#permissions)
+says the web app runs as the deploying account whoever visits it, and the
+[quotas page](https://developers.google.com/apps-script/guides/services/quotas#current_limitations) counts simultaneous executions per user
+account ("Simultaneous executions per user", and the error "for this Google user
+account"). Together, they mean **every anonymous request from every phone counts
+against that one deploying account's 30**. So the ceiling is per deploying account,
+not per script, and the account's 30 fill up long before the script's 1,000.
 
 How long each request holds one of those 30 depends on how long the script runs.
 In twelve timed requests to the public API from a home connection on 8 November
