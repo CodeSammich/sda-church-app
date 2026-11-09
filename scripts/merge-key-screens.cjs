@@ -7,11 +7,14 @@
  * ocr.json, checks.json, and settle-times.json in list order, and the store
  * copies: the App Store's, made here from the iPhone shots of every part and
  * from the iPad's part (#324), and Google Play's, which a part of their own
- * took on an emulator of Play's size (capture-android-screens.cjs --store).
+ * took on an emulator of Play's size (capture-android-screens.cjs --store),
+ * and its tablet copies, which the tablet's part made (--tablet, #695).
  *
  *   node scripts/merge-key-screens.cjs --platform ios|ipad|android --out <screens folder> <part screens folder>...
  *   node scripts/merge-key-screens.cjs --platform ios,ipad --out <screens folder> <part screens folder>...
  *                                                         Both Apple devices' shots, in one folder
+ *   node scripts/merge-key-screens.cjs --platform android,android-tablet --out <screens folder> <part screens folder>...
+ *                                                         Android's phone and tablet shots, in one folder
  *
  * Writes a summary to the step summary. Exits 1 if a shot is missing or any
  * part's checks failed.
@@ -20,7 +23,12 @@ const { appendFileSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSyn
 const { dirname, join, resolve } = require('node:path');
 const { PLATFORMS, STORE_COPY_WRITERS, loadConfig, planCaptures, planSplitCaptures, planStoreCopies } = require('./capture-ios-screens.cjs');
 
-const PLATFORM_NAMES = { ios: 'iPhone', ipad: 'iPad', android: 'Android' };
+const PLATFORM_NAMES = { ios: 'iPhone', ipad: 'iPad', android: 'Android', 'android-tablet': 'Android tablet' };
+
+// The store copies Android's runners make, by platform, which the join copies
+// in from their parts rather than making: Google Play's phone set, and its
+// tablet set (#695).
+const RUNNER_STORE_FOLDERS = { android: 'google-play', 'android-tablet': 'google-play-tablet' };
 
 const readJson = (file, empty) => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : empty);
 
@@ -62,8 +70,9 @@ const merge = async (outDir, partDirs, platforms = ['ios']) => {
       if (existsSync(shotDir)) {
         for (const name of readdirSync(shotDir)) copyFileSync(join(shotDir, name), join(outDir, platform, name));
       }
-      if (platform === 'android' && existsSync(join(partDir, 'google-play'))) {
-        cpSync(join(partDir, 'google-play'), join(outDir, 'google-play'), { recursive: true });
+      const storeFolder = RUNNER_STORE_FOLDERS[platform];
+      if (storeFolder && existsSync(join(partDir, storeFolder))) {
+        cpSync(join(partDir, storeFolder), join(outDir, storeFolder), { recursive: true });
       }
     }
   }
@@ -84,8 +93,8 @@ const merge = async (outDir, partDirs, platforms = ['ios']) => {
   }
   for (const copy of platforms.flatMap((platform) => planStoreCopies(config, platform))) {
     const file = join(outDir, copy.file);
-    if (copy.platform === 'android') {
-      if (!existsSync(file)) problems.push(`${copy.file}: the Google Play runner didn't make it`);
+    if (RUNNER_STORE_FOLDERS[copy.platform]) {
+      if (!existsSync(file)) problems.push(`${copy.file}: the runner that takes its shots didn't make it`);
       continue;
     }
     const source = join(outDir, copy.source);
@@ -124,7 +133,7 @@ if (require.main === module) {
   const out = option('--out');
   const outDir = out ? resolve(out) : undefined;
   if (!outDir || !args.length || !platforms.every((platform) => PLATFORMS.includes(platform))) {
-    console.error('Usage: node scripts/merge-key-screens.cjs --platform ios|ipad|android|ios,ipad --out <screens folder> <part screens folder>...');
+    console.error('Usage: node scripts/merge-key-screens.cjs --platform ios|ipad|android|ios,ipad|android,android-tablet --out <screens folder> <part screens folder>...');
     process.exit(2);
   }
   merge(outDir, args.map((partDir) => resolve(partDir)), platforms).catch((error) => {

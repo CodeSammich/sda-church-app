@@ -385,6 +385,19 @@ default language's.
   which does both. Play also needs a 1024 × 500 feature
   graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
   and the 512 × 512 icon (`public/icon-512x512.png`).
+- **Google Play, tablets:** Play has its own slots for **7-inch tablet** and **10-inch
+  tablet** screenshots, each 4 to 8 of them, at 9:16 upright or 16:9 turned, each side
+  1,080 to 7,680 pixels; the app needs at least four at 1080 × 1920 or more to be
+  recommended on tablets ([preview assets](https://support.google.com/googleplay/android-developer/answer/9866151)).
+  The sets come from the **Android key screens** run's tablet batch
+  (`screens/google-play-tablet/<language>/`, #695), at 1620 × 2880: the app's tablet
+  layout at a 10-inch tablet's 800 dp width, upright, at 150% text, in English,
+  Traditional Chinese, and Simplified Chinese, each ending with You (see
+  [Android key screens](native-builds.md#android-key-screens)). Upload each language's
+  set to both tablet slots, in the same listings as the phone sets. Play takes new
+  screenshots without a release. **Chromebook** screenshots are optional: Play accepts the
+  same 9:16 set there, though landscape suits a Chromebook's screen better, and without a
+  set of its own a Chromebook shows the tablet or phone screenshots.
 - **App Store:** iPhone screenshots only, at 1206 × 2622. App Store Connect's iPhone slot,
   **iPhone with Dynamic Island (medium display)**, takes only the 6.1- and 6.3-inch sizes
   (1179 × 2556 or 1206 × 2622) and rejects 1320 × 2868, which the 1.3.2 listing used.

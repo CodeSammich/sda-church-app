@@ -165,10 +165,13 @@ jobs:
           app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iOS Simulator app')"
           if [ -n "$android_run" ] && [ "$android_checks" != "not finished" ]; then
             android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-android-[0-9]+$")' 'the Android screenshots')"
+            android_tablet="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-android-tablet-[0-9]+$")' 'the Android tablet screenshots')"
             google_play="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-google-play$")' 'theirs')"
-            stores="The App Store copies are in $app_store, \`screens/app-store/\`, and $app_store_ipad, \`screens/app-store-ipad/\`. The Google Play copies are in $google_play: \`screens/google-play/\`."
+            google_play_tablet="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-google-play-tablet$")' 'the tablet download')"
+            downloads="$iphone, $ipad, $android, and $android_tablet"
+            stores="The App Store copies are in $app_store, \`screens/app-store/\`, and $app_store_ipad, \`screens/app-store-ipad/\`. The Google Play copies are in $google_play: \`screens/google-play/\`, and the tablet's in $google_play_tablet, \`screens/google-play-tablet/\`."
           else
-            android="the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
+            downloads="$iphone, $ipad, and the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
             stores="The App Store copies are in $app_store, \`screens/app-store/\`, and $app_store_ipad, \`screens/app-store-ipad/\`."
           fi
           if [ "$ios_checks" = success ] && [ "$android_checks" = success ]; then
@@ -207,10 +210,10 @@ jobs:
 
           $timing
 
-          1. **Download** $iphone, $ipad, and $android, and open their \`screens/ios/\` (iPhone), \`screens/ipad/\`, and \`screens/android/\` folders. A device's parts unzip into the same folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's or iPad's own large text), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways, in a screen's own language as \`landscape-zh\` and so on, and at 200% as \`landscape-xl\`), \`w320\` to \`w981\` (Android at an iPad's Split View and Slide Over widths), and \`zh\`, \`zh-cn\`, and \`es\`.
+          1. **Download** $downloads, and open their \`screens/ios/\` (iPhone), \`screens/ipad/\`, \`screens/android/\`, and \`screens/android-tablet/\` folders. A device's parts unzip into the same folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's or iPad's own large text), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad or the Android tablet turned sideways, in a screen's own language as \`landscape-zh\` and so on, and at 200% as \`landscape-xl\`), \`w320\` to \`w981\` (Android at an iPad's Split View and Slide Over widths), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
              - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
-             - on the iPad, a page's text and buttons spread across the whole screen instead of staying in a centered column;
+             - on the iPad or the Android tablet, a page's text and buttons spread across the whole screen instead of staying in a centered column;
              - the tab bar not a floating capsule, or the Bible's audio and chapter controls not in their own card above it, or text showing beside or below them;
              - a verse number split from its verse, or a button label cut short;
              - the wrong language, a blank or half-drawn screen, or a popup covering the page;

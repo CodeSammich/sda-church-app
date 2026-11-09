@@ -75,6 +75,8 @@ const DEVICE_SETTINGS = {
   // Android's font size (font_scale) and display size, as a multiple of the
   // emulator's own density.
   android: ['fontScale', 'displayScale'],
+  // The Android tablet's, and which way it's turned (#695).
+  'android-tablet': ['fontScale', 'displayScale', 'orientation'],
 };
 const PLATFORMS = Object.keys(DEVICE_SETTINGS);
 const ALL_DEVICE_SETTINGS = Object.values(DEVICE_SETTINGS).flat();
@@ -95,6 +97,8 @@ const BASE_SETTINGS = {
   // starts at, 150%, as members' iPads and the App Store listing do (#324).
   ipad: { ...APP_BASE_SETTINGS, textScale: null, iosTextSize: 'large', orientation: 'portrait' },
   android: { ...APP_BASE_SETTINGS, fontScale: 1, displayScale: 1 },
+  // The Android tablet saves none either: it starts at 150% too (#695).
+  'android-tablet': { ...APP_BASE_SETTINGS, textScale: null, fontScale: 1, displayScale: 1, orientation: 'portrait' },
 };
 
 // Seconds to wait after launching, before the screenshot. Measured over three
@@ -177,20 +181,22 @@ const variantSuits = (overrides, platform) =>
 
 /**
  * A screen's variants on one platform. The iPad takes each screen's
- * `ipadVariants` (#324), on the same runner as the screen's iPhone shots; the
- * iPhone and Android take every screen's `variants`, unless its `platforms`
- * leave one out.
+ * `ipadVariants` (#324), on the same runner as the screen's iPhone shots, and
+ * the Android tablet its `androidTabletVariants`, on a runner of its own
+ * (#695); the iPhone and Android take every screen's `variants`, unless its
+ * `platforms` leave one out.
  */
 const variantsOn = (screen, platform) => {
   if (platform === 'ipad') return screen.ipadVariants || [];
+  if (platform === 'android-tablet') return screen.androidTabletVariants || [];
   return !screen.platforms || screen.platforms.includes(platform) ? screen.variants : [];
 };
 
 /**
  * Lists every shot on one platform: its name, file, deep link, settings, and
  * checks. A variant is taken only on the platform whose device settings it
- * changes, if any. The iPad's portrait shots come first, so the Simulator
- * turns only once.
+ * changes, if any. The iPad's and the Android tablet's portrait shots come
+ * first, so the Simulator or emulator turns only once.
  */
 const planCaptures = (config, platform = 'ios') => {
   if (!PLATFORMS.includes(platform)) throw new Error(`No platform "${platform}"; use ${PLATFORMS.join(' or ')}.`);
@@ -329,12 +335,14 @@ const STORE_COPY_WRITERS = { ios: writeAppStoreCopy, ipad: writeIpadAppStoreCopy
  * The store copies, in upload order: the App Store's from the iPhone shots, as
  * app-store/<language>/<NN>-<shot>.png, and from the iPad shots, as
  * app-store-ipad/<language>/<NN>-<shot>.png (#324), and Google Play's from the
- * Android ones, as google-play/<language>/<NN>-<shot>.png (#372).
+ * Android ones, as google-play/<language>/<NN>-<shot>.png (#372), and from the
+ * Android tablet's, as google-play-tablet/<language>/<NN>-<shot>.png (#695).
  */
 const STORES = [
   { list: 'appStore', folder: 'app-store', platform: 'ios' },
   { list: 'appStoreIpad', folder: 'app-store-ipad', platform: 'ipad' },
   { list: 'googlePlay', folder: 'google-play', platform: 'android' },
+  { list: 'googlePlayTablet', folder: 'google-play-tablet', platform: 'android-tablet' },
 ];
 const planStoreCopies = (config, platform) =>
   STORES.filter((store) => !platform || store.platform === platform).flatMap((store) =>

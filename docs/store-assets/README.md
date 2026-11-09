@@ -4,7 +4,8 @@ Copies of the images uploaded to Google Play and the App Store, so the next upda
 starts from what's uploaded instead of from scratch. The What's New text for the version
 being released, for both stores, is in [whats-new.md](whats-new.md). From 1.7.1, each
 store has a set of phone screenshots in English, Traditional Chinese, and Simplified
-Chinese, and the App Store an iPad set in each (#324, #681). Each set is in its own
+Chinese, the App Store an iPad set in each (#324, #681), and Google Play a tablet set in
+each (#695). Each set is in its own
 interface, except that each Chinese phone set has one Bible shot in the other script,
 to show the app has both. The Spanish listings show the English sets. How each store's
 screenshots are captured, their sizes, and what they may show are in
@@ -31,6 +32,20 @@ screenshots are captured, their sizes, and what they may show are in
     characters, the Bible in Traditional characters with Cantonese audio (with the
     Traditional interface), Explore, the Library, the Simplified Bible in the dark theme,
     and You.
+- `google-play/tablet/`: the tablet screenshots, for Play's **7-inch tablet** and
+  **10-inch tablet** slots, in upload order, at 1620 × 2880, the 9:16 shape Play asks of
+  tablet screenshots, one set per listing language, each ending with the You tab (#695).
+  They're the key screens' Android tablet shots: the app's tablet layout at a 10-inch
+  tablet's 800 dp width, upright, at a tablet's own 150% text:
+  - `en-US/`: Home, the Bible in English and Chinese, Explore, the Library, and You. The
+    Spanish listings show these too.
+  - `zh-TW/`, for the `zh-TW` and `zh-HK` listings: with the Traditional Chinese
+    interface, Home, the Bible with Cantonese audio, Explore, the Library, and You.
+  - `zh-CN/`: with the Simplified Chinese interface, Home, the Simplified Bible,
+    Explore, the Library, and You.
+
+  The same screens as the iPad's sets, all upright. Copy a newer run's sets here only
+  when the tablet layout changes; a different day's verse on Home isn't a reason.
 - `app-store/en-US/`, `app-store/zh-Hant/`, and `app-store/zh-Hans/`: the iPhone
   screenshots for each listing, in upload order, at 1206 × 2622, the size App Store
   Connect's iPhone slot takes. English's are Home, the Bible in English and Chinese,
@@ -78,7 +93,10 @@ release PR #686's head when the shots were taken (db050e58):
 [iOS](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839268)
 and [Android](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42172839380).
 Every batch of both runs passed; the iOS join failed only its 50 MB download guard,
-which #690 fixes. The feature graphic was built from the English Google Play ones.
+which #690 fixes. The feature graphic was built from the English Google Play ones. The
+Google Play tablet sets are from the Android key screens run on November 8, 2026 on the
+branch that added them (#695), at 42ed22b2, on a fork
+([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42533621560)), where every batch passed.
 
 Each run also saves numbered App Store copies, from the `appStore` and `appStoreIpad`
 lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):
@@ -91,8 +109,12 @@ lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):
 Each run saves numbered Google Play copies too, in its Google Play download,
 `android-key-screens-<pr>-<run>-google-play`, under `screens/google-play/en-US/`,
 `zh-TW/`, and `zh-CN/`, from the `googlePlay` lists, on an emulator of Google Play's
-size (1080 × 1920), without transparency (#372). So for new sets, copy each of a run's
-folders here, then run both scripts above.
+size (1080 × 1920), without transparency (#372). The tablet's are in
+`android-key-screens-<pr>-<run>-google-play-tablet`, under
+`screens/google-play-tablet/en-US/`, `zh-TW/`, and `zh-CN/`, from the
+`googlePlayTablet` lists, on the tablet's emulator (#695); they go in
+`google-play/tablet/`. So for new sets, copy each of a run's folders here, then run both
+scripts above.
 
 **No transparency.** Both stores reject screenshots with an alpha channel: Google Play
 takes JPEG or 24-bit PNG, and App Store Connect refuses images with transparency. The

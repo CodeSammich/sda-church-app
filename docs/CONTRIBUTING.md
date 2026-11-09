@@ -258,9 +258,10 @@ GitHub's code scanning default setup and have no workflow file.
   branch. Every job runs on Linux.
 - Builds the Android preview APK for an emulator, with the key-screen route, and shares
   it with one emulator runner per key-screen group, numbered
-  (`Android key screens batch <n> (<group>)`), and a sixth for the Google Play shots.
-  Each frees disk space for its emulator, takes its group of the key screens, and checks
-  their text with RapidOCR.
+  (`Android key screens batch <n>`), a sixth for the Google Play shots, four at an
+  iPad's split-window widths, and an eleventh for the Android tablet and its Google Play
+  tablet shots. Each frees disk space for its emulator, takes its group of the key
+  screens, and checks their text with RapidOCR.
 - `Android key screens join` joins the batches, with the Google Play copies, and fails
   if any failed. The iOS preview's review comment links its screenshots, and a rerun
   refreshes it. See [Android key screens](operations/native-builds.md#android-key-screens).
