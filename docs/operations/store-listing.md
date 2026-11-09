@@ -397,7 +397,8 @@ Manage translations**. A listing with no set of its own shows the default langua
   (`screens/google-play-tablet/<language>/`, #695), at 1620 × 2880: the app's tablet
   layout at a 10-inch tablet's 800 dp width, upright, at 150% text, in English,
   Traditional Chinese, and Simplified Chinese, each ending with You (see
-  [Android key screens](native-builds.md#android-key-screens)). Upload each language's
+  [Android key screens](native-builds.md#android-key-screens)), and Spanish's from a
+  one-off run's. Upload each language's
   set to both tablet slots, in the same listings as the phone sets. Play takes new
   screenshots without a release. **Chromebook** screenshots are optional: Play accepts the
   same 9:16 set there, though landscape suits a Chromebook's screen better, and without a

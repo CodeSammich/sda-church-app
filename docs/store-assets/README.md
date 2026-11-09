@@ -46,12 +46,13 @@ screenshots are captured, their sizes, and what they may show are in
   tablet screenshots, one set per listing language, each ending with the You tab (#695).
   They're the key screens' Android tablet shots: the app's tablet layout at a 10-inch
   tablet's 800 dp width, upright, at a tablet's own 150% text:
-  - `en-US/`: Home, the Bible in English and Chinese, Explore, the Library, and You. The
-    Spanish listings show these too.
+  - `en-US/`: Home, the Bible in English and Chinese, Explore, the Library, and You.
   - `zh-TW/`, for the `zh-TW` and `zh-HK` listings: with the Traditional Chinese
     interface, Home, the Bible with Cantonese audio, Explore, the Library, and You.
   - `zh-CN/`: with the Simplified Chinese interface, Home, the Simplified Bible,
     Explore, the Library, and You.
+  - `es/`, for the `es-US` and `es-419` listings, one-off (#692): with the Spanish
+    interface, Home, the Bible in Spanish and English, Explore, the Library, and You.
 
   The same screens as the iPad's sets, all upright. Copy a newer run's sets here only
   when the tablet layout changes; a different day's verse on Home isn't a reason.
@@ -115,7 +116,10 @@ branch that added them (#695), at 42ed22b2, on a fork
 ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42533621560)), where every batch passed.
 Spanish's sets, its header, and its feature graphic are from one-off runs on
 November 8, 2026 (#692), on the code then live in the stores: 1.7.1's app, which 1.7.2
-didn't change.
+didn't change. Spanish's tablet set came later the same day, once the tablet batch
+existed (#695), from a one-off run on `release-candidate` as it stood after #715, with
+unreleased app changes (#715, #717, #718). None of them shows: Spanish's phone shots
+from that run match the ones here but for a pixel's shift in the tab bar's pill.
 
 Each run also saves numbered App Store copies, from the `appStore` and `appStoreIpad`
 lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):
