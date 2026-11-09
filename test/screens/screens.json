@@ -690,7 +690,7 @@
       }
     },
     {
-      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. From #708 it's setup's own full screen and contrast step, not a popup, so both pictures and the buttons show without a scroll: Standard is required again. A tap on a picture only chooses it, and setup's buttons go on: Next on the first page, Back and Done on the second. Both readers read the words on them, unlike setup's full-width Next on the Android phone. It asks a question, so it has no X.",
+      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. From #708 it's setup's own full screen and contrast step, not a popup, so both pictures and the buttons show without a scroll: Standard is required again. A tap on a picture only chooses it, and setup's buttons go on: Next on the first page, Back and Done on the second. Both readers read the words on them, unlike setup's full-width Next on the Android phone, except that RapidOCR read the outlined 上一步 as 步 alone on the Android phone, so only the iPhone and iPad require it. It asks a question, so it has no X.",
       "name": "whats-new",
       "group": "worship-and-you",
       "tabs": false,
@@ -716,7 +716,7 @@
       "mustNotShowLines": ["^Close$", "light mode", "淺色模式", "^Next$", "^下一步$"],
       "variantRules": {
         "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$", "^Back$", "^Done$"] },
-        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$", "^上一步$", "^完成$"] }
+        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$", { "line": "^上一步$", "platforms": ["ios", "ipad"] }, "^完成$"] }
       }
     },
     {
