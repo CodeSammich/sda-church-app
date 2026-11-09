@@ -203,7 +203,9 @@ const forPlatform = (rules, platform) =>
  * Where the labels sit in an Android split window (#324), or on the Android
  * tablet (#695), measured in points from its bottom on the emulators at each
  * width: the tab labels about 58 up, the chapter controls about 148, or 72
- * while reading. A page's content runs from `contentTop` points down to the
+ * while reading. A line's box starts at its tallest letter, so the chapter
+ * controls' band reaches 195 up: Spanish's "Versículo", its accent included,
+ * started 182 up on the tablet (#692). A page's content runs from `contentTop` points down to the
  * tab bar: below the status bar in a split window, whose header fits in the
  * column, and below the header too on the tablet, whose header's buttons
  * span the screen when it's turned, as on the iPad.
@@ -212,7 +214,7 @@ const splitRegions = ({ height }, contentTop = 40) => {
   const up = (points) => 1 - points / height;
   return {
     tabs: [up(80), up(8)],
-    chapterControls: [up(175), up(120)],
+    chapterControls: [up(195), up(120)],
     chapterControlsReading: [up(100), up(50)],
     content: [contentTop / height, up(80)],
   };

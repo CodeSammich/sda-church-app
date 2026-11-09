@@ -284,6 +284,16 @@ describe('one-off store sets (#692)', () => {
     }
     const audio = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'bible-audio-settings-es');
     expect(audio.mustNotShowLines).toContain('^Cerrar$');
+    // On the tablet, RapidOCR's box for "Versículo" starts at its accent, 182
+    // points up, above where "Verse" starts; the verse button still counts.
+    const { checkShot } = require('../scripts/check-screens.cjs');
+    const tabletBible = planChecks(spanish, 'android-tablet').find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es');
+    const read = [
+      { text: 'Versículo', box: [0.654, 0.872, 0.11, 0.018] },
+      ...['Inicio', 'Biblia', 'Explorar'].map((text, index) => ({ text, box: [0.23 + index * 0.16, 0.946, 0.06, 0.018] })),
+      ...['ES RVR09 + EN BSB', 'Salmos'].map((text) => ({ text, box: [0.5, 0.04, 0.2, 0.02] })),
+    ];
+    expect(checkShot(tabletBible, read)).toEqual([]);
   });
 
   it('gives a store list added later its one-off set with no change', () => {
