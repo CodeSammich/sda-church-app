@@ -3359,9 +3359,14 @@ function appendHalfSpacer_(cell) {
   styleText_(paragraph.editAsText(), 1.5, false);
 }
 
+// A layout can widen a column (options.columnWidths), add room under each row
+// (options.rowPaddingBottom), and add room between numbered hymns
+// (options.numberedListGap), as Queens does (PRINTED_QUEENS_LAYOUT).
 function appendProgramTable_(cell, rows, options) {
   options = options || {};
   var columnWidths = options.columnWidths || [105, 160, 95];
+  var rowPaddingBottom =
+    typeof options.rowPaddingBottom === 'number' ? options.rowPaddingBottom : 0.5;
   // A numbered list's lines each become a paragraph, so each can be indented.
   var lists = {};
   var table = cell.appendTable(
@@ -3391,7 +3396,7 @@ function appendProgramTable_(cell, rows, options) {
         });
       }
       tableCell.setPaddingTop(0);
-      tableCell.setPaddingBottom(0.5);
+      tableCell.setPaddingBottom(rowPaddingBottom);
       setPrintedProgramCellSidePadding_(tableCell);
       styleTableCell_(
         tableCell,
@@ -3404,7 +3409,7 @@ function appendProgramTable_(cell, rows, options) {
             : DocumentApp.HorizontalAlignment.RIGHT,
       );
       if (list) {
-        alignPrintedNumberedList_(tableCell, columnWidths[1]);
+        alignPrintedNumberedList_(tableCell, columnWidths[1], options.numberedListGap);
       }
     }
   });
@@ -3421,7 +3426,9 @@ function isPrintedNumberedList_(text) {
 // is a digit (half an em), a period and a space (a quarter each), one em in
 // all. Centred lines put each number somewhere else. The block is moved in by
 // half the room its widest line leaves, so it still sits in the middle.
-function alignPrintedNumberedList_(tableCell, width) {
+// `gap` is extra space, in points, above each number after the first: between
+// the hymns, not between a hymn and its translation.
+function alignPrintedNumberedList_(tableCell, width, gap) {
   var size = PRINTED_BULLETIN_TYPE.bodySize;
   var marker = size;
   var paragraphs = [];
@@ -3447,6 +3454,9 @@ function alignPrintedNumberedList_(tableCell, width) {
     // the rest, and a wrapped title, after it.
     paragraph.setIndentFirstLine(numbered[index] ? start : start + marker);
     paragraph.setIndentStart(start + marker);
+    if (gap && numbered[index] && index > 0) {
+      paragraph.setSpacingBefore(gap);
+    }
   });
 }
 
@@ -3474,8 +3484,10 @@ function estimatePrintedTextWidth_(text, size) {
 
 // The sermon row, in a thin box so it stands out at a glance. A Docs border
 // belongs to a whole table and would also rule between the cells, so the row
-// sits in a one-cell table that draws only the outer box.
-function appendSermonRow_(cell, row) {
+// sits in a one-cell table that draws only the outer box. `columnWidths` are
+// the program table's around it, if a layout changes them.
+function appendSermonRow_(cell, row, columnWidths) {
+  columnWidths = columnWidths || [105, 160, 95];
   var box = cell.appendTable([['']]);
   box.setBorderWidth(0.5);
   box.setBorderColor('#000000');
@@ -3491,10 +3503,10 @@ function appendSermonRow_(cell, row) {
     }),
   ]);
   table.setBorderWidth(0);
-  table.setColumnWidth(0, 105);
+  table.setColumnWidth(0, columnWidths[0]);
   // A point narrower than the rows above, for the box's border.
-  table.setColumnWidth(1, 159);
-  table.setColumnWidth(2, 95);
+  table.setColumnWidth(1, columnWidths[1] - 1);
+  table.setColumnWidth(2, columnWidths[2]);
   // A cell can't end with a table, and the paragraph Docs would add after it
   // is full height. Add it here, and shrink it and the cell's first paragraph
   // to one-point slivers.

@@ -19,6 +19,8 @@ class FakeParagraph {
   alignment = '';
   indentStart = 0;
   indentFirstLine = 0;
+  spacingBefore = 0;
+  spacingAfter = 0;
   constructor(text: string, public parent: FakeContainer | null) {
     this.setText(text);
   }
@@ -35,8 +37,8 @@ class FakeParagraph {
   setIndentStart(value: number) { this.indentStart = value; return this; }
   setIndentFirstLine(value: number) { this.indentFirstLine = value; return this; }
   setLineSpacing(value: number) { this.lineSpacing = value; return this; }
-  setSpacingBefore() { return this; }
-  setSpacingAfter() { return this; }
+  setSpacingBefore(value: number) { this.spacingBefore = value; return this; }
+  setSpacingAfter(value: number) { this.spacingAfter = value; return this; }
   setAttributes(attributes: Record<string, number>) {
     if ('FONT_SIZE' in attributes) {
       this.base.size = attributes.FONT_SIZE;
@@ -126,24 +128,30 @@ class FakeContainer {
 }
 
 class FakeCell extends FakeContainer {
+  padding: Record<string, number> = {};
   constructor(text: string) {
     super();
     this.children = [new FakeParagraph(text, this)];
   }
   getType() { return 'TABLE_CELL'; }
+  setPaddingTop(value?: number) { this.padding.top = value as number; return this; }
+  setPaddingBottom(value?: number) { this.padding.bottom = value as number; return this; }
+  setPaddingLeft(value?: number) { this.padding.left = value as number; return this; }
+  setPaddingRight(value?: number) { this.padding.right = value as number; return this; }
 }
 
 class FakeTable {
   rows: FakeCell[][];
   // Docs draws a 1-point border unless told otherwise.
   borderWidth = 1;
+  widths: number[] = [];
   constructor(rows: string[][]) {
     this.rows = rows.map((row) => row.map((text) => new FakeCell(text)));
   }
   getType() { return 'TABLE'; }
   setBorderWidth(value: number) { this.borderWidth = value; return this; }
   setBorderColor() { return this; }
-  setColumnWidth() { return this; }
+  setColumnWidth(column: number, width: number) { this.widths[column] = width; return this; }
   getCell(row: number, column: number) { return this.rows[row][column]; }
   getRow(row: number) { return { getCell: (column: number) => this.rows[row][column] }; }
 }
@@ -429,9 +437,9 @@ describe('printed bulletin type (#603)', () => {
   });
 
   it.each([
-    ['Queens', 'queens', '開會詩歌\nOpening Hymns'],
-    ['Brooklyn', 'brooklyn', '開會唱詩\nOpening Hymns'],
-  ])('lines up the numbered hymns, each with its lines at one indent: %s', (_name, place, label) => {
+    ['Queens', 'queens', '開會詩歌\nOpening Hymns', 0.5],
+    ['Brooklyn', 'brooklyn', '開會唱詩\nOpening Hymns', 0],
+  ])('lines up the numbered hymns, each with its lines at one indent: %s', (_name, place, label, gap) => {
     const hymns = ['第2首 聖哉真神', '還要等多久', 'AH 348 The Church Has One Foundation'];
     const context = loadPrintedBulletin();
     const body = new FakeContainer();
@@ -476,6 +484,16 @@ describe('printed bulletin type (#603)', () => {
     // The widest line nearly fills the column, so the block starts at its edge.
     expect(start).toBe(0);
     expect(lines.every((line) => line.chars.every((style) => style.size === 10))).toBe(true);
+    // Queens puts half a point above the second and third hymns (#706): between
+    // the hymns, not above a hymn's translation. The label and Congregation
+    // lines beside them keep single spacing.
+    expect(lines.map((line) => line.spacingBefore)).toEqual([0, 0, gap, gap, 0]);
+    const beside = [...(row?.[0].children ?? []), ...(row?.[2].children ?? [])] as FakeParagraph[];
+    expect(beside.map((line) => line.text)).toEqual([label, '會眾\nCongregation']);
+    expect(beside.map((line) => [line.spacingBefore, line.spacingAfter, line.lineSpacing])).toEqual([
+      [0, 0, 1],
+      [0, 0, 1],
+    ]);
   });
 
   it('centres a short numbered list as a block', () => {
@@ -494,7 +512,7 @@ describe('printed bulletin type (#603)', () => {
       .slice(0, 3);
 
     // Its widest line, AH 73 Holy, Holy, Holy, is about 98 points of the
-    // column's 156, so the block moves in by about half the rest.
+    // Queens column's 166, so the block moves in by about half the rest.
     expect(lines.map((line) => line.text)).toEqual(['1. 第2首 聖哉真神', 'AH 73 Holy, Holy, Holy', '2. 還要等多久']);
     expect(lines[0].indentFirstLine).toBeGreaterThan(20);
     expect(lines[0].indentFirstLine).toBeLessThan(40);
@@ -517,6 +535,134 @@ describe('printed bulletin type (#603)', () => {
       [13, 1],
       [13, 1],
     ]);
+  });
+});
+
+describe('the Queens Sabbath School and worship tables after a test print (#706)', () => {
+  // Every table in a layout, and the ones inside its cells.
+  const renderTables = (data: Record<string, unknown>, format: string, place: string) => {
+    const context = loadPrintedBulletin();
+    const body = new FakeContainer();
+    Object.assign(context, { testBody: body, testBulletin: data, testNext: bulletin(), testFormat: format, testPlace: place });
+    runInContext(
+      'renderPrintedBulletinDocument_({ getBody: function () { return testBody; } }, testBulletin, testNext, testFormat, testPlace)',
+      context,
+    );
+    const tablesOf = (container: FakeContainer): FakeTable[] =>
+      container.children.flatMap((child) =>
+        child instanceof FakeTable
+          ? [child, ...child.rows.flatMap((row) => row.flatMap((cell) => tablesOf(cell)))]
+          : [],
+      );
+    return tablesOf(body);
+  };
+  const textOf = (cell: FakeCell) => (cell.children as FakeParagraph[]).map((paragraph) => paragraph.text).join('\n');
+  // The table with a row whose label is `label`.
+  const tableWith = (tables: FakeTable[], label: string) => {
+    const found = tables.filter((table) => table.rows.some((row) => textOf(row[0]) === label));
+    expect(found).toHaveLength(1);
+    return found[0];
+  };
+  const bottomPadding = (table: FakeTable) => new Set(table.rows.flatMap((row) => row.map((cell) => cell.padding.bottom)));
+  // The sermon's row, the box around it, and the worship table after it.
+  const sermonTables = (tables: FakeTable[]) => {
+    const row = tableWith(tables, '講道\nSermon');
+    const box = tables.find((table) => table.rows[0][0].children.includes(row));
+    const after = tables[tables.indexOf(row) + 1];
+    expect(textOf(after.rows[0][0])).toBe('回應詩\nHymn of Response');
+    return { row, box, after };
+  };
+
+  // Times New Roman advance widths in 2048ths of an em (Liberation Serif has
+  // the same widths). Chinese is one em.
+  const TIMES: Record<string, number> = {
+    ' ': 512, '&': 1593, '(': 682, ')': 682, ',': 512, '.': 512, '/': 569,
+    0: 1024, 1: 1024, 2: 1024, 3: 1024, 4: 1024, 5: 1024, 6: 1024, 7: 1024, 8: 1024, 9: 1024,
+    A: 1479, B: 1366, C: 1366, D: 1479, E: 1251, G: 1479, H: 1479, I: 682, L: 1251, M: 1821,
+    O: 1479, P: 1139, R: 1366, S: 1139, T: 1251, W: 1933,
+    a: 909, b: 1024, c: 909, d: 1024, e: 909, f: 682, g: 1024, h: 1024, i: 569, k: 1024,
+    l: 569, m: 1593, n: 1024, o: 1024, p: 1024, r: 682, s: 797, t: 569, u: 1024, v: 1024,
+    w: 1479, x: 1024, y: 1024,
+  };
+  const printedWidth = (text: string) =>
+    [...text].reduce((total, character) => {
+      if (CJK.test(character)) return total + 10;
+      expect(TIMES[character]).toBeDefined();
+      return total + (TIMES[character] / 2048) * 10;
+    }, 0);
+  // A cell's room for text: its width less 2 points of padding each side.
+  const room = (width: number) => width - 4;
+
+  it.each([
+    ['regular', 'regular'],
+    ['Communion', 'communion'],
+  ])('widens the Sabbath School middle column and spaces its rows, in the Queens %s bulletin', (_name, format) => {
+    const study = tableWith(renderTables(bulletin(), format, 'queens'), '安息日學主席\nSS Chair');
+
+    // 10 points from the label column to the hymns and lesson, as in the
+    // worship tables; the names column keeps its 95.
+    expect(study.widths).toEqual([95, 170, 95]);
+    // Two and a half points under each row, where other tables have half a point.
+    expect(bottomPadding(study)).toEqual(new Set([2.5]));
+  });
+
+  it.each([
+    ['regular', 'regular'],
+    ['Communion', 'communion'],
+  ])('moves the worship middle column 10 points left, the sermon box too, in the Queens %s bulletin', (_name, format) => {
+    const tables = renderTables(bulletin(), format, 'queens');
+    const { row, box, after } = sermonTables(tables);
+
+    expect(tableWith(tables, '主席\nChairman').widths).toEqual([95, 170, 95]);
+    expect(after.widths).toEqual([95, 170, 95]);
+    expect(bottomPadding(tableWith(tables, '主席\nChairman'))).toEqual(new Set([0.5]));
+    // A point narrower in the middle, for the box's border.
+    expect(row.widths).toEqual([95, 169, 95]);
+    expect(box?.widths).toEqual([360]);
+  });
+
+  it('leaves the Brooklyn tables as they were', () => {
+    const tables = renderTables(bulletin(), 'regular', 'brooklyn');
+    const study = tableWith(tables, '開會唱詩\nOpening Hymns');
+    const { row, box } = sermonTables(tables);
+
+    expect(study.widths).toEqual([105, 160, 95]);
+    expect(bottomPadding(study)).toEqual(new Set([0.5]));
+    expect(tableWith(tables, '主席\nChairman').widths).toEqual([105, 160, 95]);
+    expect(row.widths).toEqual([105, 159, 95]);
+    expect(box?.widths).toEqual([360]);
+  });
+
+  it('fits a hymn and its bracketed translation on one line, and every label in the narrower label column', () => {
+    const data = bulletin();
+    Object.assign(data.queens as Record<string, unknown>, {
+      sabbathSchoolHymns: ['Standing on the Promises (站在應許)', 'Trust and Obey (信而順從)', 'Amazing Grace (奇異恩典)'],
+    });
+    const tables = renderTables(data, 'regular', 'queens');
+    const study = tableWith(tables, '安息日學主席\nSS Chair');
+    const hymns = study.rows.find((row) => textOf(row[0]) === '開會詩歌\nOpening Hymns')![1].children as FakeParagraph[];
+    const [first] = hymns;
+
+    // 161.1 points: wider than the shared column's 156 points of room, which
+    // wrapped it, and within the wider one's 166.
+    expect(first.text).toBe('1. Standing on the Promises (站在應許)');
+    expect(printedWidth(first.text)).toBeGreaterThan(room(160));
+    expect(first.indentFirstLine + printedWidth(first.text)).toBeLessThanOrEqual(room(study.widths[1]));
+
+    // Each label line fits the 95-point label column on one line with 1.5
+    // points to spare. The widest are Hymn of Response (76.7 points) in
+    // worship and Opening Hymns (65.8) in the Sabbath School.
+    const { row, after } = sermonTables(tables);
+    const labels = [study, tableWith(tables, '主席\nChairman'), row, after].flatMap((table) => {
+      expect(table.widths[0]).toBe(95);
+      return table.rows.flatMap((row) => textOf(row[0]).split('\n'));
+    });
+    expect(labels).toEqual(
+      expect.arrayContaining(['安息日學主席', 'Opening Hymns', '課程／學習', 'Lesson / Study', 'Closing Prayer', 'Tithe & Offering', 'Hymn of Response']),
+    );
+    for (const label of labels) {
+      expect(printedWidth(label)).toBeLessThanOrEqual(room(95) - 1.5);
+    }
   });
 });
 
