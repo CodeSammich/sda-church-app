@@ -792,7 +792,7 @@ preview surface, not the canonical release channel.
 The app's side is in [`services/BulletinService.ts`](../../services/BulletinService.ts)
 (`isBulletinCacheFresh`, `readCachedBulletin`, `cacheBulletin`) and
 [`app/(tabs)/home/bulletin.tsx`](../../app/%28tabs%29/home/bulletin.tsx) (`loadWeek`,
-`refreshWeek`, `REFRESH_COOLDOWN_MS`, `SABBATH_START_SPREAD_MS`); the API's is
+`refreshWeek`, `REFRESH_COOLDOWN_MS`, `MIDNIGHT_RELOAD_SPREAD_MS`); the API's is
 `cacheSeconds` in [`BulletinApi.gs`](../../google-apps-script/BulletinApi.gs).
 
 - The API caches privacy-filtered responses for 120 seconds. A response for an
@@ -812,9 +812,11 @@ The app's side is in [`services/BulletinService.ts`](../../services/BulletinServ
   If that copy is out of date, it downloads a newer one in the background and
   swaps it in. The spinner shows only when the phone has no copy yet, or for a
   **Refresh**.
-- Nothing checks on a timer while the page stays open, except when the Sabbath
-  begins: then each phone with the page open asks again at a random moment in
-  the next 5 minutes, so they don't all ask in the same second.
+- Nothing checks on a timer while the page stays open, except at two midnights:
+  when the Sabbath begins, and when the page moves on to the next week after
+  the Sabbath. Then each phone with the page open asks again at a random moment
+  in the next 5 minutes, so they don't all ask in the same second. Until then,
+  it keeps showing the week before.
 - A failed download keeps the stored copy, even an outdated one, and shows the
   error. It doesn't make the copy any newer, so the next check asks again.
 - Next Week loads lazily when opened.

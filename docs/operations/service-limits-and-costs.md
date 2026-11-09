@@ -227,8 +227,9 @@ On the phone, a stored copy stays current for 30 minutes (#702; `isBulletinCache
 in [`services/BulletinService.ts`](../../services/BulletinService.ts), and
 [Caching and refresh](bulletin-automation.md#caching-and-refresh)). So a phone asks
 at most about twice an hour for each week it shows, plus any refreshes, which wait
-2 minutes between them. Phones with the bulletin open when the Sabbath begins ask
-again at random moments over the next 5 minutes, not all in the same second.
+2 minutes between them. Phones with the bulletin open when the Sabbath begins, or
+when the page moves on to the next week at the midnight after it, ask again at
+random moments over the next 5 minutes, not all in the same second.
 Sabbath morning is the peak. This table is arithmetic, not a measurement: one
 request per phone, spread evenly, against the 15 a second above.
 

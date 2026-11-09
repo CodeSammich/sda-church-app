@@ -380,9 +380,12 @@ const LABELS = {
 // The Bulletin API caches each answer for 2 minutes, so a Refresh after this
 // wait can always get a newer copy (#702).
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
-// Phones with the bulletin open when the Sabbath begins ask again at a random
-// moment in the next 5 minutes, not all in the same second (#702).
-const SABBATH_START_SPREAD_MS = 5 * 60 * 1000;
+// Phones with the bulletin open at midnight, when the Sabbath begins and when
+// the page moves on to the next week, ask again at a random moment in the next
+// 5 minutes, not all in the same second (#702).
+const MIDNIGHT_RELOAD_SPREAD_MS = 5 * 60 * 1000;
+const midnightReloadDelay = () =>
+  1000 + Math.floor(Math.random() * MIDNIGHT_RELOAD_SPREAD_MS);
 const BULLETIN_LOCATION_STORAGE_KEY = 'preferred-bulletin-location';
 
 type Labels = (typeof LABELS)['en'];
@@ -711,7 +714,8 @@ export default function WeeklyBulletinScreen() {
 
   // Opening the bulletin (above), switching weeks (selectWeek), and coming
   // back to the app check the stored copy's age. Nothing checks it on a timer
-  // while the page stays open, except when the Sabbath begins.
+  // while the page stays open, except when the Sabbath begins and when the
+  // page moves on to the next week.
   useEffect(() => {
     const refreshSelectedIfStale = () => {
       if (!syncWeekDates()) void loadWeek(Number(selectedWeek));
@@ -724,16 +728,13 @@ export default function WeeklyBulletinScreen() {
     const sabbathStartDelay = sabbathStart - Date.now();
     const sabbathStartTimer =
       sabbathStartDelay > 0
-        ? setTimeout(
-            () => void loadWeek(0),
-            sabbathStartDelay + 1000 + Math.floor(Math.random() * SABBATH_START_SPREAD_MS),
-          )
+        ? setTimeout(() => void loadWeek(0), sabbathStartDelay + midnightReloadDelay())
         : undefined;
 
     const rolloverDelay = getNextBulletinRolloverAt() - Date.now();
     const rolloverTimer =
       rolloverDelay > 0
-        ? setTimeout(() => void syncWeekDates(), rolloverDelay + 1000)
+        ? setTimeout(() => void syncWeekDates(), rolloverDelay + midnightReloadDelay())
         : undefined;
 
     return () => {
