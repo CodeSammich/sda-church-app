@@ -1278,8 +1278,8 @@ emulator's screen is that size, so a copy is the shot itself; a shot of another 
 fails rather than being stretched. The tablet's, listed under `googlePlayTablet` in the
 same languages (4 to 8 each, upright, each ending with You), go the same way to
 `screens/google-play-tablet/<language>/` at 1620 × 2880; a turned shot fails there.
-A later language's tablet set is one more list under `googlePlayTablet`, with that
-language's variant in its screens' `androidTabletVariants`.
+A later language's tablet set comes from a [one-off run](#one-off-store-sets), as its
+other store sets do, not from routine runs.
 
 **On your own emulator.** With a `google_apis` image (Android Studio's "Google APIs",
 not "Google Play") and the phone's screen size and density (the capture refuses any
@@ -1324,11 +1324,11 @@ gh workflow run android-key-screens.yml --ref <branch> -f one_off=es
 The workflows pass it to every step as `KEY_SCREENS_ONE_OFF`, which every script that
 plans the shots reads (`loadConfig` in `scripts/capture-ios-screens.cjs`). The run then
 takes only that language's shots, in place of every routine shot, on the same runners and
-groups; the split-window batches take none. It checks their text with their screens'
-rules, and saves the store copies in the usual downloads, under
-`screens/app-store/es/`, `screens/app-store-ipad/es/`, and
-`screens/google-play/es/`. A pull request has no inputs, so the release PR's runs don't
-change.
+groups, the Android tablet's batch included; the split-window batches take none. It
+checks their text with their screens' rules, and saves the store copies in the usual
+downloads, under `screens/app-store/es/`, `screens/app-store-ipad/es/`,
+`screens/google-play/es/`, and `screens/google-play-tablet/es/`. A pull request has no
+inputs, so the release PR's runs don't change.
 
 Then look at every shot yourself: the language's text must show, and nothing that
 shouldn't, such as members' names, or a hymnal in that language when the app has none.

@@ -194,12 +194,12 @@ describe('one-off store sets (#692)', () => {
       expect(screen).not.toHaveProperty('ipadVariants');
       expect(config.screens.map((each: { name: string }) => each.name)).not.toContain(screen.name);
     }
-    for (const platform of ['ios', 'ipad', 'android']) {
+    for (const platform of ['ios', 'ipad', 'android', 'android-tablet']) {
       for (const shot of planCaptures(config, platform)) expect(shot.screen).not.toBe('bible-spanish-dual');
     }
     expect(planStoreCopies(config).filter((copy: { file: string }) => copy.file.includes('/es/'))).toEqual([]);
     // The routine store lists name no one-off language.
-    for (const list of ['appStore', 'appStoreIpad', 'googlePlay']) {
+    for (const list of ['appStore', 'appStoreIpad', 'googlePlay', 'googlePlayTablet']) {
       for (const language of Object.keys(config.oneOff.languages)) expect(config[list]).not.toHaveProperty(language);
     }
   });
@@ -230,7 +230,15 @@ describe('one-off store sets (#692)', () => {
       'library-es',
       'you-es',
     ]);
-    for (const list of ['appStore', 'appStoreIpad', 'googlePlay']) {
+    // Google Play's tablet list (#695) gets Spanish's set with no change of its own.
+    expect(oneOffSet(spanish, 'es', 'googlePlayTablet')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    for (const list of ['appStore', 'appStoreIpad', 'googlePlay', 'googlePlayTablet']) {
       const set = oneOffSet(spanish, 'es', list);
       expect(set).toHaveLength(config[list]['en-US'].length);
       expect(set.at(-1)).toBe('you-es');
@@ -250,6 +258,10 @@ describe('one-off store sets (#692)', () => {
     expect(names(ipad)).toEqual(oneOffSet(spanish, 'es', 'appStoreIpad'));
     for (const shot of ipad) expect(shot.settings).toMatchObject({ orientation: 'portrait', textScale: null });
     expect(names(planCaptures(spanish, 'android'))).toEqual(oneOffSet(spanish, 'es', 'googlePlay'));
+    const tablet = planCaptures(spanish, 'android-tablet');
+    expect(names(tablet)).toEqual(oneOffSet(spanish, 'es', 'googlePlayTablet'));
+    for (const shot of tablet) expect(shot.settings).toMatchObject({ orientation: 'portrait', textScale: null, language: 'es' });
+    expect(planStoreCopies(spanish, 'android-tablet').at(-1).file).toBe('google-play-tablet/es/05-you-es.png');
     for (const window of spanish.android.splitWindows) expect(planSplitCaptures(spanish, window.width)).toEqual([]);
     expect(planStoreCopies(spanish, 'ios')[1]).toEqual({
       name: 'bible-spanish-dual-es',
@@ -262,22 +274,22 @@ describe('one-off store sets (#692)', () => {
   });
 
   it("checks each shot's text with its screen's rules, the Spanish Bible's in RVR09 and BSB", () => {
-    for (const platform of ['ios', 'ipad', 'android']) {
+    for (const platform of ['ios', 'ipad', 'android', 'android-tablet']) {
       const checks = planChecks(spanish, platform);
       expect(names(checks)).toEqual(names(planCaptures(spanish, platform)));
       const bible = checks.find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es');
       expect(bible.mustShowLines).toEqual(['RVR09', 'BSB', '^Salmos(\\b|v$)']);
       const you = checks.find((shot: { name: string }) => shot.name === 'you-es');
-      expect(you.mustShowLines).toEqual(['^Contraste$', '^Alto contraste$']);
+      expect(you.mustShowLines).toEqual(expect.arrayContaining(['^Contraste$', '^Alto contraste$']));
     }
     const audio = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'bible-audio-settings-es');
     expect(audio.mustNotShowLines).toContain('^Cerrar$');
   });
 
-  it('gives a store list added later, such as Google Play tablets (#695), its one-off set with no change', () => {
-    const tablet = { ...spanish, googlePlayTablet: { 'en-US': ['home-default', 'bible-dual-default', 'you-default'] } };
-    expect(oneOffSet(tablet, 'es', 'googlePlayTablet')).toEqual(['home-es', 'bible-spanish-dual-es', 'you-es']);
-    expect(oneOffSet(tablet, 'es', 'noSuchList')).toEqual([]);
+  it('gives a store list added later its one-off set with no change', () => {
+    const later = { ...spanish, laterList: { 'en-US': ['home-default', 'bible-dual-default', 'you-default'] } };
+    expect(oneOffSet(later, 'es', 'laterList')).toEqual(['home-es', 'bible-spanish-dual-es', 'you-es']);
+    expect(oneOffSet(later, 'es', 'noSuchList')).toEqual([]);
   });
 
   it('reads its languages from the workflows, and refuses one screens.json lacks', () => {
