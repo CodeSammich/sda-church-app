@@ -65,7 +65,8 @@ describe('popup scroll hints', () => {
       'components/ThemeDialog.tsx',
       'components/ContrastDialog.tsx',
       'components/TextSizeDialog.tsx',
-      'components/InitialSetup.tsx',
+      // First-launch setup's and the contrast question's full screen (#708).
+      'components/SetupScreen.tsx',
     ]) {
       const source = readFileSync(file, 'utf8');
       expect([file, /<ScrollView\b/.test(source), source.includes('<PopupScrollView')]).toEqual([file, false, true]);

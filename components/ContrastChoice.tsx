@@ -1,5 +1,6 @@
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { getFloatingSurfaceStyle } from '@/components/CapsuleTabBar';
+import { SetupHeading, SetupRoomContext } from '@/components/SetupScreen';
 import { TEXT_SCALE_MIN } from '@/constants/AppPreferences';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import {
@@ -10,6 +11,7 @@ import {
   type ContrastMode,
   type ThemeKind,
 } from '@/constants/Themes';
+import { useContext, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { RadioButton, Text } from 'react-native-paper';
 
@@ -82,8 +84,16 @@ export const getContrastCopy = (language: string) =>
 
 const PREVIEW_TABS: readonly MaterialCommunityIconName[] = ['home', 'cross', 'compass-outline', 'account-circle-outline'];
 
-/** A small picture of the page's bottom with the tab bar, in one theme and contrast. */
-function ContrastPreview({ contrast, kind }: Readonly<{ contrast: ContrastMode; kind: ThemeKind }>) {
+/**
+ * A small picture of the page's bottom with the tab bar, in one theme and
+ * contrast. Side by side, its icons keep their size at a large text size, so
+ * the four fit across half the width.
+ */
+function ContrastPreview({
+  compact = false,
+  contrast,
+  kind,
+}: Readonly<{ compact?: boolean; contrast: ContrastMode; kind: ThemeKind }>) {
   // Only its colours are used, so it skips scaling the fonts.
   const theme = getAppTheme(kind === 'dark', false, TEXT_SCALE_MIN, contrast);
   const selected = theme.dark ? theme.colors.metallicGold.main : theme.colors.primary;
@@ -102,7 +112,12 @@ function ContrastPreview({ contrast, kind }: Readonly<{ contrast: ContrastMode; 
             key={icon}
             style={[styles.previewTab, index === 1 && { backgroundColor: theme.colors.floatingSelected }]}
           >
-            <AppIcon name={icon} size={22} color={index === 1 ? selected : theme.colors.onSurfaceVariant} />
+            <AppIcon
+              name={icon}
+              size={22}
+              scaleWithText={!compact}
+              color={index === 1 ? selected : theme.colors.onSurfaceVariant}
+            />
           </View>
         ))}
       </View>
@@ -111,20 +126,27 @@ function ContrastPreview({ contrast, kind }: Readonly<{ contrast: ContrastMode; 
 }
 
 /**
- * The two choices for one theme, high contrast first, one above the other,
- * each with its picture in that theme, its label and description. Pressing
- * one chooses it.
+ * The two choices for one theme, high contrast first, one above the other or,
+ * in columns, side by side, each with its picture in that theme, its label
+ * and description. Pressing one chooses it.
  */
 export function ContrastChoice({
+  columns = false,
   kind,
   language,
   onChoose,
   value,
-}: Readonly<{ kind: ThemeKind; language: string; onChoose: (mode: ContrastMode) => void; value: ContrastMode }>) {
+}: Readonly<{
+  columns?: boolean;
+  kind: ThemeKind;
+  language: string;
+  onChoose: (mode: ContrastMode) => void;
+  value: ContrastMode;
+}>) {
   const theme = useAppTheme();
   const copy = getContrastCopy(language);
   return (
-    <View accessibilityRole="radiogroup" style={styles.options}>
+    <View accessibilityRole="radiogroup" style={[styles.options, columns && styles.columns]}>
       {([CONTRAST_HIGH, CONTRAST_STANDARD] as const).map((mode) => {
         const selected = mode === value;
         const option = copy.options[mode];
@@ -138,6 +160,7 @@ export function ContrastChoice({
             testID={`contrast-${kind}-${mode}`}
             style={({ pressed }) => [
               styles.option,
+              columns && styles.column,
               {
                 backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
                 borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
@@ -145,9 +168,11 @@ export function ContrastChoice({
               },
             ]}
           >
-            <ContrastPreview contrast={mode} kind={kind} />
-            <View style={styles.optionRow}>
-              <View style={styles.optionText}>
+            <ContrastPreview compact={columns} contrast={mode} kind={kind} />
+            {/* Side by side, the radio button sits under the picture, so the
+                label has the card's width and doesn't break mid-word. */}
+            <View style={[styles.optionRow, columns && styles.optionRowColumn]}>
+              <View style={[styles.optionText, columns && styles.optionTextColumn]}>
                 <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
                   {option.label}
                 </Text>
@@ -171,9 +196,54 @@ export function ContrastChoice({
   );
 }
 
+/**
+ * A contrast question as a step of its own, in first-launch setup and in the
+ * question after an update (#708): the question, the hint, and the two
+ * pictures. Both pictures and the buttons below should show without a
+ * scroll, so where the pictures one above the other don't fit, at a large
+ * text size or on a short screen, they sit side by side. It shows once it
+ * knows which fits, so the other doesn't flash first.
+ */
+export function ContrastStep({
+  kind,
+  language,
+  onChoose,
+  value,
+}: Readonly<{ kind: ThemeKind; language: string; onChoose: (mode: ContrastMode) => void; value: ContrastMode }>) {
+  const copy = getContrastCopy(language);
+  const room = useContext(SetupRoomContext);
+  // The step's height with the pictures one above the other, measured only
+  // while they are, so side by side doesn't switch them back and forth.
+  const [stackedHeight, setStackedHeight] = useState(0);
+  const columns = room !== null && room > 0 && stackedHeight > room;
+  const settled = room === null || (room > 0 && stackedHeight > 0);
+  return (
+    <View
+      onLayout={(event) => {
+        if (!columns) setStackedHeight(event.nativeEvent.layout.height);
+      }}
+      style={{ opacity: settled ? 1 : 0 }}
+    >
+      <SetupHeading title={copy.questions[kind]} subtitle={copy.help} />
+      <ContrastChoice columns={columns} kind={kind} language={language} onChoose={onChoose} value={value} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   options: {
     gap: 12,
+  },
+  columns: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+  },
+  // Half the width each, however wide their words would make them.
+  column: {
+    flexBasis: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   option: {
     borderRadius: 16,
@@ -186,9 +256,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  optionRowColumn: {
+    alignItems: 'flex-start',
+    flexDirection: 'column-reverse',
+    gap: 4,
+  },
   optionText: {
     flex: 1,
     gap: 2,
+  },
+  optionTextColumn: {
+    alignSelf: 'stretch',
+    flexBasis: 'auto',
+    flexGrow: 0,
   },
   preview: {
     borderRadius: 12,

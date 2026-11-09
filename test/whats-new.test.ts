@@ -1,3 +1,5 @@
+import { ContrastStep } from '@/components/ContrastChoice';
+import { SetupRoomContext } from '@/components/SetupScreen';
 import { WhatsNewDialog } from '@/components/WhatsNewDialog';
 import {
   CONTRAST_HIGH,
@@ -10,6 +12,7 @@ import {
 } from '@/constants/Themes';
 import { compareVersions, shouldShowWhatsNew, WHATS_NEW_VERSION } from '@/constants/WhatsNew';
 import { fireEvent } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { readFileSync } from 'node:fs';
 import { createElement, useState } from 'react';
 import { renderWithPreferences } from './helpers/render-preferences';
@@ -107,6 +110,42 @@ describe("What's new (#669)", () => {
     expect(setContrastMode).toHaveBeenCalledWith('dark', CONTRAST_HIGH);
     expect(setContrastMode).toHaveBeenCalledTimes(2);
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  // A full screen, as setup is, so both pictures and the buttons show
+  // without a scroll; a popup's height limit hid Standard (#708).
+  it("is setup's own full screen and contrast step, not a popup", () => {
+    const whatsNew = readFileSync('components/WhatsNewDialog.tsx', 'utf8');
+    expect(whatsNew).toContain('<SetupScreen');
+    expect(whatsNew).toContain('<ContrastStep');
+    expect(whatsNew).not.toMatch(/<Dialog|<Portal|usePopupMaxHeight/);
+    const setup = readFileSync('components/InitialSetup.tsx', 'utf8');
+    expect(setup).toContain('<SetupScreen');
+    expect(setup).toContain('<ContrastStep');
+  });
+
+  it('puts the pictures side by side where one above the other would need a scroll', async () => {
+    const rowOf = (screen: Awaited<ReturnType<typeof renderWithPreferences>>) =>
+      // The pictures' row: the radio buttons' parent.
+      StyleSheet.flatten(screen.getAllByRole('radio')[0].parent!.props.style).flexDirection;
+    const step = (room: number) =>
+      createElement(
+        SetupRoomContext.Provider,
+        { value: room },
+        createElement(ContrastStep, { kind: 'light', language: 'en', onChoose: jest.fn(), value: CONTRAST_HIGH }),
+      );
+    const layout = (height: number) => ({ nativeEvent: { layout: { height, width: 360, x: 0, y: 0 } } });
+
+    const roomy = await renderWithPreferences(step(900));
+    await fireEvent(roomy.getByText('Which is easier to read in light mode?'), 'layout', layout(700));
+    expect(rowOf(roomy)).not.toBe('row');
+
+    const short = await renderWithPreferences(step(500));
+    await fireEvent(short.getByText('Which is easier to read in light mode?'), 'layout', layout(700));
+    expect(rowOf(short)).toBe('row');
+    // It stays side by side once it fits.
+    await fireEvent(short.getByText('Which is easier to read in light mode?'), 'layout', layout(450));
+    expect(rowOf(short)).toBe('row');
   });
 
   it('is saved as seen when answered, and when setup finishes', () => {

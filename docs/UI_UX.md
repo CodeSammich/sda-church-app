@@ -285,16 +285,22 @@ simple, blended colors.
     badges on the light blue or a deeper gold-brown (`#3B3423`,
     `STANDARD_FLOATING_COLORS`). Every text and icon on them still reads at least 4.5:1.
     - Asked at first-launch setup's last two steps ("Which is easier to read in light
-      mode?", then dark mode), and once after the update that brought it, in a popup
-      with only those two questions (`constants/WhatsNew.ts`, keyed by version, so a
-      later release can add its own or none; live announcements, #562, would be
-      separate). Changed any time under You → Contrast.
-    - The popup goes on as setup does, with setup's buttons: a tap on a picture only
-      chooses it, Next goes to the dark mode question, and Done, beside Back, closes it
-      (#708). When a tap on a picture went on, a tap on high contrast, chosen already,
-      seemed to do nothing. It asks questions, so it has no X.
+      mode?", then dark mode), and once after the update that brought it, with only
+      those two questions (`constants/WhatsNew.ts`, keyed by version, so a later release
+      can add its own or none; live announcements, #562, would be separate). Changed any
+      time under You → Contrast.
+    - The question after an update is setup's own full screen and contrast steps
+      (`components/SetupScreen.tsx`, `ContrastStep`), not a popup, so the popups' 65%
+      height limit doesn't apply (#708). In a popup, the buttons' row pushed Standard
+      below the fold on a phone. It goes on as setup does: a tap on a picture only
+      chooses it, Next goes to the dark mode question, and Done, beside Back, finishes.
+      When a tap on a picture went on, a tap on high contrast, chosen already, seemed to
+      do nothing. It asks questions, so it has no X and can't be dismissed.
     - Each shows a picture of the tab bar in each look, high contrast first, one above
-      the other, since many older members wouldn't know the word.
+      the other, since many older members wouldn't know the word. Where both pictures
+      wouldn't fit above the buttons that way, at a large text size or on a short
+      screen, they sit side by side, so both show without a scroll (#708); the words
+      under them may still scroll.
     - A designer's advice settled the default: contrast is usually the default, and the
       members it bothers, mostly younger, change it.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
@@ -307,6 +313,9 @@ simple, blended colors.
     Next, then Get Started, is the only way on, so it works the same whether the member
     keeps the choice each step starts with, such as English or high contrast, or picks
     another (#708). Finishing setup saves every choice, the contrasts included.
+  - The contrast question after an update uses the same full screen, steps and buttons
+    (`components/SetupScreen.tsx`, `components/SetupAction.tsx`), ending on Done
+    instead of Get Started (#708).
   - Members choose by pictures, not words alone, as with the contrast pictures:
     - each language is a card with a picture of the tab bar in that language;
     - each theme is a card with a picture of a page and its tab bar in it, light and dark
@@ -330,7 +339,8 @@ simple, blended colors.
 - **Popups:** Every popup is the app's own, never the system's alert (`Alert.alert`),
   which on Android looks unlike the rest of the app. A popup is centred, with the shared
   corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall at any
-  text size, scrolling beyond that. One that only says something has an X in its title row
+  text size, scrolling beyond that. First-launch setup and the contrast question after an
+  update are full-screen steps, not popups, so the limit doesn't apply to them. One that only says something has an X in its title row
   and no Close button. One that asks a question has its answers as buttons, stacked so
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`
