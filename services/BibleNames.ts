@@ -14,7 +14,8 @@ import { BIBLE_BOOK_NAMES } from './BibleService';
  *   words (search results, saved verses, a verse's popup), name it in the
  *   translation's language, then the app's in parentheses, as a reader of
  *   both would: 撒母耳記上 (1 Samuel), or 1 Samuel (撒母耳記上) in a Chinese
- *   app reading the BSB, and 第 3 節 (Verse 3).
+ *   app reading the BSB, and 第 3 節 (Verse 3). A verse's reference keeps the
+ *   app's name last: 撒母耳記上 3:4 (1 Samuel).
  * - When the translation is in the app's language, everything shows one name,
  *   as before. Traditional and Simplified Chinese count as one language, so a
  *   Traditional app reading the Simplified CUV lists 撒母耳记上 alone, not
@@ -69,15 +70,42 @@ export const getBookListName = (
     ? { name: book.name }
     : twoLanguageName(book.name, BIBLE_BOOK_NAMES[book.id]?.[appLanguage]);
 
-/** A book's reference, as search results, saved verses, and a verse's popup show it. */
+// No line break inside one name: a no-break space for its spaces, and a word
+// joiner between its Chinese characters, which a line may otherwise break
+// between. Neither shows.
+const CHINESE_CHARACTER_PAIR = /([\u3400-\u9fff\uf900-\ufaff])(?=[\u3400-\u9fff\uf900-\ufaff])/g;
+const unbroken = (text: string) => text.replace(/ /g, '\u00a0').replace(CHINESE_CHARACTER_PAIR, '$1\u2060');
+
+/**
+ * A book's two names in a line of text, such as a search result's heading. A
+ * narrow line breaks between them, never inside one, so 帖撒羅尼迦前書
+ * (1 Thessalonians) wraps to 帖撒羅尼迦前書, then (1 Thessalonians), not to
+ * "(1" and "Thessalonians)". One name is left as it was.
+ */
+export const formatBookName = ({ name, appName }: TwoLanguageName) =>
+  appName ? `${unbroken(name)} ${unbroken(`(${appName})`)}` : name;
+
+/**
+ * A verse's reference in a line of text: 帖撒羅尼迦前書 4:3 (1 Thessalonians).
+ * The app's name comes last, so a narrow line, such as a verse popup's title,
+ * breaks only before it, leaving the reference whole: 帖撒羅尼迦前書 4:3, then
+ * (1 Thessalonians). With the chapter and verse after both names, the title
+ * took three lines on a phone, or broke inside "Thessalonians".
+ */
+export const formatReference = ({ name, appName }: TwoLanguageName, chapterAndVerses: string) =>
+  appName
+    ? `${unbroken(name)}\u00a0${chapterAndVerses} ${unbroken(`(${appName})`)}`
+    : `${name} ${chapterAndVerses}`;
+
+/** A book's reference, as saved verses and a verse's popup show it. */
 export const formatBookReference = (
   book: NamedBook,
   translationLanguage: string,
   appLanguage: SupportedLanguage,
   chapterAndVerses: string,
-) => `${formatTwoLanguageName(getBookListName(book, translationLanguage, appLanguage))} ${chapterAndVerses}`;
+) => formatReference(getBookListName(book, translationLanguage, appLanguage), chapterAndVerses);
 
-/** The main translation's books for search, named as its results show them. */
+/** The main translation's books for search, with the names its results show. */
 export const getSearchBooks = (
   books: readonly Readonly<{ id: string; name: string; numberOfChapters: number }>[],
   translationLanguage: string,
@@ -85,7 +113,7 @@ export const getSearchBooks = (
 ) =>
   books.map((book) => ({
     id: book.id,
-    name: formatTwoLanguageName(getBookListName(book, translationLanguage, appLanguage)),
+    ...getBookListName(book, translationLanguage, appLanguage),
     numberOfChapters: book.numberOfChapters,
   }));
 

@@ -272,8 +272,9 @@ simple, blended colors.
       does: Psalms in an English app reading the CUV. One name keeps it inside the card.
       The book, chapter and verse lists, and what shows a verse's words (search results,
       saved verses, a verse's popup), name it in the translation's language with the
-      app's in parentheses, 詩篇 (Psalms) or 第 3 節 (Verse 3); when both don't fit on a
-      line, the second moves whole to the next. A translation in the app's language shows
+      app's in parentheses: 詩篇 (Psalms) and 第 3 節 (Verse 3) in the lists, 詩篇 23:1
+      (Psalms) in a reference. When both don't fit on a line, the name in parentheses
+      moves whole to the next, never broken inside. A translation in the app's language shows
       one name, as before, and Traditional and Simplified Chinese count as one language.
       In two-translation reading, the main translation's language comes first
       (`services/BibleNames.ts`).

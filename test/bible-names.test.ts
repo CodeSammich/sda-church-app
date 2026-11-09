@@ -3,7 +3,9 @@ import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { buildBibleSearchRows } from '@/hooks/useBibleSearch';
 import { getBookPillAbbreviation } from '@/services/BibleBookAbbreviations';
 import {
+  formatBookName,
   formatBookReference,
+  formatReference,
   formatTwoLanguageName,
   getBookListName,
   getBookPillName,
@@ -19,6 +21,9 @@ import { fetchBooks, SUPPORTED_TRANSLATIONS } from '@/services/BibleService';
 // the app's in parentheses.
 const languageOf = (translationId: string) =>
   SUPPORTED_TRANSLATIONS.find(({ id }) => id === translationId)!.lang;
+
+// A line of text with its no-break spaces and word joiners as plain text.
+const plain = (text: string) => text.replace(/\u00a0/g, ' ').replace(/\u2060/g, '');
 
 const bookIn = async (translationId: string, bookId: string) =>
   (await fetchBooks(translationId)).find(({ id }) => id === bookId)!;
@@ -76,9 +81,31 @@ describe('Bible book names in two languages (#723)', () => {
 
   it('names verse references, as saved verses and the verse popup show them', async () => {
     const john = await bookIn('cmn_cuv', 'JHN');
-    expect(formatBookReference(john, 'zh', 'en', '3:16')).toBe('約翰福音 (John) 3:16');
-    expect(formatBookReference(await bookIn('BSB', 'JHN'), 'en', 'zh', '3:16')).toBe('John (約翰福音) 3:16');
+    expect(plain(formatBookReference(john, 'zh', 'en', '3:16'))).toBe('約翰福音 3:16 (John)');
+    expect(plain(formatBookReference(await bookIn('BSB', 'JHN'), 'en', 'zh', '3:16'))).toBe('John 3:16 (約翰福音)');
+    // One name, as before.
     expect(formatBookReference(await bookIn('BSB', 'JHN'), 'en', 'en', '3:16')).toBe('John 3:16');
+    expect(formatBookReference(john, 'zh', 'zh', '3:16')).toBe('約翰福音 3:16');
+  });
+
+  it('lets a narrow line break only before the name in parentheses', async () => {
+    // A verse's popup broke "帖撒羅尼迦前書 (1" from "Thessalonians) 4:3".
+    const breaks = (text: string) => text.split(' ');
+    expect(breaks(formatBookReference(await bookIn('cmn_cuv', '1TH'), 'zh', 'en', '4:3'))).toEqual([
+      '帖\u2060撒\u2060羅\u2060尼\u2060迦\u2060前\u2060書\u00a04:3',
+      '(1\u00a0Thessalonians)',
+    ]);
+    const thessalonians = getBookListName(await bookIn('BSB', '1TH'), 'en', 'zh');
+    expect(breaks(formatReference(thessalonians, '4:3'))).toEqual([
+      '1\u00a0Thessalonians\u00a04:3',
+      '(帖\u2060撒\u2060羅\u2060尼\u2060迦\u2060前\u2060書)',
+    ]);
+    expect(breaks(formatBookName(thessalonians))).toEqual([
+      '1\u00a0Thessalonians',
+      '(帖\u2060撒\u2060羅\u2060尼\u2060迦\u2060前\u2060書)',
+    ]);
+    // One name breaks as it always has.
+    expect(formatBookName({ name: '1 Thessalonians' })).toBe('1 Thessalonians');
   });
 });
 
@@ -119,20 +146,20 @@ describe('Bible search results in two languages (#723)', () => {
         onOpen: () => undefined,
       },
       language: app,
-    }).map(({ kind, title }) => `${kind}: ${title}`);
+    }).map(({ kind, title }) => `${kind}: ${plain(title)}`);
 
   it('names each result in the translation and the app language, and Go to in the app language', async () => {
     expect(await rowsFor('摩利亞', 'cmn_cuv', 'en')).toEqual([
       'header: This chapter · 1 verse',
-      'verse: 創世記 (Genesis) 22:2',
+      'verse: 創世記 22:2 (Genesis)',
       'header: Whole Bible · 2 verses',
       'header: 創世記 (Genesis) · 1',
-      'verse: 創世記 (Genesis) 22:2',
+      'verse: 創世記 22:2 (Genesis)',
       'header: 歷代志下 (2 Chronicles) · 1',
-      'verse: 歷代志下 (2 Chronicles) 3:1',
+      'verse: 歷代志下 3:1 (2 Chronicles)',
     ]);
     expect((await rowsFor('Moriah', 'BSB', 'en'))[1]).toBe('verse: Genesis 22:2');
-    expect((await rowsFor('Moriah', 'BSB', 'zh'))[1]).toBe('verse: Genesis (創世記) 22:2');
+    expect((await rowsFor('Moriah', 'BSB', 'zh'))[1]).toBe('verse: Genesis 22:2 (創世記)');
     // "Go to" is the app's control, so it stays in the app's language.
     expect((await rowsFor('Jn 3:16', 'cmn_cuv', 'en'))[0]).toBe('reference: Go to John 3:16');
   });
@@ -148,10 +175,10 @@ describe('the Bible screen names books as #723 asks', () => {
     // In dual-language reading, the main translation's language is the one
     // named first; the second translation adds no third name.
     expect(source).toContain('getBookListName(item, supportedTranslation.lang, language)');
-    expect(source).toContain('getBookListName(savedBook, supportedTranslation.lang, language)');
+    expect(source).toContain('formatBookReference(savedBook, supportedTranslation.lang, language, verses)');
     expect(source).toContain('getSearchBooks(books, supportedTranslation.lang, language)');
     expect(source).toContain('formatBookReference(book, supportedTranslation.lang, language,');
-    expect(source).not.toMatch(/getBook\w+Name\([^)]*supportingTranslation/);
+    expect(source).not.toMatch(/(getBook\w+Name|formatBook\w+)\([^)]*supportingTranslation/);
     // The chapter and verse lists too.
     expect(source.match(/getPickerItemName\(/g)).toHaveLength(1);
     expect(source).not.toMatch(/labels\.(verse|chapter)Item/);

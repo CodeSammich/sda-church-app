@@ -225,7 +225,8 @@ const getAudioReaderLabel = (reader: string) =>
     .join(' ');
 
 type SavedVerseDisplay = SavedVerseGroup & {
-  bookName: string;
+  /** The book and verses, as services/BibleNames.ts names them (#723). */
+  reference: string;
   text?: string;
 };
 
@@ -2376,11 +2377,12 @@ export default function BibleScreen() {
     // translation's language and the app's, as in the book list (#723).
     const initialDisplays = groupedVerses.map((group) => {
       const savedBook = books.find((item) => item.id === group.bookId);
+      const verses = `${group.chapter}:${getSavedVerseRangeLabel(group)}`;
       return {
         ...group,
-        bookName: savedBook
-          ? formatTwoLanguageName(getBookListName(savedBook, supportedTranslation.lang, language))
-          : group.bookId,
+        reference: savedBook
+          ? formatBookReference(savedBook, supportedTranslation.lang, language, verses)
+          : `${group.bookId} ${verses}`,
       };
     });
     setSavedVerseDisplays(initialDisplays);
@@ -5012,7 +5014,7 @@ export default function BibleScreen() {
                       <View style={styles.savedVerseRow}>
                         <TouchableOpacity
                           accessibilityRole="button"
-                          accessibilityLabel={`${item.bookName} ${item.chapter}:${getSavedVerseRangeLabel(item)}`}
+                          accessibilityLabel={item.reference}
                           onPress={() => openSavedVerse(item)}
                           style={styles.savedVerseMainAction}
                         >
@@ -5033,8 +5035,7 @@ export default function BibleScreen() {
                                 },
                               ]}
                             >
-                              {item.bookName} {item.chapter}:
-                              {getSavedVerseRangeLabel(item)}
+                              {item.reference}
                             </Text>
                             {(item.text || savedVersesLoading) && (
                               <Text
@@ -5052,7 +5053,7 @@ export default function BibleScreen() {
                         </TouchableOpacity>
                         <IconButton
                           icon="bookmark-remove-outline"
-                          accessibilityLabel={`${labels.removeAction}: ${item.bookName} ${item.chapter}:${getSavedVerseRangeLabel(item)}`}
+                          accessibilityLabel={`${labels.removeAction}: ${item.reference}`}
                           onPress={() => removeSavedVerseGroup(item)}
                         />
                       </View>
