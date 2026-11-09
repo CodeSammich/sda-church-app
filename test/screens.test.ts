@@ -307,6 +307,24 @@ describe('one-off store sets (#692)', () => {
     expect(checkShot(tabletBible, read)).toEqual([]);
   });
 
+  it('fails a Spanish shot that shows Chinese, but not the icons RapidOCR reads as one character', () => {
+    const { checkShot } = require('../scripts/check-screens.cjs');
+    const you = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'you-es');
+    expect(you.mustNotShowLines).toContain('\\p{Script=Han}{2,}');
+    // The routine Spanish shots don't get it: it's the one-off sets' rule.
+    expect(planChecks(config, 'android').find((shot: { name: string }) => shot.name === 'explore-es').mustNotShowLines || []).not.toContain(
+      '\\p{Script=Han}{2,}',
+    );
+    const at = (text: string, top: number) => ({ text, box: [0.1, top, 0.3, 0.02] });
+    const tabs = ['Inicio', 'Biblia', 'Explorar'].map((text) => ({ text, box: [0.2, 0.93, 0.1, 0.02] }));
+    // What RapidOCR read from the Spanish shots' icons (#692): no failure.
+    const icons = [at('文A', 0.3), at('目Leer Versículo', 0.2), at('口', 0.05), at('十', 0.9)];
+    expect(checkShot(you, [...tabs, at('Contraste', 0.5), at('Alto contraste', 0.55), ...icons])).toEqual([]);
+    // English's Chinese-interface Bible, as Vision read it: fails.
+    const problems = checkShot(you, [...tabs, at('Contraste', 0.5), at('Alto contraste', 0.55), at('（大衛的詩。〕', 0.3)]);
+    expect(problems.join('\n')).toMatch(/Han/);
+  });
+
   it('gives a store list added later its one-off set with no change', () => {
     const later = { ...spanish, laterList: { 'en-US': ['home-default', 'bible-dual-default', 'you-default'] } };
     expect(oneOffSet(later, 'es', 'laterList')).toEqual(['home-es', 'bible-spanish-dual-es', 'you-es']);

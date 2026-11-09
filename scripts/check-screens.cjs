@@ -521,6 +521,15 @@ const pointsFor = (config, platform) => {
   return {};
 };
 
+/**
+ * A one-off run's rules for a shot in one of its languages (#692), such as no
+ * Chinese in Spanish's sets.
+ */
+const oneOffRules = (config, shot) =>
+  (config.oneOffRun || [])
+    .filter((language) => language === shot.settings.language)
+    .flatMap((language) => config.oneOff.languages[language].mustNotShowLines || []);
+
 /** Adds each screen's rules, and its variant's, to one platform's shots. */
 const planChecks = (config, platform = 'ios') =>
   planCaptures(config, platform).map((shot) => {
@@ -528,6 +537,7 @@ const planChecks = (config, platform = 'ios') =>
     const screen = allScreens(config).find((candidate) => candidate.name === shot.screen);
     const variant = shot.name.slice(screen.name.length + 1);
     const forVariant = screen.variantRules?.[variant] || {};
+    const forLanguage = oneOffRules(config, shot);
     return {
       ...shot,
       tabs: screen.tabs,
@@ -536,7 +546,10 @@ const planChecks = (config, platform = 'ios') =>
       ...pointsFor(config, platform),
       mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
-      mustNotShowLines: joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+      mustNotShowLines: joinRules(
+        joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+        forLanguage.length ? forLanguage : undefined,
+      ),
     };
   });
 

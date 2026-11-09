@@ -19,8 +19,11 @@ screenshots are captured, their sizes, and what they may show are in
   two of the English phone screenshots below in phone frames on the brand blue
   (`#00405C`): the Bible in the dark theme behind the Bible in English and Chinese.
   `google-play/feature-graphic-es.png` is the Spanish listings' (`es-US`, `es-419`):
-  the same, with the line of features in Spanish and two of Spanish's phone screenshots,
-  the Spanish Bible in the dark theme behind the Bible in Spanish and English.
+  the same, but with no Chinese, as the user asked of every Spanish image (#692): the
+  church's name in English and in Spanish, "Iglesia Adventista del Séptimo Día China de
+  Nueva York", which Claude translated, the line of features in Spanish, and two of
+  Spanish's phone screenshots, the Spanish Bible in the dark theme behind the Bible in
+  Spanish and English.
   `scripts/make-play-feature-graphic.cjs` builds both from those screenshots, so run it
   again when they change. An AI assistant designed them and wrote that script, so
   declare them as AI-generated in Play Console; see
@@ -38,7 +41,7 @@ screenshots are captured, their sizes, and what they may show are in
     Traditional interface), Explore, the Library, the Simplified Bible in the dark theme,
     and You.
   - `es/`, for the `es-US` and `es-419` listings, one-off (#692): English's screens with
-    the Spanish interface, in the same order, in Spanish and English only. Home, the
+    the Spanish interface, in the same order, with no Chinese anywhere. Home, the
     Bible in Spanish (Reina-Valera 1909) and English, the Spanish Bible's audio settings
     with its Spanish narration, the Spanish Bible in the dark theme, Explore, the
     Library, and You.
@@ -63,7 +66,7 @@ screenshots are captured, their sizes, and what they may show are in
   the Bible with the Traditional Chinese interface, the Bible in the dark theme, Explore, the
   Library, and You; the two Chinese sets are Google Play's `zh-TW` and `zh-CN` sets.
   Spanish's, for both Spanish listings, is one-off (#692): English's screens with the
-  Spanish interface, in Spanish and English only, the Bible in Spanish and English in
+  Spanish interface, with no Chinese anywhere, the Bible in Spanish and English in
   place of English and Chinese, and, third, the Spanish Bible's audio settings, as on
   Google Play. Home comes first: the first three appear on the App Store's install
   sheets, and Home shows what the app is.
@@ -119,7 +122,7 @@ Spanish's sets, its header, and its feature graphic are from one-off runs on
 November 8, 2026 (#692), on the code then live in the stores: 1.7.1's app, which 1.7.2
 didn't change. Spanish's tablet set came later the same day, once the tablet batch
 existed (#695), and its third shots, the Spanish Bible's audio settings, on November 9,
-when Spanish's sets dropped their Chinese (Spanish and English only). Both came from
+when Spanish's sets dropped every Chinese word. Both came from
 one-off runs on `release-candidate` as it stood after #715, with unreleased app changes
 (#715, #717, #718). None of them shows: Spanish's phone shots from those runs match the
 ones here but for a pixel's shift in the tab bar's pill, and the day's verse on Home.

@@ -797,10 +797,11 @@
     ],
     "languages": {
       "es": {
-        "$comment": "Both App Store Spanish listings (es-MX, es-ES) and both Google Play ones (es-US, es-419). Spanish and English only, no Chinese (user, 2026-11-09): the Bible shots read Reina-Valera 1909 beside the BSB, and the third shot, English's Chinese-interface Bible on the App Store and the CUV's audio languages on Google Play, is the Spanish Bible's audio settings in both.",
+        "$comment": "Both App Store Spanish listings (es-MX, es-ES) and both Google Play ones (es-US, es-419). A store set shows the app in its store's language: Spanish, with English beside it, and no Chinese anywhere (user, 2026-11-09). The Bible shots read Reina-Valera 1909 beside the BSB, and the third shot, English's Chinese-interface Bible on the App Store and the CUV's audio languages on Google Play, is the Spanish Bible's audio settings in both. mustNotShowLines apply to every shot in the language's sets (check-screens.cjs): no two Han characters together anywhere on screen. One alone passes, since RapidOCR reads some icons as one, such as the book as 目, the bookmark as 口, and the Language row's 文A icon.",
         "from": "en-US",
         "screens": { "bible-dual": "bible-spanish-dual", "bible-cuv": "bible-spanish-audio-settings", "bible-audio-settings": "bible-spanish-audio-settings" },
-        "variants": { "default": "es", "dark": "es-dark", "zh": "es" }
+        "variants": { "default": "es", "dark": "es-dark", "zh": "es" },
+        "mustNotShowLines": ["\\p{Script=Han}{2,}"]
       }
     }
   }
