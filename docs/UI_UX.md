@@ -299,6 +299,11 @@ simple, blended colors.
   dark mode. Each step's title is large, its choices scroll in a column at most 560
   points wide, and Back and Next stay at the bottom, below five progress dots outlined
   in blue (gold in the dark theme), the current one filled and wider.
+  - Each step starts with a choice made, such as English or high contrast. A tap on the
+    choice already made saves it and goes on, as Next does, so a member who wants it
+    isn't left tapping a choice that does nothing (#708). A tap on another choice only
+    chooses it, so the member sees it first: the language, the size or the theme
+    changes at once.
   - Members choose by pictures, not words alone, as with the contrast pictures:
     - each language is a card with a picture of the tab bar in that language;
     - each theme is a card with a picture of a page and its tab bar in it, light and dark

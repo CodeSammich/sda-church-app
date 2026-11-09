@@ -808,6 +808,10 @@ export default function RootLayout() {
       ),
       AsyncStorage.setItem(THEME_STORAGE_KEY, themeMode),
       AsyncStorage.setItem(TEXT_SCALE_STORAGE_KEY, serializeTextScale(textScale)),
+      // Each contrast too, so high contrast kept with Next is saved as chosen
+      // (#708), not left to the default, which a later version could change.
+      AsyncStorage.setItem(CONTRAST_STORAGE_KEYS.light, contrasts.light),
+      AsyncStorage.setItem(CONTRAST_STORAGE_KEYS.dark, contrasts.dark),
       // Setup asked the contrast, so "What's new" has nothing more to ask.
       AsyncStorage.setItem(WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION),
     ]);

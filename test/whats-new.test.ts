@@ -50,6 +50,20 @@ describe("What's new (#669)", () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
+  // Its only way on is an answer, so high contrast, chosen already, has to
+  // answer too (#708).
+  it('takes high contrast, chosen already, as the answer to each question', async () => {
+    const onDone = jest.fn();
+    const setContrastMode = jest.fn();
+    const screen = await renderWithPreferences(createElement(WhatsNewDialog, { onDone }), { setContrastMode });
+    await fireEvent.press(screen.getByRole('radio', { name: /^High contrast/ }));
+    expect(setContrastMode).toHaveBeenCalledWith('light', 'high');
+    expect(screen.getByText('Which is easier to read in dark mode?')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: /^High contrast/ }));
+    expect(setContrastMode).toHaveBeenCalledWith('dark', 'high');
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
   it('is saved as seen when answered, and when setup finishes', () => {
     const layout = readFileSync('app/_layout.tsx', 'utf8');
     expect(layout).toContain("setShowWhatsNew(shouldShowWhatsNew(setupDone === 'true', whatsNewSeen));");

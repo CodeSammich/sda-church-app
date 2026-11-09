@@ -196,6 +196,76 @@ describe('InitialSetup', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
+  // Each step starts with a choice made, so a tap on it did nothing, and a
+  // member who wanted the default couldn't tell how to go on (#708).
+  it('saves the choice already made and goes on when it is tapped, on every step', async () => {
+    const onComplete = jest.fn();
+    const setLanguage = jest.fn();
+    const setTextScale = jest.fn().mockResolvedValue(undefined);
+    const setThemeMode = jest.fn();
+    const setContrastMode = jest.fn();
+    const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete }), {
+      setContrastMode,
+      setLanguage,
+      setTextScale,
+      setThemeMode,
+    });
+    const stepLabel = (n: number) => screen.getByLabelText(`Step ${n} of 5`);
+
+    await fireEvent.press(screen.getByRole('radio', { name: 'English' }));
+    expect(setLanguage).toHaveBeenCalledWith('en');
+    expect(stepLabel(2)).toBeTruthy();
+
+    // The size saves again first.
+    await fireEvent.press(screen.getByRole('radio', { name: '125 percent text size' }));
+    await waitFor(() => expect(stepLabel(3)).toBeTruthy());
+    expect(setTextScale).toHaveBeenCalledWith(1.25);
+
+    await fireEvent.press(screen.getByRole('radio', { name: 'Light' }));
+    expect(setThemeMode).toHaveBeenCalledWith('light');
+    expect(stepLabel(4)).toBeTruthy();
+
+    await fireEvent.press(screen.getAllByRole('radio')[0]);
+    expect(setContrastMode).toHaveBeenCalledWith('light', 'high');
+    expect(stepLabel(5)).toBeTruthy();
+
+    // Back and on still work.
+    await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByText('Which is easier to read in light mode?')).toBeTruthy();
+    await goOn(screen);
+    expect(screen.getByText('Which is easier to read in dark mode?')).toBeTruthy();
+    expect(onComplete).not.toHaveBeenCalled();
+
+    // On the last step it finishes, as Get Started does.
+    await fireEvent.press(screen.getAllByRole('radio')[0]);
+    expect(setContrastMode).toHaveBeenCalledWith('dark', 'high');
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('only chooses another choice, so the member sees it before going on', async () => {
+    const setLanguage = jest.fn();
+    const setThemeMode = jest.fn();
+    const setContrastMode = jest.fn();
+    const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete: jest.fn() }), {
+      setContrastMode,
+      setLanguage,
+      setThemeMode,
+    });
+
+    await fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+    expect(setLanguage).toHaveBeenCalledWith('es');
+    expect(screen.getByLabelText('Step 1 of 5')).toBeTruthy();
+    await goOn(screen);
+    await goOn(screen);
+    await fireEvent.press(screen.getByRole('radio', { name: 'Dark' }));
+    expect(setThemeMode).toHaveBeenCalledWith('dark');
+    expect(screen.getByLabelText('Step 3 of 5')).toBeTruthy();
+    await goOn(screen);
+    await fireEvent.press(screen.getAllByRole('radio')[1]);
+    expect(setContrastMode).toHaveBeenCalledWith('light', 'standard');
+    expect(screen.getByLabelText('Step 4 of 5')).toBeTruthy();
+  });
+
   it('goes through the five steps, back and on, and finishes on the last', async () => {
     const onComplete = jest.fn();
     const setContrastMode = jest.fn();

@@ -322,6 +322,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
     });
   }, []);
   const currentStep = SETUP_STEPS[step];
+  const contrastKind = currentStep === 'contrastDark' ? 'dark' : 'light';
   const lastStep = step === SETUP_STEPS.length - 1;
   // A text size that's saving, or failed to save, has to settle first.
   const textScaleUnsettled = isSavingTextScale || failedTextScale !== null;
@@ -335,8 +336,9 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
     width: Math.max(0, Math.min(SETUP_COLUMN_MAX_WIDTH, viewportWidth - insets.left - insets.right - 48)),
   };
 
+  /** Saves the size, and says whether it saved. */
   const persistTextScale = async (nextScale: TextScale) => {
-    if (textScaleWritePendingRef.current) return;
+    if (textScaleWritePendingRef.current) return false;
 
     textScaleWritePendingRef.current = true;
     setIsSavingTextScale(true);
@@ -344,9 +346,11 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
       await setTextScale(nextScale);
       failedTextScaleRef.current = null;
       setFailedTextScale(null);
+      return true;
     } catch {
       failedTextScaleRef.current = nextScale;
       setFailedTextScale(nextScale);
+      return false;
     } finally {
       textScaleWritePendingRef.current = false;
       setIsSavingTextScale(false);
@@ -363,6 +367,17 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const goOn = () => {
     if (lastStep) completeSetup();
     else if (!textScaleWritePendingRef.current && failedTextScaleRef.current === null) setStep(step + 1);
+  };
+
+  // Each step starts with a choice made, such as English or high contrast, so
+  // a tap on it changed nothing, and a member who wanted it could think setup
+  // was stuck (#708). Now a tap on the choice already made saves it and goes
+  // on, as Next does; a tap on another choice still only chooses it, so the
+  // member sees it first.
+  const choose = (alreadyChosen: boolean, save: () => void) => {
+    if (textScaleWritePendingRef.current) return;
+    save();
+    if (alreadyChosen) goOn();
   };
 
   return (
@@ -414,9 +429,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                       key={option.value}
                       disabled={isSavingTextScale}
                       label={option.label}
-                      onPress={() => {
-                        if (!textScaleWritePendingRef.current) setLanguage(option.value);
-                      }}
+                      onPress={() => choose(option.value === language, () => setLanguage(option.value))}
                       selected={option.value === language}
                       testID={`setup-language-${option.value}`}
                     >
@@ -442,7 +455,12 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                   twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
                   onValueChange={(value) => {
                     const nextScale = Number(value);
-                    if (isTextScale(nextScale)) void persistTextScale(nextScale);
+                    if (!isTextScale(nextScale)) return;
+                    // The size chosen already goes on once it has saved again.
+                    const alreadyChosen = nextScale === textScale;
+                    void persistTextScale(nextScale).then((saved) => {
+                      if (saved && alreadyChosen) goOn();
+                    });
                   }}
                   options={TEXT_SCALE_OPTIONS.map((scale) => {
                     const percent = Math.round(scale * 100);
@@ -509,9 +527,9 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                       disabled={isSavingTextScale}
                       icon={THEME_ICONS[option.value]}
                       label={option.label}
-                      onPress={() => {
-                        if (!textScaleWritePendingRef.current) void setThemeMode(option.value as ThemeMode);
-                      }}
+                      onPress={() =>
+                        choose(option.value === themeMode, () => void setThemeMode(option.value as ThemeMode))
+                      }
                       selected={option.value === themeMode}
                       testID={`setup-appearance-${option.value}`}
                     >
@@ -525,17 +543,19 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
             {(currentStep === 'contrastLight' || currentStep === 'contrastDark') && (
               <>
                 <Text variant="headlineLarge" style={styles.title}>
-                  {contrastCopy.questions[currentStep === 'contrastDark' ? 'dark' : 'light']}
+                  {contrastCopy.questions[contrastKind]}
                 </Text>
                 <Text variant="bodyLarge" style={styles.subtitle}>
                   {contrastCopy.help}
                 </Text>
                 {/* High contrast stays chosen unless the member picks standard. */}
                 <ContrastChoice
-                  kind={currentStep === 'contrastDark' ? 'dark' : 'light'}
+                  kind={contrastKind}
                   language={language}
-                  onChoose={(mode) => void setContrastMode(currentStep === 'contrastDark' ? 'dark' : 'light', mode)}
-                  value={contrastModes[currentStep === 'contrastDark' ? 'dark' : 'light']}
+                  onChoose={(mode) =>
+                    choose(mode === contrastModes[contrastKind], () => void setContrastMode(contrastKind, mode))
+                  }
+                  value={contrastModes[contrastKind]}
                 />
               </>
             )}
