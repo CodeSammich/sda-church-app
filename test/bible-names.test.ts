@@ -183,4 +183,15 @@ describe('the Bible screen names books as #723 asks', () => {
     expect(source.match(/getPickerItemName\(/g)).toHaveLength(1);
     expect(source).not.toMatch(/labels\.(verse|chapter)Item/);
   });
+
+  it("shares a verse as it always has, with only the translation's own book name", () => {
+    // Shared text goes to someone else, so it quotes the verse and cites it in
+    // the translation's language alone: no added name in the app's language.
+    const share = source.slice(source.indexOf('const handleShare = async'), source.indexOf('Share.share('));
+    expect(share).toContain('const reference = `${book.name} ${chapterNum}:${rangeString}`;');
+    expect(share).toContain('const message = `"${fullText}"\\n\\n— ${reference} (${translation})`;');
+    expect(share).not.toMatch(/getBook\w+Name|formatBook\w+|formatReference|formatTwoLanguageName/);
+    // So does the lock screen's Now Playing title, which names the recording.
+    expect(source).toContain('`${book?.name || labels.bible} ${chapterNum}`,');
+  });
 });
