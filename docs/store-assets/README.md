@@ -118,9 +118,11 @@ branch that added them (#695), at 42ed22b2, on a fork
 Spanish's sets, its header, and its feature graphic are from one-off runs on
 November 8, 2026 (#692), on the code then live in the stores: 1.7.1's app, which 1.7.2
 didn't change. Spanish's tablet set came later the same day, once the tablet batch
-existed (#695), from a one-off run on `release-candidate` as it stood after #715, with
-unreleased app changes (#715, #717, #718). None of them shows: Spanish's phone shots
-from that run match the ones here but for a pixel's shift in the tab bar's pill.
+existed (#695), and its third shots, the Spanish Bible's audio settings, on November 9,
+when Spanish's sets dropped their Chinese (Spanish and English only). Both came from
+one-off runs on `release-candidate` as it stood after #715, with unreleased app changes
+(#715, #717, #718). None of them shows: Spanish's phone shots from those runs match the
+ones here but for a pixel's shift in the tab bar's pill, and the day's verse on Home.
 
 Each run also saves numbered App Store copies, from the `appStore` and `appStoreIpad`
 lists in `test/screens/screens.json`, in two downloads, each under 50 MB (#690):
