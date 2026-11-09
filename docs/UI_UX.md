@@ -289,6 +289,10 @@ simple, blended colors.
       with only those two questions (`constants/WhatsNew.ts`, keyed by version, so a
       later release can add its own or none; live announcements, #562, would be
       separate). Changed any time under You → Contrast.
+    - The popup goes on as setup does, with setup's buttons: a tap on a picture only
+      chooses it, Next goes to the dark mode question, and Done, beside Back, closes it
+      (#708). When a tap on a picture went on, a tap on high contrast, chosen already,
+      seemed to do nothing. It asks questions, so it has no X.
     - Each shows a picture of the tab bar in each look, high contrast first, one above
       the other, since many older members wouldn't know the word.
     - A designer's advice settled the default: contrast is usually the default, and the
@@ -299,11 +303,10 @@ simple, blended colors.
   dark mode. Each step's title is large, its choices scroll in a column at most 560
   points wide, and Back and Next stay at the bottom, below five progress dots outlined
   in blue (gold in the dark theme), the current one filled and wider.
-  - Each step starts with a choice made, such as English or high contrast. A tap on the
-    choice already made saves it and goes on, as Next does, so a member who wants it
-    isn't left tapping a choice that does nothing (#708). A tap on another choice only
-    chooses it, so the member sees it first: the language, the size or the theme
-    changes at once.
+  - A tap on a choice only chooses it, and the language, size or theme changes at once.
+    Next, then Get Started, is the only way on, so it works the same whether the member
+    keeps the choice each step starts with, such as English or high contrast, or picks
+    another (#708). Finishing setup saves every choice, the contrasts included.
   - Members choose by pictures, not words alone, as with the contrast pictures:
     - each language is a card with a picture of the tab bar in that language;
     - each theme is a card with a picture of a page and its tab bar in it, light and dark

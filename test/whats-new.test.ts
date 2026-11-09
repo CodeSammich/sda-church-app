@@ -1,10 +1,38 @@
 import { WhatsNewDialog } from '@/components/WhatsNewDialog';
-import { CONTRAST_STANDARD } from '@/constants/Themes';
+import {
+  CONTRAST_HIGH,
+  CONTRAST_STANDARD,
+  DEFAULT_CONTRAST_MODES,
+  ThemeContext,
+  THEME_LIGHT,
+  type ContrastMode,
+  type ThemeKind,
+} from '@/constants/Themes';
 import { compareVersions, shouldShowWhatsNew, WHATS_NEW_VERSION } from '@/constants/WhatsNew';
 import { fireEvent } from '@testing-library/react-native';
 import { readFileSync } from 'node:fs';
-import { createElement } from 'react';
+import { createElement, useState } from 'react';
 import { renderWithPreferences } from './helpers/render-preferences';
+
+// The dialog with its choices kept, as the app keeps them, so a choice shows.
+function StatefulWhatsNew({
+  onDone,
+  save,
+}: Readonly<{ onDone: () => void; save: (kind: ThemeKind, mode: ContrastMode) => void }>) {
+  const [contrastModes, setContrastModes] = useState(DEFAULT_CONTRAST_MODES);
+  const setContrastMode = (kind: ThemeKind, mode: ContrastMode) => {
+    save(kind, mode);
+    setContrastModes((current) => ({ ...current, [kind]: mode }));
+  };
+  return createElement(
+    ThemeContext.Provider,
+    { value: { contrastModes, setContrastMode, setThemeMode: jest.fn(), themeMode: THEME_LIGHT, toggleTheme: jest.fn() } },
+    createElement(WhatsNewDialog, { onDone }),
+  );
+}
+
+const checked = (screen: Awaited<ReturnType<typeof renderWithPreferences>>) =>
+  screen.getAllByRole('radio').map((option) => option.props.accessibilityState.checked);
 
 describe("What's new (#669)", () => {
   it('compares versions by their numbers', () => {
@@ -26,41 +54,58 @@ describe("What's new (#669)", () => {
     expect(shouldShowWhatsNew(false, null)).toBe(false);
   });
 
-  it('asks only the contrast, for light mode and then dark mode, and closes after both', async () => {
+  // As in setup, a tap on a picture only chooses it, and Next, then Done, go
+  // on (#708). When a tap went on, a tap on high contrast, chosen already,
+  // seemed to do nothing.
+  it('asks only the contrast, for light mode and then dark mode, chosen by a tap, with Next and Done', async () => {
     const onDone = jest.fn();
-    const setContrastMode = jest.fn();
-    const screen = await renderWithPreferences(createElement(WhatsNewDialog, { onDone }), {
-      language: 'zh',
-      setContrastMode,
-    });
+    const save = jest.fn();
+    const screen = await renderWithPreferences(createElement(StatefulWhatsNew, { onDone, save }), { language: 'zh' });
     expect(screen.getByText('淺色模式下，哪一個看得比較清楚？')).toBeTruthy();
-    // No other text: the question, the hint, and the two pictures.
+    // No other text: the question, the hint, the two pictures and the button.
     expect(screen.queryByText('新功能')).toBeNull();
-    let options = screen.getAllByRole('radio');
-    expect(options.map((option) => option.props.accessibilityState.checked)).toEqual([true, false]);
-    // A question: no X.
+    expect(checked(screen)).toEqual([true, false]);
+    // A question: no X, and nothing to go back to yet.
     expect(screen.queryByRole('button', { name: '關閉' })).toBeNull();
-    await fireEvent.press(options[1]);
-    expect(setContrastMode).toHaveBeenCalledWith('light', CONTRAST_STANDARD);
-    expect(onDone).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: '上一步' })).toBeNull();
+
+    await fireEvent.press(screen.getAllByRole('radio')[1]);
+    expect(save).toHaveBeenLastCalledWith('light', CONTRAST_STANDARD);
+    expect(checked(screen)).toEqual([false, true]);
+    expect(screen.getByText('淺色模式下，哪一個看得比較清楚？')).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: '下一步' }));
+    expect(save).toHaveBeenLastCalledWith('light', CONTRAST_STANDARD);
     expect(screen.getByText('深色模式下，哪一個看得比較清楚？')).toBeTruthy();
-    options = screen.getAllByRole('radio');
-    await fireEvent.press(options[0]);
-    expect(setContrastMode).toHaveBeenCalledWith('dark', 'high');
+    expect(screen.queryByRole('button', { name: '下一步' })).toBeNull();
+
+    // Back and on keep the answer.
+    await fireEvent.press(screen.getByRole('button', { name: '上一步' }));
+    expect(screen.getByText('淺色模式下，哪一個看得比較清楚？')).toBeTruthy();
+    expect(checked(screen)).toEqual([false, true]);
+    await fireEvent.press(screen.getByRole('button', { name: '下一步' }));
+
+    // A tap on high contrast, chosen already, only chooses it.
+    await fireEvent.press(screen.getAllByRole('radio')[0]);
+    expect(save).toHaveBeenLastCalledWith('dark', CONTRAST_HIGH);
+    expect(screen.getByText('深色模式下，哪一個看得比較清楚？')).toBeTruthy();
+    expect(onDone).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: '完成' }));
+    expect(save).toHaveBeenLastCalledWith('dark', CONTRAST_HIGH);
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  // Its only way on is an answer, so high contrast, chosen already, has to
-  // answer too (#708).
-  it('takes high contrast, chosen already, as the answer to each question', async () => {
+  it('keeps and saves high contrast, chosen already, with Next and Done', async () => {
     const onDone = jest.fn();
     const setContrastMode = jest.fn();
     const screen = await renderWithPreferences(createElement(WhatsNewDialog, { onDone }), { setContrastMode });
-    await fireEvent.press(screen.getByRole('radio', { name: /^High contrast/ }));
-    expect(setContrastMode).toHaveBeenCalledWith('light', 'high');
+    await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+    expect(setContrastMode).toHaveBeenCalledWith('light', CONTRAST_HIGH);
     expect(screen.getByText('Which is easier to read in dark mode?')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('radio', { name: /^High contrast/ }));
-    expect(setContrastMode).toHaveBeenCalledWith('dark', 'high');
+    expect(onDone).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+    expect(setContrastMode).toHaveBeenCalledWith('dark', CONTRAST_HIGH);
+    expect(setContrastMode).toHaveBeenCalledTimes(2);
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 

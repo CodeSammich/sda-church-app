@@ -690,7 +690,7 @@
       }
     },
     {
-      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. It asks a question, so it has no X.",
+      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. It asks a question, so it has no X. A tap on a picture only chooses it, as in setup, and setup's buttons go on (#708): Next on the first page, Back and Done on the second. Vision reads their white words on blue; RapidOCR may not, so Android doesn't require them.",
       "name": "whats-new",
       "group": "worship-and-you",
       "tabs": false,
@@ -699,10 +699,10 @@
       "settings": { "whatsNewSeen": null },
       "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["^Close$", "dark mode", "深色模式"],
+      "mustNotShowLines": ["^Close$", "dark mode", "深色模式", "^Back$", "^Done$", "^上一步$", "^完成$"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
-        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$", { "line": "^Next$", "platforms": ["ios", "ipad"] }] },
+        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$", { "line": "^下一步$", "platforms": ["ios", "ipad"] }] }
       }
     },
     {
@@ -715,10 +715,10 @@
       "settings": { "whatsNewSeen": null, "whatsNewStep": "dark" },
       "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["^Close$", "light mode", "淺色模式"],
+      "mustNotShowLines": ["^Close$", "light mode", "淺色模式", "^Next$", "^下一步$"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
-        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$", { "line": "^Back$", "platforms": ["ios", "ipad"] }, { "line": "^Done$", "platforms": ["ios", "ipad"] }] },
+        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$", { "line": "^上一步$", "platforms": ["ios", "ipad"] }, { "line": "^完成$", "platforms": ["ios", "ipad"] }] }
       }
     },
     {

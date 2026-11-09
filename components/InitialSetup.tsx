@@ -24,6 +24,7 @@ import { ChoiceCard, TabBarPreview, THEME_ICONS, THEME_PREVIEW_KINDS, ThemePrevi
 import { isKeyScreensBuild, SCREENSHOT_SETUP_STEP_KEY } from '@/services/ScreenshotRoute';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PopupScrollView } from '@/components/PopupScrollView';
+import { SetupAction } from '@/components/SetupAction';
 import { useContext, useEffect, useRef, useState } from 'react';
 import {
   Modal,
@@ -229,62 +230,6 @@ const SetupChoiceGroup = ({
   );
 };
 
-interface SetupActionProps {
-  accessibilityLabel?: string;
-  disabled?: boolean;
-  kind?: 'contained' | 'outlined';
-  label: string;
-  onPress: () => void;
-  /** stretch: the popup's width; fill: a share of a row of buttons. */
-  placement?: 'start' | 'stretch' | 'fill';
-}
-
-const SetupAction = ({
-  accessibilityLabel,
-  disabled = false,
-  kind = 'contained',
-  label,
-  onPress,
-  placement = 'stretch',
-}: SetupActionProps) => {
-  const theme = useAppTheme();
-  const contained = kind === 'contained';
-
-  return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.actionButton,
-        placement === 'start' && styles.actionButtonAtStart,
-        placement === 'fill' && styles.actionButtonFill,
-        {
-          backgroundColor: contained ? theme.colors.primary : 'transparent',
-          borderColor: contained ? theme.colors.primary : theme.colors.outline,
-          opacity: disabled ? 0.5 : pressed ? 0.78 : 1,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.actionButtonText,
-          {
-            color: contained
-              ? theme.colors.onPrimary
-              : theme.colors.primary,
-          },
-        ]}
-        variant="labelLarge"
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-};
-
 // One question per step (#523), so each fits on a phone and the button to go
 // on is always in view: the language first, so the rest shows in it, then the
 // text size, so the last steps show at that size, and last the contrast for
@@ -322,7 +267,6 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
     });
   }, []);
   const currentStep = SETUP_STEPS[step];
-  const contrastKind = currentStep === 'contrastDark' ? 'dark' : 'light';
   const lastStep = step === SETUP_STEPS.length - 1;
   // A text size that's saving, or failed to save, has to settle first.
   const textScaleUnsettled = isSavingTextScale || failedTextScale !== null;
@@ -336,9 +280,8 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
     width: Math.max(0, Math.min(SETUP_COLUMN_MAX_WIDTH, viewportWidth - insets.left - insets.right - 48)),
   };
 
-  /** Saves the size, and says whether it saved. */
   const persistTextScale = async (nextScale: TextScale) => {
-    if (textScaleWritePendingRef.current) return false;
+    if (textScaleWritePendingRef.current) return;
 
     textScaleWritePendingRef.current = true;
     setIsSavingTextScale(true);
@@ -346,11 +289,9 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
       await setTextScale(nextScale);
       failedTextScaleRef.current = null;
       setFailedTextScale(null);
-      return true;
     } catch {
       failedTextScaleRef.current = nextScale;
       setFailedTextScale(nextScale);
-      return false;
     } finally {
       textScaleWritePendingRef.current = false;
       setIsSavingTextScale(false);
@@ -367,17 +308,6 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const goOn = () => {
     if (lastStep) completeSetup();
     else if (!textScaleWritePendingRef.current && failedTextScaleRef.current === null) setStep(step + 1);
-  };
-
-  // Each step starts with a choice made, such as English or high contrast, so
-  // a tap on it changed nothing, and a member who wanted it could think setup
-  // was stuck (#708). Now a tap on the choice already made saves it and goes
-  // on, as Next does; a tap on another choice still only chooses it, so the
-  // member sees it first.
-  const choose = (alreadyChosen: boolean, save: () => void) => {
-    if (textScaleWritePendingRef.current) return;
-    save();
-    if (alreadyChosen) goOn();
   };
 
   return (
@@ -429,7 +359,9 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                       key={option.value}
                       disabled={isSavingTextScale}
                       label={option.label}
-                      onPress={() => choose(option.value === language, () => setLanguage(option.value))}
+                      onPress={() => {
+                        if (!textScaleWritePendingRef.current) setLanguage(option.value);
+                      }}
                       selected={option.value === language}
                       testID={`setup-language-${option.value}`}
                     >
@@ -455,12 +387,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                   twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
                   onValueChange={(value) => {
                     const nextScale = Number(value);
-                    if (!isTextScale(nextScale)) return;
-                    // The size chosen already goes on once it has saved again.
-                    const alreadyChosen = nextScale === textScale;
-                    void persistTextScale(nextScale).then((saved) => {
-                      if (saved && alreadyChosen) goOn();
-                    });
+                    if (isTextScale(nextScale)) void persistTextScale(nextScale);
                   }}
                   options={TEXT_SCALE_OPTIONS.map((scale) => {
                     const percent = Math.round(scale * 100);
@@ -527,9 +454,9 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                       disabled={isSavingTextScale}
                       icon={THEME_ICONS[option.value]}
                       label={option.label}
-                      onPress={() =>
-                        choose(option.value === themeMode, () => void setThemeMode(option.value as ThemeMode))
-                      }
+                      onPress={() => {
+                        if (!textScaleWritePendingRef.current) void setThemeMode(option.value as ThemeMode);
+                      }}
                       selected={option.value === themeMode}
                       testID={`setup-appearance-${option.value}`}
                     >
@@ -543,19 +470,17 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
             {(currentStep === 'contrastLight' || currentStep === 'contrastDark') && (
               <>
                 <Text variant="headlineLarge" style={styles.title}>
-                  {contrastCopy.questions[contrastKind]}
+                  {contrastCopy.questions[currentStep === 'contrastDark' ? 'dark' : 'light']}
                 </Text>
                 <Text variant="bodyLarge" style={styles.subtitle}>
                   {contrastCopy.help}
                 </Text>
                 {/* High contrast stays chosen unless the member picks standard. */}
                 <ContrastChoice
-                  kind={contrastKind}
+                  kind={currentStep === 'contrastDark' ? 'dark' : 'light'}
                   language={language}
-                  onChoose={(mode) =>
-                    choose(mode === contrastModes[contrastKind], () => void setContrastMode(contrastKind, mode))
-                  }
-                  value={contrastModes[contrastKind]}
+                  onChoose={(mode) => void setContrastMode(currentStep === 'contrastDark' ? 'dark' : 'light', mode)}
+                  value={contrastModes[currentStep === 'contrastDark' ? 'dark' : 'light']}
                 />
               </>
             )}
@@ -707,29 +632,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 12,
-  },
-  actionButton: {
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    borderRadius: 26,
-    borderWidth: 1,
-    justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 52,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  actionButtonAtStart: {
-    alignSelf: 'flex-start',
-  },
-  actionButtonFill: {
-    flex: 1,
-    marginTop: 0,
-  },
-  actionButtonText: {
-    flexShrink: 1,
-    fontWeight: '700',
-    textAlign: 'center',
   },
   choiceButton: {
     alignItems: 'center',
