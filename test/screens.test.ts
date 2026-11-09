@@ -208,7 +208,7 @@ describe('one-off store sets (#692)', () => {
     expect(oneOffSet(spanish, 'es', 'appStore')).toEqual([
       'home-es',
       'bible-spanish-dual-es',
-      'bible-cuv-zh',
+      'bible-spanish-audio-settings-es',
       'bible-spanish-dual-es-dark',
       'explore-es',
       'library-es',
@@ -224,7 +224,7 @@ describe('one-off store sets (#692)', () => {
     expect(oneOffSet(spanish, 'es', 'googlePlay')).toEqual([
       'home-es',
       'bible-spanish-dual-es',
-      'bible-audio-settings-es',
+      'bible-spanish-audio-settings-es',
       'bible-spanish-dual-es-dark',
       'explore-es',
       'library-es',
@@ -248,8 +248,17 @@ describe('one-off store sets (#692)', () => {
   it('plans only their shots, in Spanish, with no split windows, and copies them in upload order', () => {
     const iphone = planCaptures(spanish, 'ios');
     expect(names(iphone)).toEqual(oneOffSet(spanish, 'es', 'appStore'));
-    // Only English's Chinese-interface Bible keeps its language, to show the app has Chinese.
-    for (const shot of iphone) expect([shot.name, shot.settings.language]).toEqual([shot.name, shot.name === 'bible-cuv-zh' ? 'zh' : 'es']);
+    // Spanish and English only, no Chinese (user, 2026-11-09): every shot in the
+    // Spanish interface, and no Chinese Bible open or beside it.
+    for (const platform of ['ios', 'ipad', 'android', 'android-tablet']) {
+      for (const shot of planCaptures(spanish, platform)) {
+        expect([shot.file, shot.settings.language]).toEqual([shot.file, 'es']);
+        expect([shot.file, `${shot.route} ${shot.settings.supportingTranslation}`]).not.toEqual([
+          shot.file,
+          expect.stringMatching(/cmn_/),
+        ]);
+      }
+    }
     const dark = iphone.find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es-dark');
     expect(dark.settings).toMatchObject({ theme: 'dark', language: 'es', supportingTranslation: 'BSB' });
     expect(dark.url).toBe('sdachurchapp://bible?bookId=PSA&chapter=23&translationId=spa_r09');
@@ -270,7 +279,8 @@ describe('one-off store sets (#692)', () => {
       file: 'app-store/es/02-bible-spanish-dual-es.png',
     });
     expect(planStoreCopies(spanish, 'ipad').at(-1).file).toBe('app-store-ipad/es/05-you-es.png');
-    expect(planStoreCopies(spanish, 'android')[2].file).toBe('google-play/es/03-bible-audio-settings-es.png');
+    expect(planStoreCopies(spanish, 'android')[2].file).toBe('google-play/es/03-bible-spanish-audio-settings-es.png');
+    expect(planStoreCopies(spanish, 'ios')[2].file).toBe('app-store/es/03-bible-spanish-audio-settings-es.png');
   });
 
   it("checks each shot's text with its screen's rules, the Spanish Bible's in RVR09 and BSB", () => {
@@ -282,8 +292,9 @@ describe('one-off store sets (#692)', () => {
       const you = checks.find((shot: { name: string }) => shot.name === 'you-es');
       expect(you.mustShowLines).toEqual(expect.arrayContaining(['^Contraste$', '^Alto contraste$']));
     }
-    const audio = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'bible-audio-settings-es');
-    expect(audio.mustNotShowLines).toContain('^Cerrar$');
+    const audio = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'bible-spanish-audio-settings-es');
+    expect(audio.mustShowLines).toContain('Reina-Valera');
+    expect(audio.mustNotShowLines).toEqual(expect.arrayContaining(['^Cerrar$', 'Mandar.n', 'Canton.s']));
     // On the tablet, RapidOCR's box for "Versículo" starts at its accent, 182
     // points up, above where "Verse" starts; the verse button still counts.
     const { checkShot } = require('../scripts/check-screens.cjs');
@@ -316,7 +327,7 @@ describe('one-off store sets (#692)', () => {
     expect(() => loadConfig(undefined, { oneOff: 'ko' })).toThrow('No one-off language "ko"');
     expect(() => splitShotName(config, 'home-nope')).toThrow('make the shot "home-nope"');
     expect(splitShotName(spanish, 'bible-spanish-dual-es-dark')).toMatchObject({ variant: 'es-dark' });
-    expect(allScreens(spanish).at(-1).name).toBe('bible-spanish-dual');
+    expect(allScreens(spanish).map((screen: { name: string }) => screen.name)).toContain('bible-spanish-dual');
     // Both workflows take the languages by hand, and pass them to every step;
     // a pull request has no inputs, so the release PR's runs stay as they were.
     for (const file of ['ios-key-screens.yml', 'android-key-screens.yml']) {

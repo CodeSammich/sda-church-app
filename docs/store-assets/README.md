@@ -38,9 +38,10 @@ screenshots are captured, their sizes, and what they may show are in
     Traditional interface), Explore, the Library, the Simplified Bible in the dark theme,
     and You.
   - `es/`, for the `es-US` and `es-419` listings, one-off (#692): English's screens with
-    the Spanish interface, in the same order. Home, the Bible in Spanish (Reina-Valera
-    1909) and English, the audio settings with the CUV's audio languages, the Spanish
-    Bible in the dark theme, Explore, the Library, and You.
+    the Spanish interface, in the same order, in Spanish and English only. Home, the
+    Bible in Spanish (Reina-Valera 1909) and English, the Spanish Bible's audio settings
+    with its Spanish narration, the Spanish Bible in the dark theme, Explore, the
+    Library, and You.
 - `google-play/tablet/`: the tablet screenshots, for Play's **7-inch tablet** and
   **10-inch tablet** slots, in upload order, at 1620 × 2880, the 9:16 shape Play asks of
   tablet screenshots, one set per listing language, each ending with the You tab (#695).
@@ -62,9 +63,9 @@ screenshots are captured, their sizes, and what they may show are in
   the Bible with the Traditional Chinese interface, the Bible in the dark theme, Explore, the
   Library, and You; the two Chinese sets are Google Play's `zh-TW` and `zh-CN` sets.
   Spanish's, for both Spanish listings, is one-off (#692): English's screens with the
-  Spanish interface, the Bible in Spanish and English in place of English and Chinese,
-  but the same third shot, the Bible with the Traditional Chinese interface, to show the
-  app has Chinese. Home comes first: the first three appear on the App Store's install
+  Spanish interface, in Spanish and English only, the Bible in Spanish and English in
+  place of English and Chinese, and, third, the Spanish Bible's audio settings, as on
+  Google Play. Home comes first: the first three appear on the App Store's install
   sheets, and Home shows what the app is.
 - `app-store/ipad/`: the iPad screenshots for each listing, in upload order, at
   2064 × 2752 in portrait, the size App Store Connect's **iPad

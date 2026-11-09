@@ -1309,9 +1309,11 @@ waits for (#692, #241). Each such language is under `oneOff.languages` in
 
 So each store list's set for the language is English's, with the same screens in the
 same order, ending with You, and a store list added later, such as Google Play's tablet
-sets (#695), gets one with no change, only another run. Spanish's App Store set keeps
-English's third shot, the Bible with the Traditional Chinese interface, to show the app
-has Chinese.
+sets (#695), gets one with no change, only another run. Spanish's sets show Spanish and
+English only, no Chinese (user, 2026-11-09): where English's third shot shows Chinese,
+the Bible with the Traditional Chinese interface on the App Store and the CUV's Mandarin
+and Cantonese audio on Google Play, Spanish's shows the Spanish Bible's audio settings
+(`bible-spanish-audio-settings`).
 
 To take a language's sets, start both workflows by hand on a branch whose app code is
 what's live in the stores, with **one_off** set to the language's key, such as `es`:
