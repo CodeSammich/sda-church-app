@@ -526,3 +526,43 @@ describe("the Chinese mission video card, this week's or the last one found (#72
     expect(checkShot(iphone, samples.clean['library-zh'])).toEqual(['no line matches /^本週$/', titleRule, dateRule]);
   });
 });
+
+describe("the lesson open in Quick Look, its title read with the iPad's dropdown arrow (#736)", () => {
+  const iphone = shot('sabbath-school-lesson-viewer-default');
+  const ipadShots = planChecks(loadConfig(), 'ipad');
+  const ipad = ipadShots.find((candidate: { name: string }) => candidate.name === 'sabbath-school-lesson-viewer-landscape');
+  const at = (text: string, box: number[]): Line => ({ text, box });
+  // The lines the check looks at, as Vision read them: the title Quick Look
+  // shows and the top of the PDF's first page under it. On release PR #731's
+  // run 42759990060, the iPad read the title's dropdown arrow into its line as
+  // " v", and the old check, /^Beginner \(ages 1.3\)$/, failed it. On the
+  // fork's run 42690519431 the day before, it left the arrow out. The iPhone
+  // shows no arrow.
+  const pageIpad = [
+    at('BIG IDEA: I can help others.', [0.313, 0.229, 0.376, 0.043]),
+    at('Others', [0.298, 0.583, 0.473, 0.154]),
+  ];
+  const pageIphone = [
+    at('BIG IDEA: I can help others.', [0.312, 0.172, 0.375, 0.015]),
+    at('Others', [0.29, 0.29, 0.49, 0.059]),
+  ];
+  const withArrow = at('Beginner (ages 1-3) v', [0.007, 0.045, 0.132, 0.017]);
+  const withoutArrow = at('Beginner (ages 1-3)', [0.006, 0.045, 0.118, 0.019]);
+  const iphoneTitle = at('Beginner (ages 1-3)', [0.287, 0.081, 0.366, 0.019]);
+  const titleRule = 'no line matches /^Beginner \\(ages 1.3\\)(\\s*[vV⌄˅∨﹀])?$|aliveinjesus\\.info/';
+  const retitled = (text: string) => ({ ...withArrow, text });
+
+  it('passes the title with or without the arrow read into its line', () => {
+    expect(checkShot(ipad, [withArrow, ...pageIpad])).toEqual([]);
+    expect(checkShot(ipad, [withoutArrow, ...pageIpad])).toEqual([]);
+    expect(checkShot(iphone, [iphoneTitle, ...pageIphone])).toEqual([]);
+  });
+
+  it('fails a missing title, another lesson, or more text after the title', () => {
+    expect(checkShot(ipad, pageIpad)).toEqual([titleRule]);
+    expect(checkShot(iphone, pageIphone)).toEqual([titleRule]);
+    expect(checkShot(ipad, [retitled('Kindergarten (ages 4-6) v'), ...pageIpad])).toEqual([titleRule]);
+    expect(checkShot(ipad, [retitled('Beginner (ages 1-3) vv'), ...pageIpad])).toEqual([titleRule]);
+    expect(checkShot(ipad, [retitled('Beginner (ages 1-3) Students'), ...pageIpad])).toEqual([titleRule]);
+  });
+});
