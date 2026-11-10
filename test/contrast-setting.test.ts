@@ -102,6 +102,11 @@ describe('the contrast setting (#669)', () => {
     expect(layout).toContain('AsyncStorage.getItem(CONTRAST_STORAGE_KEYS.light),');
     expect(layout).toContain('AsyncStorage.getItem(CONTRAST_STORAGE_KEYS.dark),');
     expect(layout).toContain('await AsyncStorage.setItem(CONTRAST_STORAGE_KEYS[kind], mode);');
+    // Finishing setup saves both, so high contrast kept with Next is saved as
+    // chosen, as the language, theme and text size are (#708).
+    const onCompleteSetup = layout.slice(layout.indexOf('const onCompleteSetup = async'), layout.indexOf('setShowSetup(false);'));
+    expect(onCompleteSetup).toContain('AsyncStorage.setItem(CONTRAST_STORAGE_KEYS.light, contrasts.light),');
+    expect(onCompleteSetup).toContain('AsyncStorage.setItem(CONTRAST_STORAGE_KEYS.dark, contrasts.dark),');
     // Each theme the app makes after loading takes the one for its light or
     // dark; only the first, before the saved settings load, is the default.
     expect(layout.match(/getAppTheme\(/g)).toHaveLength(5);

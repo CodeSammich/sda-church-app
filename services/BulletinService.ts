@@ -76,10 +76,16 @@ type BulletinApiResponse =
   | { ok: true; bulletin: Bulletin }
   | { ok: false; error: string };
 
-type CachedBulletin = {
+export type CachedBulletin = {
   bulletin: Bulletin;
+  /** When the app downloaded it. */
   fetchedAt: number;
+  /** The app version that downloaded it. Copies saved before #702 have none. */
+  appVersion?: string;
 };
+
+/** How long a downloaded bulletin counts as current (#702). */
+export const BULLETIN_MAX_AGE_MS = 30 * 60 * 1000;
 
 const BULLETIN_CACHE_PREFIX = 'bulletin-cache-v2:';
 const BULLETIN_REFRESH_PREFIX = 'bulletin-refresh-v1:';
@@ -176,14 +182,53 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
 
 const sabbathStart = (date: string) => new Date(`${date}T00:00:00`).getTime();
 
+/**
+ * Whether a stored copy is still current (#702). It's out of date once it's
+ * more than 30 minutes old, so staff edits reach phones during the week; once
+ * its Sabbath has begun, if it was downloaded before then; and when another
+ * app version saved it, or one from before versions were kept, since a newer
+ * app may show fields the old copy lacks.
+ */
 export const isBulletinCacheFresh = (
-  date: string,
-  fetchedAt: number,
+  { bulletin, fetchedAt, appVersion }: CachedBulletin,
   now = Date.now(),
-) => now < sabbathStart(date) || fetchedAt >= sabbathStart(date);
+) => {
+  const age = now - fetchedAt;
+  const start = sabbathStart(bulletin.date);
+  return (
+    appVersion !== undefined &&
+    appVersion === Constants.expoConfig?.version &&
+    age >= 0 &&
+    age < BULLETIN_MAX_AGE_MS &&
+    (now < start || fetchedAt >= start)
+  );
+};
 
 /**
- * Returns the stored bulletin for a date while it is fresh. With allowStale,
+ * The stored copy of a date's bulletin, if there is one, and whether it's
+ * still current. The bulletin screen shows it either way, at once, and asks
+ * for a newer one when it isn't.
+ */
+export const readCachedBulletin = async (
+  date: string,
+  now = Date.now(),
+): Promise<{ bulletin: Bulletin; fresh: boolean } | undefined> => {
+  try {
+    const text = await readCachedText(stored('bulletin', date));
+    if (!text) return undefined;
+
+    const cached = JSON.parse(text) as CachedBulletin;
+    if (!cached?.bulletin || cached.bulletin.date !== date || !Number.isFinite(cached.fetchedAt)) {
+      return undefined;
+    }
+    return { bulletin: cached.bulletin, fresh: isBulletinCacheFresh(cached, now) };
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * Returns the stored bulletin for a date while it is current. With allowStale,
  * it also returns an outdated copy, which the bulletin screen shows when a
  * request fails (for example when the Apps Script API is busy or offline).
  */
@@ -192,29 +237,18 @@ export const getCachedBulletin = async (
   now = Date.now(),
   { allowStale = false } = {},
 ): Promise<Bulletin | undefined> => {
-  try {
-    const text = await readCachedText(stored('bulletin', date));
-    if (!text) return undefined;
-
-    const cached = JSON.parse(text) as CachedBulletin;
-    if (
-      !cached?.bulletin ||
-      cached.bulletin.date !== date ||
-      !Number.isFinite(cached.fetchedAt) ||
-      (!allowStale && !isBulletinCacheFresh(date, cached.fetchedAt, now))
-    ) {
-      return undefined;
-    }
-    return cached.bulletin;
-  } catch {
-    return undefined;
-  }
+  const cached = await readCachedBulletin(date, now);
+  return cached && (allowStale || cached.fresh) ? cached.bulletin : undefined;
 };
 
 export const cacheBulletin = async (bulletin: Bulletin, fetchedAt = Date.now()) => {
   await writeCachedText(
     stored('bulletin', bulletin.date),
-    JSON.stringify({ bulletin, fetchedAt } satisfies CachedBulletin),
+    JSON.stringify({
+      bulletin,
+      fetchedAt,
+      appVersion: Constants.expoConfig?.version,
+    } satisfies CachedBulletin),
   );
   await pruneStored(bulletin.date).catch(() => undefined);
 };

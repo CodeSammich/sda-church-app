@@ -122,6 +122,15 @@ import { BibleAudioSeekController } from '@/services/BibleAudioSeekController';
 import { getBookPillAbbreviation } from '@/services/BibleBookAbbreviations';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
+  formatBookReference,
+  formatTwoLanguageName,
+  getBookListName,
+  getBookPillName,
+  getPickerItemName,
+  getSearchBooks,
+  type TwoLanguageName,
+} from '@/services/BibleNames';
+import {
   getParallelStructuralContent,
   getParallelVerseTexts,
   indexChapterVerses,
@@ -216,7 +225,8 @@ const getAudioReaderLabel = (reader: string) =>
     .join(' ');
 
 type SavedVerseDisplay = SavedVerseGroup & {
-  bookName: string;
+  /** The book and verses, as services/BibleNames.ts names them (#723). */
+  reference: string;
   text?: string;
 };
 
@@ -247,10 +257,8 @@ const uiLabels = {
     translation: 'Reader languages',
     book: 'Book',
     chapter: 'Chapter',
-    chapterItem: 'Chapter {n}',
     verse: 'Verse',
     verseShort: 'Vs.',
-    verseItem: 'Verse {n}',
     bible: 'Bible',
     footnote: 'Footnote',
     hebrewSubtitle: 'Hebrew (Original)',
@@ -334,10 +342,8 @@ const uiLabels = {
     translation: '閱讀語言',
     book: '書卷',
     chapter: '章節',
-    chapterItem: '第 {n} 章',
     verse: '節',
     verseShort: '節',
-    verseItem: '第 {n} 節',
     bible: '聖經',
     footnote: '腳注',
     hebrewSubtitle: '希伯來語 (原文)',
@@ -418,10 +424,8 @@ const uiLabels = {
     translation: '阅读语言',
     book: '书卷',
     chapter: '章节',
-    chapterItem: '第 {n} 章',
     verse: '节',
     verseShort: '节',
-    verseItem: '第 {n} 节',
     bible: '圣经',
     footnote: '脚注',
     hebrewSubtitle: '希伯来语 (原文)',
@@ -502,10 +506,8 @@ const uiLabels = {
     translation: 'Idiomas de lectura',
     book: 'Libro',
     chapter: 'Capítulo',
-    chapterItem: 'Capítulo {n}',
     verse: 'Versículo',
     verseShort: 'Vers.',
-    verseItem: 'Versículo {n}',
     bible: 'Biblia',
     footnote: 'Footnote',
     hebrewSubtitle: 'Hebreo (Original)',
@@ -2371,10 +2373,18 @@ export default function BibleScreen() {
       books.map((item) => item.id),
       savedVerseSort,
     );
-    const initialDisplays = groupedVerses.map((group) => ({
-      ...group,
-      bookName: books.find((item) => item.id === group.bookId)?.name || group.bookId,
-    }));
+    // Each shows the main translation's words, so its book is named in the
+    // translation's language and the app's, as in the book list (#723).
+    const initialDisplays = groupedVerses.map((group) => {
+      const savedBook = books.find((item) => item.id === group.bookId);
+      const verses = `${group.chapter}:${getSavedVerseRangeLabel(group)}`;
+      return {
+        ...group,
+        reference: savedBook
+          ? formatBookReference(savedBook, supportedTranslation.lang, language, verses)
+          : `${group.bookId} ${verses}`,
+      };
+    });
     setSavedVerseDisplays(initialDisplays);
 
     if (groupedVerses.length === 0) {
@@ -2418,7 +2428,7 @@ export default function BibleScreen() {
     return () => {
       cancelled = true;
     };
-  }, [modalType, savedVerses, savedVerseSort, supportedTranslation.id, books]);
+  }, [modalType, savedVerses, savedVerseSort, supportedTranslation.id, supportedTranslation.lang, books, language]);
 
   const getVersePlainText = (verseNum: number) => {
     if (!chapterData) return '';
@@ -3123,7 +3133,8 @@ export default function BibleScreen() {
   // path once the linked chapter has loaded (#372): popup=verse for
   // verseStart's details, or popup=audio-settings once the chapter has audio.
   // popup=audio-download-tip opens it as the marked button would, with the
-  // line that playback keeps stopping to load (#595).
+  // line that playback keeps stopping to load (#595). popup=book opens the
+  // book list, as the book pill would (#723).
   // A chapter change clears chapterData first, so a loaded chapter that
   // matches the link is the linked one.
   const screenshotPopupOpened = useRef(false);
@@ -3133,9 +3144,15 @@ export default function BibleScreen() {
       'verse',
       'audio-settings',
       'audio-download-tip',
+      'book',
     ]);
     if (!screenshotPopup) return;
     if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
+    if (screenshotPopup === 'book') {
+      screenshotPopupOpened.current = true;
+      setModalType('book');
+      return;
+    }
     if (screenshotPopup !== 'verse') {
       if (audioReaderEntries.length === 0) return;
       screenshotPopupOpened.current = true;
@@ -3750,12 +3767,13 @@ export default function BibleScreen() {
   const bibleSearch = useMemo<BibleSearchOptions>(
     () => ({
       translationIds: [supportedTranslation.id, ...(supportingTranslation ? [supportingTranslation.id] : [])],
-      books: books.map(({ id, name, numberOfChapters }) => ({ id, name, numberOfChapters })),
+      // Named as the book list names them, as the results show verses' words (#723).
+      books: getSearchBooks(books, supportedTranslation.lang, language),
       bookId: book?.id,
       chapter: chapterNum,
       onOpen: (reference) => openSearchReferenceRef.current(reference),
     }),
-    [supportedTranslation.id, supportingTranslation?.id, books, book?.id, chapterNum],
+    [supportedTranslation.id, supportedTranslation.lang, supportingTranslation?.id, books, book?.id, chapterNum, language],
   );
 
   const hasChapterAudio = audioReaderEntries.length > 0;
@@ -3843,8 +3861,10 @@ export default function BibleScreen() {
     </View>
   );
 
-  const bookName = book?.name || '...';
-  const bookAbbreviation = book ? getBookPillAbbreviation(book.id, supportedTranslation.lang, book.name) : bookName;
+  // The pill is a control, so it names the book in the app's language, even
+  // while the CUV is read in an English app (#723). The lists name it in both.
+  const bookName = book ? getBookPillName(book, supportedTranslation.lang, language) : '...';
+  const bookAbbreviation = book ? getBookPillAbbreviation(book.id, language, bookName) : bookName;
   // A shown pill's chevron, dropped when the row is short of room.
   const renderPillChevron = () =>
     dockPillLabels.chevrons ? (
@@ -4573,7 +4593,7 @@ export default function BibleScreen() {
                 }}
               >
                 <BibleAudioOfflineSection
-                  book={book ? { id: book.id, name: book.name } : undefined}
+                  book={book ? { id: book.id, name: bookName } : undefined}
                   onOpen={(narrator) => {
                     setAudioSettingsVisible(false);
                     router.push({
@@ -4994,7 +5014,7 @@ export default function BibleScreen() {
                       <View style={styles.savedVerseRow}>
                         <TouchableOpacity
                           accessibilityRole="button"
-                          accessibilityLabel={`${item.bookName} ${item.chapter}:${getSavedVerseRangeLabel(item)}`}
+                          accessibilityLabel={item.reference}
                           onPress={() => openSavedVerse(item)}
                           style={styles.savedVerseMainAction}
                         >
@@ -5015,8 +5035,7 @@ export default function BibleScreen() {
                                 },
                               ]}
                             >
-                              {item.bookName} {item.chapter}:
-                              {getSavedVerseRangeLabel(item)}
+                              {item.reference}
                             </Text>
                             {(item.text || savedVersesLoading) && (
                               <Text
@@ -5034,7 +5053,7 @@ export default function BibleScreen() {
                         </TouchableOpacity>
                         <IconButton
                           icon="bookmark-remove-outline"
-                          accessibilityLabel={`${labels.removeAction}: ${item.bookName} ${item.chapter}:${getSavedVerseRangeLabel(item)}`}
+                          accessibilityLabel={`${labels.removeAction}: ${item.reference}`}
                           onPress={() => removeSavedVerseGroup(item)}
                         />
                       </View>
@@ -5045,7 +5064,9 @@ export default function BibleScreen() {
             ) : lastActiveType === 'verse-detail' ? (
               <>
                 {renderPopupHeader(
-                  `${book?.name ?? ''} ${chapterNum}:${selectedVerseNum}`,
+                  book
+                    ? formatBookReference(book, supportedTranslation.lang, language, `${chapterNum}:${selectedVerseNum}`)
+                    : `${chapterNum}:${selectedVerseNum}`,
                   closeModal,
                 )}
                 <Divider />
@@ -5574,15 +5595,20 @@ export default function BibleScreen() {
                     ) : undefined
                   }
                   renderItem={({ item }) => {
-                    const itemLabel =
+                    // A book, chapter, or verse in the translation's language,
+                    // then the app's, when they differ (#723).
+                    const itemName: TwoLanguageName =
                       typeof item === 'object'
                         ? 'lang' in item
-                          ? getTranslationLabel(item)
-                          : item.name
-                        : (lastActiveType === 'verse'
-                            ? labels.verseItem
-                            : labels.chapterItem
-                          ).replace('{n}', item.toString());
+                          ? { name: getTranslationLabel(item) }
+                          : getBookListName(item, supportedTranslation.lang, language)
+                        : getPickerItemName(
+                            lastActiveType === 'verse' ? 'verse' : 'chapter',
+                            item,
+                            supportedTranslation.lang,
+                            language,
+                          );
+                    const itemLabel = formatTwoLanguageName(itemName);
                     const isSelectedItem =
                       (lastActiveType === 'translation' &&
                         typeof item === 'object' &&
@@ -5668,16 +5694,38 @@ export default function BibleScreen() {
                         }}
                         style={styles.pressRow}
                       >
-                        <Text
-                          style={[
-                            styles.pressRowText,
-                            isSelectedItem
-                              ? { color: theme.colors.primary, fontWeight: '700' }
-                              : { color: theme.colors.onSurface },
-                          ]}
-                        >
-                          {itemLabel}
-                        </Text>
+                        {itemName.appName ? (
+                          // The app's name in parentheses moves whole to a
+                          // second line when both don't fit on one, rather than
+                          // breaking inside it: 帖撒羅尼迦前書, then
+                          // (1 Thessalonians), at the largest text sizes.
+                          <View style={styles.pressRowNames}>
+                            {[itemName.name, `(${itemName.appName})`].map((part) => (
+                              <Text
+                                key={part}
+                                style={[
+                                  styles.pressRowNamePart,
+                                  isSelectedItem
+                                    ? { color: theme.colors.primary, fontWeight: '700' }
+                                    : { color: theme.colors.onSurface },
+                                ]}
+                              >
+                                {part}
+                              </Text>
+                            ))}
+                          </View>
+                        ) : (
+                          <Text
+                            style={[
+                              styles.pressRowText,
+                              isSelectedItem
+                                ? { color: theme.colors.primary, fontWeight: '700' }
+                                : { color: theme.colors.onSurface },
+                            ]}
+                          >
+                            {itemLabel}
+                          </Text>
+                        )}
                         {isSelectedItem && (
                           <AppIcon
                             pointerEvents="none"
@@ -5847,6 +5895,22 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       flex: 1,
       flexShrink: 1,
       minWidth: 0,
+    },
+    // A list row's two names, each kept whole on a line when it can be.
+    pressRowNames: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      columnGap: scaleTypographyMetric(5, uiTextScale),
+    },
+    // pressRowText's size, without its flex: 1, whose zero basis would keep
+    // both names on one line however long.
+    pressRowNamePart: {
+      flexShrink: 1,
+      maxWidth: '100%',
+      fontSize: scaleTypographyMetric(16, uiTextScale),
+      lineHeight: scaleTypographyMetric(22, uiTextScale),
     },
     pressRowTitle: {
       fontSize: scaleTypographyMetric(16, uiTextScale),

@@ -2,7 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as WebBrowser from 'expo-web-browser';
 
-import { LEGAL_DISCLAIMER_URL, openLegalDisclaimer } from '@/constants/ExternalLinks';
+import {
+  IN_APP_BROWSER_OPTIONS,
+  LEGAL_DISCLAIMER_URL,
+  openLegalDisclaimer,
+} from '@/constants/ExternalLinks';
 import { OPEN_SOURCE_NOTICES } from '@/constants/OpenSourceNotices';
 
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn() }));
@@ -16,6 +20,7 @@ describe('the legal disclaimer link', () => {
     await openLegalDisclaimer();
     expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(
       'https://app.nyccsda.org/legal.html',
+      IN_APP_BROWSER_OPTIONS,
     );
   });
 

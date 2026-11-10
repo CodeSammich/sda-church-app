@@ -26,7 +26,8 @@ const {
 } = require('../scripts/capture-ios-screens.cjs');
 
 const repoFile = (path: string) => readFileSync(resolve(__dirname, '..', path), 'utf8');
-const config = loadConfig();
+// The routine list, even if a one-off run's KEY_SCREENS_ONE_OFF is set (#692).
+const config = loadConfig(undefined, { oneOff: '' });
 const shots = planCaptures(config);
 
 describe('key screen list (test/screens/screens.json)', () => {
@@ -169,6 +170,191 @@ describe('App Store shots', () => {
     for (const list of Object.values(config.appStore) as string[][]) {
       expect(list.length).toBeGreaterThanOrEqual(3);
       expect(list.length).toBeLessThanOrEqual(10);
+    }
+  });
+});
+
+describe('one-off store sets (#692)', () => {
+  const {
+    ONE_OFF_ENV,
+    allScreens,
+    oneOffSet,
+    planSplitCaptures,
+    splitShotName,
+  } = require('../scripts/capture-ios-screens.cjs');
+  const { planChecks } = require('../scripts/check-screens.cjs');
+  const spanish = loadConfig(undefined, { oneOff: 'es' });
+  const names = (list: Array<{ name: string }>) => list.map((each) => each.name);
+
+  it('stay out of every routine run', () => {
+    expect(config.oneOffRun).toBeUndefined();
+    // A screen only one-off sets use has no variants of its own to take.
+    for (const screen of config.oneOff.screens) {
+      expect(screen).not.toHaveProperty('variants');
+      expect(screen).not.toHaveProperty('ipadVariants');
+      expect(config.screens.map((each: { name: string }) => each.name)).not.toContain(screen.name);
+    }
+    for (const platform of ['ios', 'ipad', 'android', 'android-tablet']) {
+      for (const shot of planCaptures(config, platform)) expect(shot.screen).not.toBe('bible-spanish-dual');
+    }
+    expect(planStoreCopies(config).filter((copy: { file: string }) => copy.file.includes('/es/'))).toEqual([]);
+    // The routine store lists name no one-off language.
+    for (const list of ['appStore', 'appStoreIpad', 'googlePlay', 'googlePlayTablet']) {
+      for (const language of Object.keys(config.oneOff.languages)) expect(config[list]).not.toHaveProperty(language);
+    }
+  });
+
+  it('take Spanish with the same screens and order as English, each ending with You', () => {
+    expect(oneOffSet(spanish, 'es', 'appStore')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'bible-spanish-audio-settings-es',
+      'bible-spanish-dual-es-dark',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    expect(oneOffSet(spanish, 'es', 'appStoreIpad')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    expect(oneOffSet(spanish, 'es', 'googlePlay')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'bible-spanish-audio-settings-es',
+      'bible-spanish-dual-es-dark',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    // Google Play's tablet list (#695) gets Spanish's set with no change of its own.
+    expect(oneOffSet(spanish, 'es', 'googlePlayTablet')).toEqual([
+      'home-es',
+      'bible-spanish-dual-es',
+      'explore-es',
+      'library-es',
+      'you-es',
+    ]);
+    for (const list of ['appStore', 'appStoreIpad', 'googlePlay', 'googlePlayTablet']) {
+      const set = oneOffSet(spanish, 'es', list);
+      expect(set).toHaveLength(config[list]['en-US'].length);
+      expect(set.at(-1)).toBe('you-es');
+    }
+  });
+
+  it('plans only their shots, in Spanish, with no split windows, and copies them in upload order', () => {
+    const iphone = planCaptures(spanish, 'ios');
+    expect(names(iphone)).toEqual(oneOffSet(spanish, 'es', 'appStore'));
+    // Spanish and English only, no Chinese (user, 2026-11-09): every shot in the
+    // Spanish interface, and no Chinese Bible open or beside it.
+    for (const platform of ['ios', 'ipad', 'android', 'android-tablet']) {
+      for (const shot of planCaptures(spanish, platform)) {
+        expect([shot.file, shot.settings.language]).toEqual([shot.file, 'es']);
+        expect([shot.file, `${shot.route} ${shot.settings.supportingTranslation}`]).not.toEqual([
+          shot.file,
+          expect.stringMatching(/cmn_/),
+        ]);
+      }
+    }
+    const dark = iphone.find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es-dark');
+    expect(dark.settings).toMatchObject({ theme: 'dark', language: 'es', supportingTranslation: 'BSB' });
+    expect(dark.url).toBe('sdachurchapp://bible?bookId=PSA&chapter=23&translationId=spa_r09');
+    // The iPad's in portrait, at its own 150% text, as the App Store takes them.
+    const ipad = planCaptures(spanish, 'ipad');
+    expect(names(ipad)).toEqual(oneOffSet(spanish, 'es', 'appStoreIpad'));
+    for (const shot of ipad) expect(shot.settings).toMatchObject({ orientation: 'portrait', textScale: null });
+    expect(names(planCaptures(spanish, 'android'))).toEqual(oneOffSet(spanish, 'es', 'googlePlay'));
+    const tablet = planCaptures(spanish, 'android-tablet');
+    expect(names(tablet)).toEqual(oneOffSet(spanish, 'es', 'googlePlayTablet'));
+    for (const shot of tablet) expect(shot.settings).toMatchObject({ orientation: 'portrait', textScale: null, language: 'es' });
+    expect(planStoreCopies(spanish, 'android-tablet').at(-1).file).toBe('google-play-tablet/es/05-you-es.png');
+    for (const window of spanish.android.splitWindows) expect(planSplitCaptures(spanish, window.width)).toEqual([]);
+    expect(planStoreCopies(spanish, 'ios')[1]).toEqual({
+      name: 'bible-spanish-dual-es',
+      platform: 'ios',
+      source: 'ios/bible-spanish-dual-es.png',
+      file: 'app-store/es/02-bible-spanish-dual-es.png',
+    });
+    expect(planStoreCopies(spanish, 'ipad').at(-1).file).toBe('app-store-ipad/es/05-you-es.png');
+    expect(planStoreCopies(spanish, 'android')[2].file).toBe('google-play/es/03-bible-spanish-audio-settings-es.png');
+    expect(planStoreCopies(spanish, 'ios')[2].file).toBe('app-store/es/03-bible-spanish-audio-settings-es.png');
+  });
+
+  it("checks each shot's text with its screen's rules, the Spanish Bible's in RVR09 and BSB", () => {
+    for (const platform of ['ios', 'ipad', 'android', 'android-tablet']) {
+      const checks = planChecks(spanish, platform);
+      expect(names(checks)).toEqual(names(planCaptures(spanish, platform)));
+      const bible = checks.find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es');
+      expect(bible.mustShowLines).toEqual(['RVR09', 'BSB', '^Salmos(\\b|v$)']);
+      const you = checks.find((shot: { name: string }) => shot.name === 'you-es');
+      expect(you.mustShowLines).toEqual(expect.arrayContaining(['^Contraste$', '^Alto contraste$']));
+    }
+    const audio = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'bible-spanish-audio-settings-es');
+    expect(audio.mustShowLines).toContain('Reina-Valera');
+    expect(audio.mustNotShowLines).toEqual(expect.arrayContaining(['^Cerrar$', 'Mandar.n', 'Canton.s']));
+    // On the tablet, RapidOCR's box for "Versículo" starts at its accent, 182
+    // points up, above where "Verse" starts; the verse button still counts.
+    const { checkShot } = require('../scripts/check-screens.cjs');
+    const tabletBible = planChecks(spanish, 'android-tablet').find((shot: { name: string }) => shot.name === 'bible-spanish-dual-es');
+    const read = [
+      { text: 'Versículo', box: [0.654, 0.872, 0.11, 0.018] },
+      ...['Inicio', 'Biblia', 'Explorar'].map((text, index) => ({ text, box: [0.23 + index * 0.16, 0.946, 0.06, 0.018] })),
+      ...['ES RVR09 + EN BSB', 'Salmos'].map((text) => ({ text, box: [0.5, 0.04, 0.2, 0.02] })),
+    ];
+    expect(checkShot(tabletBible, read)).toEqual([]);
+  });
+
+  it('fails a Spanish shot that shows Chinese, but not the icons RapidOCR reads as one character', () => {
+    const { checkShot } = require('../scripts/check-screens.cjs');
+    const you = planChecks(spanish, 'android').find((shot: { name: string }) => shot.name === 'you-es');
+    expect(you.mustNotShowLines).toContain('\\p{Script=Han}{2,}');
+    // The routine Spanish shots don't get it: it's the one-off sets' rule.
+    expect(planChecks(config, 'android').find((shot: { name: string }) => shot.name === 'explore-es').mustNotShowLines || []).not.toContain(
+      '\\p{Script=Han}{2,}',
+    );
+    const at = (text: string, top: number) => ({ text, box: [0.1, top, 0.3, 0.02] });
+    const tabs = ['Inicio', 'Biblia', 'Explorar'].map((text) => ({ text, box: [0.2, 0.93, 0.1, 0.02] }));
+    // What RapidOCR read from the Spanish shots' icons (#692): no failure.
+    const icons = [at('文A', 0.3), at('目Leer Versículo', 0.2), at('口', 0.05), at('十', 0.9)];
+    expect(checkShot(you, [...tabs, at('Contraste', 0.5), at('Alto contraste', 0.55), ...icons])).toEqual([]);
+    // English's Chinese-interface Bible, as Vision read it: fails.
+    const problems = checkShot(you, [...tabs, at('Contraste', 0.5), at('Alto contraste', 0.55), at('（大衛的詩。〕', 0.3)]);
+    expect(problems.join('\n')).toMatch(/Han/);
+  });
+
+  it('gives a store list added later its one-off set with no change', () => {
+    const later = { ...spanish, laterList: { 'en-US': ['home-default', 'bible-dual-default', 'you-default'] } };
+    expect(oneOffSet(later, 'es', 'laterList')).toEqual(['home-es', 'bible-spanish-dual-es', 'you-es']);
+    expect(oneOffSet(later, 'es', 'noSuchList')).toEqual([]);
+  });
+
+  it('reads its languages from the workflows, and refuses one screens.json lacks', () => {
+    const previous = process.env[ONE_OFF_ENV];
+    try {
+      process.env[ONE_OFF_ENV] = 'es';
+      expect(loadConfig().oneOffRun).toEqual(['es']);
+      process.env[ONE_OFF_ENV] = '';
+      expect(loadConfig().oneOffRun).toBeUndefined();
+    } finally {
+      if (previous === undefined) delete process.env[ONE_OFF_ENV];
+      else process.env[ONE_OFF_ENV] = previous;
+    }
+    expect(() => loadConfig(undefined, { oneOff: 'ko' })).toThrow('No one-off language "ko"');
+    expect(() => splitShotName(config, 'home-nope')).toThrow('make the shot "home-nope"');
+    expect(splitShotName(spanish, 'bible-spanish-dual-es-dark')).toMatchObject({ variant: 'es-dark' });
+    expect(allScreens(spanish).map((screen: { name: string }) => screen.name)).toContain('bible-spanish-dual');
+    // Both workflows take the languages by hand, and pass them to every step;
+    // a pull request has no inputs, so the release PR's runs stay as they were.
+    for (const file of ['ios-key-screens.yml', 'android-key-screens.yml']) {
+      const workflow = repoFile(`.github/workflows/${file}`);
+      const trigger = workflow.slice(workflow.indexOf('\non:'), workflow.indexOf('\npermissions:'));
+      expect(trigger).toMatch(/\n  workflow_dispatch:\n    inputs:\n      one_off:\n/);
+      expect(trigger).toMatch(/\n        type: string\n        default: ''\n/);
+      expect(workflow).toContain(`\nenv:\n  ${ONE_OFF_ENV}: \${{ inputs.one_off }}\n`);
+      expect(workflow).not.toMatch(/run:[^\n]*inputs\.one_off/);
     }
   });
 });
@@ -699,9 +885,9 @@ describe('iPad layout checks (#324)', () => {
     expect(await checkPopupWidth(textSize, wide)).toEqual(['the popup is about 1238 points wide, more than 560']);
     // A page with no popup is one colour edge to edge.
     expect(await checkPopupWidth(shot('home-landscape'), wide)).toEqual([]);
-    // The contrast question after an update has no popup= in its path, so the
-    // list marks it. First-launch setup fills the screen (#681): no popup.
-    expect(await checkPopupWidth(shot('whats-new-landscape'), wide)).toHaveLength(1);
+    // First-launch setup fills the screen (#681), and from #708 so does the
+    // contrast question after an update: no popup.
+    expect(await checkPopupWidth(shot('whats-new-landscape'), wide)).toEqual([]);
     expect(await checkPopupWidth(shot('setup-landscape'), wide)).toEqual([]);
     expect(await checkPopupWidth(shot('offline-bible-audio-narrator-landscape'), wide)).toHaveLength(1);
   });
@@ -1508,6 +1694,173 @@ describe('Android key screens (#372)', () => {
   });
 });
 
+describe('Android tablet key screens (#695)', () => {
+  const tablet = planCaptures(config, 'android-tablet');
+  const tabletNames = tablet.map((shot: { name: string }) => shot.name);
+  const { deviceFor, deviceSettings, planShots, storeCopiesFor, writePlayCopy, orientationOf } = require('../scripts/capture-android-screens.cjs');
+  const { androidWindow, checkDockCard, checkIpadLayout, checkShot, columnEdges, planChecks, regionsFor, tabletPoints } = require('../scripts/check-screens.cjs');
+  const { TABLET_MIN_SCREEN_SIDE } = require('../constants/AppPreferences');
+  const { mkdtempSync } = require('node:fs');
+  const { tmpdir } = require('node:os');
+  const sharp = require('sharp');
+
+  it('takes the screens the tablet layout changes most, named android-tablet/<screen>-<variant>.png', () => {
+    expect([...new Set(tablet.map((shot: { screen: string }) => shot.screen))].sort()).toEqual(
+      ['bible-cuv-cantonese', 'bible-cuvs', 'bible-dual', 'explore', 'home', 'library', 'setup', 'you'],
+    );
+    for (const shot of tablet) expect(shot.file).toBe(`android-tablet/${shot.name}.png`);
+    // Each turned to landscape too, where the content column shows, but the
+    // two Bible shots only Chinese listings use.
+    for (const screen of ['setup', 'home', 'bible-dual', 'explore', 'library', 'you']) {
+      expect(tabletNames).toContain(`${screen}-landscape`);
+    }
+    // Upright first, so the emulator turns only once.
+    const turned = tablet.map((shot: { settings: { orientation: string } }) => shot.settings.orientation);
+    expect(turned.slice(turned.indexOf('landscape')).every((value: string) => value === 'landscape')).toBe(true);
+    expect(turned.filter((value: string) => value === 'portrait').length).toBeGreaterThan(0);
+    // The phone's own lists don't change.
+    expect(planCaptures(config, 'android').some((shot: { settings: object }) => 'orientation' in shot.settings)).toBe(false);
+  });
+
+  it("saves no text size or orientation, so its shots show a tablet's own 150%, upright or turned", () => {
+    const landscape = tablet.find((shot: { name: string }) => shot.name === 'home-landscape');
+    expect(landscape.settings).toMatchObject({ orientation: 'landscape', textScale: null, fontScale: 1, displayScale: 1 });
+    const manifest = buildManifest(landscape.settings, landscape.route);
+    expect(manifest).not.toHaveProperty('user-text-scale');
+    expect(Object.values(manifest)).not.toContain('landscape');
+    // The emulator turns instead: a quarter turn for landscape, upright otherwise.
+    expect(deviceSettings(landscape.settings, 324)).toEqual({ night: 'no', fontScale: '1', density: '324', rotation: '1' });
+    expect(deviceSettings(tablet[0].settings, 324).rotation).toBe('0');
+    // The phone is never turned.
+    expect(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1 }, 300)).not.toHaveProperty('rotation');
+    // The You tab confirms the 150%, on the tablet only.
+    const you = planChecks(config, 'android-tablet').find((each: { name: string }) => each.name === 'you-default');
+    expect(checkShot(you, [{ text: 'Current: 125%', box: [0.1, 0.3, 0.2, 0.02] }])).toContain('no line matches /^Current: 150%$/');
+    const phoneYou = planChecks(config, 'android').find((each: { name: string }) => each.name === 'you-default');
+    expect(checkShot(phoneYou, []).join()).not.toContain('150%');
+  });
+
+  it("runs on an emulator of Google Play's tablet shape, as wide as a 10-inch tablet", () => {
+    const device = config.android.tablet;
+    expect(deviceFor(config, { tablet: true })).toBe(device);
+    expect(planShots(config, { tablet: true })).toEqual(tablet);
+    // Play's tablet and Chromebook screenshots: 9:16 upright, each side 1,080
+    // to 7,680 pixels, and at least 1080 × 1920 to be recommended. Its
+    // general rule caps a side at 3,840.
+    expect(device.height * 9).toBe(device.width * 16);
+    expect(device.width).toBeGreaterThanOrEqual(1080);
+    expect(device.height).toBeGreaterThanOrEqual(1920);
+    expect(device.height).toBeLessThanOrEqual(3840);
+    // 800 dp wide, as the Pixel Tablet and other 10-inch tablets are upright,
+    // so a tablet, not a phone, either way up (TABLET_MIN_SCREEN_SIDE).
+    const points = tabletPoints(device);
+    expect(points.width).toBe(800);
+    expect(Math.min(points.width, points.height)).toBeGreaterThanOrEqual(TABLET_MIN_SCREEN_SIDE);
+  });
+
+  it('lists Google Play tablet shots in each phone language, upright, ending with You, all captured on the tablet', () => {
+    // As the phone's sets: zh-HK's listing shows zh-TW's.
+    expect(Object.keys(config.googlePlayTablet)).toEqual(Object.keys(config.googlePlay));
+    for (const list of Object.values(config.googlePlayTablet) as string[][]) {
+      // Play takes 4 to 8 for tablets, and recommends apps with at least 4.
+      expect(list.length).toBeGreaterThanOrEqual(4);
+      expect(list.length).toBeLessThanOrEqual(8);
+      expect(list.at(-1)).toMatch(/^you-/);
+      for (const name of list) {
+        expect(tabletNames).toContain(name);
+        // A landscape shot among upright ones shows smaller (#681).
+        expect(tablet.find((shot: { name: string }) => shot.name === name).settings.orientation).toBe('portrait');
+      }
+    }
+    const { copies, size, sizeName } = storeCopiesFor(config, { tablet: true });
+    expect(copies).toEqual(planStoreCopies(config, 'android-tablet'));
+    expect([size, sizeName]).toEqual([config.android.tablet, 'android.tablet']);
+    for (const copy of copies) {
+      expect(copy.source).toBe(`android-tablet/${copy.name}.png`);
+      expect(copy.file).toMatch(/^google-play-tablet\/(en-US|zh-TW|zh-CN)\/\d{2}-/);
+    }
+    expect(copies[0].file).toBe('google-play-tablet/en-US/01-home-default.png');
+    expect(storeCopiesFor(config, { group: 'home' }).copies).toEqual([]);
+  });
+
+  it("saves Play tablet copies at the tablet's size, and refuses a turned or other-size shot", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'google-play-tablet-'));
+    const make = async (name: string, width: number, height: number) => {
+      const file = join(dir, name);
+      await sharp({ create: { width, height, channels: 4, background: { r: 10, g: 20, b: 30, alpha: 1 } } }).png().toFile(file);
+      return file;
+    };
+    const { width, height } = config.android.tablet;
+    const upright = await make('upright.png', width, height);
+    await writePlayCopy(upright, join(dir, 'copy.png'), config.android.tablet, 'android.tablet');
+    expect(await sharp(join(dir, 'copy.png')).metadata()).toMatchObject({ width, height, hasAlpha: false });
+    const turned = await make('turned.png', height, width);
+    await expect(writePlayCopy(turned, join(dir, 'no.png'), config.android.tablet, 'android.tablet')).rejects.toThrow(
+      `not Google Play's ${width} × ${height}; check android.tablet`,
+    );
+    expect(await orientationOf(upright)).toBe('portrait');
+    expect(await orientationOf(turned)).toBe('landscape');
+  });
+
+  it("checks each shot with its screen's rules, the labels where the tablet puts them, and the iPad's column", () => {
+    const checks = planChecks(config, 'android-tablet');
+    expect(checks.map((shot: { name: string }) => shot.name)).toEqual(tabletNames);
+    const shot = (name: string) => checks.find((each: { name: string }) => each.name === name);
+    expect(shot('bible-dual-default').mustShowLines).toEqual(expect.arrayContaining(['BSB', '[Cc]UV']));
+    // The window turns with the tablet: 800 × 1422 points upright, 1422 × 800 turned.
+    expect(androidWindow(shot('home-default'))).toEqual({ width: 800, height: 1422.2222222222222 });
+    expect(androidWindow(shot('home-landscape'))).toEqual({ width: 1422.2222222222222, height: 800 });
+    expect(androidWindow(shots[0])).toBeNull();
+    // The tab labels about 58 points up from the bottom, either way up.
+    for (const name of ['home-default', 'home-landscape']) {
+      const { height } = androidWindow(shot(name));
+      const labels = ['Home', 'Bible', 'Explore', 'You'].map((text, index) => ({ text, box: [0.3 + index * 0.1, 1 - 66 / height, 0.05, 0.01] }));
+      expect(checkShot(shot(name), labels).filter((problem: string) => problem.startsWith('tab labels'))).toEqual([]);
+      expect(regionsFor(shot(name)).tabs[1]).toBeGreaterThan(1 - 58 / height);
+    }
+    // Upright, the 864-point column at 150% fills the 800-point screen; turned, it's centred.
+    expect(columnEdges(shot('home-default'))).toEqual([0, 1]);
+    const [left, right] = columnEdges(shot('home-landscape'));
+    expect(right - left).toBeCloseTo(864 / 1422.2, 3);
+    expect(checkIpadLayout(shot('home-landscape'), [{ text: 'Read Verse', box: [0.05, 0.5, 0.2, 0.02] }])).toHaveLength(1);
+    expect(checkIpadLayout(shot('home-landscape'), [{ text: 'Read Verse', box: [0.3, 0.5, 0.2, 0.02] }])).toEqual([]);
+    // The Bible's header spans the screen, as on the iPad: its translation
+    // button sat 49 points down, at 79% to 88% across, on the first run.
+    expect(checkIpadLayout(shot('bible-dual-landscape'), [{ text: 'BSB +', box: [0.788, 0.061, 0.041, 0.028] }])).toEqual([]);
+    expect(checkIpadLayout(shot('bible-dual-landscape'), [{ text: 'He leads me', box: [0.788, 0.3, 0.1, 0.03] }])).toHaveLength(1);
+  });
+
+  it("checks the Bible card's edges on the tablet's Bible shots", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tablet-dock-'));
+    const checks = planChecks(config, 'android-tablet');
+    const bible = checks.find((each: { name: string }) => each.name === 'bible-dual-default');
+    const { width, height } = androidWindow(bible);
+    const scale = config.android.tablet.width / width;
+    // The 640-point card, centred, with a blue button across its right edge.
+    const card = Math.round(640 * scale);
+    const left = Math.round(((width - 640) / 2) * scale);
+    const button = await sharp({ create: { width: 120, height: 120, channels: 3, background: { r: 227, g: 242, b: 253 } } }).png().toBuffer();
+    const file = join(dir, 'crossing.png');
+    await sharp({ create: { width: config.android.tablet.width, height: config.android.tablet.height, channels: 3, background: { r: 242, g: 230, b: 223 } } })
+      .composite([
+        { input: await sharp({ create: { width: card, height: Math.round(200 * scale), channels: 3, background: { r: 255, g: 255, b: 255 } } }).png().toBuffer(), left, top: Math.round((height - 290) * scale) },
+        { input: button, left: left + card - 60, top: Math.round((height - 250) * scale) },
+      ])
+      .png()
+      .toFile(file);
+    expect(await checkDockCard(bible, file)).toEqual(["a Bible card control crosses the card's right edge"]);
+    const home = checks.find((each: { name: string }) => each.name === 'home-default');
+    expect(await checkDockCard(home, file)).toEqual([]);
+  });
+
+  it('keeps the tablet batch within the same reminder to prune as the groups', () => {
+    // Its runner starts capturing when the app is built, as the groups' do,
+    // so this keeps it near their times.
+    const seconds = tablet.reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+    expect({ minutes: Math.round(seconds / 6) / 10, over: seconds > 480 }).toMatchObject({ over: false });
+  });
+});
+
 describe('Android key screens workflow (#372)', () => {
   const workflow = repoFile('.github/workflows/android-key-screens.yml');
   const preview = repoFile('.github/workflows/ios-key-screens.yml');
@@ -1559,7 +1912,7 @@ describe('Android key screens workflow (#372)', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(capture)![1].split(', ');
     expect(groups).toEqual(Object.keys(config.groups));
     expect(capture).toContain(
-      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.store && '--store' || format('--group {0}', matrix.group)) }}",
+      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.store && '--store' || (matrix.tablet && '--tablet' || format('--group {0}', matrix.group))) }}",
     );
     expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+ \$PART\n/);
     // The sixth runner takes the Google Play shots, and has no group to check.
@@ -1567,7 +1920,7 @@ describe('Android key screens workflow (#372)', () => {
     expect(capture.match(/if: \$\{\{ !cancelled\(\) && !matrix\.store \}\}/g)).toHaveLength(2);
     expect(capture).toContain("process.env.STORE === 'true' ? googlePlay : phone");
     expect(capture).toContain(
-      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || format('--platform android --group {0}', matrix.group) }}",
+      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.tablet && '--platform android-tablet' || format('--platform android --group {0}', matrix.group)) }}",
     );
     expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+\$PART\n/);
     // Batches 7 to 10: an iPad's split windows (#324), one each.
@@ -1575,6 +1928,11 @@ describe('Android key screens workflow (#372)', () => {
     widths.forEach((width: number, index: number) => {
       expect(capture).toContain(`- { group: split-${width}, batch: ${index + 7}, split: ${width} }`);
     });
+    // Batch 11: the Android tablet (#695), on an emulator of its size, which
+    // captures and checks its own shots.
+    expect(capture).toContain('- { group: tablet, batch: 11, tablet: true }');
+    expect(capture).toContain("TABLET: ${{ matrix.tablet && 'true' || 'false' }}");
+    expect(capture).toContain("process.env.TABLET === 'true' ? tablet : ");
     expect(capture).toContain('pip" install --quiet -r scripts/ocr-requirements.txt');
     expect(capture.indexOf('capture-android-screens.cjs')).toBeLessThan(capture.indexOf('--platform android'));
     expect(capture).toContain('name: android-key-screens-${{ github.run_id }}-${{ matrix.group }}');
@@ -1587,7 +1945,7 @@ describe('Android key screens workflow (#372)', () => {
     expect(join).toContain('needs: [android-build, android-capture]');
     expect(join).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(join).toContain("needs.android-capture.result != 'success'");
-    expect(join).toContain('merge-key-screens.cjs --platform android --out');
+    expect(join).toContain('merge-key-screens.cjs --platform android,android-tablet --out');
     // The iPhone workflow's review comment finds the joined artifact by this name.
     expect(join).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}");
   });
@@ -1599,9 +1957,16 @@ describe('Android key screens workflow (#372)', () => {
     expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+-android-[0-9]+$")');
     expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+-google-play$")');
     // Packed for Chrome as the iPhone's are, with the Google Play copies apart.
-    expect(workflow).toContain('--devices android --store google-play');
+    expect(workflow).toContain('--devices android,android-tablet --store google-play,google-play-tablet');
     expect(workflow).toContain('-android-1\n          path: ${{ runner.temp }}/review/android-1/\n');
     expect(workflow).toContain('-google-play\n          path: ${{ runner.temp }}/review/google-play/\n');
+    // The tablet's (#695), in as many parts as a device may need, and its
+    // Google Play copies apart from the phone's, which with them would pass 50 MB.
+    const { MAX_PARTS } = require('../scripts/pack-review-downloads.cjs');
+    for (let part = 1; part <= MAX_PARTS; part++) {
+      expect(workflow).toContain(`-android-tablet-${part}\n          path: \${{ runner.temp }}/review/android-tablet-${part}/\n`);
+    }
+    expect(workflow).toContain('-google-play-tablet\n          path: ${{ runner.temp }}/review/google-play-tablet/\n');
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
   });
 

@@ -46,7 +46,8 @@ on every push to `main`, is kept for browser testing and previews; see
   - [Android preview APK](#android-preview-apk)
   - [iOS key screens](#ios-key-screens-unsigned-simulator-builds), including the
     [key screens](#key-screens) on the iPhone and
-    [on Android](#android-key-screens)
+    [on Android](#android-key-screens), and
+    [one-off store sets](#one-off-store-sets) for a newer language
   - [Android audio test on release PRs](#android-audio-test-on-release-prs)
 - [Automatic store uploads](#automatic-store-uploads)
 - [Versions and maintenance](#versions-and-maintenance), including
@@ -829,6 +830,10 @@ The review comment links every part. On 1.7.0's run the downloads were:
 | Android | 167 | 27 MB |
 | Google Play copies | 13 | 7 MB |
 
+The Android tablet's (#695) are two more: its 22 shots came to 8.3 MB and its 15 Google
+Play copies to 19.8 MB on their first full run, apart from the phone's 14.0 MB of copies
+so neither passes 50 MB as sets are added.
+
 Each workflow uploads at most three parts a device. The join fails if a device would need
 a fourth, or a download would pass 50 MB. Then add an upload step for the next part in
 `ios-key-screens.yml` or `android-key-screens.yml`, and raise `MAX_PARTS` in
@@ -886,7 +891,7 @@ iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
    opens the popup for `verseStart` once the chapter loads, or its
    `popup=audio-settings`, once the chapter has audio (#372), or its
    `popup=audio-download-tip`, the same popup as the tip opens it when playback keeps
-   stopping to load (#595), or Sabbath School's
+   stopping to load (#595), or its `popup=book`, the book list (#723), or Sabbath School's
    `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
    a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
@@ -1142,11 +1147,17 @@ only with a read-only token and reads no secret.
   `mustShowLines` are written for the phone, so they're left out. A screen's
   `variantRules` for a window, such as `w320`, add rules of its own, such as the book's
   name in the Bible card's pill.
+- **Android key screens batch 11** (`tablet`) takes the Android tablet's shots, on an
+  emulator of a 10-inch tablet's size (below): the screens that list
+  `androidTabletVariants`, upright and then turned. `capture-android-screens.cjs
+  --tablet` saves `screens/android-tablet/<screen>-<variant>.png` and the Google Play
+  tablet copies, and `check-screens.cjs --platform android-tablet` checks them.
 - **Android key screens join** joins the batches into
   `android-key-screens-<pr>-<run>-android-1` (and `-android-2` and so on if the shots need
-  more than one) and the Google Play copies, `android-key-screens-<pr>-<run>-google-play`,
-  each under 50 MB ([Downloads under 50 MB](#downloads-under-50-mb)), and fails if any
-  group failed.
+  more than one), the tablet's `-android-tablet-1`, and the Google Play copies,
+  `android-key-screens-<pr>-<run>-google-play` for the phone and `-google-play-tablet`
+  for the tablet, each under 50 MB ([Downloads under 50 MB](#downloads-under-50-mb)), and
+  fails if any group failed.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
 workflow's run on the same commit. It then links every download of both, says whether both
@@ -1186,6 +1197,34 @@ numbers.
 phone's is 2.22:1. So the Play shots listed under `googlePlay` are taken on a second
 emulator, 1080 × 1920 at 420 dpi (`android.googlePlay`), by
 `capture-android-screens.cjs --store`.
+
+**The tablet (#695).** On Android, as on the iPad, the app's tablet layout switches on
+when the screen's shorter side is at least 600 dp (`TABLET_MIN_SCREEN_SIDE`): the
+tablet's larger capsule, the content column, text that starts at 150%, and a screen that
+turns. The phone, Play's size, and the split windows don't show it as a member's tablet
+does, so batch 11 has an emulator of its own, `android.tablet`: a 10-inch tablet held
+upright, 800 dp wide as the Pixel Tablet and other 10-inch tablets at 1280 × 800 dp are,
+but 9:16 rather than their 16:10, at 1620 × 2880 and 324 dpi (800 × 1422 dp). Google
+Play's tablet and Chromebook screenshots take 9:16 upright or 16:9 turned, each side
+1,080 to 7,680 pixels, and the app needs at least four at 1080 × 1920 or more to be
+recommended ([preview assets](https://support.google.com/googleplay/android-developer/answer/9866151)).
+The app's tablet layout follows the screen's width and its shorter side, not its
+height, so one emulator does both jobs: it lays out as a real tablet does, with a little
+more of each page in view, and its upright shots are the store copies, checked by the
+same rules.
+
+It takes the screens the tablet layout changes most, as on the iPad: Home, the Bible
+with its card, Explore, the Library, You, and setup. Each is taken upright in the
+languages the Google Play sets need (setup in English only), and then turned to
+landscape in English (`user_rotation`, since the app turns on a tablet): 22 shots, about
+as long as the busiest group takes. The capture
+fails a shot that isn't turned the way its variant asks. The checks are each screen's
+rules, with the tab labels and chapter controls where the split windows put them,
+measured up from the bottom, and the iPad's layout checks: the content column, which
+fills the screen upright and is centred when turned, no text at the screen's edge, and
+no control crossing the Bible card's edges. You must show Text size at 150%, the size a
+tablet starts at, since the tablet's shots save none. A rule written for
+`["ios", "android"]` leaves the tablet out; add `"android-tablet"` where it applies.
 
 **Settings before each shot.** Android keeps the app's storage in a SQLite database,
 `databases/RKStorage` in the app's private folder, not in a file the runner can write.
@@ -1232,21 +1271,73 @@ The phone's screen holds less than the iPhone's, so a few lines fall below the f
 there, such as the Sabbath School age groups. A rule written
 `{ "line": …, "platforms": ["ios"] }` applies on those platforms only.
 
-**Google Play screenshots.** The shots listed under `googlePlay` (`en-US` and `zh-TW`,
-at most 8 each) are saved, numbered in upload order, to
+**Google Play screenshots.** The shots listed under `googlePlay` (`en-US`, `zh-TW`,
+and `zh-CN`, at most 8 each) are saved, numbered in upload order, to
 `screens/google-play/<language>/`, at 1080 × 1920 and without transparency. Their
 emulator's screen is that size, so a copy is the shot itself; a shot of another size
-fails rather than being stretched.
+fails rather than being stretched. The tablet's, listed under `googlePlayTablet` in the
+same languages (4 to 8 each, upright, each ending with You), go the same way to
+`screens/google-play-tablet/<language>/` at 1620 × 2880; a turned shot fails there.
+A later language's tablet set comes from a [one-off run](#one-off-store-sets), as its
+other store sets do, not from routine runs.
 
 **On your own emulator.** With a `google_apis` image (Android Studio's "Google APIs",
 not "Google Play") and the phone's screen size and density (the capture refuses any
 other size), build with `EXPO_PUBLIC_KEY_SCREENS=1 npm run
 build:android:apk:debug:intel`, install it, and run `node
 scripts/capture-android-screens.cjs --out <folder> [--group <group>]`, or `--store` on a
-1080 × 1920 emulator for the Google Play shots. `ADB` names the
+1080 × 1920 emulator for the Google Play shots, or `--tablet` on a 1620 × 2880 one at
+324 dpi for the tablet's. `ADB` names the
 adb to use, such as `adb.exe` from WSL. On a reused `android/` folder, delete
 `android/app/build/generated/assets/react/release` first: Gradle doesn't notice a
 changed `EXPO_PUBLIC_*` value and keeps the old JavaScript.
+
+#### One-off store sets
+
+A language that comes to the app after English and Chinese, Spanish first, gets its
+store screenshots once, by hand, and no shots in the routine runs that every release PR
+waits for (#692, #241). Each such language is under `oneOff.languages` in
+`test/screens/screens.json`:
+
+- `from`: the store sets it follows, English's (`en-US`).
+- `variants`: the variant each of English's becomes, such as `default` to `es` and
+  `dark` to `es-dark`.
+- `screens`: a screen to swap, such as `bible-dual` (the BSB with the CUV) for
+  `bible-spanish-dual` (Reina-Valera 1909 with the BSB, as a Spanish reader first sees
+  the Bible). A screen that only one-off sets use goes under `oneOff.screens`, with no
+  variants of its own, so routine runs never take it.
+
+So each store list's set for the language is English's, with the same screens in the
+same order, ending with You, and a store list added later, such as Google Play's tablet
+sets (#695), gets one with no change, only another run. Spanish's sets show Spanish and
+English only, no Chinese (user, 2026-11-09): where English's third shot shows Chinese,
+the Bible with the Traditional Chinese interface on the App Store and the CUV's Mandarin
+and Cantonese audio on Google Play, Spanish's shows the Spanish Bible's audio settings
+(`bible-spanish-audio-settings`).
+
+To take a language's sets, start both workflows by hand on a branch whose app code is
+what's live in the stores, with **one_off** set to the language's key, such as `es`:
+
+```bash
+gh workflow run ios-key-screens.yml --ref <branch> -f one_off=es
+gh workflow run android-key-screens.yml --ref <branch> -f one_off=es
+```
+
+The workflows pass it to every step as `KEY_SCREENS_ONE_OFF`, which every script that
+plans the shots reads (`loadConfig` in `scripts/capture-ios-screens.cjs`). The run then
+takes only that language's shots, in place of every routine shot, on the same runners and
+groups, the Android tablet's batch included; the split-window batches take none. It
+checks their text with their screens' rules, and saves the store copies in the usual
+downloads, under `screens/app-store/es/`, `screens/app-store-ipad/es/`,
+`screens/google-play/es/`, and `screens/google-play-tablet/es/`. A pull request has no
+inputs, so the release PR's runs don't change.
+
+Then look at every shot yourself: the language's text must show, and nothing that
+shouldn't, such as members' names, or a hymnal in that language when the app has none.
+Copy the sets into `docs/store-assets/` beside English's, strip their metadata, rebuild
+the language's App Store header and Play feature graphic, and upload them; see
+[Store assets](../store-assets/README.md). The sets stay as taken until someone runs this
+again: a release's run doesn't retake them.
 
 ### Android audio test on release PRs
 

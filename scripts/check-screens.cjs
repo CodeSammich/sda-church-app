@@ -29,7 +29,10 @@
  *   shelves scroll sideways to the screen's edge, skips the first two;
  * - at the iPad's split window widths on Android, no Bible card control
  *   crosses the card's edge (#681), and a screen's `variantRules` for that
- *   window, such as `w320`, apply, such as the book's name in its pill.
+ *   window, such as `w320`, apply, such as the book's name in its pill;
+ * - on the Android tablet (#695), its shots get their screens' rules, as the
+ *   iPad's do, and the layout checks of the iPad and the split windows: the
+ *   content column, text at the edge, a popup's width, and the Bible card's.
  *
  * Where a label is missing, it takes a closer look at that strip of the screen,
  * enlarged and with more contrast, before reporting it.
@@ -42,6 +45,9 @@
  *                                                         Checks the Android shots, android/*.png
  *   node scripts/check-screens.cjs --dir <screens folder> --platform ipad
  *                                                         Checks the iPad shots, ipad/*.png (#324)
+ *   node scripts/check-screens.cjs --dir <screens folder> --platform android-tablet
+ *                                                         Checks the Android tablet shots,
+ *                                                         android-tablet/*.png (#695)
  *   node scripts/check-screens.cjs --dir <screens folder> --platform all
  *                                                         Checks them all, as in the joined artifacts
  *   node scripts/check-screens.cjs --dir <screens folder> --split 504
@@ -52,10 +58,10 @@
  * summary. Exits 1 if any rule fails.
  */
 const { execFileSync } = require('node:child_process');
-const { appendFileSync, existsSync, mkdtempSync, writeFileSync } = require('node:fs');
+const { appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
-const { PLATFORMS, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup, variantsOn } = require('./capture-ios-screens.cjs');
+const { PLATFORMS, allScreens, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup } = require('./capture-ios-screens.cjs');
 
 // Vision's languages for each app language, most important first. Bible screens
 // in English also show Chinese, so English reads both.
@@ -122,11 +128,16 @@ const REGIONS = REGIONS_BY_PLATFORM.ios;
 // first-launch setup, or a value the app failed to fill in. On Android, also
 // the system's crash and not-responding dialogs.
 const NEVER_SHOWN = ['Open in', 'Get Started', 'undefined', 'NaN', '[object Object]'];
+const ANDROID_NEVER_SHOWN = [...NEVER_SHOWN, "isn't responding", 'keeps stopping', 'has stopped'];
 const NEVER_SHOWN_BY_PLATFORM = {
   ios: NEVER_SHOWN,
   ipad: NEVER_SHOWN,
-  android: [...NEVER_SHOWN, "isn't responding", 'keeps stopping', 'has stopped'],
+  android: ANDROID_NEVER_SHOWN,
+  'android-tablet': ANDROID_NEVER_SHOWN,
 };
+
+// The platforms read by RapidOCR on Linux, rather than by Vision on a Mac.
+const RAPID_OCR_PLATFORMS = ['android', 'android-tablet'];
 
 const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const isChinese = (text) => /\p{Script=Han}/u.test(text);
@@ -189,23 +200,47 @@ const forPlatform = (rules, platform) =>
   (rules || []).filter((rule) => typeof rule === 'string' || !rule.platforms || rule.platforms.includes(platform));
 
 /**
- * Where the labels sit in an Android split window (#324), measured in points
- * from its bottom on the emulators at each width: the tab labels about 58 up,
- * the chapter controls about 148, or 72 while reading. A page's content runs
- * from below the status bar to the tab bar.
+ * Where the labels sit in an Android split window (#324), or on the Android
+ * tablet (#695), measured in points from its bottom on the emulators at each
+ * width: the tab labels about 58 up, the chapter controls about 148, or 72
+ * while reading. A line's box starts at its tallest letter, so the chapter
+ * controls' band reaches 195 up: Spanish's "Versículo", its accent included,
+ * started 182 up on the tablet (#692). A page's content runs from `contentTop` points down to the
+ * tab bar: below the status bar in a split window, whose header fits in the
+ * column, and below the header too on the tablet, whose header's buttons
+ * span the screen when it's turned, as on the iPad.
  */
-const splitRegions = ({ height }) => {
+const splitRegions = ({ height }, contentTop = 40) => {
   const up = (points) => 1 - points / height;
   return {
     tabs: [up(80), up(8)],
-    chapterControls: [up(175), up(120)],
+    chapterControls: [up(195), up(120)],
     chapterControlsReading: [up(100), up(50)],
-    content: [40 / height, up(80)],
+    content: [contentTop / height, up(80)],
   };
 };
 
+// The Android tablet's status bar and header, in points: its header's text
+// sat 49 to 71 points down when turned (#695).
+const TABLET_HEADER_BOTTOM = 96;
+
+/**
+ * An Android shot's window in points, as the shot was turned: a split
+ * window's (#324), or the tablet's screen (#695). Null for the other devices.
+ */
+const androidWindow = (shot) => {
+  if (shot.split) return shot.split;
+  if (shot.platform !== 'android-tablet') return null;
+  const { width, height } = shot.points;
+  return shot.settings.orientation === 'landscape' ? { width: height, height: width } : { width, height };
+};
+
 /** Where a shot's labels belong: its device's regions, turned as the shot was. */
-const regionsFor = (shot) => (shot.split ? splitRegions(shot.split) : REGIONS_BY_PLATFORM[screenOf(shot)]);
+const regionsFor = (shot) => {
+  const window = androidWindow(shot);
+  if (!window) return REGIONS_BY_PLATFORM[screenOf(shot)];
+  return shot.split ? splitRegions(window) : splitRegions(window, TABLET_HEADER_BOTTOM);
+};
 
 /** Returns what's wrong with one shot, given the lines of text read from it. */
 const checkShot = (shot, lines) => {
@@ -315,15 +350,16 @@ const POPUP_SURFACE = [0xf2, 0xe6, 0xdf];
 
 const percent = (fraction) => `${Math.round(fraction * 100)}%`;
 
-/** The iPad's width in points, as the shot was turned, or a split window's. */
+/** The iPad's width in points, as the shot was turned, or an Android window's. */
 const widthInPoints = (shot) => {
-  if (shot.split) return shot.split.width;
+  const window = androidWindow(shot);
+  if (window) return window.width;
   return screenOf(shot) === 'ipad-landscape' ? shot.points.height : shot.points.width;
 };
 
 /** The content column's left and right edges, as fractions of the width, or null to skip. */
 const columnEdges = (shot) => {
-  const fontScale = shot.split ? shot.settings.fontScale : IOS_FONT_SCALES[shot.settings.iosTextSize];
+  const fontScale = androidWindow(shot) ? shot.settings.fontScale : IOS_FONT_SCALES[shot.settings.iosTextSize];
   if (!fontScale) return null;
   const width = widthInPoints(shot);
   const scale = (shot.settings.textScale ?? TABLET_TEXT_SCALE) * fontScale;
@@ -338,7 +374,7 @@ const columnEdges = (shot) => {
  * off.
  */
 const checkIpadLayout = (shot, lines) => {
-  if ((shot.platform !== 'ipad' && !shot.split) || shot.wideContent) return [];
+  if ((shot.platform !== 'ipad' && !androidWindow(shot)) || shot.wideContent) return [];
   const problems = [];
   // Words and numbers only: iPadOS draws its window's resize grip in the
   // bottom-right corner, which Vision reads as "/".
@@ -419,7 +455,7 @@ const surfaceWidth = async (file, color = POPUP_SURFACE, { tolerance = 10, gap =
  * dimmed page is too close to the surface's colour.
  */
 const checkPopupWidth = async (shot, file) => {
-  if ((shot.platform !== 'ipad' && !shot.split) || shot.wideContent || !showsPopup(shot) || shot.settings.theme === 'dark') {
+  if ((shot.platform !== 'ipad' && !androidWindow(shot)) || shot.wideContent || !showsPopup(shot) || shot.settings.theme === 'dark') {
     return [];
   }
   const width = widthInPoints(shot);
@@ -436,18 +472,19 @@ const DOCK_CARD_MAX_WIDTH = 640;
 
 /**
  * Whether a control crosses the Bible card's left or right edge in an Android
- * split window (#681): at 320 points the audio row's sleep timer ran past the
- * card's right edge, which cut it off. The card is white, and what's around it
- * warm or grey, so blue just inside an edge, a control's fill or icon, means
- * one crosses it. It looks from 110 to 300 points up from the window's bottom,
- * where the card sits with or without the tab bar below it. Light theme only,
- * as the split shots are.
+ * split window (#681), or on the Android tablet (#695): at 320 points the
+ * audio row's sleep timer ran past the card's right edge, which cut it off.
+ * The card is white, and what's around it warm or grey, so blue just inside
+ * an edge, a control's fill or icon, means one crosses it. It looks from 110
+ * to 300 points up from the window's bottom, where the card sits with or
+ * without the tab bar below it. Light theme only, as the split shots are.
  */
 const checkDockCard = async (shot, file) => {
-  if (!shot.split || !shot.route.startsWith('bible') || showsPopup(shot) || shot.settings.theme === 'dark') return [];
+  const window = androidWindow(shot);
+  if (!window || !shot.route.startsWith('bible') || showsPopup(shot) || shot.settings.theme === 'dark') return [];
   const sharp = require('sharp');
   const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-  const { width, height } = shot.split;
+  const { width, height } = window;
   const scale = info.width / width;
   const card = Math.min(width - 32, DOCK_CARD_MAX_WIDTH);
   const left = (width - card) / 2;
@@ -471,23 +508,48 @@ const checkDockCard = async (shot, file) => {
 const joinRules = (screenRules, variantRules) =>
   screenRules || variantRules ? [...(screenRules || []), ...(variantRules || [])] : undefined;
 
+/**
+ * The Android tablet's screen in points (dp), upright: its pixels at its
+ * density, as Android lays the app out (#695).
+ */
+const tabletPoints = ({ width, height, density }) => ({ width: (width * 160) / density, height: (height * 160) / density });
+
+/** The screen size, in points, that a platform's layout checks need. */
+const pointsFor = (config, platform) => {
+  if (platform === 'ipad') return { points: config.ipad.points };
+  if (platform === 'android-tablet') return { points: tabletPoints(config.android.tablet) };
+  return {};
+};
+
+/**
+ * A one-off run's rules for a shot in one of its languages (#692), such as no
+ * Chinese in Spanish's sets.
+ */
+const oneOffRules = (config, shot) =>
+  (config.oneOffRun || [])
+    .filter((language) => language === shot.settings.language)
+    .flatMap((language) => config.oneOff.languages[language].mustNotShowLines || []);
+
 /** Adds each screen's rules, and its variant's, to one platform's shots. */
 const planChecks = (config, platform = 'ios') =>
   planCaptures(config, platform).map((shot) => {
-    const screen = config.screens.find((candidate) =>
-      variantsOn(candidate, platform).some((variant) => `${candidate.name}-${variant}` === shot.name),
-    );
+    // Its screen may be one that only one-off sets use (#692).
+    const screen = allScreens(config).find((candidate) => candidate.name === shot.screen);
     const variant = shot.name.slice(screen.name.length + 1);
     const forVariant = screen.variantRules?.[variant] || {};
+    const forLanguage = oneOffRules(config, shot);
     return {
       ...shot,
       tabs: screen.tabs,
       ...(screen.wideContent ? { wideContent: true } : {}),
       ...(screen.popup ? { popup: true } : {}),
-      ...(platform === 'ipad' ? { points: config.ipad.points } : {}),
+      ...pointsFor(config, platform),
       mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
-      mustNotShowLines: joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+      mustNotShowLines: joinRules(
+        joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+        forLanguage.length ? forLanguage : undefined,
+      ),
     };
   });
 
@@ -551,11 +613,11 @@ const ocrRapid = (jobs) => {
 
 /**
  * Reads each image's text with its platform's reader: Vision for the iPhone
- * and iPad, on a Mac, and RapidOCR for Android, on Linux.
+ * and iPad, on a Mac, and RapidOCR for Android's phone and tablet, on Linux.
  */
 const ocr = (jobs) => {
-  const android = jobs.filter((job) => job.platform === 'android');
-  const apple = jobs.filter((job) => job.platform !== 'android');
+  const android = jobs.filter((job) => RAPID_OCR_PLATFORMS.includes(job.platform));
+  const apple = jobs.filter((job) => !RAPID_OCR_PLATFORMS.includes(job.platform));
   return { ...(apple.length ? ocrVision(apple) : {}), ...ocrRapid(android) };
 };
 
@@ -632,7 +694,7 @@ const main = async () => {
   };
   const dir = argument('--dir') && resolve(argument('--dir'));
   if (!dir) {
-    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder> [--platform ios|ipad|android|all] [--group <group>]');
+    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder> [--platform ios|ipad|android|android-tablet|all] [--group <group>]');
     process.exit(2);
   }
   const config = loadConfig();
@@ -644,6 +706,8 @@ const main = async () => {
     ? planSplitChecks(config, split)
     : takeGroup(platforms.flatMap((each) => planChecks(config, each)), argument('--group'), config);
   const text = await readText(dir, shots);
+  // A group may have no shots, as in a one-off run (#692), and no folder of its own.
+  mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'ocr.json'), JSON.stringify(text, null, 1));
 
   const results = [];
@@ -667,7 +731,7 @@ const main = async () => {
   writeFileSync(join(dir, 'checks.json'), JSON.stringify(results, null, 1));
   const failed = results.filter((result) => result.problems.length);
   const summary = [
-    `### Key-screen text checks (${split ? `Android, ${split}-point split window` : { ios: 'iPhone', ipad: 'iPad', android: 'Android', all: 'iPhone, iPad, and Android' }[platform]})`,
+    `### Key-screen text checks (${split ? `Android, ${split}-point split window` : { ios: 'iPhone', ipad: 'iPad', android: 'Android', 'android-tablet': 'Android tablet', all: 'iPhone, iPad, and Android phone and tablet' }[platform]})`,
     '',
     `${results.length - failed.length} of ${results.length} screenshots pass.`,
     ...failed.map((result) => `- ❌ ${result.file}: ${result.problems.join('; ')}`),
@@ -693,6 +757,8 @@ module.exports = {
   REGIONS,
   REGIONS_BY_PLATFORM,
   regionsFor,
+  androidWindow,
+  tabletPoints,
   NEVER_SHOWN,
   NEVER_SHOWN_BY_PLATFORM,
   showsLabel,

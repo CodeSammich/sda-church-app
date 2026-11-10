@@ -20,11 +20,27 @@ on:
     branches:
       - main
   # key-screens-recheck.yml checks an earlier run's screenshots again,
-  # without building.
+  # without building. Started by hand with one_off, this takes a language's
+  # store sets once, instead of the key screens (#692).
   workflow_dispatch:
+    inputs:
+      one_off:
+        description: >-
+          One-off store sets: the languages to take, such as es, from oneOff
+          in test/screens/screens.json. Leave blank for the key screens.
+        type: string
+        default: ''
 
 permissions:
   contents: read
+
+# A one-off run (#692) takes only these languages' store sets (oneOff in
+# test/screens/screens.json), in place of every key screen, and checks their
+# text: each script that plans the shots reads this. It's blank on pull
+# requests, so the release PR's run doesn't change. See "One-off store sets"
+# in docs/operations/native-builds.md.
+env:
+  KEY_SCREENS_ONE_OFF: ${{ inputs.one_off }}
 
 concurrency:
   group: android-key-screens-${{ github.event.pull_request.number || github.ref }}
@@ -125,7 +141,9 @@ jobs:
         # phone's screen is 2.22:1. Batches 7 to 10 take the screens a wide
         # screen changes most at an iPad's Split View and Slide Over widths
         # (android.splitWindows), which no Simulator can be made to show
-        # (#324). Linux runners are free, so they cost no Mac.
+        # (#324). Batch 11 takes the Android tablet's (android.tablet), upright
+        # and turned, and its Google Play tablet copies (#695). Linux runners
+        # are free, so they cost no Mac.
         include:
           - { group: home, batch: 1 }
           - { group: bible-reading, batch: 2 }
@@ -137,6 +155,7 @@ jobs:
           - { group: split-504, batch: 8, split: 504 }
           - { group: split-678, batch: 9, split: 678 }
           - { group: split-981, batch: 10, split: 981 }
+          - { group: tablet, batch: 11, tablet: true }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -197,6 +216,7 @@ jobs:
         env:
           STORE: ${{ matrix.store && 'true' || 'false' }}
           SPLIT: ${{ matrix.split }}
+          TABLET: ${{ matrix.tablet && 'true' || 'false' }}
         run: |
           set -euo pipefail
           avdmanager_bin="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/avdmanager | sort -V | tail -1)"
@@ -204,15 +224,15 @@ jobs:
           mkdir -p "$ANDROID_AVD_HOME"
           echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
           # The phone in test/screens/screens.json, Google Play's size for its
-          # shots, or an iPad's split window, in points at 2x. avdmanager has no
-          # profile for the phone, so this starts from a generic one and sets
-          # the screen.
+          # shots, an iPad's split window, in points at 2x, or the tablet.
+          # avdmanager has no profile for the phone, so this starts from a
+          # generic one and sets the screen.
           read -r WIDTH HEIGHT DENSITY < <(node -p \
-            "const { phone, googlePlay, splitWindows } = require('./test/screens/screens.json').android;
+            "const { phone, googlePlay, splitWindows, tablet } = require('./test/screens/screens.json').android;
              const split = splitWindows.find((window) => window.width === Number(process.env.SPLIT));
              const device = split
                ? { width: split.width * 2, height: split.height * 2, density: 320 }
-               : process.env.STORE === 'true' ? googlePlay : phone;
+               : process.env.TABLET === 'true' ? tablet : process.env.STORE === 'true' ? googlePlay : phone;
              [device.width, device.height, device.density].join(' ')")
           echo no | "$avdmanager_bin" create avd --force -n key-screens -k "$SYSTEM_IMAGE" -d pixel
           AVD_CONFIG="$ANDROID_AVD_HOME/key-screens.avd/config.ini"
@@ -271,11 +291,13 @@ jobs:
 
       - name: Capture the key screens
         # Screenshots of this group's screens in test/screens/screens.json,
-        # named android/<screen>-<variant>.png, the Google Play copies, or a
-        # split window's shots, android/<screen>-w<width>.png.
+        # named android/<screen>-<variant>.png, the Google Play copies, a
+        # split window's shots, android/<screen>-w<width>.png, or the
+        # tablet's, android-tablet/<screen>-<variant>.png, with its Google
+        # Play copies.
         timeout-minutes: 20
         env:
-          PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.store && '--store' || format('--group {0}', matrix.group)) }}
+          PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.store && '--store' || (matrix.tablet && '--tablet' || format('--group {0}', matrix.group))) }}
         run: >-
           node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens" $PART
 
@@ -292,12 +314,13 @@ jobs:
 
       - name: Check the text on the key screens
         # The iPhone's checks, with the tab bar and chapter controls where the
-        # emulator puts them, or a split window's (check-screens.cjs --split).
+        # emulator puts them, a split window's (check-screens.cjs --split), or
+        # the tablet's, with the iPad's layout checks.
         # Runs even if a capture failed, to report on the rest.
         if: ${{ !cancelled() && !matrix.store }}
         timeout-minutes: 15
         env:
-          PART: ${{ matrix.split && format('--split {0}', matrix.split) || format('--platform android --group {0}', matrix.group) }}
+          PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.tablet && '--platform android-tablet' || format('--platform android --group {0}', matrix.group)) }}
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/android-key-screens/screens"
           $PART
@@ -321,7 +344,8 @@ jobs:
 
   screens:
     # Joins the groups into the downloads ios-key-screens.yml's review
-    # comment links: the screenshots, and the Google Play copies. It fails if
+    # comment links: the phone's and the tablet's screenshots, and their
+    # Google Play copies. It fails if
     # any group failed, so a failed group can't pass as skipped. The "Main
     # protection" ruleset requires this job's name.
     needs: [android-build, android-capture]
@@ -356,19 +380,20 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/android-key-screens"
-          node scripts/merge-key-screens.cjs --platform android --out "$RUNNER_TEMP/android-key-screens/screens" \
+          node scripts/merge-key-screens.cjs --platform android,android-tablet --out "$RUNNER_TEMP/android-key-screens/screens" \
             "$RUNNER_TEMP"/parts/*/screens
 
       # Every download a reviewer opens stays under the 50 MB Chrome looks
       # inside ("Downloads under 50 MB" in docs/operations/native-builds.md),
-      # as in ios-key-screens.yml: the screenshots as palette PNGs, in parts
-      # if need be, and the Google Play copies, untouched. It runs after a
-      # failed join too, since the screenshots show why.
+      # as in ios-key-screens.yml: the phone's and the tablet's screenshots as
+      # palette PNGs, in parts if need be, and the Google Play phone and tablet
+      # copies, untouched. It runs after a failed join too, since the
+      # screenshots show why.
       - name: Pack the downloads
         if: ${{ !cancelled() }}
         run: >-
           node scripts/pack-review-downloads.cjs --from "$RUNNER_TEMP/android-key-screens/screens"
-          --out "$RUNNER_TEMP/review" --devices android --store google-play
+          --out "$RUNNER_TEMP/review" --devices android,android-tablet --store google-play,google-play-tablet
 
       - name: Upload the screenshots
         if: always()
@@ -397,12 +422,48 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Upload the tablet screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-tablet-1
+          path: ${{ runner.temp }}/review/android-tablet-1/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload the tablet screenshots, part 2
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-tablet-2
+          path: ${{ runner.temp }}/review/android-tablet-2/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the tablet screenshots, part 3
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-tablet-3
+          path: ${{ runner.temp }}/review/android-tablet-3/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload the Google Play copies
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play
           path: ${{ runner.temp }}/review/google-play/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload the Google Play tablet copies
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play-tablet
+          path: ${{ runner.temp }}/review/google-play-tablet/
           if-no-files-found: warn
           retention-days: 14
 

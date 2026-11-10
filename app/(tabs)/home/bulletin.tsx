@@ -44,6 +44,7 @@ import {
   getUpcomingSabbathDates,
   hasBulletinValue,
   isBulletinLocationEmpty,
+  readCachedBulletin,
   setRefreshAvailableAt as persistRefreshAvailableAt,
 } from '@/services/BulletinService';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
@@ -376,7 +377,15 @@ const LABELS = {
   },
 } as const;
 
-const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
+// The Bulletin API caches each answer for 2 minutes, so a Refresh after this
+// wait can always get a newer copy (#702).
+const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
+// Phones with the bulletin open at midnight, when the Sabbath begins and when
+// the page moves on to the next week, ask again at a random moment in the next
+// 5 minutes, not all in the same second (#702).
+const MIDNIGHT_RELOAD_SPREAD_MS = 5 * 60 * 1000;
+const midnightReloadDelay = () =>
+  1000 + Math.floor(Math.random() * MIDNIGHT_RELOAD_SPREAD_MS);
 const BULLETIN_LOCATION_STORAGE_KEY = 'preferred-bulletin-location';
 
 type Labels = (typeof LABELS)['en'];
@@ -585,68 +594,59 @@ export default function WeeklyBulletinScreen() {
     return true;
   }, [weekDates]);
 
+  /**
+   * Shows a week's stored copy at once, then, when that copy is out of date
+   * (isBulletinCacheFresh) or the member taps Refresh, asks the API for a
+   * newer one and swaps it in when it arrives. The spinner shows only for a
+   * Refresh, or while there's nothing to show yet.
+   */
   const loadWeek = useCallback(
-    async (index: number, signal?: AbortSignal, skipDeviceCache = false) => {
+    async (index: number, signal?: AbortSignal, refresh = false) => {
       const date = weekDates[index];
       if (!date || loadingWeeksRef.current.has(date)) return;
 
       loadingWeeksRef.current.add(date);
+      const updateWeek = (update: (week: WeekState) => WeekState) => {
+        if (signal?.aborted) return;
+        setWeeks((current) =>
+          current.map((week, weekIndex) =>
+            weekIndex === index && week.date === date ? update(week) : week,
+          ),
+        );
+      };
 
       try {
-        const cached = skipDeviceCache ? undefined : await getCachedBulletin(date);
-        if (cached) {
-          if (!signal?.aborted) {
-            setWeeks((current) =>
-              current.map((week, weekIndex) =>
-                weekIndex === index && week.date === date
-                  ? { date, bulletin: cached, error: undefined, loading: false }
-                  : week,
-              ),
-            );
-          }
+        const stored = await readCachedBulletin(date);
+        if (stored?.fresh && !refresh) {
+          updateWeek(() => ({ date, bulletin: stored.bulletin, error: undefined, loading: false }));
           return;
         }
 
-        setWeeks((current) =>
-          current.map((week, weekIndex) =>
-            weekIndex === index && week.date === date
-              ? { ...week, error: undefined, loading: true }
-              : week,
-          ),
-        );
+        updateWeek((week) => {
+          const bulletin = stored?.bulletin ?? week.bulletin;
+          // A download that starts on its own keeps any error showing until
+          // it succeeds, so the message doesn't flicker.
+          return refresh || !bulletin
+            ? { ...week, bulletin, error: undefined, loading: true }
+            : { ...week, bulletin };
+        });
         const fetched = await fetchBulletin(date, signal);
         // A bulletin without its schedule (#580) gives way to a stored copy
         // that has one, as when the API fails.
         const bulletin = fetched.scheduleNotSet
           ? ((await getCachedBulletin(date, Date.now(), { allowStale: true })) ?? fetched)
           : fetched;
-        if (!signal?.aborted) {
-          setWeeks((current) =>
-            current.map((week, weekIndex) =>
-              weekIndex === index && week.date === date
-                ? { date, bulletin, error: undefined, loading: false }
-                : week,
-            ),
-          );
-        }
+        updateWeek(() => ({ date, bulletin, error: undefined, loading: false }));
       } catch (error) {
         // Keep showing the last stored copy, even an outdated one, rather than
         // only an error when the bulletin API is busy or unreachable.
         const stale = await getCachedBulletin(date, Date.now(), { allowStale: true });
-        if (!signal?.aborted) {
-          setWeeks((current) =>
-            current.map((week, weekIndex) =>
-              weekIndex === index && week.date === date
-                ? {
-                    ...week,
-                    bulletin: week.bulletin ?? stale,
-                    error: error instanceof Error ? error.message : LABELS.en.loadError,
-                    loading: false,
-                  }
-                : week,
-            ),
-          );
-        }
+        updateWeek((week) => ({
+          ...week,
+          bulletin: week.bulletin ?? stale,
+          error: error instanceof Error ? error.message : LABELS.en.loadError,
+          loading: false,
+        }));
       } finally {
         loadingWeeksRef.current.delete(date);
       }
@@ -671,6 +671,18 @@ export default function WeeklyBulletinScreen() {
         return updated;
       });
       setCooldownClock(now);
+      if (loadingWeeksRef.current.has(date)) {
+        // A download that started on its own is already under way, so the
+        // Refresh waits for it, with the spinner, rather than asking twice.
+        setWeeks((current) =>
+          current.map((week, weekIndex) =>
+            weekIndex === index && week.date === date
+              ? { ...week, error: undefined, loading: true }
+              : week,
+          ),
+        );
+        return;
+      }
       await loadWeek(index, undefined, true);
     },
     [loadWeek, weekDates],
@@ -700,6 +712,10 @@ export default function WeeklyBulletinScreen() {
     };
   }, [weekDates]);
 
+  // Opening the bulletin (above), switching weeks (selectWeek), and coming
+  // back to the app check the stored copy's age. Nothing checks it on a timer
+  // while the page stays open, except when the Sabbath begins and when the
+  // page moves on to the next week.
   useEffect(() => {
     const refreshSelectedIfStale = () => {
       if (!syncWeekDates()) void loadWeek(Number(selectedWeek));
@@ -712,13 +728,13 @@ export default function WeeklyBulletinScreen() {
     const sabbathStartDelay = sabbathStart - Date.now();
     const sabbathStartTimer =
       sabbathStartDelay > 0
-        ? setTimeout(() => void loadWeek(0), sabbathStartDelay + 1000)
+        ? setTimeout(() => void loadWeek(0), sabbathStartDelay + midnightReloadDelay())
         : undefined;
 
     const rolloverDelay = getNextBulletinRolloverAt() - Date.now();
     const rolloverTimer =
       rolloverDelay > 0
-        ? setTimeout(() => void syncWeekDates(), rolloverDelay + 1000)
+        ? setTimeout(() => void syncWeekDates(), rolloverDelay + midnightReloadDelay())
         : undefined;
 
     return () => {

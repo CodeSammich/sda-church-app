@@ -16,7 +16,8 @@
  *   settle-times.json;
  * - each store folder's copies are a download of their own, untouched, since
  *   they're uploaded as they are: the App Store's iPhone copies (app-store),
- *   its iPad copies (app-store-ipad), and Google Play's (google-play). With
+ *   its iPad copies (app-store-ipad), and Google Play's phone (google-play)
+ *   and tablet (google-play-tablet, #695) copies. With
  *   1.7.1's English, Traditional and Simplified Chinese sets, the iPhone's and
  *   iPad's together came to 52.6 MB (#681).
  *
@@ -24,7 +25,7 @@
  *     --devices ios,ipad --store app-store,app-store-ipad
  *
  * Writes <out>/<device>-<n>/screens/<platform>/*.png (iphone-1, ipad-1,
- * android-1, …) and <out>/<store folder>/screens/<store folder>/, which the workflows
+ * android-1, android-tablet-1, …) and <out>/<store folder>/screens/<store folder>/, which the workflows
  * upload, at most MAX_PARTS parts a device. Fails if a device needs more parts
  * than that, or a download passes 50 MB; see "Downloads under 50 MB"
  * in docs/operations/native-builds.md.
@@ -40,7 +41,7 @@ const CHROME_LIMIT_BYTES = 52428800;
 const PART_TARGET_BYTES = 45 * 1048576;
 /** The parts a device's workflow uploads. */
 const MAX_PARTS = 3;
-const DEVICE_NAMES = { ios: 'iphone', ipad: 'ipad', android: 'android' };
+const DEVICE_NAMES = { ios: 'iphone', ipad: 'ipad', android: 'android', 'android-tablet': 'android-tablet' };
 const RESULTS = ['ocr.json', 'checks.json', 'settle-times.json'];
 // 256 colours keep the app's flat colours exact and dither its photos, which
 // look the same at a glance (measured on 1.7.0's shots).
@@ -162,7 +163,7 @@ if (require.main === module) {
   const devices = (option('--devices') || '').split(',').filter(Boolean);
   const store = (option('--store') || '').split(',').filter(Boolean);
   if (!from || !out || !devices.length || !devices.every((device) => DEVICE_NAMES[device])) {
-    console.error('Usage: node scripts/pack-review-downloads.cjs --from <joined screens folder> --out <folder> --devices ios,ipad|android [--store <folder>,...]');
+    console.error('Usage: node scripts/pack-review-downloads.cjs --from <joined screens folder> --out <folder> --devices ios,ipad|android,android-tablet [--store <folder>,...]');
     process.exit(2);
   }
   pack({ from: resolve(from), out: resolve(out), devices, store })

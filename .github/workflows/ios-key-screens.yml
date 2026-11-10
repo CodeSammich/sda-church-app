@@ -19,11 +19,27 @@ on:
     branches:
       - main
   # key-screens-recheck.yml checks an earlier run's screenshots again,
-  # without building.
+  # without building. Started by hand with one_off, this takes a language's
+  # store sets once, instead of the key screens (#692).
   workflow_dispatch:
+    inputs:
+      one_off:
+        description: >-
+          One-off store sets: the languages to take, such as es, from oneOff
+          in test/screens/screens.json. Leave blank for the key screens.
+        type: string
+        default: ''
 
 permissions:
   contents: read
+
+# A one-off run (#692) takes only these languages' store sets (oneOff in
+# test/screens/screens.json), in place of every key screen, and checks their
+# text: each script that plans the shots reads this. It's blank on pull
+# requests, so the release PR's run doesn't change. See "One-off store sets"
+# in docs/operations/native-builds.md.
+env:
+  KEY_SCREENS_ONE_OFF: ${{ inputs.one_off }}
 
 concurrency:
   group: ios-key-screens-${{ github.event.pull_request.number || github.ref }}

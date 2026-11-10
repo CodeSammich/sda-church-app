@@ -1,6 +1,5 @@
 import {
   isTextScale,
-  TABLET_MIN_SCREEN_SIDE,
   TEXT_SCALE_OPTIONS,
   type TextScale,
 } from '@/constants/AppPreferences';
@@ -19,21 +18,20 @@ import {
   type ThemeMode,
 } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
-import { ContrastChoice, getContrastCopy } from '@/components/ContrastChoice';
+import { ContrastStep } from '@/components/ContrastChoice';
 import { ChoiceCard, TabBarPreview, THEME_ICONS, THEME_PREVIEW_KINDS, ThemePreview } from '@/components/SettingChoices';
 import { isKeyScreensBuild, SCREENSHOT_SETUP_STEP_KEY } from '@/services/ScreenshotRoute';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PopupScrollView } from '@/components/PopupScrollView';
+import { SetupAction } from '@/components/SetupAction';
+import { getSetupWords, SetupHeading, SetupScreen } from '@/components/SetupScreen';
 import { useContext, useEffect, useRef, useState } from 'react';
 import {
-  Modal,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface InitialSetupProps {
   onComplete: () => void;
@@ -59,10 +57,6 @@ const setupLabels = {
     retry: 'Retry',
     retryLabel: (percent: number) =>
       `Retry saving ${percent} percent text size`,
-    start: 'Get Started',
-    next: 'Next',
-    back: 'Back',
-    step: (step: number, steps: number) => `Step ${step} of ${steps}`,
   },
   zh: {
     title: '歡迎',
@@ -83,10 +77,6 @@ const setupLabels = {
     retry: '重試',
     retryLabel: (percent: number) =>
       `重新嘗試儲存 ${percent}% 文字大小`,
-    start: '開始使用',
-    next: '下一步',
-    back: '上一步',
-    step: (step: number, steps: number) => `第 ${step} 步，共 ${steps} 步`,
   },
   'zh-cn': {
     title: '欢迎',
@@ -107,10 +97,6 @@ const setupLabels = {
     retry: '重试',
     retryLabel: (percent: number) =>
       `重新尝试保存 ${percent}% 文字大小`,
-    start: '开始使用',
-    next: '下一步',
-    back: '上一步',
-    step: (step: number, steps: number) => `第 ${step} 步，共 ${steps} 步`,
   },
   es: {
     title: 'Bienvenido',
@@ -132,10 +118,6 @@ const setupLabels = {
     retry: 'Reintentar',
     retryLabel: (percent: number) =>
       `Reintentar guardar el tamaño del texto al ${percent} por ciento`,
-    start: 'Comenzar',
-    next: 'Siguiente',
-    back: 'Atrás',
-    step: (step: number, steps: number) => `Paso ${step} de ${steps}`,
   },
 } as const;
 
@@ -229,62 +211,6 @@ const SetupChoiceGroup = ({
   );
 };
 
-interface SetupActionProps {
-  accessibilityLabel?: string;
-  disabled?: boolean;
-  kind?: 'contained' | 'outlined';
-  label: string;
-  onPress: () => void;
-  /** stretch: the popup's width; fill: a share of a row of buttons. */
-  placement?: 'start' | 'stretch' | 'fill';
-}
-
-const SetupAction = ({
-  accessibilityLabel,
-  disabled = false,
-  kind = 'contained',
-  label,
-  onPress,
-  placement = 'stretch',
-}: SetupActionProps) => {
-  const theme = useAppTheme();
-  const contained = kind === 'contained';
-
-  return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.actionButton,
-        placement === 'start' && styles.actionButtonAtStart,
-        placement === 'fill' && styles.actionButtonFill,
-        {
-          backgroundColor: contained ? theme.colors.primary : 'transparent',
-          borderColor: contained ? theme.colors.primary : theme.colors.outline,
-          opacity: disabled ? 0.5 : pressed ? 0.78 : 1,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.actionButtonText,
-          {
-            color: contained
-              ? theme.colors.onPrimary
-              : theme.colors.primary,
-          },
-        ]}
-        variant="labelLarge"
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-};
-
 // One question per step (#523), so each fits on a phone and the button to go
 // on is always in view: the language first, so the rest shows in it, then the
 // text size, so the last steps show at that size, and last the contrast for
@@ -295,22 +221,17 @@ export const SETUP_STEPS = ['language', 'textSize', 'appearance', 'contrastLight
 export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const { language, setLanguage } = useContext(LanguageContext);
   const { contrastModes, setContrastMode, setThemeMode, themeMode } = useContext(ThemeContext);
-  const contrastCopy = getContrastCopy(language);
   // The chosen size, which a very large phone text size can reduce when drawn.
   const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
   const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
-  const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
-  // On a tablet, a step sits in the middle of the space above Back and Next,
-  // rather than at the top of a tall, mostly empty screen. On a phone it stays
-  // at the top, so each step's title is where the last one's was.
-  const tablet = Math.min(viewportWidth, viewportHeight) >= TABLET_MIN_SCREEN_SIDE;
+  const { width: viewportWidth } = useWindowDimensions();
   const [isSavingTextScale, setIsSavingTextScale] = useState(false);
   const [failedTextScale, setFailedTextScale] = useState<TextScale | null>(null);
   const textScaleWritePendingRef = useRef(false);
   const failedTextScaleRef = useRef<TextScale | null>(null);
   const labels = setupLabels[language] ?? setupLabels.en;
+  const words = getSetupWords(language);
   const [step, setStep] = useState(0);
   // A key-screens build opens the step the capture saved, since it can't tap
   // Next, so each step has its own screenshot.
@@ -323,17 +244,9 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   }, []);
   const currentStep = SETUP_STEPS[step];
   const lastStep = step === SETUP_STEPS.length - 1;
+  const contrastKind = currentStep === 'contrastDark' ? 'dark' : 'light';
   // A text size that's saving, or failed to save, has to settle first.
   const textScaleUnsettled = isSavingTextScale || failedTextScale !== null;
-  // The progress dots' colour: the theme's blue, or gold in the dark theme,
-  // like the selected tab.
-  const accent = theme.dark ? theme.colors.metallicGold.main : theme.colors.primary;
-  // A tablet's or a landscape phone's steps sit in a centred column, at most
-  // SETUP_COLUMN_MAX_WIDTH, inside 24 points a side.
-  const column = {
-    alignSelf: 'center' as const,
-    width: Math.max(0, Math.min(SETUP_COLUMN_MAX_WIDTH, viewportWidth - insets.left - insets.right - 48)),
-  };
 
   const persistTextScale = async (nextScale: TextScale) => {
     if (textScaleWritePendingRef.current) return;
@@ -368,227 +281,154 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   return (
     // The whole screen (#681), in the page's colour, so each step has room for
     // its pictures and the way on sits at the bottom, where a thumb finds it.
-    // Every orientation, or iOS would turn an iPad held sideways to portrait.
-    <Modal
-      visible
-      animationType="fade"
-      onRequestClose={() => undefined}
-      statusBarTranslucent
-      navigationBarTranslucent
-      supportedOrientations={['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right']}
-    >
-      <View
-        style={[
-          styles.screen,
-          {
-            backgroundColor: theme.colors.background,
-            paddingBottom: insets.bottom,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-            paddingTop: insets.top,
-          },
-        ]}
-      >
-        {/* Keyed by step, so each step opens at its top. It fills the screen
-            above the footer, so Back and Next stay at the bottom on every step. */}
-        <PopupScrollView
-          key={currentStep}
-          frameStyle={styles.scroll}
-          contentContainerStyle={[styles.content, tablet && styles.centredContent]}
-        >
-          <View style={column}>
-            {currentStep === 'language' && (
-              <>
-                <Text variant="headlineLarge" style={styles.title}>
-                  {labels.title}
-                </Text>
-                <Text variant="bodyLarge" style={styles.subtitle}>
-                  {labels.subtitle}
-                </Text>
-                <Text variant="titleMedium" style={styles.label}>
-                  {labels.language}
-                </Text>
-                <View accessibilityRole="radiogroup" style={styles.cards}>
-                  {SETUP_LANGUAGES.map((option) => (
-                    <ChoiceCard
-                      key={option.value}
-                      disabled={isSavingTextScale}
-                      label={option.label}
-                      onPress={() => {
-                        if (!textScaleWritePendingRef.current) setLanguage(option.value);
-                      }}
-                      selected={option.value === language}
-                      testID={`setup-language-${option.value}`}
-                    >
-                      <TabBarPreview language={option.value} />
-                    </ChoiceCard>
-                  ))}
-                </View>
-              </>
-            )}
-
-            {currentStep === 'textSize' && (
-              <>
-                <Text variant="headlineLarge" style={styles.title}>
-                  {labels.textSize}
-                </Text>
-                <Text variant="bodyLarge" style={styles.subtitle}>
-                  {labels.textSizeHelp}
-                </Text>
-                <TextSizeSample language={language} />
-                <SetupChoiceGroup
-                  value={String(textScale)}
-                  disabled={isSavingTextScale}
-                  twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
-                  onValueChange={(value) => {
-                    const nextScale = Number(value);
-                    if (isTextScale(nextScale)) void persistTextScale(nextScale);
-                  }}
-                  options={TEXT_SCALE_OPTIONS.map((scale) => {
-                    const percent = Math.round(scale * 100);
-                    return {
-                      accessibilityLabel: labels.percentLabel(percent),
-                      label: `${percent}%`,
-                      value: String(scale),
-                    };
-                  })}
-                />
-                {isSavingTextScale && (
-                  <Text
-                    accessibilityLiveRegion="polite"
-                    style={styles.textScaleStatus}
-                    variant="bodyMedium"
-                  >
-                    {labels.saving}
-                  </Text>
-                )}
-                {failedTextScale !== null && !isSavingTextScale && (
-                  <View style={styles.textScaleError}>
-                    <Text
-                      accessibilityLiveRegion="assertive"
-                      role="alert"
-                      style={{ color: theme.colors.error }}
-                      variant="bodyMedium"
-                    >
-                      {labels.saveError(Math.round(failedTextScale * 100))}
-                    </Text>
-                    <SetupAction
-                      accessibilityLabel={labels.retryLabel(
-                        Math.round(failedTextScale * 100),
-                      )}
-                      kind="outlined"
-                      label={labels.retry}
-                      onPress={() => void persistTextScale(failedTextScale)}
-                      placement="start"
-                    />
-                  </View>
-                )}
-              </>
-            )}
-
-            {currentStep === 'appearance' && (
-              <>
-                <Text variant="headlineLarge" style={styles.title}>
-                  {labels.appearance}
-                </Text>
-                <Text variant="bodyLarge" style={styles.subtitle}>
-                  {labels.appearanceHelp}
-                </Text>
-                {/* One card a row, as the language step's are. */}
-                <View accessibilityRole="radiogroup" style={styles.cards}>
-                  {(
-                    [
-                      { value: THEME_SYSTEM, label: labels.system },
-                      { value: THEME_SUNSET, label: labels.sunset },
-                      { value: THEME_LIGHT, label: labels.light },
-                      { value: THEME_DARK, label: labels.dark },
-                    ] as const
-                  ).map((option) => (
-                    <ChoiceCard
-                      key={option.value}
-                      disabled={isSavingTextScale}
-                      icon={THEME_ICONS[option.value]}
-                      label={option.label}
-                      onPress={() => {
-                        if (!textScaleWritePendingRef.current) void setThemeMode(option.value as ThemeMode);
-                      }}
-                      selected={option.value === themeMode}
-                      testID={`setup-appearance-${option.value}`}
-                    >
-                      <ThemePreview contrastModes={contrastModes} kinds={THEME_PREVIEW_KINDS[option.value]} />
-                    </ChoiceCard>
-                  ))}
-                </View>
-              </>
-            )}
-
-            {(currentStep === 'contrastLight' || currentStep === 'contrastDark') && (
-              <>
-                <Text variant="headlineLarge" style={styles.title}>
-                  {contrastCopy.questions[currentStep === 'contrastDark' ? 'dark' : 'light']}
-                </Text>
-                <Text variant="bodyLarge" style={styles.subtitle}>
-                  {contrastCopy.help}
-                </Text>
-                {/* High contrast stays chosen unless the member picks standard. */}
-                <ContrastChoice
-                  kind={currentStep === 'contrastDark' ? 'dark' : 'light'}
-                  language={language}
-                  onChoose={(mode) => void setContrastMode(currentStep === 'contrastDark' ? 'dark' : 'light', mode)}
-                  value={contrastModes[currentStep === 'contrastDark' ? 'dark' : 'light']}
-                />
-              </>
-            )}
-          </View>
-        </PopupScrollView>
-
-        {/* Outside the scrolling part, so the way on is always in view. */}
-        <View style={[styles.footer, column]}>
-          <View
-            accessible
-            accessibilityLabel={labels.step(step + 1, SETUP_STEPS.length)}
-            style={styles.dots}
-          >
-            {SETUP_STEPS.map((name, index) => (
-              // Each step's dot is outlined in the accent, so the ones ahead
-              // show plainly; the current one is filled and wider (#681).
-              <View
-                key={name}
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor: index === step ? accent : 'transparent',
-                    borderColor: accent,
-                    width: index === step ? 32 : 14,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-          <View style={styles.actions}>
-            {step > 0 && (
-              <SetupAction
-                disabled={isSavingTextScale}
-                kind="outlined"
-                label={labels.back}
-                onPress={() => setStep(step - 1)}
-                placement="fill"
-              />
-            )}
+    <SetupScreen
+      scrollKey={currentStep}
+      step={step}
+      steps={SETUP_STEPS.length}
+      actions={
+        <>
+          {step > 0 && (
             <SetupAction
-              disabled={textScaleUnsettled}
-              label={lastStep ? labels.start : labels.next}
-              onPress={goOn}
+              disabled={isSavingTextScale}
+              kind="outlined"
+              label={words.back}
+              onPress={() => setStep(step - 1)}
               placement="fill"
             />
+          )}
+          <SetupAction
+            disabled={textScaleUnsettled}
+            label={lastStep ? words.start : words.next}
+            onPress={goOn}
+            placement="fill"
+          />
+        </>
+      }
+    >
+      {currentStep === 'language' && (
+        <>
+          <SetupHeading title={labels.title} subtitle={labels.subtitle} />
+          <Text variant="titleMedium" style={styles.label}>
+            {labels.language}
+          </Text>
+          <View accessibilityRole="radiogroup" style={styles.cards}>
+            {SETUP_LANGUAGES.map((option) => (
+              <ChoiceCard
+                key={option.value}
+                disabled={isSavingTextScale}
+                label={option.label}
+                onPress={() => {
+                  if (!textScaleWritePendingRef.current) setLanguage(option.value);
+                }}
+                selected={option.value === language}
+                testID={`setup-language-${option.value}`}
+              >
+                <TabBarPreview language={option.value} />
+              </ChoiceCard>
+            ))}
           </View>
-        </View>
-      </View>
-    </Modal>
+        </>
+      )}
+
+      {currentStep === 'textSize' && (
+        <>
+          <SetupHeading title={labels.textSize} subtitle={labels.textSizeHelp} />
+          <TextSizeSample language={language} />
+          <SetupChoiceGroup
+            value={String(textScale)}
+            disabled={isSavingTextScale}
+            twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
+            onValueChange={(value) => {
+              const nextScale = Number(value);
+              if (isTextScale(nextScale)) void persistTextScale(nextScale);
+            }}
+            options={TEXT_SCALE_OPTIONS.map((scale) => {
+              const percent = Math.round(scale * 100);
+              return {
+                accessibilityLabel: labels.percentLabel(percent),
+                label: `${percent}%`,
+                value: String(scale),
+              };
+            })}
+          />
+          {isSavingTextScale && (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={styles.textScaleStatus}
+              variant="bodyMedium"
+            >
+              {labels.saving}
+            </Text>
+          )}
+          {failedTextScale !== null && !isSavingTextScale && (
+            <View style={styles.textScaleError}>
+              <Text
+                accessibilityLiveRegion="assertive"
+                role="alert"
+                style={{ color: theme.colors.error }}
+                variant="bodyMedium"
+              >
+                {labels.saveError(Math.round(failedTextScale * 100))}
+              </Text>
+              <SetupAction
+                accessibilityLabel={labels.retryLabel(
+                  Math.round(failedTextScale * 100),
+                )}
+                kind="outlined"
+                label={labels.retry}
+                onPress={() => void persistTextScale(failedTextScale)}
+                placement="start"
+              />
+            </View>
+          )}
+        </>
+      )}
+
+      {currentStep === 'appearance' && (
+        <>
+          <SetupHeading title={labels.appearance} subtitle={labels.appearanceHelp} />
+          {/* One card a row, as the language step's are. */}
+          <View accessibilityRole="radiogroup" style={styles.cards}>
+            {(
+              [
+                { value: THEME_SYSTEM, label: labels.system },
+                { value: THEME_SUNSET, label: labels.sunset },
+                { value: THEME_LIGHT, label: labels.light },
+                { value: THEME_DARK, label: labels.dark },
+              ] as const
+            ).map((option) => (
+              <ChoiceCard
+                key={option.value}
+                disabled={isSavingTextScale}
+                icon={THEME_ICONS[option.value]}
+                label={option.label}
+                onPress={() => {
+                  if (!textScaleWritePendingRef.current) void setThemeMode(option.value as ThemeMode);
+                }}
+                selected={option.value === themeMode}
+                testID={`setup-appearance-${option.value}`}
+              >
+                <ThemePreview contrastModes={contrastModes} kinds={THEME_PREVIEW_KINDS[option.value]} />
+              </ChoiceCard>
+            ))}
+          </View>
+        </>
+      )}
+
+      {/* High contrast stays chosen unless the member picks standard. */}
+      {(currentStep === 'contrastLight' || currentStep === 'contrastDark') && (
+        <ContrastStep
+          key={contrastKind}
+          kind={contrastKind}
+          language={language}
+          onChoose={(mode) => void setContrastMode(contrastKind, mode)}
+          value={contrastModes[contrastKind]}
+        />
+      )}
+    </SetupScreen>
   );
 };
 
-const SETUP_COLUMN_MAX_WIDTH = 560;
 
 // Each language by its own name, with a picture of the tab bar in it.
 const SETUP_LANGUAGES: readonly { value: SupportedLanguage; label: string }[] = [
@@ -631,30 +471,6 @@ function TextSizeSample({ language }: Readonly<{ language: SupportedLanguage }>)
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    paddingTop: 32,
-    paddingBottom: 16,
-  },
-  centredContent: {
-    justifyContent: 'center',
-  },
-  title: {
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginBottom: 24,
-    opacity: 0.75,
-    textAlign: 'center',
-  },
   label: {
     fontWeight: '600',
     marginBottom: 8,
@@ -668,48 +484,6 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 20,
     padding: 16,
-  },
-  footer: {
-    gap: 16,
-    paddingBottom: 16,
-    paddingTop: 8,
-  },
-  dots: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dot: {
-    borderRadius: 7,
-    borderWidth: 2,
-    height: 14,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionButton: {
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    borderRadius: 26,
-    borderWidth: 1,
-    justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 52,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  actionButtonAtStart: {
-    alignSelf: 'flex-start',
-  },
-  actionButtonFill: {
-    flex: 1,
-    marginTop: 0,
-  },
-  actionButtonText: {
-    flexShrink: 1,
-    fontWeight: '700',
-    textAlign: 'center',
   },
   choiceButton: {
     alignItems: 'center',

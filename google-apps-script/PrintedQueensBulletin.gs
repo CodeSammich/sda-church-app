@@ -7,6 +7,28 @@
  * the stable reference layout.
  */
 
+/**
+ * The Queens Sabbath School and worship tables' changes to the shared program
+ * table, after a test print (#706). The shared table's columns are 105, 160
+ * and 95 points (label, middle, names), with half a point under each row. The
+ * regular and Communion layouts both print these panels; Brooklyn keeps the
+ * shared table.
+ */
+var PRINTED_QUEENS_LAYOUT = Object.freeze({
+  // The Sabbath School's middle column is 10 points (one Chinese character)
+  // wider, and its label column that much narrower, so a hymn with its
+  // translation in brackets fits on one line.
+  studyColumnWidths: Object.freeze([95, 170, 95]),
+  // Two points more under each Sabbath School row, so each label's Chinese
+  // and English lines read as one item.
+  studyRowPaddingBottom: 2.5,
+  // Half a point between the numbered Sabbath School hymns. The label and
+  // Congregation lines beside them keep their spacing.
+  studyHymnGap: 0.5,
+  // The same for the worship tables.
+  worshipColumnWidths: Object.freeze([95, 170, 95]),
+});
+
 function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulletin, format) {
   // The regular Queens reference is a simpler two-page handout: the interior
   // Study/Worship spread comes first, followed by the back/cover spread.
@@ -107,7 +129,11 @@ function appendStudyPanel_(cell, bulletin) {
     hymnRows.closing,
     [printedBilingualText_('Closing Prayer', '結會禱告'), '', printValue_(location.closingPrayer)],
   ];
-  appendProgramTable_(cell, studyRows);
+  appendProgramTable_(cell, studyRows, {
+    columnWidths: PRINTED_QUEENS_LAYOUT.studyColumnWidths,
+    rowPaddingBottom: PRINTED_QUEENS_LAYOUT.studyRowPaddingBottom,
+    numberedListGap: PRINTED_QUEENS_LAYOUT.studyHymnGap,
+  });
   appendBibleReadingPanel_(cell, location, true, bulletin.physicalBibleTranslations);
 }
 
@@ -121,7 +147,8 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
   var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '頌讚'), printedBilingualText_('SDAH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Invocation', '宣召'), '', printValue_(location.chairPastoralPrayer)],
+    // The sermon speaker gives the invocation, as in the app (#707).
+    [printedBilingualText_('Invocation', '宣召'), '', printValue_(location.sermon)],
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [
       printedBilingualText_('Bible Reading', '讀經'),
@@ -152,9 +179,10 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
       printedBilingualText_('Congregation', '會眾'),
     ]);
   }
-  appendProgramTable_(cell, worshipRowsBeforeSermon);
-  appendSermonRow_(cell, sermonRow);
-  appendProgramTable_(cell, worshipRowsAfterSermon);
+  var worshipColumns = { columnWidths: PRINTED_QUEENS_LAYOUT.worshipColumnWidths };
+  appendProgramTable_(cell, worshipRowsBeforeSermon, worshipColumns);
+  appendSermonRow_(cell, sermonRow, PRINTED_QUEENS_LAYOUT.worshipColumnWidths);
+  appendProgramTable_(cell, worshipRowsAfterSermon, worshipColumns);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
     // When this column is taller than the study column, the giving footer's

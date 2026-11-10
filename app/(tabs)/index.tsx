@@ -90,8 +90,9 @@ export default function HomeScreen() {
       hymnal: 'Hymnal',
       sabbathStarts: 'Sabbath starts in',
       isSabbath: 'Happy Sabbath!',
-      // decided to remove the dynamic location since most people don't like to give away location
-      // instead, each congregation shuold adjust the code to use their own location coordinates
+      // The place the countdown is for, the church's (CHURCH_LATITUDE and
+      // CHURCH_LONGITUDE), named in each language like every other label, so a
+      // new language names it in its own words.
       locationDefault: 'New York, NY',
     },
     zh: {
@@ -107,8 +108,6 @@ export default function HomeScreen() {
       hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
       isSabbath: '安息日快樂！',
-      // decided to remove the dynamic location since most people don't like to give away location
-      // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: '紐約',
     },
     'zh-cn': {
@@ -139,9 +138,7 @@ export default function HomeScreen() {
       hymnal: 'Himnario',
       sabbathStarts: 'El Sábado comienza en',
       isSabbath: '¡Feliz Sábado!',
-      // decided to remove the dynamic location since most people don't like to give away location
-      // instead, each congregation shuold adjust the code to use their own location coordinates
-      locationDefault: 'New York, NY',
+      locationDefault: 'Nueva York, NY',
     },
   };
 

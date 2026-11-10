@@ -111,6 +111,10 @@ brand-guideline review before adding it.
 
 Websites open in the in-app browser, which slides up over the app and closes back to
 it: Safari View Controller on iOS, a Custom Tab on Android, and a new tab on the web.
+On Android the Custom Tab opens inside the app's own task, on top of the app, so each
+link opens a new tab with its own page. In a task of its own, a page someone left
+without closing it stayed open, and the next link showed that page again instead of
+its own ([#705](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/705)).
 Links that belong to another app open that app instead: phone numbers, email addresses,
 YouTube, Spotify, Zoom, Google Maps, and the App Store and Google Play. A phone without
 that app opens them in its own browser. Every link goes through `openURL` (websites) or
@@ -226,7 +230,13 @@ simple, blended colors.
   others take the muted ink. Its icons and labels follow the app's text size,
   which the systems' own bars wouldn't. On iOS it sits partly within the home
   indicator's inset, as iOS's own bar does; on Android, wholly above the gesture bar or
-  the three buttons, with Android's ripple when pressed (`getCapsuleBottomGap`).
+  the three buttons (`getCapsuleBottomGap`).
+  - **Pressing a tab slides the selected tab's pill to it** in a quarter of a second, on
+    the native driver, before the tab's page has drawn (#704). With Reduce Motion (iOS)
+    or Remove animations (Android) on, it moves at once. On Home's own pages no tab is
+    selected and there's no pill; the next tab pressed gets it without a slide. There's
+    no Android ripple: it ignored the pill's round ends and flashed a square behind the
+    tab.
   - **Pages run to the bottom edge** and scroll under it, and under the Bible's card,
     fading out in a soft halo of the page's own colour (`FloatingHalo`): about
     three-quarters opaque at a bar's edge, half 6 points out, and gone about 25 points
@@ -257,6 +267,17 @@ simple, blended colors.
       the arrows back if they fit beside it (`getDockPillLabels`,
       `getBookPillAbbreviation`). Each pill stays at least 44 points wide, a tap
       target. The book is always named, never cut to "…" alone.
+    - **Book names when the Bible is in another language (#723):** the book pill is a
+      control, so it names the book in the app's language alone, as the Verse pill
+      does: Psalms in an English app reading the CUV. One name keeps it inside the card.
+      The book, chapter and verse lists, and what shows a verse's words (search results,
+      saved verses, a verse's popup), name it in the translation's language with the
+      app's in parentheses: 詩篇 (Psalms) and 第 3 節 (Verse 3) in the lists, 詩篇 23:1
+      (Psalms) in a reference. When both don't fit on a line, the name in parentheses
+      moves whole to the next, never broken inside. A translation in the app's language shows
+      one name, as before, and Traditional and Simplified Chinese count as one language.
+      In two-translation reading, the main translation's language comes first
+      (`services/BibleNames.ts`).
   - **The header's buttons match the bars:** the back button, the page title, the search
     bar, and the Bible's translation, saved-verse, help and search buttons float on the
     same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a
@@ -275,12 +296,22 @@ simple, blended colors.
     badges on the light blue or a deeper gold-brown (`#3B3423`,
     `STANDARD_FLOATING_COLORS`). Every text and icon on them still reads at least 4.5:1.
     - Asked at first-launch setup's last two steps ("Which is easier to read in light
-      mode?", then dark mode), and once after the update that brought it, in a popup
-      with only those two questions (`constants/WhatsNew.ts`, keyed by version, so a
-      later release can add its own or none; live announcements, #562, would be
-      separate). Changed any time under You → Contrast.
+      mode?", then dark mode), and once after the update that brought it, with only
+      those two questions (`constants/WhatsNew.ts`, keyed by version, so a later release
+      can add its own or none; live announcements, #562, would be separate). Changed any
+      time under You → Contrast.
+    - The question after an update is setup's own full screen and contrast steps
+      (`components/SetupScreen.tsx`, `ContrastStep`), not a popup, so the popups' 65%
+      height limit doesn't apply (#708). In a popup, the buttons' row pushed Standard
+      below the fold on a phone. It goes on as setup does: a tap on a picture only
+      chooses it, Next goes to the dark mode question, and Done, beside Back, finishes.
+      When a tap on a picture went on, a tap on high contrast, chosen already, seemed to
+      do nothing. It asks questions, so it has no X and can't be dismissed.
     - Each shows a picture of the tab bar in each look, high contrast first, one above
-      the other, since many older members wouldn't know the word.
+      the other, since many older members wouldn't know the word. Where both pictures
+      wouldn't fit above the buttons that way, at a large text size or on a short
+      screen, they sit side by side, so both show without a scroll (#708); the words
+      under them may still scroll.
     - A designer's advice settled the default: contrast is usually the default, and the
       members it bothers, mostly younger, change it.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
@@ -289,6 +320,13 @@ simple, blended colors.
   dark mode. Each step's title is large, its choices scroll in a column at most 560
   points wide, and Back and Next stay at the bottom, below five progress dots outlined
   in blue (gold in the dark theme), the current one filled and wider.
+  - A tap on a choice only chooses it, and the language, size or theme changes at once.
+    Next, then Get Started, is the only way on, so it works the same whether the member
+    keeps the choice each step starts with, such as English or high contrast, or picks
+    another (#708). Finishing setup saves every choice, the contrasts included.
+  - The contrast question after an update uses the same full screen, steps and buttons
+    (`components/SetupScreen.tsx`, `components/SetupAction.tsx`), ending on Done
+    instead of Get Started (#708).
   - Members choose by pictures, not words alone, as with the contrast pictures:
     - each language is a card with a picture of the tab bar in that language;
     - each theme is a card with a picture of a page and its tab bar in it, light and dark
@@ -312,7 +350,8 @@ simple, blended colors.
 - **Popups:** Every popup is the app's own, never the system's alert (`Alert.alert`),
   which on Android looks unlike the rest of the app. A popup is centred, with the shared
   corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall at any
-  text size, scrolling beyond that. One that only says something has an X in its title row
+  text size, scrolling beyond that. First-launch setup and the contrast question after an
+  update are full-screen steps, not popups, so the limit doesn't apply to them. One that only says something has an X in its title row
   and no Close button. One that asks a question has its answers as buttons, stacked so
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`

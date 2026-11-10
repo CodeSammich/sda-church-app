@@ -1634,6 +1634,80 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(renderWorshipEnding(false)).toEqual(['table']);
   });
 
+  // Renders a worship panel with made-up people, after the title step the
+  // print uses, and returns each row's person by its English label.
+  const renderWorshipPeople = (panel: string, closing: boolean, location: Record<string, string>) => {
+    const context = loadAppsScript({ testLocation: location });
+    const rows: string[][] = JSON.parse(
+      runInContext(
+        `var rows = [];
+         appendPanelHeading_ = appendCenteredText_ = appendHalfSpacer_ = function () {};
+         appendCompactItalicCenteredText_ = appendSilentPrayerHeading_ = appendSpacer_ = function () {};
+         appendProgramTable_ = appendBrooklynProgramTable_ = function (cell, table) {
+           rows = rows.concat(table);
+         };
+         appendSermonRow_ = function (cell, row) { rows.push(row); };
+         var dictionary = {
+           englishToChinese: { 'paul wen': '溫保羅', 'mark sun': '孫馬可', 'ruth ho': '何路得' },
+           chineseToEnglish: { '溫保羅': 'Paul Wen', '孫馬可': 'Mark Sun', '何路得': 'Ruth Ho' },
+           titles: { 'paul wen': { english: 'Pastor', chinese: '牧師' } }
+         };
+         var bulletin = preparePrintedBulletinForPrint_(
+           { queens: JSON.parse(JSON.stringify(testLocation)), brooklyn: JSON.parse(JSON.stringify(testLocation)) },
+           dictionary
+         );
+         ${panel}('worship', bulletin, ${closing});
+         JSON.stringify(rows)`,
+        context,
+      ) as string,
+    );
+    return (label: string) => rows.find(([first]) => first.split('\n').pop() === label)?.[2];
+  };
+
+  it.each([
+    ['Queens', true],
+    ['Queens Communion', false],
+  ])('prints the sermon speaker in the %s Invocation row, as in the sermon row', (_name, closing) => {
+    const person = renderWorshipPeople('appendWorshipPanel_', closing, {
+      sermon: 'Paul Wen',
+      chairPastoralPrayer: 'Mark Sun',
+    });
+
+    // The same person, with the same Leadership title, as the sermon row.
+    expect(person('Sermon')).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(person('Invocation')).toBe(person('Sermon'));
+    // The chair and the pastoral prayer keep their own person.
+    expect(person('Chairman')).toBe('孫馬可\nMark Sun');
+    expect(person('Pastoral Prayer')).toBe('孫馬可\nMark Sun');
+  });
+
+  it('prints TBD in the Queens Invocation row with no sermon speaker, never the chair', () => {
+    const person = renderWorshipPeople('appendWorshipPanel_', true, { chairPastoralPrayer: 'Mark Sun' });
+
+    expect(person('Invocation')).toBe('尚未確定\nTBD');
+  });
+
+  it("keeps Brooklyn's chair in its Invocation row, unlike Queens", () => {
+    // The user confirmed in #707's review that Brooklyn's chair gives the
+    // invocation on purpose.
+    const person = renderWorshipPeople('appendBrooklynWorshipPanel_', true, {
+      sermon: 'Paul Wen',
+      chairPastoralPrayer: 'Mark Sun',
+      chair: 'Ruth Ho',
+    });
+    expect(person('Sermon')).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(person('Invocation')).toBe('何路得\nRuth Ho');
+    expect(person('Chairman')).toBe('何路得\nRuth Ho');
+    expect(person('Pastoral Prayer')).toBe('孫馬可\nMark Sun');
+
+    // Without a Brooklyn chair, the Chair/Pastoral Prayer person gives it.
+    const noChair = renderWorshipPeople('appendBrooklynWorshipPanel_', true, {
+      sermon: 'Paul Wen',
+      chairPastoralPrayer: 'Mark Sun',
+    });
+    expect(noChair('Invocation')).toBe('孫馬可\nMark Sun');
+  });
+
   it('keeps the giving text in from the sheet edge without padding the QR cells', () => {
     const makeCell = () => {
       const cell = {

@@ -1,3 +1,5 @@
+import { describeChineseMissionSpotlight } from '@/features/sabbath-school/ChineseMissionSpotlight';
+
 const {
   checkAdvance,
   checkShot,
@@ -159,7 +161,9 @@ describe('closer look at a strip', () => {
     // The first pass missed 您 here; the other three labels still show Chinese.
     const lines = samples.clean['library-zh'] as Line[];
     expect(checkShot(shot('library-zh'), lines)).toEqual([]);
-    expect(checkShot(shot('bible-pinyin-zh'), [line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)])).toEqual([]);
+    expect(
+      checkShot(shot('bible-pinyin-zh'), [line('約翰福音', 0.86), line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)]),
+    ).toEqual([]);
   });
 });
 
@@ -222,12 +226,24 @@ describe('screen rules', () => {
   });
 
   it("catches the previous Bible's book names after a link opens the CUV (#373)", () => {
-    const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.944));
+    // The book list, which names the CUV's books with the app's English in
+    // parentheses since #723; the pill names the book in English whichever
+    // names are loaded.
     const after = shot('bible-cuv-after-spanish-default');
-    // What the release run read: Vision, reading English first, misses 詩篇.
-    expect(checkShot(after, [...tabs, line('23 v', 0.86), line('Verse v', 0.86)])).toEqual([]);
-    expect(checkShot(after, [...tabs, line('Salmos v', 0.86), line('Verse v', 0.86)])).toEqual([
-      '"Salmos v" matches /Salmos/, which must not show',
+    const list = (names: string[]) => names.map((name, index) => line(name, 0.3 + index * 0.06));
+    expect(checkShot(after, list(['創世記 (Genesis)', '出埃及記 (Exodus)', '利未記 (Leviticus)']))).toEqual([]);
+    // Vision, reading English first, may miss the Chinese.
+    expect(checkShot(after, list(['(Genesis)', '(Exodus)', '(Leviticus)', '(Numbers)']))).toEqual([]);
+    // The Spanish names, kept after the link.
+    expect(checkShot(after, list(['Génesis (Genesis)', 'Éxodo (Exodus)', 'Levítico (Leviticus)']))).toEqual([
+      '"Éxodo (Exodus)" matches /^[EÉ]xodo\\b/, which must not show',
+      '"Levítico (Leviticus)" matches /^Lev[ií]tico\\b/, which must not show',
+    ]);
+    // The list before #723, with no English.
+    expect(checkShot(after, list(['創世記', '出埃及記', '利未記']))).toEqual([
+      'no line matches /[(（]Genesis\\b/',
+      'no line matches /[(（]Exodus\\b/',
+      'no line matches /[(（]Leviticus\\b/',
     ]);
   });
 
@@ -416,5 +432,137 @@ describe('tab labels in any case (#589)', () => {
   it('still fails a label cut short, or one inside a longer word', () => {
     expect(showsLabel([line('Inici')], 'Inicio', tabs)).toBe(false);
     expect(showsLabel([line('Verses')], 'Verse', tabs)).toBe(false);
+  });
+});
+
+describe("the Chinese mission video card, this week's or the last one found (#726)", () => {
+  const androidShots = planChecks(loadConfig(), 'android');
+  const iphone = shot('sabbath-school-zh');
+  const android = androidShots.find((candidate: { name: string }) => candidate.name === 'sabbath-school-zh');
+  const at = (text: string, box: number[]): Line => ({ text, box });
+  // The lines the checks look at, as Vision (the iPhone) and RapidOCR (the
+  // Android phone) read them on real shots: the lesson card's title, the
+  // mission video card, and the tab bar.
+  const iphoneTabs = [
+    at('首頁', [0.136, 0.959, 0.047, 0.012]),
+    at('聖經', [0.363, 0.959, 0.047, 0.012]),
+    at('探索', [0.587, 0.959, 0.05, 0.012]),
+    at('您', [0.823, 0.959, 0.028, 0.012]),
+  ];
+  const androidTabs = [
+    at('首頁', [0.132, 0.936, 0.071, 0.021]),
+    at('聖經', [0.353, 0.936, 0.072, 0.021]),
+    at('探索', [0.576, 0.936, 0.072, 0.021]),
+    at('您', [0.817, 0.937, 0.04, 0.019]),
+  ];
+  // Monday 2026-11-09, before CHTV posted the 14th's video: the fork's iOS run
+  // 42690519431 and Android run 42651426472, which the old check,
+  // /^\d{1,2}月\d{1,2}日安息日/, failed. The note wraps at a different place
+  // on each phone, and Vision read its last 上 as 〉.
+  const lastWeekIphone = [
+    at('本週', [0.192, 0.49, 0.082, 0.02]),
+    at('11月7日聖工剪影', [0.192, 0.587, 0.309, 0.02]),
+    at('不安歇的心（普通話）。本週的影片出來後會換〉', [0.192, 0.612, 0.704, 0.023]),
+    at('上。', [0.192, 0.637, 0.05, 0.017]),
+    ...iphoneTabs,
+  ];
+  const lastWeekAndroid = [
+    at('本週', [0.212, 0.561, 0.113, 0.029]),
+    at('11月7日聖工剪影', [0.218, 0.671, 0.372, 0.024]),
+    at('不安歇的心（普通話)。本週的影片出', [0.218, 0.701, 0.626, 0.022]),
+    at('來後會換上。', [0.217, 0.724, 0.212, 0.022]),
+    ...androidTabs,
+  ];
+  // This week's, as the English page when the feed gave no video: the iPhone
+  // on 2026-11-08 (run 42532995249), the Android phone on 2026-11-06 (run
+  // 42146492850).
+  const thisWeekIphone = [
+    at('本週', [0.192, 0.49, 0.082, 0.02]),
+    at('本週聖工剪影', [0.192, 0.587, 0.246, 0.02]),
+    at('11月14日安息日的 Mission Spotlight（英文）', [0.192, 0.615, 0.621, 0.016]),
+    ...iphoneTabs,
+  ];
+  const thisWeekAndroid = [
+    at('本週', [0.212, 0.561, 0.113, 0.029]),
+    at('本週聖工剪影', [0.218, 0.671, 0.293, 0.025]),
+    at('11月7日安息日的 Mission Spotlight', [0.215, 0.7, 0.604, 0.023]),
+    at('(英文)', [0.236, 0.722, 0.121, 0.026]),
+    ...androidTabs,
+  ];
+  const titleRule = 'no line matches /^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$/';
+  const dateRule = 'no line matches /^\\d{1,2}月\\d{1,2}日(安息日|聖工剪影$)/';
+
+  it('passes the last video found, with its note, on both phones', () => {
+    expect(checkShot(iphone, lastWeekIphone)).toEqual([]);
+    expect(checkShot(android, lastWeekAndroid)).toEqual([]);
+  });
+
+  it("passes this week's English page on both phones", () => {
+    expect(checkShot(iphone, thisWeekIphone)).toEqual([]);
+    expect(checkShot(android, thisWeekAndroid)).toEqual([]);
+  });
+
+  it("passes the card as the app writes it, for this week's Mandarin video or an older one", () => {
+    const card = (sabbath: string) =>
+      describeChineseMissionSpotlight({ sabbath, id: 'aaaaaaaaaaa', story: '山上的學校' }, new Date(2026, 10, 14), 'zh');
+    expect(card('2026-11-14').title).toBe('本週聖工剪影');
+    expect(card('2026-11-07').title).toBe('11月7日聖工剪影');
+    for (const { title, description } of [card('2026-11-14'), card('2026-11-07')]) {
+      const lines = [at('本週', [0.192, 0.49, 0.082, 0.02]), line(title, 0.587), line(description, 0.612), ...iphoneTabs];
+      expect(checkShot(iphone, lines)).toEqual([]);
+    }
+  });
+
+  it('fails a date not written out in Chinese, or another screen', () => {
+    const replaced = (lines: Line[], from: string, to: string) =>
+      lines.map((each) => ({ ...each, text: each.text.replace(from, to) }));
+    // formatAppDate's date in English, as Hermes once showed it on Android.
+    expect(checkShot(iphone, replaced(lastWeekIphone, '11月7日', 'November 7'))).toEqual([titleRule, dateRule]);
+    expect(checkShot(android, replaced(lastWeekAndroid, '11月7日', 'November 7'))).toEqual([titleRule, dateRule]);
+    expect(checkShot(iphone, replaced(thisWeekIphone, '11月14日', 'November 14'))).toEqual([dateRule]);
+    // A date that leads neither 安息日 nor the title doesn't count.
+    expect(checkShot(iphone, replaced(thisWeekIphone, '安息日的', '的'))).toEqual([dateRule]);
+    // The Library in Chinese, a real shot of another screen.
+    expect(checkShot(iphone, samples.clean['library-zh'])).toEqual(['no line matches /^本週$/', titleRule, dateRule]);
+  });
+});
+
+describe("the lesson open in Quick Look, its title read with the iPad's dropdown arrow (#736)", () => {
+  const iphone = shot('sabbath-school-lesson-viewer-default');
+  const ipadShots = planChecks(loadConfig(), 'ipad');
+  const ipad = ipadShots.find((candidate: { name: string }) => candidate.name === 'sabbath-school-lesson-viewer-landscape');
+  const at = (text: string, box: number[]): Line => ({ text, box });
+  // The lines the check looks at, as Vision read them: the title Quick Look
+  // shows and the top of the PDF's first page under it. On release PR #731's
+  // run 42759990060, the iPad read the title's dropdown arrow into its line as
+  // " v", and the old check, /^Beginner \(ages 1.3\)$/, failed it. On the
+  // fork's run 42690519431 the day before, it left the arrow out. The iPhone
+  // shows no arrow.
+  const pageIpad = [
+    at('BIG IDEA: I can help others.', [0.313, 0.229, 0.376, 0.043]),
+    at('Others', [0.298, 0.583, 0.473, 0.154]),
+  ];
+  const pageIphone = [
+    at('BIG IDEA: I can help others.', [0.312, 0.172, 0.375, 0.015]),
+    at('Others', [0.29, 0.29, 0.49, 0.059]),
+  ];
+  const withArrow = at('Beginner (ages 1-3) v', [0.007, 0.045, 0.132, 0.017]);
+  const withoutArrow = at('Beginner (ages 1-3)', [0.006, 0.045, 0.118, 0.019]);
+  const iphoneTitle = at('Beginner (ages 1-3)', [0.287, 0.081, 0.366, 0.019]);
+  const titleRule = 'no line matches /^Beginner \\(ages 1.3\\)(\\s*[vV⌄˅∨﹀])?$|aliveinjesus\\.info/';
+  const retitled = (text: string) => ({ ...withArrow, text });
+
+  it('passes the title with or without the arrow read into its line', () => {
+    expect(checkShot(ipad, [withArrow, ...pageIpad])).toEqual([]);
+    expect(checkShot(ipad, [withoutArrow, ...pageIpad])).toEqual([]);
+    expect(checkShot(iphone, [iphoneTitle, ...pageIphone])).toEqual([]);
+  });
+
+  it('fails a missing title, another lesson, or more text after the title', () => {
+    expect(checkShot(ipad, pageIpad)).toEqual([titleRule]);
+    expect(checkShot(iphone, pageIphone)).toEqual([titleRule]);
+    expect(checkShot(ipad, [retitled('Kindergarten (ages 4-6) v'), ...pageIpad])).toEqual([titleRule]);
+    expect(checkShot(ipad, [retitled('Beginner (ages 1-3) vv'), ...pageIpad])).toEqual([titleRule]);
+    expect(checkShot(ipad, [retitled('Beginner (ages 1-3) Students'), ...pageIpad])).toEqual([titleRule]);
   });
 });

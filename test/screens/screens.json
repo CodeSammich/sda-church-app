@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, appStoreIpad the iPad's, from the screens that list ipadVariants (#324), and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 8 minutes on the iPhone, or 7 on the iPad. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. Every download a reviewer opens stays under the 50 MB Chrome looks inside, with no app in it: Chrome blocked the one download that held the screenshots and the unsigned app (#484), and called 1.7.0's 349 MB of iPhone and iPad shots dangerous. scripts/pack-review-downloads.cjs packs each device's shots as palette PNGs, in parts if need be, and fails the join if they'd need more parts than the workflow uploads (\"Downloads under 50 MB\" in docs/operations/native-builds.md).",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, appStoreIpad the iPad's, from the screens that list ipadVariants (#324), googlePlay, per Google Play language, the Android ones (at most 8), and googlePlayTablet the Android tablet's, from the screens that list androidTabletVariants (#695); and oneOff, the store sets of languages taken only in a hand-started one-off run (#692), each derived from these lists. Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 8 minutes on the iPhone, or 7 on the iPad. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. Every download a reviewer opens stays under the 50 MB Chrome looks inside, with no app in it: Chrome blocked the one download that held the screenshots and the unsigned app (#484), and called 1.7.0's 349 MB of iPhone and iPad shots dangerous. scripts/pack-review-downloads.cjs packs each device's shots as palette PNGs, in parts if need be, and fails the join if they'd need more parts than the workflow uploads (\"Downloads under 50 MB\" in docs/operations/native-builds.md).",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -9,10 +9,11 @@
     "points": { "width": 1032, "height": 1376 }
   },
   "android": {
-    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
+    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. tablet is a 10-inch tablet held upright (#695), 800 dp wide as the Pixel Tablet and other 10-inch tablets at 1280 × 800 dp are, but 9:16 rather than their 16:10, the shape Google Play's tablet screenshots take: 1620 × 2880 at 324 dpi, 800 × 1422 dp. The app's tablet layout follows the screen's width and its shorter side, not its height, so it lays out as on a real tablet, with a little more of each page in view, and the one emulator takes both the tablet's checks and its Google Play shots. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
     "systemImage": "system-images;android-36;google_apis;x86_64",
     "phone": { "name": "Samsung Galaxy A07 4G", "width": 720, "height": 1600, "density": 300 },
     "googlePlay": { "name": "Google Play screenshot size", "width": 1080, "height": 1920, "density": 420 },
+    "tablet": { "name": "10-inch tablet at Google Play's 9:16", "width": 1620, "height": 2880, "density": 324 },
     "splitWindows": [
       { "$comment": "The iPad's Split View and Slide Over windows, in points (dp at 2x, 320 dpi), taken on their own emulators (#324): Slide Over, and the 11-inch iPad's half, the 13-inch iPad's half in portrait, and its two-thirds in landscape.", "width": 320, "height": 744 },
       { "width": 504, "height": 1194 },
@@ -35,6 +36,7 @@
     "es": { "language": "es" },
     "zh-dark": { "language": "zh", "theme": "dark" },
     "zh-cn-dark": { "language": "zh-cn", "theme": "dark" },
+    "es-dark": { "language": "es", "theme": "dark" },
     "xl-ios-large-text": { "textScale": 2, "iosTextSize": "accessibility-large" },
     "es-xl-ios-large-text": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-large" },
     "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" },
@@ -65,6 +67,7 @@
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
       "ipadVariants": ["landscape"],
+      "androidTabletVariants": ["default", "landscape"],
       "mustShowLines": ["^Welcome$", "^Language$", "^English$", { "line": "^Next$", "platforms": ["ios"] }],
       "mustNotShowLines": ["^Appearance$", "^Text size$"],
       "variantRules": {
@@ -74,16 +77,17 @@
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"Happy Sabbath!\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. The timer's rule allows up to three characters before it, for the days: Vision can read the iPhone's Courier \"1d\" as \"ld\" or \"la\", and RapidOCR can drop the space after it. The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"Happy Sabbath!\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. zh, zh-cn and es require the place in their own language, 紐約, 纽约 or Nueva York, NY (#729). The timer's rule allows up to three characters before it, for the days: Vision can read the iPhone's Courier \"1d\" as \"ld\" or \"la\", and RapidOCR can drop the space after it, as it dropped the one before \"in\" on the Android tablet (#695). The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "landscape", "landscape-xl", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
         "xl-ios-large-text": {
           "mustShowLines": ["^Today.s Verse$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
-        "default": { "mustShowLines": ["^(Sabbath starts in|Happy Sabbath!?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["^(Friday|Saturday), "] },
+        "default": { "mustShowLines": ["^(Sabbath starts ?in|Happy Sabbath!?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["^(Friday|Saturday), "] },
         "es-large": { "mustShowLines": ["Compartir$", "^(El S.bado comienza en|.?Feliz S.bado!?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["\\bCompar(t|ti)?$", "^(tir|ir)\\b"] },
         "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo\\b"] },
         "xl-android-font-max": {
@@ -91,8 +95,9 @@
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
         "es-xl-android-font-max": { "mustShowLines": ["^Vers[ií]culo\\b"] },
-        "zh": { "mustShowLines": ["^(距離安息日還有|安息日快樂！?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] },
-        "zh-cn": { "mustShowLines": ["^(距离安息日还有|安息日快乐！?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] }
+        "zh": { "mustShowLines": ["^(距離安息日還有|安息日快樂！?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$", "^紐約$"], "mustNotShowLines": ["星期[一二三四五六日]"] },
+        "zh-cn": { "mustShowLines": ["^(距离安息日还有|安息日快乐！?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$", "^纽约$"], "mustNotShowLines": ["星期[一二三四五六日]"] },
+        "es": { "mustShowLines": ["^Nueva York,? NY$"] }
       },
       "changesDaily": true
     },
@@ -113,6 +118,7 @@
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "ios-large-text", "landscape"],
+      "androidTabletVariants": ["default", "landscape"],
       "mustShowLines": ["\\bEN\\b", "BSB", "[Cc]UV", "^Psalms(\\b|v$)"],
       "variantRules": {
         "w320": { "mustShowLines": ["^Ps(alms)?\\b"] }
@@ -156,17 +162,19 @@
       },
       "variants": ["zh"],
       "ipadVariants": ["landscape-zh", "zh"],
+      "androidTabletVariants": ["zh"],
       "mustShowLines": ["粵語", "^\u8a69\u7bc7"]
     },
     {
       "name": "bible-cuv-after-spanish",
       "group": "bible-text",
-      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed, so Vision reads the dock in English first and misses 詩篇; it reads a stale Salmos reliably.",
-      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=book",
       "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["Salmos"]
+      "mustShowLines": ["[(（]Genesis\\b", "[(（]Exodus\\b", "[(（]Leviticus\\b"],
+      "mustNotShowLines": ["Salmos", "^[EÉ]xodo\\b", "^Lev[ií]tico\\b", "^N[uú]meros\\b"]
     },
     {
       "name": "bible-cuvs",
@@ -176,15 +184,22 @@
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh-cn", "zh-cn-dark"],
       "ipadVariants": ["landscape-zh-cn", "zh-cn"],
+      "androidTabletVariants": ["zh-cn"],
       "mustShowLines": ["国语", "^\u8bd7\u7bc7"]
     },
     {
       "name": "bible-pinyin",
       "group": "bible-text",
+      "$comment": "The CUV with pinyin. The book pill names the book in the app's language (#723): John in English, at 100% and 150%, though the CUV is read; 約翰福音 in Chinese, as the CUV names it.",
       "path": "bible?bookId=JHN&chapter=3&translationId=cmn_cuv",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": true },
       "variants": ["default", "zh", "large"],
-      "ipadVariants": ["landscape-zh"]
+      "ipadVariants": ["landscape-zh"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^John\\b"] },
+        "large": { "mustShowLines": ["^John\\b"] },
+        "zh": { "mustShowLines": ["^約翰福音"] }
+      }
     },
     {
       "name": "bible-scrolled",
@@ -234,7 +249,8 @@
       "mustShowLines": ["^WordProject$"],
       "variantRules": {
         "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
-        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] }
+        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] },
+        "es": { "mustShowLines": [{ "line": "^Ajustes de audio$", "maxTop": 0.4 }, "^Idioma del audio$", "^Escuchar sin conexi.n$"], "mustNotShowLines": ["^Cerrar$", "^Toda la Biblia$"] }
       }
     },
     {
@@ -357,6 +373,7 @@
       "path": "explore",
       "variants": ["default", "dark", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
       "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
         "default": { "mustNotShowLines": ["^In-depth Bible"] },
         "zh": { "mustShowLines": ["^精選書庫", "^深入研經"], "mustNotShowLines": ["圖書館"] },
@@ -373,9 +390,10 @@
       "wideContent": true,
       "variants": ["default", "dark", "zh", "zh-cn", "es"],
       "ipadVariants": ["default", "landscape", "landscape-xl", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "mustShowLines": [
         { "line": "^The Bruised Reed$", "minLeft": 0.3, "platforms": ["ios", "android"] },
-        { "line": "^The Bruised Reed$", "minLeft": 0.2, "platforms": ["ipad"] }
+        { "line": "^The Bruised Reed$", "minLeft": 0.2, "platforms": ["ipad", "android-tablet"] }
       ]
     },
     {
@@ -426,13 +444,13 @@
     {
       "name": "sabbath-school",
       "group": "library",
-      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the title is 本週聖工剪影, or the Sabbath of the last Mandarin video the phone found, such as 10月31日聖工剪影; and the video's line starts with its Sabbath's date, such as 11月7日安息日, whether it's the Mandarin video or the English page. That date is the key screens' check of Chinese dates written out by hand (formatAppDate): on Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"). The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
+      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the card shows one of three things, and a key-screens build, which starts with nothing remembered, shows whichever CHTV's feed gives it that day: this week's Mandarin video, titled 本週聖工剪影, its line starting with this week's Sabbath, such as 11月14日安息日; the English page when the feed gives none, with the same title and date; or, early in the week, before CHTV posts the new video, the last one it found, titled by its own Sabbath, such as 11月7日聖工剪影, with a note that this week's will replace it (#726). So the title is 本週聖工剪影 or a Sabbath's, and some line must start with a Sabbath's date: this week's before 安息日, or the older video's as its title. The note isn't checked: where it wraps depends on the story's name and the phone. That date is the key screens' check of Chinese dates written out by hand (formatAppDate): on Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"). The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "ipadVariants": ["default", "landscape", "landscape-xl"],
       "variantRules": {
         "default": { "mustShowLines": ["^This Week$", "^This Week.s Mission\\b"] },
-        "zh": { "mustShowLines": ["^本週$", "^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$", "^\\d{1,2}月\\d{1,2}日安息日"] },
+        "zh": { "mustShowLines": ["^本週$", "^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$", "^\\d{1,2}月\\d{1,2}日(安息日|聖工剪影$)"] },
         "es": { "mustShowLines": ["^Esta semana$", "^Video misionero\\b"] }
       }
     },
@@ -459,14 +477,14 @@
       "name": "sabbath-school-lesson-viewer",
       "group": "library",
       "platforms": ["ios"],
-      "$comment": "A children's lesson downloaded and open in Quick Look, the iPhone's own viewer (#529, #551). popup=lesson-viewer opens the Beginner student lesson in a key-screens build as a tap would: this week's PDF is about 1 MB. The app records how it opened (record), and the capture fails unless Quick Look opened, saying whether the network was the cause. Where the week's lesson has no PDF yet, the browser opens its website instead and the run only warns, so the rules accept that page's address too. Nothing of the page beneath may show.",
+      "$comment": "A children's lesson downloaded and open in Quick Look, the iPhone's own viewer (#529, #551). popup=lesson-viewer opens the Beginner student lesson in a key-screens build as a tap would: this week's PDF is about 1 MB. The app records how it opened (record), and the capture fails unless Quick Look opened, saying whether the network was the cause. Where the week's lesson has no PDF yet, the browser opens its website instead and the run only warns, so the rules accept that page's address too. On the iPad, Quick Look puts a dropdown arrow beside the title, and Vision sometimes reads it into the title's line as a trailing v, so the title may end with one (#736). Nothing of the page beneath may show.",
       "path": "sabbath-school?popup=lesson-viewer",
       "wideContent": true,
       "variants": ["default"],
       "ipadVariants": ["landscape"],
       "wait": 4,
       "record": "screenshot-lesson",
-      "mustShowLines": ["^Beginner \\(ages 1.3\\)$|aliveinjesus\\.info"],
+      "mustShowLines": ["^Beginner \\(ages 1.3\\)(\\s*[vV⌄˅∨﹀])?$|aliveinjesus\\.info"],
       "mustNotShowLines": ["^Students$", "^Teachers$", "^Opens this week's lesson PDF"]
     },
     {
@@ -577,13 +595,15 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup.",
+      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup. The Android tablet saves no text size, so Text size must read 150%, the size a tablet starts at (#695).",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "zh-cn", "android-display-large"],
       "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
+      "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$"] },
-        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$"] }
+        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$", { "line": "^Current: 150%$", "platforms": ["android-tablet"] }] },
+        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$", { "line": "^目前：150%$", "platforms": ["android-tablet"] }] },
+        "es": { "mustShowLines": ["^Contraste$", "^Alto contraste$", { "line": "^Actual: 150%$", "platforms": ["android-tablet"] }] }
       }
     },
     {
@@ -681,19 +701,18 @@
       }
     },
     {
-      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. It asks a question, so it has no X.",
+      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. From #708 it's setup's own full screen and contrast step, not a popup, so both pictures and the buttons show without a scroll: Standard is required again. A tap on a picture only chooses it, and setup's buttons go on: Next on the first page, Back and Done on the second. Both readers read the words on them, unlike setup's full-width Next on the Android phone, except that RapidOCR read the outlined 上一步 as 步 alone on the Android phone, so only the iPhone and iPad require it. It asks a question, so it has no X.",
       "name": "whats-new",
       "group": "worship-and-you",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "whatsNewSeen": null },
       "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["^Close$", "dark mode", "深色模式"],
+      "mustNotShowLines": ["^Close$", "dark mode", "深色模式", "^Back$", "^Done$", "^上一步$", "^完成$"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
-        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$", "^Next$"] },
+        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$", "^下一步$"] }
       }
     },
     {
@@ -701,15 +720,14 @@
       "name": "whats-new-dark",
       "group": "worship-and-you",
       "tabs": false,
-      "popup": true,
       "path": "",
       "settings": { "whatsNewSeen": null, "whatsNewStep": "dark" },
       "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["^Close$", "light mode", "淺色模式"],
+      "mustNotShowLines": ["^Close$", "light mode", "淺色模式", "^Next$", "^下一步$"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
-        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$", "^Back$", "^Done$"] },
+        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$", { "line": "^上一步$", "platforms": ["ios", "ipad"] }, "^完成$"] }
       }
     },
     {
@@ -756,5 +774,41 @@
     "en-US": ["home-default", "bible-dual-default", "bible-audio-settings-default", "bible-dual-dark", "explore-default", "library-default", "you-default"],
     "zh-TW": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark", "you-zh"],
     "zh-CN": ["home-zh-cn", "bible-cuvs-zh-cn", "bible-cuv-cantonese-zh", "explore-zh-cn", "library-zh-cn", "bible-cuvs-zh-cn-dark", "you-zh-cn"]
+  },
+  "googlePlayTablet": {
+    "en-US": ["home-default", "bible-dual-default", "explore-default", "library-default", "you-default"],
+    "zh-TW": ["home-zh", "bible-cuv-cantonese-zh", "explore-zh", "library-zh", "you-zh"],
+    "zh-CN": ["home-zh-cn", "bible-cuvs-zh-cn", "explore-zh-cn", "library-zh-cn", "you-zh-cn"]
+  },
+  "oneOff": {
+    "$comment": "Store sets taken once, by hand, never in a routine run (#692): a language added after English and Chinese gets its store screenshots this way, and no shots in routine CI (#241). Start iOS key screens and Android key screens by hand with one_off set to its key here, such as es: the run then takes only that language's sets, in place of every routine shot, and checks their text. Each store list's set for it is the list's from set, English's, in the same order and ending with You, each shot's screen and variant swapped through screens and variants, so a store list added later, such as Google Play's tablet sets (#695), needs only another run. Its copies go to the same downloads as the routine ones, under <store>/<language>/. screens here are taken only in one-off sets. See \"One-off store sets\" in docs/operations/native-builds.md.",
+    "screens": [
+      {
+        "name": "bible-spanish-dual",
+        "group": "bible-text",
+        "$comment": "The Spanish set's Bible in two languages, as a Spanish reader first sees it: Reina-Valera 1909 (RVR09) with the BSB beside it (getDefaultSupportingTranslationId), as English's shows BSB with the CUV. Psalm 23, as English's.",
+        "path": "bible?bookId=PSA&chapter=23&translationId=spa_r09",
+        "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+        "mustShowLines": ["RVR09", "BSB", "^Salmos(\\b|v$)"]
+      },
+      {
+        "name": "bible-spanish-audio-settings",
+        "group": "bible-reading",
+        "$comment": "The audio settings over that Bible, opened by popup=audio-settings: Reina-Valera 1909's Spanish narration, and Listen offline. Spanish's sets show it where English's show the CUV's Mandarin and Cantonese (Google Play) or the Bible with the Chinese interface (the App Store): Spanish and English, no Chinese (user, 2026-11-09).",
+        "path": "bible?bookId=PSA&chapter=23&translationId=spa_r09&popup=audio-settings",
+        "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+        "mustShowLines": [{ "line": "^Ajustes de audio$", "maxTop": 0.4 }, "Reina-Valera", "^Escuchar sin conexi.n$"],
+        "mustNotShowLines": ["^Cerrar$", "Mandar.n", "Canton.s"]
+      }
+    ],
+    "languages": {
+      "es": {
+        "$comment": "Both App Store Spanish listings (es-MX, es-ES) and both Google Play ones (es-US, es-419). A store set shows the app in its store's language: Spanish, with English beside it, and no Chinese anywhere (user, 2026-11-09). The Bible shots read Reina-Valera 1909 beside the BSB, and the third shot, English's Chinese-interface Bible on the App Store and the CUV's audio languages on Google Play, is the Spanish Bible's audio settings in both. mustNotShowLines apply to every shot in the language's sets (check-screens.cjs): no two Han characters together anywhere on screen. One alone passes, since RapidOCR reads some icons as one, such as the book as 目, the bookmark as 口, and the Language row's 文A icon.",
+        "from": "en-US",
+        "screens": { "bible-dual": "bible-spanish-dual", "bible-cuv": "bible-spanish-audio-settings", "bible-audio-settings": "bible-spanish-audio-settings" },
+        "variants": { "default": "es", "dark": "es-dark", "zh": "es" },
+        "mustNotShowLines": ["\\p{Script=Han}{2,}"]
+      }
+    }
   }
 }
