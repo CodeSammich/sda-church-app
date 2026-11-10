@@ -280,4 +280,36 @@ describe('bulletin page reloads (#702)', () => {
     await wait(10 * MINUTE + 5 * MINUTE + 1000);
     expect(requests).toHaveLength(1);
   });
+
+  // On a Sabbath night, the page shows this Sabbath and the next. At midnight
+  // it moves on, and asks for the new week, which this phone hasn't stored.
+  const sabbathNight = new Date(2026, 7, 8, 23, 50).getTime();
+  const openOnSabbathNight = async () => {
+    jest.setSystemTime(sabbathNight);
+    await cacheBulletin(bulletinWith('Grace Abounds'), sabbathNight - 5 * MINUTE);
+    await openBulletin();
+    expect(requests).toHaveLength(0);
+  };
+
+  it('moves on to the next week at a random moment in the 5 minutes after midnight', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    await openOnSabbathNight();
+
+    // Midnight is in 10 minutes; this phone waits 1 second and then half of
+    // the 5 minutes more.
+    const delay = 10 * MINUTE + 1000 + 2.5 * MINUTE;
+    await wait(delay - 1000);
+    expect(requests).toHaveLength(0);
+    expect(isShowing('Grace Abounds')).toBe(true);
+    await wait(1000);
+    expect(requests.map(({ url }) => url)).toEqual([expect.stringContaining('date=2026-08-15')]);
+  });
+
+  it('moves on within 5 minutes and 1 second of midnight, however late the random pick', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0.9999999);
+    await openOnSabbathNight();
+
+    await wait(10 * MINUTE + 5 * MINUTE + 1000);
+    expect(requests.map(({ url }) => url)).toEqual([expect.stringContaining('date=2026-08-15')]);
+  });
 });
