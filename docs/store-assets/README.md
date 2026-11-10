@@ -132,9 +132,11 @@ Spanish's sets are from one-off runs (#692):
   ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42747646177), on a
   fork, where every batch passed), and the App Store iPhone Home shot
   ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42751392298), on a
-  fork, where every batch passed). The header was built again from it. The iPad's Home
-  is still the earlier one, with "New York, NY": in that run, the church photo behind
-  the verse hadn't loaded on the iPad.
+  fork, where every batch passed). The header was built again from it. In that run,
+  the church photo behind the verse hadn't loaded on the iPad, so the iPad's Home is
+  from a second one-off run, on November 9 at a998002a, the same app
+  ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42755219621), on a
+  fork).
 
 None of the unreleased changes shows: Spanish's phone shots from the later runs match the
 earlier ones but for a pixel's shift in the tab bar's pill, and the day's verse on Home.
