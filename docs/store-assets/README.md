@@ -130,7 +130,11 @@ Spanish's sets are from one-off runs (#692):
 - From November 9, on the branch that named the countdown's place in Spanish, "Nueva
   York, NY" (#729), at a5d7dc74: the Google Play phone and tablet Home shots
   ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42747646177), on a
-  fork, where every batch passed).
+  fork, where every batch passed), and the App Store iPhone Home shot
+  ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42751392298), on a
+  fork, where every batch passed). The header was built again from it. The iPad's Home
+  is still the earlier one, with "New York, NY": in that run, the church photo behind
+  the verse hadn't loaded on the iPad.
 
 None of the unreleased changes shows: Spanish's phone shots from the later runs match the
 earlier ones but for a pixel's shift in the tab bar's pill, and the day's verse on Home.
