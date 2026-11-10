@@ -87,11 +87,14 @@ screenshots are captured, their sizes, and what they may show are in
   [Foreground service](../operations/play-console-answers.md#foreground-service).
 
 Each set's You screenshot is newer than the rest: it shows the Language row's globe,
-which replaced 文A (#725). The Google Play phone and tablet ones are from the Android
-key screens run on November 9, 2026 on the branch that changed it, at 9ccae741, on a
-fork ([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42715360733)),
-where every batch passed but the Library's, on a Sabbath School check that change
-didn't touch.
+which replaced 文A (#725). They're from the key-screen runs on November 9, 2026 on the
+branch that changed it, on a fork. The Google Play phone and tablet ones are from the
+Android run at 9ccae741
+([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42715360733)), where
+every batch passed but the Library's, on a Sabbath School check that change didn't
+touch. The App Store iPhone and iPad ones are from the iOS run at 46cf4d5d
+([run](https://github.com/CodeSammich/sda-church-app/actions/runs/42719283840)), where
+every batch passed.
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The screenshots
 and headers here are from the key-screen runs for 1.7.1 on November 6, 2026, with the
