@@ -434,13 +434,13 @@
     {
       "name": "sabbath-school",
       "group": "library",
-      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the title is 本週聖工剪影, or the Sabbath of the last Mandarin video the phone found, such as 10月31日聖工剪影; and the video's line starts with its Sabbath's date, such as 11月7日安息日, whether it's the Mandarin video or the English page. That date is the key screens' check of Chinese dates written out by hand (formatAppDate): on Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"). The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
+      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the card shows one of three things, and a key-screens build, which starts with nothing remembered, shows whichever CHTV's feed gives it that day: this week's Mandarin video, titled 本週聖工剪影, its line starting with this week's Sabbath, such as 11月14日安息日; the English page when the feed gives none, with the same title and date; or, early in the week, before CHTV posts the new video, the last one it found, titled by its own Sabbath, such as 11月7日聖工剪影, with a note that this week's will replace it (#726). So the title is 本週聖工剪影 or a Sabbath's, and some line must start with a Sabbath's date: this week's before 安息日, or the older video's as its title. The note isn't checked: where it wraps depends on the story's name and the phone. That date is the key screens' check of Chinese dates written out by hand (formatAppDate): on Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"). The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "ipadVariants": ["default", "landscape", "landscape-xl"],
       "variantRules": {
         "default": { "mustShowLines": ["^This Week$", "^This Week.s Mission\\b"] },
-        "zh": { "mustShowLines": ["^本週$", "^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$", "^\\d{1,2}月\\d{1,2}日安息日"] },
+        "zh": { "mustShowLines": ["^本週$", "^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$", "^\\d{1,2}月\\d{1,2}日(安息日|聖工剪影$)"] },
         "es": { "mustShowLines": ["^Esta semana$", "^Video misionero\\b"] }
       }
     },
