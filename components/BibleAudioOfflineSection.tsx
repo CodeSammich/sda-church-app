@@ -98,7 +98,7 @@ type BibleAudioOfflineSectionProps = Readonly<{
   translationId: string;
   /** The narrator chosen in the popup above. */
   reader?: string;
-  /** The book being read, in the translation's own name. */
+  /** The book being read, named in the app's language, as the book pill names it (#723). */
   book?: Readonly<{ id: string; name: string }>;
   textScale: TextScale;
   styles: BibleAudioOfflineSectionStyles;

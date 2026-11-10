@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { searchBible, type BibleSearchHit } from '@/services/BibleSearch';
+import { formatBookName, formatReference } from '@/services/BibleNames';
 import {
   formatScriptureReference,
   parseScriptureReference,
@@ -18,8 +19,12 @@ import {
 export type BibleSearchOptions = Readonly<{
   /** The translations on screen: the main one, then the second in dual-language reading. */
   translationIds: readonly string[];
-  /** The main translation's books, for their names and chapter counts. */
-  books: readonly Readonly<{ id: string; name: string; numberOfChapters: number }>[];
+  /**
+   * The main translation's books, for their chapter counts and the names the
+   * results show: in its language, and in the app's when that's another
+   * (#723), as services/BibleNames.ts's getSearchBooks names them.
+   */
+  books: readonly Readonly<{ id: string; name: string; appName?: string; numberOfChapters: number }>[];
   bookId?: string;
   chapter?: number;
   onOpen: (reference: ParsedScriptureReference) => void;
@@ -114,11 +119,12 @@ export const buildBibleSearchRows = ({
     return rows;
   }
 
-  const bookNames = new Map(options.books.map(({ id, name }) => [id, name]));
+  const bookNames = new Map(options.books.map((book) => [book.id, book]));
+  const bookName = (bookId: string) => bookNames.get(bookId) ?? { name: bookId };
   const verseRow = (hit: BibleSearchHit, section: string): BibleSearchRow => ({
     kind: 'verse',
     key: `${section}-${hit.bookId}-${hit.chapter}-${hit.verse}`,
-    title: `${bookNames.get(hit.bookId) ?? hit.bookId} ${hit.chapter}:${hit.verse}`,
+    title: formatReference(bookName(hit.bookId), `${hit.chapter}:${hit.verse}`),
     subtitle: hit.supportingText ? `${hit.text}\n${hit.supportingText}` : hit.text,
     reference: { bookId: hit.bookId, chapter: hit.chapter, verseStart: hit.verse, verseEnd: hit.verse },
   });
@@ -140,7 +146,7 @@ export const buildBibleSearchRows = ({
     const { bookId } = hits[start];
     let end = start;
     while (end < hits.length && hits[end].bookId === bookId) end += 1;
-    rows.push({ kind: 'header', key: `book-${bookId}`, title: `${bookNames.get(bookId) ?? bookId} · ${end - start}` });
+    rows.push({ kind: 'header', key: `book-${bookId}`, title: `${formatBookName(bookName(bookId))} · ${end - start}` });
     rows.push(...hits.slice(start, end).map((hit) => verseRow(hit, 'bible')));
     start = end;
   }
