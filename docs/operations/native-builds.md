@@ -46,7 +46,8 @@ on every push to `main`, is kept for browser testing and previews; see
   - [Android preview APK](#android-preview-apk)
   - [iOS key screens](#ios-key-screens-unsigned-simulator-builds), including the
     [key screens](#key-screens) on the iPhone and
-    [on Android](#android-key-screens)
+    [on Android](#android-key-screens), and
+    [one-off store sets](#one-off-store-sets) for a newer language
   - [Android audio test on release PRs](#android-audio-test-on-release-prs)
 - [Automatic store uploads](#automatic-store-uploads)
 - [Versions and maintenance](#versions-and-maintenance), including
@@ -1277,8 +1278,8 @@ emulator's screen is that size, so a copy is the shot itself; a shot of another 
 fails rather than being stretched. The tablet's, listed under `googlePlayTablet` in the
 same languages (4 to 8 each, upright, each ending with You), go the same way to
 `screens/google-play-tablet/<language>/` at 1620 × 2880; a turned shot fails there.
-A later language's tablet set is one more list under `googlePlayTablet`, with that
-language's variant in its screens' `androidTabletVariants`.
+A later language's tablet set comes from a [one-off run](#one-off-store-sets), as its
+other store sets do, not from routine runs.
 
 **On your own emulator.** With a `google_apis` image (Android Studio's "Google APIs",
 not "Google Play") and the phone's screen size and density (the capture refuses any
@@ -1290,6 +1291,53 @@ scripts/capture-android-screens.cjs --out <folder> [--group <group>]`, or `--sto
 adb to use, such as `adb.exe` from WSL. On a reused `android/` folder, delete
 `android/app/build/generated/assets/react/release` first: Gradle doesn't notice a
 changed `EXPO_PUBLIC_*` value and keeps the old JavaScript.
+
+#### One-off store sets
+
+A language that comes to the app after English and Chinese, Spanish first, gets its
+store screenshots once, by hand, and no shots in the routine runs that every release PR
+waits for (#692, #241). Each such language is under `oneOff.languages` in
+`test/screens/screens.json`:
+
+- `from`: the store sets it follows, English's (`en-US`).
+- `variants`: the variant each of English's becomes, such as `default` to `es` and
+  `dark` to `es-dark`.
+- `screens`: a screen to swap, such as `bible-dual` (the BSB with the CUV) for
+  `bible-spanish-dual` (Reina-Valera 1909 with the BSB, as a Spanish reader first sees
+  the Bible). A screen that only one-off sets use goes under `oneOff.screens`, with no
+  variants of its own, so routine runs never take it.
+
+So each store list's set for the language is English's, with the same screens in the
+same order, ending with You, and a store list added later, such as Google Play's tablet
+sets (#695), gets one with no change, only another run. Spanish's sets show Spanish and
+English only, no Chinese (user, 2026-11-09): where English's third shot shows Chinese,
+the Bible with the Traditional Chinese interface on the App Store and the CUV's Mandarin
+and Cantonese audio on Google Play, Spanish's shows the Spanish Bible's audio settings
+(`bible-spanish-audio-settings`).
+
+To take a language's sets, start both workflows by hand on a branch whose app code is
+what's live in the stores, with **one_off** set to the language's key, such as `es`:
+
+```bash
+gh workflow run ios-key-screens.yml --ref <branch> -f one_off=es
+gh workflow run android-key-screens.yml --ref <branch> -f one_off=es
+```
+
+The workflows pass it to every step as `KEY_SCREENS_ONE_OFF`, which every script that
+plans the shots reads (`loadConfig` in `scripts/capture-ios-screens.cjs`). The run then
+takes only that language's shots, in place of every routine shot, on the same runners and
+groups, the Android tablet's batch included; the split-window batches take none. It
+checks their text with their screens' rules, and saves the store copies in the usual
+downloads, under `screens/app-store/es/`, `screens/app-store-ipad/es/`,
+`screens/google-play/es/`, and `screens/google-play-tablet/es/`. A pull request has no
+inputs, so the release PR's runs don't change.
+
+Then look at every shot yourself: the language's text must show, and nothing that
+shouldn't, such as members' names, or a hymnal in that language when the app has none.
+Copy the sets into `docs/store-assets/` beside English's, strip their metadata, rebuild
+the language's App Store header and Play feature graphic, and upload them; see
+[Store assets](../store-assets/README.md). The sets stay as taken until someone runs this
+again: a release's run doesn't retake them.
 
 ### Android audio test on release PRs
 

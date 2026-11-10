@@ -310,6 +310,8 @@ const storeCopiesFor = (config, { store, tablet }) => {
 
 const capture = async (outDir, { group, store, split, tablet }) => {
   const config = loadConfig();
+  // A batch may have no shots, as in a one-off run (#692), and still writes its results.
+  mkdirSync(outDir, { recursive: true });
   const device = deviceFor(config, { store, split, tablet });
   const pkg = previewPackage();
   await becomeRoot();

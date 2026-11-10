@@ -1,52 +1,95 @@
 /**
- * Builds Google Play's feature graphic: the app icon, the church's name in English
- * and Traditional Chinese, and a line of features on the left, and two phones with
- * Google Play store screenshots on the right (the Bible in the dark theme behind,
- * the Bible in English and Chinese in front), on the brand blue (#00405C). The
- * screenshots are docs/store-assets/google-play/phone/en-US/, so run it again when
- * those change. See docs/store-assets/README.md.
+ * Builds Google Play's feature graphics, one per listing language that has its own:
+ * the app icon, the church's name in English and, below it, in Traditional Chinese, or
+ * in Spanish on Spanish's, with no Chinese (user, 2026-11-09), and a line of features
+ * in the listing's language on the left, and two phones with Google Play
+ * store screenshots from that language's set on the right (the Bible in the dark
+ * theme behind, the Bible in two languages in front), on the brand blue (#00405C).
+ * English's, feature-graphic.png, is from docs/store-assets/google-play/phone/en-US/,
+ * and Spanish's, feature-graphic-es.png, from its one-off set in phone/es/ (#692),
+ * so run it again when those change. See docs/store-assets/README.md.
  *
- * The graphic is a 1024 x 500 PNG with no transparency, as Play requires.
+ * Each graphic is a 1024 x 500 PNG with no transparency, as Play requires.
  *
  * The Chinese name needs Noto Sans TC Bold, which the repo doesn't bundle. Download
  * NotoSansTC-Bold.otf from https://github.com/notofonts/noto-cjk (Sans/SubsetOTF/TC):
  *
- *   node scripts/make-play-feature-graphic.cjs <fonts-folder> [output-file]
- *   node scripts/strip-image-metadata.cjs docs/store-assets/google-play/feature-graphic.png
+ *   node scripts/make-play-feature-graphic.cjs <fonts-folder> [output-folder]
+ *   node scripts/strip-image-metadata.cjs docs/store-assets/google-play/feature-graphic*.png
  */
+const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 
 const root = path.resolve(__dirname, '..');
 const [fontsDir, outArg] = process.argv.slice(2);
 if (!fontsDir) {
-  console.error('Usage: node scripts/make-play-feature-graphic.cjs <fonts-folder> [output-file]');
+  console.error('Usage: node scripts/make-play-feature-graphic.cjs <fonts-folder> [output-folder]');
   process.exit(1);
 }
-const shots = path.join(root, 'docs/store-assets/google-play/phone/en-US');
-const out = outArg ? path.resolve(outArg) : path.join(root, 'docs/store-assets/google-play/feature-graphic.png');
+const shotsRoot = path.join(root, 'docs/store-assets/google-play/phone');
+const outDir = outArg ? path.resolve(outArg) : path.join(root, 'docs/store-assets/google-play');
 const icon = path.join(root, 'public/icon-512x512.png');
 const jakartaBold = path.join(root, 'assets/fonts/PlusJakartaSans-Bold.ttf');
 const jakartaMedium = path.join(root, 'assets/fonts/PlusJakartaSans-Medium.ttf');
-const notoTC = path.join(fontsDir, 'NotoSansTC-Bold.otf');
 
 const W = 1024;
 const H = 500;
 const LEFT = 64;
 const LIGHT_BLUE = '#A9DDF2';
 
+// Each graphic: its file, the set its two phones come from, by shot name (the files
+// are numbered in upload order), back then front, the church's name under the English
+// one, and its line of features.
+const GRAPHICS = [
+  {
+    file: 'feature-graphic.png',
+    set: 'en-US',
+    phones: ['bible-dual-dark', 'bible-dual-default'],
+    localName: {
+      markup: `<span letter_spacing="${Math.round(24 * 0.12 * 1024)}">紐約華人基督復臨安息日會</span>`,
+      font: 'Noto Sans TC Bold',
+      fontfile: () => path.join(fontsDir, 'NotoSansTC-Bold.otf'),
+      size: 24,
+    },
+    features: 'Multilingual Bible · Audio · Weekly bulletin · Hymns',
+  },
+  {
+    // Both Spanish listings, es-US and es-419. The church's name in Spanish, which
+    // Claude translated (#692), in place of the Chinese.
+    file: 'feature-graphic-es.png',
+    set: 'es',
+    phones: ['bible-spanish-dual-es-dark', 'bible-spanish-dual-es'],
+    localName: {
+      markup: 'Iglesia Adventista del Séptimo Día\nChina de Nueva York',
+      font: 'Plus Jakarta Sans Bold',
+      fontfile: () => jakartaBold,
+      size: 22,
+      spacing: 2,
+    },
+    features: 'Biblia multilingüe · Audio · Boletín semanal · Himnos',
+  },
+];
+// A screenshot file, found by name in its set.
+const shotFile = (set, name) => {
+  const dir = path.join(shotsRoot, set);
+  const file = fs.readdirSync(dir).find((each) => each.replace(/^\d\d-/, '') === `${name}.png`);
+  if (!file) throw new Error(`No ${name} in ${dir}.`);
+  return path.join(dir, file);
+};
+
 // Back to front, both tilted the same way and running off the bottom edge.
 const SHOT_RATIO = 1920 / 1080;
 const BEZEL = 7;
 const PHONES = [
-  { file: '04-bible-dual-dark.png', screenW: 188, x: 596, y: 118 },
-  { file: '02-bible-dual-default.png', screenW: 214, x: 748, y: 60 },
+  { screenW: 188, x: 596, y: 118 },
+  { screenW: 214, x: 748, y: 60 },
 ];
 const TILT = -9;
 
 async function phoneSvg({ file, screenW, x, y }, index) {
   const screenH = Math.round(screenW * SHOT_RATIO);
-  const image = await sharp(path.join(shots, file)).resize(screenW, screenH).png().toBuffer();
+  const image = await sharp(file).resize(screenW, screenH).png().toBuffer();
   const frameW = screenW + 2 * BEZEL;
   const frameH = screenH + 2 * BEZEL;
   const radius = Math.round(screenW * 0.11);
@@ -66,8 +109,10 @@ const text = async (markup, font, fontfile, size, spacing = 0) =>
     .png()
     .toBuffer();
 
-(async () => {
-  const phones = await Promise.all(PHONES.map(phoneSvg));
+async function build(graphic) {
+  const phones = await Promise.all(
+    PHONES.map((phone, index) => phoneSvg({ ...phone, file: shotFile(graphic.set, graphic.phones[index]) }, index)),
+  );
   const iconSize = 84;
   const iconImage = await sharp(icon).resize(iconSize, iconSize).png().toBuffer();
   const background = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -92,27 +137,30 @@ const text = async (markup, font, fontfile, size, spacing = 0) =>
   </svg>`;
 
   const name = await text('<span foreground="#FFFFFF">New York Chinese\nSDA Church</span>', 'Plus Jakarta Sans Bold', jakartaBold, 46, 2);
-  const chineseName = await text(
-    `<span foreground="${LIGHT_BLUE}" letter_spacing="${Math.round(24 * 0.12 * 1024)}">紐約華人基督復臨安息日會</span>`,
-    'Noto Sans TC Bold',
-    notoTC,
-    24,
+  const { localName: local } = graphic;
+  const localName = await text(
+    `<span foreground="${LIGHT_BLUE}">${local.markup}</span>`,
+    local.font,
+    local.fontfile(),
+    local.size,
+    local.spacing,
   );
   const features = await text(
-    `<span foreground="${LIGHT_BLUE}">Multilingual Bible · Audio · Weekly bulletin · Hymns</span>`,
+    `<span foreground="${LIGHT_BLUE}">${graphic.features}</span>`,
     'Plus Jakarta Sans Medium',
     jakartaMedium,
     18,
   );
   const nameHeight = (await sharp(name).metadata()).height;
   const nameTop = 186;
-  const chineseTop = nameTop + nameHeight + 20;
-  const featuresTop = chineseTop + (await sharp(chineseName).metadata()).height + 30;
+  const localTop = nameTop + nameHeight + 20;
+  const featuresTop = localTop + (await sharp(localName).metadata()).height + 30;
 
+  const out = path.join(outDir, graphic.file);
   await sharp(Buffer.from(background), { density: 72 })
     .composite([
       { input: name, left: LEFT, top: nameTop },
-      { input: chineseName, left: LEFT, top: chineseTop },
+      { input: localName, left: LEFT, top: localTop },
       { input: features, left: LEFT, top: featuresTop },
     ])
     .flatten({ background: '#00405C' })
@@ -120,6 +168,11 @@ const text = async (markup, font, fontfile, size, spacing = 0) =>
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toFile(out);
   console.log(path.relative(root, out));
+}
+
+(async () => {
+  fs.mkdirSync(outDir, { recursive: true });
+  for (const graphic of GRAPHICS) await build(graphic);
 })().catch((error) => {
   console.error(error);
   process.exit(1);

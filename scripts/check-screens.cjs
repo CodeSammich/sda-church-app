@@ -58,10 +58,10 @@
  * summary. Exits 1 if any rule fails.
  */
 const { execFileSync } = require('node:child_process');
-const { appendFileSync, existsSync, mkdtempSync, writeFileSync } = require('node:fs');
+const { appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
-const { PLATFORMS, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup, variantsOn } = require('./capture-ios-screens.cjs');
+const { PLATFORMS, allScreens, loadConfig, planCaptures, planSplitCaptures, screenOf, takeGroup } = require('./capture-ios-screens.cjs');
 
 // Vision's languages for each app language, most important first. Bible screens
 // in English also show Chinese, so English reads both.
@@ -203,7 +203,9 @@ const forPlatform = (rules, platform) =>
  * Where the labels sit in an Android split window (#324), or on the Android
  * tablet (#695), measured in points from its bottom on the emulators at each
  * width: the tab labels about 58 up, the chapter controls about 148, or 72
- * while reading. A page's content runs from `contentTop` points down to the
+ * while reading. A line's box starts at its tallest letter, so the chapter
+ * controls' band reaches 195 up: Spanish's "Versículo", its accent included,
+ * started 182 up on the tablet (#692). A page's content runs from `contentTop` points down to the
  * tab bar: below the status bar in a split window, whose header fits in the
  * column, and below the header too on the tablet, whose header's buttons
  * span the screen when it's turned, as on the iPad.
@@ -212,7 +214,7 @@ const splitRegions = ({ height }, contentTop = 40) => {
   const up = (points) => 1 - points / height;
   return {
     tabs: [up(80), up(8)],
-    chapterControls: [up(175), up(120)],
+    chapterControls: [up(195), up(120)],
     chapterControlsReading: [up(100), up(50)],
     content: [contentTop / height, up(80)],
   };
@@ -519,14 +521,23 @@ const pointsFor = (config, platform) => {
   return {};
 };
 
+/**
+ * A one-off run's rules for a shot in one of its languages (#692), such as no
+ * Chinese in Spanish's sets.
+ */
+const oneOffRules = (config, shot) =>
+  (config.oneOffRun || [])
+    .filter((language) => language === shot.settings.language)
+    .flatMap((language) => config.oneOff.languages[language].mustNotShowLines || []);
+
 /** Adds each screen's rules, and its variant's, to one platform's shots. */
 const planChecks = (config, platform = 'ios') =>
   planCaptures(config, platform).map((shot) => {
-    const screen = config.screens.find((candidate) =>
-      variantsOn(candidate, platform).some((variant) => `${candidate.name}-${variant}` === shot.name),
-    );
+    // Its screen may be one that only one-off sets use (#692).
+    const screen = allScreens(config).find((candidate) => candidate.name === shot.screen);
     const variant = shot.name.slice(screen.name.length + 1);
     const forVariant = screen.variantRules?.[variant] || {};
+    const forLanguage = oneOffRules(config, shot);
     return {
       ...shot,
       tabs: screen.tabs,
@@ -535,7 +546,10 @@ const planChecks = (config, platform = 'ios') =>
       ...pointsFor(config, platform),
       mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
-      mustNotShowLines: joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+      mustNotShowLines: joinRules(
+        joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+        forLanguage.length ? forLanguage : undefined,
+      ),
     };
   });
 
@@ -692,6 +706,8 @@ const main = async () => {
     ? planSplitChecks(config, split)
     : takeGroup(platforms.flatMap((each) => planChecks(config, each)), argument('--group'), config);
   const text = await readText(dir, shots);
+  // A group may have no shots, as in a one-off run (#692), and no folder of its own.
+  mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'ocr.json'), JSON.stringify(text, null, 1));
 
   const results = [];
