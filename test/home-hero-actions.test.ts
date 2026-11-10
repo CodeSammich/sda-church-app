@@ -84,4 +84,10 @@ describe("the Sabbath countdown's card (#593)", () => {
       expect(home).toContain(label);
     }
   });
+
+  it("names its place in each language's own words, Spanish's too (#729)", () => {
+    // One per language, in Home's labels: a new language adds its own here.
+    const places = [...home.matchAll(/locationDefault: '([^']*)'/g)].map((match) => match[1]);
+    expect(places).toEqual(['New York, NY', '紐約', '纽约', 'Nueva York, NY']);
+  });
 });
