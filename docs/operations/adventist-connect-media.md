@@ -176,7 +176,10 @@ For WordProject's recordings, Cantonese and Spanish:
    incomplete manifest.
 
 WordPress puts an upload timestamp in each URL, so re-uploading a file changes its
-URL and the manifest must be regenerated.
+URL and the manifest must be regenerated. Re-uploading John 3 also changes the
+[status page](status-page.md#changing-the-checks)'s check for that recording:
+`test/status-page.test.ts` fails until that page's table is updated, and then
+the same change goes into the status repository's `.upptimerc.yml`.
 
 The reader's verse times were made from these exact files. A recording replaced with
 a different one, or a new narrator, needs its times made again: see
@@ -267,6 +270,8 @@ Watch for:
 
 - The dependency monitor reporting `Adventist Connect` failures, especially `403`,
   `429`, or an HTML response where an MP3 was expected.
+- An outage issue from the [status page](status-page.md), which checks John 3 in
+  each recording every hour.
 - Reports that audio takes several seconds to start, or that the lock screen or
   notification title ends in `(Internet Archive)` or `(Audio Power)` instead of
   `(NYCCSDA.org)`: the app is falling back, which suggests the primary source is

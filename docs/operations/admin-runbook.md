@@ -26,6 +26,7 @@ does and what still needs a person.
 - [iOS key screens builds](#ios-key-screens-builds)
 - [Dependabot pull requests](#dependabot-pull-requests)
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
+- [Status page alerts](#status-page-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
 - [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
@@ -64,6 +65,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain, Expo doctor) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. The three monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| A status page outage | The issue opens in the `sda-church-app-status` repository, never this one. Watch that repository with **Watch → Custom → Issues**; see [Status page alerts](#status-page-alerts). |
 | A yearly checkup, Workspace backup, or bulletin changeover issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
@@ -404,7 +406,8 @@ are copied as they are.
 **How the address works:** a Cloudflare redirect rule sends `app.nyccsda.org` to that
 GitHub Pages address with a permanent (301) redirect, keeping the path and any query.
 So `app.nyccsda.org/download?stay` becomes `…/sda-church-app/download?stay`. Both stores
-accept a redirect. Two similar addresses are not the app website:
+accept a redirect. One rule comes before it: `app.nyccsda.org/status` goes to the
+[status page](status-page.md#the-short-address). Two similar addresses are not the app website:
 
 - `nyccsda.org` is the church's main website, which forwards to adventistchurch.org, so
   `nyccsda.org/sda-church-app/…` and `nyccsda.org/privacy-policy.html` don't work.
@@ -428,7 +431,8 @@ Links, needs `app.nyccsda.org` to serve the site itself instead of redirecting, 
 Apple doesn't follow redirects for the file that enables it. That means setting
 `app.nyccsda.org` as the GitHub Pages custom domain, pointing a Cloudflare CNAME at
 `new-york-chinese-seventh-day-adventist.github.io` in place of the redirect rule, and
-changing the web build's base path from `/sda-church-app` to `/`.
+changing the web build's base path from `/sda-church-app` to `/`. The
+[status page's short address](status-page.md#the-short-address) then needs another home.
 
 ## The Cloudflare account and domain
 
@@ -941,6 +945,15 @@ no app older than a changeover's version has asked the bulletin API for 14 days.
 alert and doesn't close itself: do the cleanup it describes. See
 [Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers).
 
+## Status page alerts
+
+**Repository:** `sda-church-app-status`, where Upptime checks the audio hosts,
+the bulletin API and a few other services every hour.
+
+It opens an issue in that repository when a service is down and closes it when
+the service is back. Its issues never appear in this repository. See
+[Status page](status-page.md#alerts) for what to do when an outage lasts.
+
 ## Store toolchain monitor alerts
 
 **Workflow:** **Store Toolchain Monitor**, which runs every Monday and can be run
@@ -1302,6 +1315,7 @@ exits.
 | Apple distribution certificate and provisioning profile | `production` Environment secrets | Both expire every year, and the Apple fee waiver is reconfirmed at each membership renewal. See [Yearly Apple renewals](app-store-setup.md#yearly-apple-renewals). |
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
 | App Store Connect API key (`APP_STORE_CONNECT_API_*`) | `store-upload` Environment secrets | It doesn't expire. If it leaks, revoke it under **Users and Access → Integrations** in App Store Connect, create a new one with the **Developer** role, and replace the three secrets. |
+| Status page GitHub App key (`GH_APP_PRIVATE_KEY`) | Actions secret in the `sda-church-app-status` repository | It doesn't expire. If it may have leaked, generate a new key, replace the secret, and delete the old key; see [The GitHub App](status-page.md#the-github-app). |
 | Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
 | Faith Comes By Hearing Bible Brain API key | The church's IT Admin shared drive, which only certain administrators can open | Not used yet ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). Never put it in the app, the repository, an issue, a pull request, or a chat. If it may have leaked, ask FCBH for a new one and replace the stored copy. |
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |

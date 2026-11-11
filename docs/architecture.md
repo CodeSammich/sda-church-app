@@ -165,6 +165,9 @@ and may not be possible, so protect them above everything else.
   - bulletin [QR code](operations/admin-runbook.md#bulletin-qr-codes) generation into
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
+  - a [status page](operations/status-page.md) that checks the audio hosts, the
+    bulletin API and a few other services every hour, from its own
+    repository, `sda-church-app-status`, where its outage issues stay;
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
   - a weekly [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts)
@@ -428,7 +431,8 @@ The apps use these outside services without an account. "In app" means the app
 downloads data from the service; "Link" means the app only opens the site in the
 browser; "Build script only" means the app ships files a build script downloaded from it,
 and never contacts it. The [external dependency monitor](operations/external-dependency-monitor.md)
-checks nearly all of them daily.
+checks nearly all of them daily, and the [status page](operations/status-page.md)
+checks the audio hosts and the bulletin API every hour.
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
@@ -494,7 +498,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Google Play | None | The one-time $25 registration is paid; nothing recurs. |
 | Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
 | Google Workspace | None | Workspace for Nonprofits: email, Drive, and Apps Script. |
-| GitHub | None | Free for public repositories, Actions included. |
+| GitHub | None | Free for public repositories, Actions included. That covers the [status page](operations/status-page.md)'s repository too. |
 | Every API and website in [Third-party APIs and websites](#third-party-apis-and-websites) | None | Free, with no account or with a free key. |
 
 ## Upkeep calendar
@@ -511,6 +515,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
+| Hourly (automated) | [Status page](operations/status-page.md) | Opens an issue in the status repository while a service is down; see [Alerts](operations/status-page.md#alerts) |
 | Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
