@@ -107,6 +107,14 @@ const BASE_SETTINGS = {
   'android-tablet': { ...APP_BASE_SETTINGS, textScale: null, fontScale: 1, displayScale: 1, orientation: 'portrait' },
 };
 
+// Checks only some platforms take. On iOS the screens set the status bar's
+// style (#733), which the iPhone's shots check; the iPad's status bar has its
+// clock elsewhere, and Android's isn't set that way.
+const CHECK_PLATFORMS = {
+  lightStatusBarIcons: ['ios'],
+  themeStatusBarIcons: ['ios'],
+};
+
 // Seconds to wait after launching, before the screenshot. Measured over three
 // runs in October 2026 (settle-times.json): Bible screens, which then loaded
 // their text over the network, were done changing within 6 seconds every time,
@@ -266,7 +274,9 @@ const shotFor = (config, screen, variant, platform) => {
     route: screen.path,
     url: `${SCHEME}://${screen.path}`,
     settings: { ...BASE_SETTINGS[platform], ...(screen.settings || {}), ...overrides },
-    checks: screen.checks || [],
+    checks: (screen.checks || []).filter(
+      (check) => !CHECK_PLATFORMS[check] || CHECK_PLATFORMS[check].includes(platform),
+    ),
     wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
     // A record the app saves of what it did, for a check of its own
     // (key-screen-records.cjs), and a second screenshot `later` seconds
@@ -659,8 +669,49 @@ const STATUS_BAR_REGIONS_BY_SCREEN = {
 const screenOf = (shot) =>
   shot.settings.orientation === 'landscape' ? `${shot.platform}-landscape` : shot.platform;
 
+/**
+ * Where the iPhone's clock sits, between the regions beside it above, as
+ * fractions of the width.
+ */
+const CLOCK_REGION = { x: [0.135, 0.235], y: [0.032, 0.114] };
+
+/**
+ * The colour of the status bar's clock and icons: 'light', 'dark', or null
+ * when the clock doesn't stand out from what's behind it. Most of the clock's
+ * box is what's behind it, so its middle brightness is that; the clock is the
+ * pixels much brighter or darker (#733).
+ */
+const statusBarIcons = async (file, region = CLOCK_REGION) => {
+  const sharp = require('sharp');
+  const { width } = await sharp(file).metadata();
+  const { data, info } = await sharp(file)
+    .extract({
+      left: Math.round(width * region.x[0]),
+      top: Math.round(width * region.y[0]),
+      width: Math.round(width * (region.x[1] - region.x[0])),
+      height: Math.round(width * (region.y[1] - region.y[0])),
+    })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const brightness = [];
+  for (let index = 0; index < data.length; index += info.channels) {
+    brightness.push(0.2126 * data[index] + 0.7152 * data[index + 1] + 0.0722 * data[index + 2]);
+  }
+  const middle = [...brightness].sort((a, b) => a - b)[brightness.length >> 1];
+  const brighter = brightness.filter((value) => value - middle > 64).length;
+  const darker = brightness.filter((value) => middle - value > 64).length;
+  if (Math.max(brighter, darker) < brightness.length * 0.01) return null;
+  return brighter > darker ? 'light' : 'dark';
+};
+
 const CHECKS = {
   statusBarClear: (file, shot) => statusBarClear(file, STATUS_BAR_REGIONS_BY_SCREEN[screenOf(shot)]),
+  // Over a dark hero, under the status bar: the page's LightStatusBar.
+  lightStatusBarIcons: async (file) => (await statusBarIcons(file)) === 'light',
+  // Dark on the light theme, light on the dark: the root Stack's style.
+  themeStatusBarIcons: async (file, shot) =>
+    (await statusBarIcons(file)) === (shot.settings.theme === 'dark' ? 'light' : 'dark'),
 };
 
 const serveSim = (...args) =>
@@ -1002,4 +1053,6 @@ module.exports = {
   turnUpright,
   manifestPath,
   statusBarClear,
+  statusBarIcons,
+  CHECKS,
 };

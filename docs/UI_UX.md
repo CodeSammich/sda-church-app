@@ -215,6 +215,14 @@ simple, blended colors.
     visual separation between the app and the device hardware, reinforcing the "Digital
     Sanctuary" metaphor by making the interface feel like an integrated environment rather
     than a window inside a frame.
+  - **Status bar icons:** The theme's: dark in the light theme, light in the dark. Over
+    a dark picture that sits under the status bar (the launch splash, and the Library's
+    and the hymnal page's carousels), they're light: show `LightStatusBar`
+    (`components/LightStatusBar.tsx`) while the page is focused. Don't use React
+    Native's `StatusBar` alone, or give a screen its own `statusBarStyle`. On iOS the
+    screens set the status bar (`UIViewControllerBasedStatusBarAppearance`, which apps
+    built with the iOS 27 SDK must use), and the root Stack gives every screen the style
+    (#733).
 - **Header Opacity:** The top header is completely opaque (using the base background
   color) to provide a solid anchor for the "Digital Sanctuary."
 - **One floating tab bar on every system (#589).** iPhone, iPad, Android and the web
