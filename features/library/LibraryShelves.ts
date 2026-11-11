@@ -6,8 +6,8 @@ import type { SupportedLanguage } from '@/constants/LanguageContext';
  * Adventist writers: today's, Ellen G. White, and the pioneers. So a visitor
  * meets the wider Christian shelf before the denomination's own. Today's
  * Adventist writers are books the church's leaders chose from the Chinese
- * Union Mission's reader (#554); they're all in Chinese, so for now the shelf
- * shows only in Chinese.
+ * Union Mission's reader (#554). Chinese readers see all of them; English and
+ * Spanish readers see the six that are free in those languages (#703).
  */
 export const LIBRARY_SHELVES = ['classics', 'children', 'youth', 'contemporary', 'egw', 'pioneers'] as const;
 export type LibraryShelf = (typeof LIBRARY_SHELVES)[number];
@@ -60,7 +60,8 @@ export const FEATURED_LIBRARY_BOOKS = [
  * Keys are `LibraryShelfBook` keys.
  */
 export const LIBRARY_SHELF_LEADERS: Readonly<Partial<Record<LibraryShelf, readonly string[]>>> = {
-  // The Kneeling Christian shows only in Chinese, as the shelf's one Chinese book.
+  // The church's leaders chose The Kneeling Christian from the Chinese Union
+  // Mission's reader (#554).
   classics: ['sibbes-bruised-reed', 'kneeling-christian'],
   youth: ['taylor-pastor-hsi'],
   // Sabbath Encouragement always comes first, then her most-read books.

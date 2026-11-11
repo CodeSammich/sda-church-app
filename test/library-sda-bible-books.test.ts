@@ -16,7 +16,8 @@ const shelfBooks = async (language: SupportedLanguage) => {
 };
 
 // The books the church's leaders chose from the Chinese Union Mission's
-// reader (#554) are Chinese, so only Chinese readers see them.
+// reader (#554). Chinese readers open all of them there; English and Spanish
+// readers see the ones free in their language, and open those instead (#703).
 describe.each<[SupportedLanguage, string, string]>([
   ['zh', '?ui=tc', '地上的最後一夜'],
   ['zh-cn', '?ui=cn', '地上的最后一夜'],
@@ -28,11 +29,12 @@ describe.each<[SupportedLanguage, string, string]>([
 
     for (const book of books) {
       const item = LIBRARY_CATALOG.sdaBibleBooks.find(({ id }) => id === book.key)!;
-      expect(book.coverUrls).toEqual([item.coverUrl]);
+      const reader = item.chineseEdition ?? item;
+      expect(book.coverUrls).toEqual([reader.coverUrl]);
       expect(book.byEllenWhite).toBe(false);
       jest.mocked(openURL).mockClear();
       book.onPress();
-      expect(openURL).toHaveBeenCalledWith(`${item.sourceUrl}${script}`, expect.any(String), expect.any(String));
+      expect(openURL).toHaveBeenCalledWith(`${reader.sourceUrl}${script}`, expect.any(String), expect.any(String));
     }
   });
 
@@ -48,11 +50,49 @@ describe.each<[SupportedLanguage, string, string]>([
   });
 });
 
-describe.each<SupportedLanguage>(['en', 'es'])('the library with the app in %s', (language) => {
-  it("leaves today's Adventist writers' shelf empty, so the library page hides it", async () => {
+describe.each<[SupportedLanguage, string, RegExp]>([
+  ['en', 'The Last Night on Earth', /^https:\/\/www\.amazingfacts\.org\/(?!es\/)/],
+  ['es', 'La última noche en la Tierra', /^https:\/\/www\.amazingfacts\.org\/es\//],
+])("today's Adventist writers with the app in %s", (language, firstTitle, amazingFacts) => {
+  it('lists the six free on Amazing Facts, with covers of their own, opening there', async () => {
+    const books = (await shelfBooks(language)).getShelfBooks('contemporary');
+    expect(books.map(({ key }) => key)).toEqual([
+      'crews-last-night-on-earth',
+      'jesske-deathwatch-in-siberia',
+      'crews-remember-lots-wife',
+      'batchelor-bible-and-evolution',
+      'batchelor-pharisee-or-tax-collector',
+      'crews-baptized-paganism',
+    ]);
+    expect(books[0].title).toBe(firstTitle);
+    for (const book of books) {
+      expect(book.title).not.toMatch(/[\u3400-\u9fff]/);
+      expect(book.coverSource).toBeDefined();
+      expect(book.coverUrls).toBeUndefined();
+      jest.mocked(openURL).mockClear();
+      book.onPress();
+      expect(jest.mocked(openURL).mock.calls[0][0]).toMatch(amazingFacts);
+    }
+  });
+
+  it('puts The Kneeling Christian second among the Christian classics, opening on CCEL', async () => {
+    const books = (await shelfBooks(language)).getShelfBooks('classics');
+    expect(books.slice(0, 2).map(({ key }) => key)).toEqual(['sibbes-bruised-reed', 'kneeling-christian']);
+    jest.mocked(openURL).mockClear();
+    books[1].onPress();
+    expect(openURL).toHaveBeenCalledWith(
+      'https://www.ccel.org/ccel/unknown/kneeling.html',
+      expect.any(String),
+      expect.any(String),
+    );
+  });
+
+  it('leaves out the books sold in English', async () => {
     const library = await shelfBooks(language);
-    expect(library.getShelfBooks('contemporary')).toEqual([]);
-    expect(library.getShelfBooks('classics').map(({ key }) => key)).not.toContain('kneeling-christian');
-    expect(library.getShelfBooks('egw').map(({ key }) => key)).not.toContain('lake-ellen-white-under-fire');
+    const keys = ['classics', 'contemporary', 'egw'].flatMap((shelf) =>
+      library.getShelfBooks(shelf as 'classics').map(({ key }) => key),
+    );
+    expect(keys).not.toContain('batchelor-richest-caveman');
+    expect(keys).not.toContain('lake-ellen-white-under-fire');
   });
 });

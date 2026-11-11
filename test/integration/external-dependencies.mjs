@@ -422,15 +422,16 @@ const archiveBooks = [...libraryCatalogSource.matchAll(
   /sourceUrl:\s*'(https:\/\/archive\.org\/details\/([A-Za-z0-9._-]+))'/g,
 )].map(([, url, identifier]) => ({ url, identifier }));
 
-// Every public-domain book links to Gutenberg or the Internet Archive, so a
-// count mismatch means a link pattern stopped matching the catalog's format.
+// Every public-domain book links to Gutenberg, the Internet Archive, or the
+// Christian Classics Ethereal Library, so a count mismatch means a link
+// pattern stopped matching the catalog's format.
 // Only books count, at the catalog's top level: an edition in another
 // language, nested inside its book, is checked with the other editions.
 const topLevelCount = (pattern) =>
   [...libraryCatalogSource.matchAll(new RegExp(`^ {4}${pattern}`, 'gm'))].length;
 const publicDomainEntryCount = topLevelCount(String.raw`rights:\s*'public-domain-us'`);
 const publicDomainBookLinkCount = topLevelCount(
-  String.raw`sourceUrl:\s*'https:\/\/(?:(?:www\.)?gutenberg\.org\/ebooks\/\d+|archive\.org\/details\/[A-Za-z0-9._-]+)'`,
+  String.raw`sourceUrl:\s*'https:\/\/(?:(?:www\.)?gutenberg\.org\/ebooks\/\d+|archive\.org\/details\/[A-Za-z0-9._-]+|www\.ccel\.org\/ccel\/[a-z0-9/._-]+\.html)'`,
 );
 
 await record('catalog has one unique link per public-domain book', 'Project Gutenberg', async () => {
@@ -439,7 +440,7 @@ await record('catalog has one unique link per public-domain book', 'Project Gute
     publicDomainBookLinkCount !== publicDomainEntryCount
   ) {
     throw new Error(
-      `found ${publicDomainBookLinkCount} Project Gutenberg and Internet Archive links for ${publicDomainEntryCount} public-domain books`,
+      `found ${publicDomainBookLinkCount} Project Gutenberg, Internet Archive, and CCEL links for ${publicDomainEntryCount} public-domain books`,
     );
   }
   if (new Set(gutenbergBooks.map(({ url }) => url)).size !== gutenbergBooks.length) {
@@ -453,19 +454,39 @@ await record('daily public-domain book samples', 'Project Gutenberg', (warn) =>
     label: ({ ebookId }) => `ebook ${ebookId}`,
   }));
 
+// A book page on a publisher's or library's own site, which must still be at
+// its own address: a page that moves may redirect elsewhere on the same site.
+// These sites rate-limit bots (Amazing Facts answered HTTP 429 after about a
+// dozen quick requests on 2026-11-10), so a 429 passes, like other
+// navigational websites'.
+const probeBookPage = async (url) => {
+  const response = await request(url, { accept429: true });
+  expectOk(response, url, [429]);
+  expectFinalHost(response, url, [new URL(url).hostname]);
+  await response.body?.cancel();
+  if (response.ok && new URL(response.url || url).pathname !== new URL(url).pathname) {
+    throw new Error(`${url} redirected to ${response.url}`);
+  }
+  return describeResponse(response);
+};
+
 // Spanish readers see a book's Spanish edition when it has one. Those open on
-// EGW Writings or in the publisher's own free copy.
+// EGW Writings, on Amazing Facts (sampled with the free originals below), or
+// in the publisher's own free copy.
 const spanishEditionUrls = [...libraryCatalogSource.matchAll(
   /spanish:\s*\{[^}]*?sourceUrl:\s*'(https:\/\/[^']+)'/g,
 )].map(([, url]) => url);
 
 await record('Spanish editions open', 'Library', async () => {
-  if (spanishEditionUrls.length !== 3) {
-    throw new Error(`found ${spanishEditionUrls.length} Spanish edition links, expected 3`);
+  if (spanishEditionUrls.length !== 9) {
+    throw new Error(`found ${spanishEditionUrls.length} Spanish edition links, expected 9`);
   }
   for (const url of spanishEditionUrls) {
-    if (new URL(url).hostname === 'text.egwwritings.org') {
+    const { hostname } = new URL(url);
+    if (hostname === 'text.egwwritings.org') {
       await getTextPage(url, { expectedHosts: ['text.egwwritings.org'] });
+    } else if (hostname === 'www.amazingfacts.org') {
+      continue;
     } else {
       // Chapel Library serves its books as PDFs.
       await probe(url, {
@@ -475,16 +496,19 @@ await record('Spanish editions open', 'Library', async () => {
       });
     }
   }
-  return `${spanishEditionUrls.length} Spanish editions`;
+  return `${spanishEditionUrls.length} Spanish editions, Amazing Facts' sampled with the free originals`;
 });
 
-// Chinese readers see a book's Chinese edition when it has one: so far a
-// public-domain scan in HathiTrust's page viewer. The viewer turns away
-// scripts, so check HathiTrust's catalog record that the volume is still
-// public domain and in full view.
+// Chinese readers see a book's Chinese edition when it has one: a
+// public-domain scan in HathiTrust's page viewer, or a book in the Chinese
+// Union Mission's reader, which the reader check below covers. The viewer
+// turns away scripts, so check HathiTrust's catalog record that the volume is
+// still public domain and in full view.
 const chineseEditionUrls = [...libraryCatalogSource.matchAll(
   /chineseEdition:\s*\{[^}]*?sourceUrl:\s*'(https:\/\/[^']+)'/g,
-)].map(([, url]) => url);
+)]
+  .map(([, url]) => url)
+  .filter((url) => new URL(url).hostname !== 'read.sdabible.org');
 
 await record('Chinese editions stay public domain', 'HathiTrust', async () => {
   if (chineseEditionUrls.length !== 1) {
@@ -696,6 +720,29 @@ await record('Library books open in the reader', 'Chinese Union Mission library'
     { label: ({ slug }) => slug },
   );
   return `${sdaBibleBooks.length - problems.length} of ${sdaBibleBooks.length} books with their text; covers ${coverSamples}`;
+});
+
+// Seven of those books were written in English and are free there: English
+// and Spanish readers open them on Amazing Facts or the Christian Classics
+// Ethereal Library instead (#703). Three of those pages, with Amazing Facts'
+// Spanish ones, are checked each day.
+const freeOriginalUrls = [...libraryCatalogSource.matchAll(
+  /^ {4}sourceUrl:\s*'(https:\/\/www\.(?:amazingfacts|ccel)\.org\/[^']+)'/gm,
+)].map(([, url]) => url);
+const amazingFactsSpanishUrls = spanishEditionUrls.filter(
+  (url) => new URL(url).hostname === 'www.amazingfacts.org',
+);
+
+await record("free originals of the reader's books open", 'Library', async (warn) => {
+  if (freeOriginalUrls.length !== 7) {
+    throw new Error(`found ${freeOriginalUrls.length} Amazing Facts and CCEL links, expected 7`);
+  }
+  if (amazingFactsSpanishUrls.length !== 6) {
+    throw new Error(`found ${amazingFactsSpanishUrls.length} Amazing Facts Spanish links, expected 6`);
+  }
+  return spotCheck([...freeOriginalUrls, ...amazingFactsSpanishUrls], 703, probeBookPage, warn, {
+    label: (url) => new URL(url).pathname,
+  });
 });
 
 // Every Bible text ships with the app (assets/bible), the verse popup's Hebrew

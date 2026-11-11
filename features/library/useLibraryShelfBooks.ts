@@ -168,6 +168,8 @@ export function useLibraryShelfBooks(
       .map((item) => {
         const text = getLibraryItemDisplayText(item, language);
         const source = getLibraryItemSource(item, language);
+        // Only Chinese readers see a Chinese edition's cover thumbnail.
+        const coverUrl = isChinese && item.chineseEdition ? item.chineseEdition.coverUrl : item.coverUrl;
         return {
           key: item.id,
           title: text.title,
@@ -188,7 +190,7 @@ export function useLibraryShelfBooks(
             (language === 'es' && item.spanish && SPANISH_BOOK_COVERS[item.id]) ||
             (isChinese && item.chineseEdition && CHINESE_BOOK_COVERS[item.id]) ||
             BOOK_COVERS[item.id],
-          coverUrls: item.coverUrl ? [item.coverUrl] : undefined,
+          coverUrls: coverUrl ? [coverUrl] : undefined,
           byEllenWhite: item.author === 'Ellen G. White',
           onPress: () => openURL(source.sourceUrl, labels.title, labels.openError),
         };
