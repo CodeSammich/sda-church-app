@@ -13,6 +13,7 @@ import {
   BulletinLocation,
   cacheBulletin,
   fetchBulletin,
+  getBulletinAnnouncements,
   getCachedBulletin,
   getRefreshAvailableAt,
   setRefreshAvailableAt,
@@ -232,6 +233,34 @@ describe('bulletin service', () => {
     expect(isBulletinLocationEmpty({ ...emptyLocation(), sabbathSchoolHymns: ['', 'TBD'] })).toBe(true);
     expect(isBulletinLocationEmpty({ ...emptyLocation(), sabbathSchoolHymns: ['', '12'] })).toBe(false);
     expect(isBulletinLocationEmpty({ ...emptyLocation(), specialMusicTitle: 'It Is Well' })).toBe(false);
+  });
+
+  it("shows each announcement in the reader's language, with the other where one is missing (#562)", () => {
+    const location: BulletinLocation = {
+      ...emptyLocation(),
+      announcements: [
+        { english: 'Fellowship lunch after the service.', chinese: '崇拜後有愛筵，歡迎大家參加。', spanish: 'Almuerzo de confraternidad después del culto.' },
+        // A failed translation leaves its side blank.
+        { english: 'Choir practice at 2 pm.', chinese: '', spanish: '' },
+        { english: '', chinese: '查經班改到週三。' },
+        { english: '  ', chinese: '' },
+      ],
+    };
+    const shown = (language: 'en' | 'zh' | 'zh-cn' | 'es') => getBulletinAnnouncements(location, language);
+
+    expect(shown('en')).toEqual(['Fellowship lunch after the service.', 'Choir practice at 2 pm.', '查經班改到週三。']);
+    expect(shown('zh')).toEqual(['崇拜後有愛筵，歡迎大家參加。', 'Choir practice at 2 pm.', '查經班改到週三。']);
+    // Simplified readers get the Traditional the bulletin prints, converted.
+    expect(shown('zh-cn')).toEqual(['崇拜后有爱筵，欢迎大家参加。', 'Choir practice at 2 pm.', '查经班改到周三。']);
+    expect(shown('es')).toEqual(['Almuerzo de confraternidad después del culto.', 'Choir practice at 2 pm.', '查經班改到週三。']);
+  });
+
+  it('shows no announcements from a bulletin served before them (#562)', () => {
+    expect(getBulletinAnnouncements(emptyLocation(), 'en')).toEqual([]);
+    // The API sent a blank string there until #562, and a stored copy may still have it.
+    expect(getBulletinAnnouncements({ ...emptyLocation(), announcements: '' }, 'en')).toEqual([]);
+    // Nor does one count as a location's data, any more than the printed bulletin's did.
+    expect(isBulletinLocationEmpty({ ...emptyLocation(), announcements: [{ english: 'Potluck', chinese: '' }] })).toBe(true);
   });
 
   it('treats only blank and TBD values as absent optional bulletin data', () => {

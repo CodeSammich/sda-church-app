@@ -94,14 +94,14 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   // this opens the spreadsheet when the tab can't be looked up.
   bulletinIntakeSheetUrl:
     'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit',
+  // The dialog saved each week's announcements under this prefix until they
+  // moved to Weekly Data (#562). prunePrintedBulletinProperties_ deletes any left.
   printedAnnouncementsPropertyPrefix: 'PRINTED_ANNOUNCEMENTS_',
   // The old verse picker saved a print-only verse under this prefix (#622).
   // prunePrintedBulletinProperties_ deletes any left.
   printedBibleVersePropertyPrefix: 'PRINTED_BIBLE_VERSE_',
   // Per-week Script Properties are kept this long after their Sabbath.
   weeklyPropertyRetentionDays: 28,
-  printedAnnouncementsMaxEntries: 12,
-  printedAnnouncementsMaxSerializedBytes: 8000,
   churchSketchImageFileId: '1ZmxAI0l-689nnz5l1pEtmpNTDquA8_No',
   lastSupperImageFileId: '1ZGPxK1cidxies9jAguiAIPVlk9Vqk-Kd',
   sdaLogoImageFileId: '19NBpTBQZyj2oSYY9qSQOvEkoPFd4M3E5',
@@ -534,14 +534,6 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.choice:disabled{cursor:not-allowed;opacity:.48;box-shadow:none;}' +
     '.verse-view{background:#f8f9fa;border:1px solid #dadce0;border-radius:4px;font-size:14px;line-height:1.45;padding:9px 10px;white-space:pre-wrap;}' +
     '.verse-view.problem{background:#fce8e6;border-color:#f4b4ae;color:#a50e0e;font-size:13px;}' +
-    '.announcement-entry{border:1px solid #dadce0;border-radius:8px;margin:10px 0;padding:12px;}' +
-    '.announcement-header{align-items:center;display:flex;justify-content:space-between;gap:8px;}' +
-    '.announcement-header strong{font-size:13px;}' +
-    '.announcement-entry textarea{box-sizing:border-box;width:100%;font:14px Arial,sans-serif;' +
-    'border:1px solid #bdc1c6;border-radius:4px;min-height:72px;padding:9px 10px;resize:vertical;}' +
-    '.announcement-entry select{margin-top:8px;}' +
-    '.announcement-remove{background:#fce8e6;color:#a50e0e;font-size:12px;padding:6px 9px;}' +
-    '.announcement-add{background:#e8f0fe;color:#174ea6;font-size:13px;margin-top:4px;}' +
     '.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;}' +
     '.status-slot{box-sizing:border-box;padding-top:8px;}' +
     '#statusView{min-height:164px;}' +
@@ -596,9 +588,6 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<select id="englishTranslation">' +
     englishTranslationOptions +
     '</select>' +
-    '<label>Announcements (print only) / 通知（仅印刷）</label>' +
-    '<div id="announcementList"></div>' +
-    '<button type="button" class="announcement-add" id="addAnnouncement">+ Add announcement / 添加通知</button>' +
     // The verse is in Weekly Data, so it isn't shown here: only why Preview is
     // off, when Weekly Data's verse is blank or can't be read (#622).
     '<div id="verseView" class="verse-view problem" role="alert" hidden></div>' +
@@ -624,7 +613,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'var initialRequest=' +
     requestJson +
     ';' +
-    'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var promptData=null;var promptRequest=0;' +
+    'var locationValue="queens";var formatValue="regular";var promptData=null;var promptRequest=0;' +
     'function selectChoice(group,value){' +
     'var buttons=document.querySelectorAll("#"+group+" .choice");' +
     'Array.prototype.forEach.call(buttons,function(button){' +
@@ -634,16 +623,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function escapeHtml(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\\x27/g,"&#39;");}' +
     'function updateSubmitState(){var date=document.getElementById("date").value.trim();var unsupported=locationValue==="brooklyn"&&formatValue==="communion";var verseReady=Boolean(promptData&&promptData.verse&&!promptData.verseProblem);document.getElementById("submit").disabled=Boolean(unsupported||!date||!verseReady);}' +
     'function showError(message){var error=document.getElementById("error");error.textContent=message;error.hidden=false;updateSubmitState();}' +
-    'function announcementMarkup(entry,index){entry=entry||{};var scope=entry.scope||"all";return "<div class=\\"announcement-entry\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 通知 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><select class=\\"announcement-scope\\"><option value=\\"all\\""+(scope==="all"?" selected":"")+">Both locations / 两个地点</option><option value=\\"queens\\""+(scope==="queens"?" selected":"")+">Queens / 皇后区</option><option value=\\"brooklyn\\""+(scope==="brooklyn"?" selected":"")+">Brooklyn / 布鲁克林</option></select><label>English announcement / 英文通知</label><textarea class=\\"announcement-english\\" placeholder=\\"Optional English announcement\\">"+escapeHtml(entry.english||"")+"</textarea><label>Traditional Chinese announcement / 繁体中文通知</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Optional Traditional Chinese announcement\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
-    'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 通知 "+(index+1);});}' +
-    'function addAnnouncementEntry(entry){var list=document.getElementById("announcementList");var index=list.children.length;list.insertAdjacentHTML("beforeend",announcementMarkup(entry,index));refreshAnnouncementLabels();}' +
-    'function renderAnnouncements(entries){var list=document.getElementById("announcementList");list.innerHTML="";(entries||[]).forEach(addAnnouncementEntry);refreshAnnouncementLabels();announcementsDirty=false;updateSubmitState();}' +
     'function renderVerse(data){var view=document.getElementById("verseView");var problem=data&&data.verseProblem;view.hidden=!problem;view.textContent=problem||"";}' +
-    'function renderPromptData(data){promptData=data||null;renderAnnouncements((data&&data.announcements)||[]);renderVerse(data);updateSubmitState();}' +
+    'function renderPromptData(data){promptData=data||null;renderVerse(data);updateSubmitState();}' +
     // A reply for an earlier date or location is dropped, so the verse shown is
     // always the one for the current choices.
-    'function loadPromptData(){var request=++promptRequest;promptData=null;renderVerse(null);updateSubmitState();google.script.run.withSuccessHandler(function(data){if(request===promptRequest){renderPromptData(data);}}).withFailureHandler(function(error){if(request===promptRequest){renderPromptData({announcements:[],verse:"",verseProblem:"Could not read Weekly Data. Close this dialog, then open it again.\\n无法读取 Weekly Data。请关闭此对话框后重新打开。\\n\\n"+(error&&error.message?error.message:String(error))});}}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
-    'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();if(english||chinese){entries.push({scope:card.querySelector(".announcement-scope").value,english:english,chinese:chinese});}});return entries;}' +
+    'function loadPromptData(){var request=++promptRequest;promptData=null;renderVerse(null);updateSubmitState();google.script.run.withSuccessHandler(function(data){if(request===promptRequest){renderPromptData(data);}}).withFailureHandler(function(error){if(request===promptRequest){renderPromptData({verse:"",verseProblem:"Could not read Weekly Data. Close this dialog, then open it again.\\n无法读取 Weekly Data。请关闭此对话框后重新打开。\\n\\n"+(error&&error.message?error.message:String(error))});}}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
     'function showLoading(){document.getElementById("bulletinForm").hidden=true;document.getElementById("statusView").hidden=false;document.getElementById("statusView").innerHTML=' +
     '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Making the preview…<br>正在生成预览…</h2><p class=\'intro\'>This may take a minute while the Google Doc is prepared.<br>创建 Google 文档可能需要一点时间。</p></div>";focusStatusView_();}' +
     'function focusStatusView_(){setTimeout(function(){var status=document.getElementById("statusView");if(status&&status.scrollIntoView){status.scrollIntoView({behavior:"smooth",block:"nearest"});}},0);}' +
@@ -658,12 +642,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '}).withFailureHandler(function(error){showError(error&&error.message?error.message:String(error));}).getPrintedBulletinPromptWarning((promptData&&promptData.verse)||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
     'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);updateLocationFormatAvailability();loadPromptData();}});' +
     'document.getElementById("formatChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){formatValue=event.target.getAttribute("data-value");selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();updateSubmitState();}});' +
-    'document.getElementById("addAnnouncement").addEventListener("click",function(){addAnnouncementEntry({});announcementsDirty=true;});' +
-    'document.getElementById("announcementList").addEventListener("input",function(){announcementsDirty=true;});' +
-    'document.getElementById("announcementList").addEventListener("change",function(){announcementsDirty=true;});' +
-    'document.getElementById("announcementList").addEventListener("click",function(event){if(event.target.classList.contains("announcement-remove")){event.target.closest(".announcement-entry").remove();refreshAnnouncementLabels();announcementsDirty=true;}});' +
     'document.getElementById("date").addEventListener("change",function(){loadPromptData();updateSubmitState();});' +
-    'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();if(!date){showError("Sabbath date is required. / 安息日日期为必填。");return;}if(!promptData||!promptData.verse||promptData.verseProblem){showError((promptData&&promptData.verseProblem)||"Reading Weekly Data… / 正在读取 Weekly Data…");return;}var request={date:date,format:formatValue,location:locationValue,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}runRequest(request);});' +
+    'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();if(!date){showError("Sabbath date is required. / 安息日日期为必填。");return;}if(!promptData||!promptData.verse||promptData.verseProblem){showError((promptData&&promptData.verseProblem)||"Reading Weekly Data… / 正在读取 Weekly Data…");return;}var request={date:date,format:formatValue,location:locationValue,englishTranslation:document.getElementById("englishTranslation").value};runRequest(request);});' +
     'function makeWordCopy(){var date=document.getElementById("date").value.trim();var wordStatus=document.getElementById("wordCopyStatus");var button=document.getElementById("wordCopy");if(!date){wordStatus.className="error";wordStatus.textContent="Choose the Sabbath date first. / 请先选择安息日日期。";return;}' +
     'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the .docx… / 正在制作 .docx…";google.script.run.withSuccessHandler(function(result){button.disabled=false;' +
     'wordStatus.className="download-row";wordStatus.innerHTML="<a class=\'download\' href=\'"+escapeHtml(result.downloadUrl)+"\'>⬇ Download .docx / 下载 .docx</a>";})' +
@@ -788,11 +768,9 @@ function getPhysicalBibleTextStats_(text) {
 function createPrintedBulletinFromRequest(request) {
   request = request || {};
   validatePrintedBulletinRequest_(request);
-  if (Object.prototype.hasOwnProperty.call(request, 'announcements')) {
-    savePrintedBulletinAnnouncements_(request.date, request.announcements);
-  }
-  // The verse is always Weekly Data's, as in the app (#622), so a verse sent
-  // with the request is ignored.
+  // The verse and the announcements are always Weekly Data's, as in the app
+  // (#622, #562), so any sent with the request, as a dialog opened before the
+  // change sends them, are ignored.
   var result = createPrintedBulletin_(
     request.date,
     request.format,
@@ -817,15 +795,6 @@ function validatePrintedBulletinRequest_(request) {
   }
 }
 
-/**
- * Reads the printed-only announcement list for the selected Sabbath. This is
- * deliberately separate from the public bulletin payload and the staff-managed
- * schedule data.
- */
-function getPrintedBulletinAnnouncements(requestedDate) {
-  return readPrintedBulletinAnnouncements_(requestedDate).entries;
-}
-
 function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var date = toIsoDate_(requestedDate);
   var location = normalizePrintedBulletinLocation_(requestedLocation);
@@ -840,21 +809,6 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
     }
   }
   var verse = bulletin && bulletin[location] ? String(bulletin[location].bibleVerses || '').trim() : '';
-  var storedAnnouncements = readPrintedBulletinAnnouncements_(date);
-  var announcements = storedAnnouncements.entries;
-  if (!storedAnnouncements.found && bulletin) {
-    announcements = [];
-    if (hasPrintValue_(bulletin.announcements)) {
-      announcements.push({ scope: 'all', english: bulletin.announcements, chinese: '' });
-    }
-    if (bulletin[location] && hasPrintValue_(bulletin[location].announcements)) {
-      announcements.push({
-        scope: location,
-        english: bulletin[location].announcements,
-        chinese: '',
-      });
-    }
-  }
   // The dialog shows Weekly Data's verse read-only, the same one the app
   // shows, and can't create the Doc while it's blank or unreadable (#622).
   var verseProblem = readError
@@ -863,7 +817,6 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
       readError
     : getPrintedBibleVerseProblem_(verse);
   return {
-    announcements: announcements,
     verse: verse,
     verseLabels: verseProblem ? null : formatPrintedBibleVerseLabels_(verse),
     verseProblem: verseProblem,
@@ -919,68 +872,15 @@ function formatPrintedBibleVerseLabels_(reference) {
   };
 }
 
-function savePrintedBulletinAnnouncements_(requestedDate, entries) {
-  var date = toIsoDate_(requestedDate);
-  if (!date) {
-    throw new Error('A valid Sabbath date is required for printed announcements');
-  }
-
-  var normalized = normalizePrintedBulletinAnnouncements_(entries);
-  var serialized = JSON.stringify(normalized);
-  if (
-    getPhysicalUtf8ByteLength_(serialized) >
-    PRINTED_BULLETIN_CONFIG.printedAnnouncementsMaxSerializedBytes
-  ) {
-    throw new Error(
-      'The printed announcements are too long. Please shorten them or use fewer entries.',
-    );
-  }
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    PropertiesService.getScriptProperties().setProperty(
-      getPrintedBulletinAnnouncementsPropertyKey_(date),
-      serialized,
-    );
-  } finally {
-    lock.releaseLock();
-  }
-  return normalized;
-}
-
-function readPrintedBulletinAnnouncements_(requestedDate) {
-  var date = toIsoDate_(requestedDate);
-  if (!date || typeof PropertiesService === 'undefined') {
-    return { found: false, entries: [] };
-  }
-
-  var raw = PropertiesService.getScriptProperties().getProperty(
-    getPrintedBulletinAnnouncementsPropertyKey_(date),
-  );
-  if (raw === null || typeof raw === 'undefined') {
-    return { found: false, entries: [] };
-  }
-
-  try {
-    return {
-      found: true,
-      entries: normalizePrintedBulletinAnnouncements_(JSON.parse(raw)),
-    };
-  } catch (error) {
-    Logger.log('Could not read printed announcements for ' + date + ': ' + error);
-    return { found: true, entries: [] };
-  }
-}
-
 /**
- * Script Properties keep each bulletin's Doc ID, and each week's printed
- * announcements, by Sabbath. The project settings page can manage only 50
- * properties by hand, so after each Doc is made this deletes the per-week ones
- * for Sabbaths more than four weeks past, and every print-only verse the old
- * verse picker left (#622). Recent and future weeks stay, so a reprint still
- * updates its Doc. The Docs and PDFs stay in Drive, and no other property is
- * touched. Returns the number deleted.
+ * Script Properties keep each bulletin's Doc ID by Sabbath. The project
+ * settings page can manage only 50 properties by hand, so after each Doc is
+ * made this deletes the per-week ones for Sabbaths more than four weeks past,
+ * and every print-only verse the old verse picker left (#622) and every week's
+ * announcements the dialog saved before they moved to Weekly Data (#562).
+ * Recent and future weeks stay, so a reprint still updates its Doc. The Docs
+ * and PDFs stay in Drive, and no other property is touched. Returns the number
+ * deleted.
  */
 function prunePrintedBulletinProperties_(today) {
   var lock = LockService.getScriptLock();
@@ -1024,10 +924,10 @@ function isExpiredPrintedBulletinProperty_(key, cutoff) {
   if (prefix === config.printedBibleVersePropertyPrefix) {
     return hasLocation;
   }
-  var weekly =
-    prefix === config.documentPropertyPrefix ||
-    prefix === config.pdfPropertyPrefix ||
-    (prefix === config.printedAnnouncementsPropertyPrefix && !hasLocation);
+  if (prefix === config.printedAnnouncementsPropertyPrefix) {
+    return !hasLocation;
+  }
+  var weekly = prefix === config.documentPropertyPrefix || prefix === config.pdfPropertyPrefix;
   return weekly && match[3] < cutoff;
 }
 
@@ -1035,48 +935,6 @@ function addPrintedBulletinDays_(date, days) {
   var parts = date.split('-');
   var shifted = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + days));
   return [shifted.getUTCFullYear(), pad2_(shifted.getUTCMonth() + 1), pad2_(shifted.getUTCDate())].join('-');
-}
-
-function getPrintedBulletinAnnouncementsPropertyKey_(date) {
-  return PRINTED_BULLETIN_CONFIG.printedAnnouncementsPropertyPrefix + date;
-}
-
-function normalizePrintedBulletinAnnouncements_(entries) {
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-  if (entries.length > PRINTED_BULLETIN_CONFIG.printedAnnouncementsMaxEntries) {
-    throw new Error(
-      'A maximum of ' +
-        PRINTED_BULLETIN_CONFIG.printedAnnouncementsMaxEntries +
-        ' printed announcements is supported.',
-    );
-  }
-
-  return entries
-    .map(function (entry) {
-      entry = entry || {};
-      var scope = String(entry.scope || 'all').trim().toLowerCase();
-      if (['all', 'queens', 'brooklyn'].indexOf(scope) === -1) {
-        scope = 'all';
-      }
-      return {
-        scope: scope,
-        english: normalizePrintedAnnouncementText_(entry.english),
-        chinese: normalizePrintedAnnouncementText_(entry.chinese),
-      };
-    })
-    .filter(function (entry) {
-      return Boolean(entry.english || entry.chinese);
-    });
-}
-
-function normalizePrintedAnnouncementText_(value) {
-  return String(value === null || typeof value === 'undefined' ? '' : value)
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/[ \t]+\n/g, '\n')
-    .trim();
 }
 
 function getPhysicalUtf8ByteLength_(value) {
@@ -1227,9 +1085,6 @@ function createPrintedBulletinUnlocked_(
   if (verseProblem) {
     throw new Error(verseProblem);
   }
-  var printedAnnouncements = readPrintedBulletinAnnouncements_(date);
-  bulletin.printedAnnouncements = printedAnnouncements.entries;
-  bulletin.hasPrintedAnnouncements = printedAnnouncements.found;
   bulletin = preparePrintedBulletinForPrint_(bulletin, nameDictionary);
   bulletin.physicalBibleTranslations = bibleTranslations;
   hydratePhysicalBibleVerses_(bulletin, bibleTranslations);
@@ -2866,37 +2721,24 @@ function protectPrintedChinesePunctuation_(text) {
   );
 }
 
+// The location's announcements from Weekly Data, each in English and Chinese,
+// the same ones the app shows (#562). buildBulletin_ has already filled in a
+// side staff left blank, if the translation worked.
 function getPhysicalPrintedAnnouncementEntries_(bulletin, location) {
-  if (bulletin && bulletin.hasPrintedAnnouncements) {
-    return (bulletin.printedAnnouncements || [])
-      .filter(function (entry) {
-        return entry.scope === 'all' || entry.scope === location;
-      })
-      .filter(function (entry) {
-        return Boolean(entry.english || entry.chinese);
-      });
+  var announcements = bulletin && bulletin[location] && bulletin[location].announcements;
+  if (!Array.isArray(announcements)) {
+    return [];
   }
-
-  var locationData = bulletin && bulletin[location];
-  return [
-    bulletin && bulletin.announcements,
-    locationData && locationData.announcements,
-  ]
-    .filter(function (value) {
-      return hasPrintValue_(value);
+  return announcements
+    .map(function (announcement) {
+      return {
+        english: String((announcement && announcement.english) || '').trim(),
+        chinese: String((announcement && announcement.chinese) || '').trim(),
+      };
     })
-    .map(function (value) {
-      return { english: String(value), chinese: '' };
+    .filter(function (entry) {
+      return Boolean(entry.english || entry.chinese);
     });
-}
-
-function getPhysicalPrintedAnnouncementText_(bulletin, location) {
-  return getPhysicalPrintedAnnouncementEntries_(bulletin, location)
-    .map(function (entry) {
-      return printedBilingualText_(entry.english, entry.chinese);
-    })
-    .filter(Boolean)
-    .join('\n\n');
 }
 
 function getFirstPrintedAnnouncementSentenceLength_(text) {

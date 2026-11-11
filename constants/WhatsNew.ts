@@ -1,8 +1,8 @@
 /**
  * "What's new", shown once on the first launch after an update to members who
  * set up an earlier version (#669). New installs answer the same in setup,
- * which marks it seen. It's part of the app, tied to its version; live
- * announcements, which would come from the server without an App Store
+ * which marks it seen. It's part of the app, tied to its version; the
+ * church's announcements, which come with the bulletin without an App Store
  * update (#562), are separate.
  *
  * The saved value is the newest version whose "What's new" the member has

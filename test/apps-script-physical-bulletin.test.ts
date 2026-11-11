@@ -259,6 +259,8 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(alerts[0]).toContain('A column can be in any position.');
     expect(alerts[0].split('\n\n')[1].split('\n')).toEqual([
       'Sabbath Calendar (tab)',
+      'Weekly Data: English Announcements',
+      'Weekly Data: Chinese Announcements',
       'Weekly Data: Bible Verses',
       'Weekly Data: English Sermon Title',
       'Weekly Data: Chinese Sermon Title',
@@ -271,8 +273,10 @@ describe('printed bulletin Apps Script helpers', () => {
   });
 
   describe('Weekly Data rows for the next Sabbaths (#558)', () => {
+    // In the order a new tab gets them, with the announcements by the location (#562).
     const HEADERS = [
-      'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
+      'Date', 'Location', 'English Announcements', 'Chinese Announcements',
+      'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
       'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
     ];
@@ -335,6 +339,7 @@ describe('printed bulletin Apps Script helpers', () => {
               });
             },
             setFontWeight: (weight: string) => calls.push(`${weight}:${row}:${column}:${numColumns}`),
+            setNote: (note: string) => calls.push(`note:${row}:${column}:${note.split('.')[0]}`),
             setNumberFormat: (format: string) => formats.push(`${row}:${column}:${numRows}:${format}`),
             setDataValidation: (rule: string) => rules.push(`${row}:${column}:${numRows}:${rule}`),
             getA1Notation: () => `${String.fromCharCode(64 + column)}${row}`,
@@ -492,11 +497,22 @@ describe('printed bulletin Apps Script helpers', () => {
           ['Sat Nov 21 2026', 'Queens'],
           ['Sat Nov 21 2026', 'Brooklyn'],
         ]);
+        expect(sheet.values[1].slice(2, 4)).toEqual([
+          'Fellowship lunch after the service. Everyone is welcome.\nChoir practice at 2 pm in the sanctuary.',
+          '',
+        ]);
         expect(sheet.values[2]).toEqual([
-          'Example', 'Brooklyn', 'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
+          'Example', 'Brooklyn', '', '崇拜後有愛筵，歡迎大家參加。',
+          'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
           '205', 'Amazing Grace', '', '第5首 讚美上主', '奇異恩典', 'AH 86 How Great Thou Art',
         ]);
-        expect(sheet.calls).toEqual(['bold:1:1:11', 'frozen:1']);
+        // The announcement headers say what goes there, and that it's public.
+        expect(sheet.calls).toEqual([
+          'bold:1:1:13',
+          'note:1:3:One announcement per line, in English',
+          'note:1:4:One announcement per line, in Traditional Chinese, as the bulletin prints it; the app converts it for Simplified readers',
+          'frozen:1',
+        ]);
         expect(spreadsheet.toasts).toEqual([
           'Weekly Data was missing, so it was set up again with its columns and two example rows. / ' +
             'Weekly Data 工作表缺失，已重新建立，含所有列和两行示例。',
@@ -512,7 +528,7 @@ describe('printed bulletin Apps Script helpers', () => {
       run(spreadsheet, '2026-11-04');
       expect(sheet.values[0]).toEqual([...headers, 'Location', 'Bible Verses', 'Special Music Title']);
       expect(sheet.values[1].slice(0, 3)).toEqual(['2026-11-07', 'Queens', 'Sermon']);
-      expect(sheet.calls).toEqual(['bold:1:10:3']);
+      expect(sheet.calls).toEqual(['bold:1:12:3']);
       expect(spreadsheet.toasts).toEqual([
         'Weekly Data: added these missing columns at the far right: Location, Bible Verses, Special Music Title. / ' +
           'Weekly Data：已在最右侧补上缺少的列：Location、Bible Verses、Special Music Title。',
@@ -539,7 +555,54 @@ describe('printed bulletin Apps Script helpers', () => {
           context,
         ) as string,
       );
-      expect(widths).toEqual([11, 11, 11]);
+      expect(widths).toEqual([13, 13, 13]);
+    });
+
+    it('adds the announcement columns, with their notes, to a tab from before #562', () => {
+      const before = HEADERS.filter((header) => !header.endsWith('Announcements'));
+      const sheet = weeklySheet([['2026-11-07', 'Queens', 'John 3:16']], 40, before);
+      const spreadsheet = book(sheet);
+      run(spreadsheet, '2026-11-04');
+      expect(sheet.values[0]).toEqual([...before, 'English Announcements', 'Chinese Announcements']);
+      expect(sheet.calls).toEqual([
+        'bold:1:12:2',
+        'note:1:12:One announcement per line, in English',
+        'note:1:13:One announcement per line, in Traditional Chinese, as the bulletin prints it; the app converts it for Simplified readers',
+      ]);
+      expect(spreadsheet.toasts).toEqual([
+        'Weekly Data: added these missing columns at the far right: English Announcements, Chinese Announcements. / ' +
+          'Weekly Data：已在最右侧补上缺少的列：English Announcements、Chinese Announcements。',
+      ]);
+    });
+
+    it("still adds the next Sabbaths' rows when an editor outside the technology group can't add the columns", () => {
+      const before = HEADERS.filter((header) => !header.endsWith('Announcements'));
+      const sheet = weeklySheet([['2026-10-31', 'Queens']], 40, before);
+      // Row 1 is protected for the technology group.
+      const getRange = sheet.getRange;
+      sheet.getRange = (row: number, column: number, numRows?: number, numColumns?: number) => {
+        const range = getRange(row, column, numRows, numColumns);
+        return row === 1
+          ? { ...range, setValues: () => { throw new Error('You are trying to edit a protected cell or object.'); } }
+          : range;
+      };
+      const spreadsheet = book(sheet);
+      expect(run(spreadsheet, '2026-11-04')).toBe(6);
+      expect(sheet.values[0]).toEqual(before);
+      // Nothing says they were added; the next technology-group open adds them.
+      expect(spreadsheet.toasts).toEqual([]);
+    });
+
+    it('notes that the announcements are public, in both languages', () => {
+      const notes = JSON.parse(
+        runInContext('JSON.stringify(WEEKLY_DATA_HEADER_NOTES)', loadAppsScript({})) as string,
+      ) as Record<string, string>;
+      expect(Object.keys(notes)).toEqual(['English Announcements', 'Chinese Announcements']);
+      for (const note of Object.values(notes)) {
+        expect(note).toContain('anyone can read it');
+        expect(note).toContain('任何人都能看到');
+        expect(note).toContain('machine-translated');
+      }
     });
   });
 
@@ -730,6 +793,8 @@ describe('printed bulletin Apps Script helpers', () => {
       'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
       'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
+      // Since #562, read by name like the rest, so last here.
+      'English Announcements', 'Chinese Announcements',
     ], [
       '2026-09-05', 'brooklyn', verse, '', '', '', '', '', '', '', '',
     ]]);
@@ -898,7 +963,9 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).not.toContain('Chinese is always CUV');
     expect(html).not.toContain('cmn_cu1');
     expect(html).toContain('getPrintedBulletinPromptWarning');
-    expect(html).toContain('Add announcement / 添加通知');
+    // Announcements are typed in Weekly Data, so the dialog has no box for them (#562).
+    expect(html).not.toContain('Add announcement');
+    expect(html).not.toContain('announcement');
     expect(html).toContain('getPrintedBulletinPromptData');
     // Three numbered cards, each a few words: no help paragraphs, only step
     // 3's Mac note.
@@ -913,9 +980,6 @@ describe('printed bulletin Apps Script helpers', () => {
       '预览并检查</h2><p class="preview-note">ⓘ Preview may run taller than print: Docs spaces Chinese more. Step 3\'s .docx fixes it.<br>',
     );
     expect(html).toContain('ⓘ 预览可能比打印稿长：Google 文档的中文行距较大。第 3 步的 .docx 会修正。</p><form id="bulletinForm">');
-    expect(html).toContain('Announcements (print only) / 通知（仅印刷）');
-    // No empty announcement card to start with: just the Add button.
-    expect(html).toContain('(entries||[]).forEach(addAnnouncementEntry)');
     expect(html).not.toContain('admin-reminder"');
     expect(html).toContain('>Preview / 预览</button>');
     expect(html).not.toContain('Create / 创建');
@@ -935,7 +999,6 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('class="status-slot"');
     expect(html).toContain('document.getElementById("bulletinForm").hidden=true');
     expect(html).toContain('block:"nearest"');
-    expect(html.indexOf('English Bible / 英文圣经')).toBeLessThan(html.indexOf('Announcements (print only)'));
     // The verse is in Weekly Data, so the dialog doesn't show it: only, by
     // Preview, why Preview is off when it's blank or unreadable (#622).
     expect(html).toContain('<div id="verseView" class="verse-view problem" role="alert" hidden></div>');
@@ -952,61 +1015,59 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('verseReady');
   });
 
-  it('stores ordered printed announcements in Apps Script properties', () => {
-    const properties: Record<string, string> = {};
+  it('prints each location\'s own Weekly Data announcements, the ones the app shows (#562)', () => {
+    const context = loadAppsScript({});
+    const entries = (bulletin: string, location: string) =>
+      JSON.parse(
+        runInContext(`JSON.stringify(getPhysicalPrintedAnnouncementEntries_(${bulletin}, '${location}'))`, context) as string,
+      );
+    const bulletin = `{
+      announcements: 'A legacy Sabbath Calendar column',
+      queens: { announcements: [
+        { english: 'Potluck after worship.', chinese: '崇拜後聚餐。', spanish: 'Comida después del culto.' },
+        { english: ' Choir practice at 2 pm. ', chinese: '', spanish: '' },
+        { english: '', chinese: '' }
+      ] },
+      brooklyn: { announcements: [{ english: 'Brooklyn only', chinese: '布魯克林' }] }
+    }`;
+
+    // Chinese and English for the printout's two columns, with nothing blank
+    // and nothing from the other location or the old Sabbath Calendar column.
+    expect(entries(bulletin, 'queens')).toEqual([
+      { english: 'Potluck after worship.', chinese: '崇拜後聚餐。' },
+      { english: 'Choir practice at 2 pm.', chinese: '' },
+    ]);
+    expect(entries(bulletin, 'brooklyn')).toEqual([{ english: 'Brooklyn only', chinese: '布魯克林' }]);
+    // A bulletin from before #562 had a blank string there.
+    expect(entries(`{ queens: { announcements: '' } }`, 'queens')).toEqual([]);
+    expect(entries(`{}`, 'queens')).toEqual([]);
+  });
+
+  it('no longer stores announcements typed in the dialog (#562)', () => {
+    const saved: string[] = [];
     const context = loadAppsScript({
       PropertiesService: {
         getScriptProperties: () => ({
-          getProperty: (key: string) => properties[key] ?? null,
-          setProperty: (key: string, value: string) => {
-            properties[key] = value;
-          },
-        }),
-      },
-      LockService: {
-        getScriptLock: () => ({
-          waitLock: () => undefined,
-          releaseLock: () => undefined,
+          setProperty: (key: string) => saved.push(key),
         }),
       },
     });
-
-    const output = JSON.parse(
-      runInContext(
-        `savePrintedBulletinAnnouncements_('2026-09-26', [
-          { scope: 'all', english: 'Potluck after worship', chinese: '崇拜後聚餐' },
-          { scope: 'queens', english: 'Queens-only notice', chinese: '' },
-          { scope: 'brooklyn', english: '', chinese: '' }
-        ]); JSON.stringify(readPrintedBulletinAnnouncements_('2026-09-26'))`,
-        context,
-      ) as string,
-    );
-
-    expect(output).toEqual({
-      found: true,
-      entries: [
-        { scope: 'all', english: 'Potluck after worship', chinese: '崇拜後聚餐' },
-        { scope: 'queens', english: 'Queens-only notice', chinese: '' },
-      ],
+    Object.assign(context, {
+      createPrintedBulletin_: () => ({ url: 'https://docs.example/doc' }),
+      prunePrintedBulletinProperties_: () => 0,
     });
-    expect(properties['PRINTED_ANNOUNCEMENTS_2026-09-26']).toContain('Queens-only notice');
-  });
 
-  it('renders only matching printed announcement scopes', () => {
-    const context = loadAppsScript({});
-    const output = runInContext(
-      `getPhysicalPrintedAnnouncementText_({
-        hasPrintedAnnouncements: true,
-        printedAnnouncements: [
-          { scope: 'all', english: 'Everyone', chinese: '' },
-          { scope: 'queens', english: 'Queens only', chinese: '皇后區' },
-          { scope: 'brooklyn', english: 'Brooklyn only', chinese: '' }
-        ]
-      }, 'queens')`,
+    // A dialog opened before the change still sends its announcements.
+    runInContext(
+      `createPrintedBulletinFromRequest({
+        date: '2026-09-26', location: 'queens', format: 'regular',
+        announcements: [{ scope: 'all', english: 'Typed in an old dialog', chinese: '' }]
+      })`,
       context,
     );
-
-    expect(output).toBe('Everyone\n\n皇后區\nQueens only');
+    expect(saved).toEqual([]);
+    expect(runInContext(`typeof savePrintedBulletinAnnouncements_`, context)).toBe('undefined');
+    expect(runInContext(`typeof getPrintedBulletinAnnouncements`, context)).toBe('undefined');
   });
 
   it('bolds the first sentence of each printed announcement language', () => {
@@ -1413,7 +1474,7 @@ describe('printed bulletin Apps Script helpers', () => {
     });
   });
 
-  it('prunes per-week Script Properties more than four weeks old, and every old print-only verse', () => {
+  it('prunes per-week Script Properties more than four weeks old, and every old print-only verse and saved announcement', () => {
     const properties: Record<string, string> = {
       // Older than four weeks before 2026-11-03 (the cutoff is 2026-10-06).
       'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12': 'doc-a',
@@ -1421,15 +1482,16 @@ describe('printed bulletin Apps Script helpers', () => {
       'PHYSICAL_BULLETIN_DOC_ID_2026-09-05': 'doc-c',
       'PHYSICAL_BULLETIN_PDF_ID_QUEENS_2026-09-12': 'pdf-a',
       'PHYSICAL_BULLETIN_PDF_ID_2026-09-05': 'pdf-b',
+      // Every old print-only verse and saved announcement goes, even next
+      // week's: they're read from Weekly Data now (#622, #562).
       'PRINTED_ANNOUNCEMENTS_2026-09-12': '[]',
-      // Every old print-only verse goes, even next week's.
+      'PRINTED_ANNOUNCEMENTS_2026-11-07': '[]',
       'PRINTED_BIBLE_VERSE_QUEENS_2026-09-12': 'John 1:1',
       'PRINTED_BIBLE_VERSE_BROOKLYN_2026-11-07': 'John 1:2',
       // Recent and future weeks stay, so a reprint still updates its Doc.
       'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-10-10': 'doc-d',
       'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07': 'doc-e',
       'PHYSICAL_BULLETIN_PDF_ID_BROOKLYN_2026-10-06': 'pdf-c',
-      'PRINTED_ANNOUNCEMENTS_2026-11-07': '[]',
       // Anything else stays: settings, other prefixes, odd forms and dates.
       'bulletin.changeover.schedule-not-set.watchedSince': '2026-09-01',
       PRINTED_BULLETIN_CJK_FONT: 'Some Font',
@@ -1468,7 +1530,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
     const removed = runInContext(`prunePrintedBulletinProperties_('2026-11-03')`, context);
 
-    expect(removed).toBe(8);
+    expect(removed).toBe(9);
     expect(Object.keys(properties).sort()).toEqual([
       'PHYSICAL_BULLETIN_ADMIN_EMAILS',
       'PHYSICAL_BULLETIN_DOC_ID_MANHATTAN_2026-09-12',
@@ -1478,7 +1540,6 @@ describe('printed bulletin Apps Script helpers', () => {
       'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07',
       'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026_09_12',
       'PHYSICAL_BULLETIN_PDF_ID_BROOKLYN_2026-10-06',
-      'PRINTED_ANNOUNCEMENTS_2026-11-07',
       'PRINTED_ANNOUNCEMENTS_QUEENS_2026-09-12',
       'PRINTED_BIBLE_VERSE_2026-09-12',
       'PRINTED_BULLETIN_CJK_FONT',
@@ -1486,7 +1547,7 @@ describe('printed bulletin Apps Script helpers', () => {
       'XPHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12',
       'bulletin.changeover.schedule-not-set.watchedSince',
     ]);
-    expect(logs).toEqual(['Pruned 8 old printed bulletin Script Properties.']);
+    expect(logs).toEqual(['Pruned 9 old printed bulletin Script Properties.']);
     expect(locks).toEqual(['lock', 'release']);
   });
 
@@ -3487,6 +3548,8 @@ describe('Sabbath Calendar year-ahead rows', () => {
       'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
       'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
+      // Since #562, read by name like the rest, so last here.
+      'English Announcements', 'Chinese Announcements',
     ];
     const sermonCalls: string[] = [];
     const sermonSheet = {
@@ -3540,7 +3603,7 @@ describe('Sabbath Calendar year-ahead rows', () => {
     expect(result.populated).toBe(39);
     // A header row loses its old fixed-name rules (#558), and one without
     // any is left alone.
-    expect(sermonCalls).toEqual(['clearValidation:1:11']);
+    expect(sermonCalls).toEqual(['clearValidation:1:13']);
     expect(sheet.calls.filter((call) => call.startsWith('clearValidation'))).toEqual([]);
     expect(result.validation).toEqual({
       installed: 'A2:Y14',

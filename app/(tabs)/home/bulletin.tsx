@@ -38,6 +38,7 @@ import {
   BulletinLocation,
   BulletinMetadataTranslation,
   fetchBulletin,
+  getBulletinAnnouncements,
   getCachedBulletin,
   getNextBulletinRolloverAt,
   getRefreshAvailableAt,
@@ -74,6 +75,7 @@ const LABELS = {
     sabbathSchoolProgram: 'Sabbath School',
     worshipProgram: 'Worship Program',
     serviceRoster: 'Service Roster',
+    announcements: 'Announcements',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
     possibleJointService: 'Brooklyn service details are not listed for this Sabbath.',
@@ -153,6 +155,7 @@ const LABELS = {
     sabbathSchoolProgram: '安息日學',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
+    announcements: '報告事項',
     queens: '皇后區',
     brooklyn: '布魯克林',
     possibleJointService: '本安息日尚未列出布魯克林的聚會資料。',
@@ -232,6 +235,7 @@ const LABELS = {
     sabbathSchoolProgram: '安息日学',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
+    announcements: '报告事项',
     queens: '皇后区',
     brooklyn: '布鲁克林',
     possibleJointService: '本安息日尚未列出布鲁克林的聚会资料。',
@@ -311,6 +315,7 @@ const LABELS = {
     sabbathSchoolProgram: 'Escuela Sabática',
     worshipProgram: 'Programa de Adoración',
     serviceRoster: 'Asignaciones de Servicio',
+    announcements: 'Anuncios',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
     possibleJointService: 'No hay detalles del servicio de Brooklyn para este sábado.',
@@ -1068,6 +1073,34 @@ export default function WeeklyBulletinScreen() {
     );
   };
 
+  // The week's announcements from Weekly Data (#562), the same ones the
+  // printed bulletin has, after the program as in print. None, no section.
+  const renderAnnouncements = (location: BulletinLocation) => {
+    const announcements = getBulletinAnnouncements(location, language);
+    if (!announcements.length) return null;
+    return (
+      <View style={styles.cardSection}>
+        <View style={[styles.sectionHeading, { borderLeftColor: theme.colors.primary }]}>
+          <Text
+            variant="titleMedium"
+            style={{ color: theme.colors.primary, fontWeight: '700' }}
+          >
+            {labels.announcements}
+          </Text>
+        </View>
+        <Divider style={styles.sectionHeadingDivider} />
+        {announcements.map((announcement, index) => (
+          <View
+            key={`${index}:${announcement}`}
+            style={[styles.dataRow, index < announcements.length - 1 && styles.dataRowBorder]}
+          >
+            <Text variant="bodyMedium">{announcement}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderRoster = (location: BulletinLocation, isQueens: boolean) => {
     const rows: Array<[string, string | undefined]> = isQueens
       ? [
@@ -1193,6 +1226,7 @@ export default function WeeklyBulletinScreen() {
 
         {renderSabbathSchool(location, isQueens)}
         {renderProgram(location, isQueens, tithePurpose)}
+        {renderAnnouncements(location)}
         {renderRoster(location, isQueens)}
       </Card.Content>
     </Card>

@@ -256,6 +256,13 @@ that Sabbath see a failed load until traffic drops. The daily
 response.
 
 Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a concern.
+The `Weekly Data` announcements' translations are also cached, apart from the
+response, for up to six hours
+([Cache](https://developers.google.com/apps-script/reference/cache/cache)), so a
+line is translated a few times a day, not every two minutes (#562). Apps Script
+allows 20,000 translate calls a day on a Google Workspace account
+([quotas](https://developers.google.com/apps-script/guides/services/quotas)), and
+one call carries all of a location's lines in one language.
 
 ### Adventech Sabbath School
 

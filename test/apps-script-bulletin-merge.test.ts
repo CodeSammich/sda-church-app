@@ -28,6 +28,8 @@ const WEEKLY_HEADERS = [
   'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
   'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
   'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
+  // Since #562, read by name like the rest, so last here.
+  'English Announcements', 'Chinese Announcements',
 ];
 
 const createSheet = (name: string, headers: string[], rows: string[][] = []) => ({
@@ -444,8 +446,10 @@ describe('Apps Script bulletin response merging', () => {
   it('reads each column by its name, wherever it is', () => {
     const shuffled = [...WEEKLY_HEADERS, 'Notes'].reverse();
     const row = ['2026-11-07', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人',
-      '第12首', '', '', 'AH 1', 'It Is Well', '第452首', 'a note'].reverse();
+      '第12首', '', '', 'AH 1', 'It Is Well', '第452首', 'Fellowship lunch after the service.', '',
+      'a note'].reverse();
     expect(readWeeklyRow(shuffled, row)).toMatchObject({
+      announcements: [{ english: 'Fellowship lunch after the service.', chinese: '', spanish: '' }],
       bibleVerses: 'John 10:11-16',
       sermonTitle: { english: 'The Good Shepherd', chinese: '好牧人' },
       sabbathSchoolHymns: ['第12首'],
@@ -482,6 +486,8 @@ describe('Apps Script bulletin response merging', () => {
 
   it('still reads a tab with the English and Chinese hymn columns from before #558', () => {
     expect(getMissingColumns(INTAKE_HEADERS)).toEqual([
+      'Weekly Data: English Announcements',
+      'Weekly Data: Chinese Announcements',
       'Weekly Data: Sabbath School Hymn 1',
       'Weekly Data: Sabbath School Hymn 2',
       'Weekly Data: Sabbath School Hymn 3',

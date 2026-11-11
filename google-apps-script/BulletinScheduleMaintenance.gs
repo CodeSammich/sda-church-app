@@ -595,21 +595,58 @@ function populateUpcomingBulletinQuarters_(sheet, now) {
 }
 
 // A new Weekly Data tab's rows after the headers: a worked example for each
-// location, between them showing each way to fill a hymn cell, in the order of
-// BULLETIN_SHEET_COLUMNS. Nothing reads a row whose Date isn't a date, so they
-// never reach a bulletin.
+// location, between them showing each way to fill a hymn cell, and
+// announcements typed in one language for the other to be machine-translated,
+// in the order of BULLETIN_SHEET_COLUMNS. Nothing reads a row whose Date isn't
+// a date, so they never reach a bulletin.
 var WEEKLY_DATA_EXAMPLE_ROWS = Object.freeze([
   Object.freeze([
-    'Example', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人',
+    'Example', 'Queens',
+    'Fellowship lunch after the service. Everyone is welcome.\nChoir practice at 2 pm in the sanctuary.',
+    '',
+    'John 10:11-16', 'The Good Shepherd', '好牧人',
     '第12首 讚美上帝大君王', 'AH 73 Holy, Holy, Holy', '還要等多久',
     'AH 1 Praise to the Lord', 'It Is Well with My Soul', '第452首 遵命有福',
   ]),
   Object.freeze([
-    'Example', 'Brooklyn', 'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
+    'Example', 'Brooklyn', '', '崇拜後有愛筵，歡迎大家參加。',
+    'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
     '205', 'Amazing Grace', '',
     '第5首 讚美上主', '奇異恩典', 'AH 86 How Great Thou Art',
   ]),
 ]);
+
+// A note on the header of each announcement column (#562), set when the
+// script writes that header: when it sets up the tab, or adds the column back.
+// English and Simplified Chinese, like the sheet's other staff instructions.
+var WEEKLY_DATA_HEADER_NOTES = Object.freeze({
+  'English Announcements':
+    'One announcement per line, in English. Shown in the app, where anyone can read it, and printed in the bulletin. ' +
+    'Leave this blank to have Chinese Announcements machine-translated, or type your own to replace the translation. ' +
+    'Leave out private details, such as health news, addresses and phone numbers.\n' +
+    '每行一条英文通知。会显示在应用中（任何人都能看到）并印在周刊上。留空则自动翻译 Chinese Announcements，' +
+    '自己填写即可取代翻译。请勿填写个人隐私，例如健康状况、地址和电话。',
+  'Chinese Announcements':
+    'One announcement per line, in Traditional Chinese, as the bulletin prints it; the app converts it for ' +
+    'Simplified readers. Line 1 goes with line 1 of English Announcements. Leave this blank to have English ' +
+    'Announcements machine-translated, or type your own to replace the translation. Shown in the app, where ' +
+    'anyone can read it: leave out private details, such as health news, addresses and phone numbers.\n' +
+    '每行一条中文通知，请用繁体字（周刊印繁体，应用会为简体读者转换）。第 1 行对应 English Announcements 的第 1 行。' +
+    '留空则自动翻译 English Announcements，自己填写即可取代翻译。会显示在应用中，任何人都能看到：' +
+    '请勿填写个人隐私，例如健康状况、地址和电话。',
+});
+
+// Notes these headers, written from this column on, where WEEKLY_DATA_HEADER_NOTES
+// has one.
+function setWeeklyDataHeaderNotes_(sheet, firstColumn, headers) {
+  headers.forEach(function (header, index) {
+    var note = WEEKLY_DATA_HEADER_NOTES[header];
+    var cell = note && sheet.getRange(1, firstColumn + index);
+    if (cell && typeof cell.setNote === 'function') {
+      cell.setNote(note);
+    }
+  });
+}
 
 // Keeps Weekly Data in shape however it's edited (#558), so nobody has to
 // guard its headers. A deleted or emptied tab comes back with its headers and
@@ -629,6 +666,7 @@ function ensureWeeklyDataTab_(spreadsheet) {
     );
     sheet.getRange(1, 1, rows.length, expected.length).setValues(rows);
     sheet.getRange(1, 1, 1, expected.length).setFontWeight('bold');
+    setWeeklyDataHeaderNotes_(sheet, 1, expected);
     sheet.setFrozenRows(1);
     showWeeklyDataNotice_(
       spreadsheet,
@@ -653,13 +691,26 @@ function ensureWeeklyDataTab_(spreadsheet) {
     );
   });
   if (missing.length) {
-    var gridColumns = lastColumn + missing.length - sheet.getMaxColumns();
-    if (gridColumns > 0) {
-      sheet.insertColumnsAfter(sheet.getMaxColumns(), gridColumns);
+    // Row 1 is protected for the technology group, so an ordinary editor's
+    // open can't add a header. Then the columns wait for the next technology
+    // group open, and the rest of the upkeep, such as the next Sabbaths' rows,
+    // goes on (#562 added two columns, which the first open after the deploy
+    // may not be able to add).
+    try {
+      var gridColumns = lastColumn + missing.length - sheet.getMaxColumns();
+      if (gridColumns > 0) {
+        sheet.insertColumnsAfter(sheet.getMaxColumns(), gridColumns);
+      }
+      var added = sheet.getRange(1, lastColumn + 1, 1, missing.length);
+      added.setValues([missing]);
+      added.setFontWeight('bold');
+      setWeeklyDataHeaderNotes_(sheet, lastColumn + 1, missing);
+    } catch (error) {
+      if (typeof Logger !== 'undefined') {
+        Logger.log('Could not add the missing Weekly Data columns ' + missing.join(', ') + ': ' + error);
+      }
+      return sheet;
     }
-    var added = sheet.getRange(1, lastColumn + 1, 1, missing.length);
-    added.setValues([missing]);
-    added.setFontWeight('bold');
     showWeeklyDataNotice_(
       spreadsheet,
       'Weekly Data: added these missing columns at the far right: ' + missing.join(', ') +

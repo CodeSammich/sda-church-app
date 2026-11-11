@@ -298,8 +298,8 @@ simple, blended colors.
     - Asked at first-launch setup's last two steps ("Which is easier to read in light
       mode?", then dark mode), and once after the update that brought it, with only
       those two questions (`constants/WhatsNew.ts`, keyed by version, so a later release
-      can add its own or none; live announcements, #562, would be separate). Changed any
-      time under You → Contrast.
+      can add its own or none; the church's announcements, #562, are separate: they're
+      in the bulletin). Changed any time under You → Contrast.
     - The question after an update is setup's own full screen and contrast steps
       (`components/SetupScreen.tsx`, `ContrastStep`), not a popup, so the popups' 65%
       height limit doesn't apply (#708). In a popup, the buttons' row pushed Standard

@@ -21,6 +21,8 @@ const WEEKLY_HEADERS = [
   'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
   'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
   'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
+  // Since #562, read by name like the rest, so last here.
+  'English Announcements', 'Chinese Announcements',
 ];
 
 const SABBATH = '2026-11-07';
@@ -988,5 +990,61 @@ describe('the public API', () => {
       error: 'The bulletin is unavailable right now. Please try again later.',
     });
     expect(logged.join('\n')).toContain('Service Spreadsheets failed');
+  });
+});
+
+describe('announcements (#562)', () => {
+  // WEEKLY_HEADERS has the two announcement columns last.
+  const weeklyRow = (location: string, english: string, chinese: string) =>
+    [SABBATH, location, 'John 10:11-16', 'The Good Shepherd', '好牧人', '', '', '', '', '', '', english, chinese];
+  const announcementsWorkbook = () =>
+    createWorkbook({
+      'Sabbath Calendar': [SCHEDULE_HEADERS, scheduleRow()],
+      'Weekly Data': [
+        WEEKLY_HEADERS,
+        weeklyRow('Queens', 'Fellowship lunch after the service.\nChoir practice at 2 pm.', '崇拜後有愛筵。'),
+        weeklyRow('Brooklyn', '', '查經班改到週三。'),
+      ],
+      'Name Dictionary': [['English Name', 'Chinese Name'], ['Ada Lin', '林愛達']],
+      Leadership: [['Pastors', 'Elders'], ['Ada Lin', 'Ben Hall']],
+    });
+  const withTranslator = (context: object) =>
+    Object.assign(context, {
+      LanguageApp: { translate: (text: string, _source: string, target: string) => text.split('\n').map((line) => `[${target}] ${line}`).join('\n') },
+    });
+
+  it("sends each location's own, in English, Chinese and Spanish", () => {
+    const context = withTranslator(load(announcementsWorkbook()));
+    const response = JSON.parse(
+      runInContext(`doGet({ parameter: { date: '${SABBATH}', appVersion: '1.9.0' } }).text`, context) as string,
+    );
+    expect(response.ok).toBe(true);
+    expect(response.bulletin.queens.announcements).toEqual([
+      { english: 'Fellowship lunch after the service.', chinese: '崇拜後有愛筵。', spanish: '[es] Fellowship lunch after the service.' },
+      { english: 'Choir practice at 2 pm.', chinese: '[zh-TW] Choir practice at 2 pm.', spanish: '[es] Choir practice at 2 pm.' },
+    ]);
+    expect(response.bulletin.brooklyn.announcements).toEqual([
+      { english: '[en] 查經班改到週三。', chinese: '查經班改到週三。', spanish: '[es] 查經班改到週三。' },
+    ]);
+    // Only the list goes out, not the cells it came from.
+    expect(JSON.stringify(response)).not.toContain('announcementText');
+  });
+
+  it('prints the same ones, in Chinese and English', () => {
+    const context = withTranslator(load(announcementsWorkbook()));
+    expect(
+      run(context, `getPhysicalPrintedAnnouncementEntries_(buildBulletin_('${SABBATH}', { includeFullNames: true }), 'brooklyn')`),
+    ).toEqual([{ english: '[en] 查經班改到週三。', chinese: '查經班改到週三。' }]);
+  });
+
+  it('sends an empty list for blank cells, or a location with no Weekly Data row', () => {
+    // Queens's row leaves both cells blank, and Brooklyn has no row.
+    const context = load(createChurchWorkbook());
+    const bulletin = run<{ queens: { announcements: unknown }; brooklyn: { announcements: unknown } }>(
+      context,
+      `buildBulletin_('${SABBATH}', {})`,
+    );
+    expect(bulletin.queens.announcements).toEqual([]);
+    expect(bulletin.brooklyn.announcements).toEqual([]);
   });
 });
