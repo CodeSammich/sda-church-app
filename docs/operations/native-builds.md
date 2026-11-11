@@ -849,7 +849,7 @@ and the copies pass all 123.
 
 #### Key screens
 
-The five runners screenshot the 47 screens listed in `test/screens/screens.json`, 109
+The five runners screenshot the 63 screens listed in `test/screens/screens.json`, 142
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner then takes its group's iPad shots; see
 [iPad key screens](#ipad-key-screens). Each runner takes one group (`--group <name>`) of related
@@ -860,7 +860,7 @@ the App Store copies. The release PR waits only for the slowest group.
 
 **Adding a key screen.** Give it the `group` for its part of the app, as `groups`
 describes. A test fails if any group would take more than 8 minutes to capture on the
-iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
+iPhone or the iPad. The limit is a reminder to prune, not a rule:
 
 1. Prune first: drop variants that repeat what another shot already shows, such as a
    dark or Chinese copy of a screen whose layout doesn't change, and screens no longer
@@ -891,18 +891,41 @@ iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
    opens the popup for `verseStart` once the chapter loads, or its
    `popup=audio-settings`, once the chapter has audio (#372), or its
    `popup=audio-download-tip`, the same popup as the tip opens it when playback keeps
-   stopping to load (#595), or its `popup=book`, the book list (#723), or Sabbath School's
+   stopping to load (#595), or its `popup=book`, the book list (#723), or its
+   `popup=chapter`, the chapter list (#456), or Sabbath School's
    `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
    a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
    just the screen. Two shots go further and start something real (#551): the Bible's
    `play=1` plays the chapter's audio as a tap on Play would (`isScreenshotPlay`), and
    Sabbath School's `popup=lesson-viewer` downloads the Beginner student lesson and
-   opens it, as a tap would.
+   opens it, as a tap would. The bulletin's path can ask for a state no tap brings
+   about (`getScreenshotState`, #456): `state=load-failed`, a bulletin that couldn't
+   load, or `section=program`, the page scrolled to its worship program.
+
+   **Made-up data.** These screenshots, the text read from them, and the run's
+   downloads are public, so the pages that show members' names or faces show made-up
+   data in a key-screens build (`services/KeyScreensFixtures.ts`, #456):
+
+   - The bulletin's network call returns a made-up answer of the Bulletin API's shape,
+     which goes through the same checks as a real one. Its names are shortened as the
+     public API shortens them, and it holds the worst cases on purpose, such as the
+     longest first name and a role with three people, so the text checks can name
+     exact lines. The bulletin keeps no stored copy there, so each shot gets the same
+     bulletin whichever shot came before it.
+   - The Team page shows made-up staff, and Team and Fellowships show the church
+     building's photo in place of faces.
+
+   Expo writes `EXPO_PUBLIC_KEY_SCREENS` into the app when it's built, and the
+   made-up data is loaded only behind that condition, written out where it's loaded,
+   so Metro leaves it out of store builds. `test/key-screens-fixtures.test.ts` checks
+   that, that the made-up bulletin never reaches the network, and that every name in
+   it is one the API's shortening leaves as it is.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
-   wait (9 for the Bible, which measured settles within 6), so a group's 14 to 22 shots
-   take about 3–6 minutes. While it
+   wait (9 for the Bible, which measured settles within 6), so a group's 21 to 31 shots
+   take about 6 to 10 minutes: 5.5 to 9.6 on [1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635),
+   before #456 added 13. While it
    waits, it takes a screenshot every 2 seconds and records in
    `screens/settle-times.json` when each screen stopped changing, so the waits can be
    shortened from measurements (#453). Three Simulators on one runner were tried and
@@ -1025,8 +1048,11 @@ step 2 of the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-
 
 To add a screen, add an entry to `test/screens/screens.json`: a `name`, its `group`
 (see **Adding a key screen**, above), the deep link `path` without the scheme, any Bible
-`settings`, the `variants` to take, and any `checks`. Leave out screens that show members' names or photos, such as the bulletin,
-the team page, and the fellowship page; `test/screens.test.ts` checks this. A new
+`settings`, the `variants` to take, and any `checks`. Leave out screens that show
+members' names or faces, unless a key-screens build makes them up, as it does for the
+bulletin, Team, and Fellowships ([Made-up data](#key-screens), above).
+`test/screens.test.ts` allows only those, and Sabbath Worship, which has no one's name
+in it. A new
 setting also needs its storage key in the script's `SETTING_KEYS`, and the test checks
 the app still reads that key. A screen whose content changes every day, such as Home
 with its verse of the day and countdown, is marked `changesDaily`, for when these images
@@ -1039,7 +1065,7 @@ on a 13-inch iPad Pro Simulator (`ipad.device` in `screens.json`). The maintaine
 no iPad, so these shots, and a check on a member's iPad through TestFlight before each App
 Store release, are how iPad layouts get tested.
 
-- **Which shots.** Each screen's `ipadVariants`, 64 shots: every key screen in landscape,
+- **Which shots.** Each screen's `ipadVariants`, 90 shots: every key screen in landscape,
   where a wide screen changes the most, and in the language its checks read (`landscape`,
   `landscape-zh`, `landscape-zh-cn`, `landscape-es`); the screens a wide screen changes
   most in portrait too (`default`: Home, New Member & Visitor, the Bible, Explore, the
@@ -1097,8 +1123,11 @@ Store release, are how iPad layouts get tested.
   landscape, which App Store Connect's **iPad 13-inch display** slot takes.
 - **Time.** About 20 seconds a shot, against the iPhone's 14 (`shotCost` adds 5), and 5
   to 7 more to read each shot's text. A test flags a group whose iPad shots would take
-  more than 7 minutes, like the iPhone's 6: a reminder to prune, then to rebalance the
-  groups, and only then to raise the limit. The busiest group's runner takes about 10
+  more than 8 minutes, like the iPhone's: a reminder to prune, then to rebalance the
+  groups, and only then to raise the limit. It was 7 until #456, when
+  `worship-and-you` took the bulletin's shots: on
+  [1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635) that group's iPhone and iPad shots took 12.4
+  minutes, against 18.4 to 20.5 on the others. The busiest group's runner takes about 10
   minutes more than it did without the iPad, so the compiling runner's job limit is 70
   minutes and the others' 130.
 - **What it can't show.** A window beside another app, or one resized by hand, which no
