@@ -112,7 +112,7 @@ upkeep, such as yearly Apple renewals and runner image retirements, is under
 
 `scripts/build-android-native.mjs` reuses an existing generated `android/` project
 for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
-`expo-template-bare-minimum@58.0.31`, including when `--no-install` is used. A clean
+`expo-template-bare-minimum@58.0.32`, including when `--no-install` is used. A clean
 GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
 plugin, or another native setting changes, force regeneration with either:
 
@@ -164,7 +164,7 @@ Android project with the exact template version used by the build script:
 ```sh
 npm install
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.31 \
+  --template expo-template-bare-minimum@58.0.32 \
   --platform android
 ```
 
@@ -177,7 +177,7 @@ Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.31 \
+  --template expo-template-bare-minimum@58.0.32 \
   --platform android \
   --no-install
 ```
@@ -919,8 +919,14 @@ under the status bar, and the Bible header with two translations and a back arro
 **Automatic checks.** The run fails, and the step summary says why, if the app isn't
 running after launch, if it didn't open the saved screen, if a screenshot is blank or
 still shows the launch splash, or if a screen marked `statusBarClear` shows anything
-behind the status bar. A blank or splash screenshot is retaken every 2 seconds, up to 10
-times, before it counts. So is a screen still changing at the end of its wait, where more
+behind the status bar. On the iPhone, it also fails if a screen marked
+`lightStatusBarIcons` (Library and the hymnal page, under their carousels) doesn't show
+light status bar icons, or one marked `themeStatusBarIcons` (Home) doesn't show the
+theme's: dark in the light theme, light in the dark (#733). The colour comes from the
+clock: the pixels in its box much brighter or darker than the rest. A clock that doesn't
+stand out at all fails too. The iPad and Android skip both. A blank or splash
+screenshot is retaken every 2 seconds, up to 10 times, before it counts. So is a
+screen still changing at the end of its wait, where more
 than 1% of the screenshot differs from the one before it, up to 6 times, until it
 stops: on a slow runner, a Bible shot was once taken before it scrolled to its verse.
 Home's countdown changes far less than that, so it doesn't hold up a shot. A shot whose
@@ -1251,9 +1257,9 @@ screen under the 320 dp Android keeps it to). A screen with `"platforms": ["ios"
 **Checks.** The same as the iPhone's: the app is running, it opened the saved screen
 (read back from its database), no screenshot is blank or still shows the splash,
 `statusBarClear` screens show nothing in the status bar's empty middle, and the text
-checks, with the tab bar and chapter controls where the phone's screen puts
-them (`REGIONS_BY_PLATFORM`). On Android they also fail on the system's "isn't
-responding" and "keeps stopping" dialogs.
+checks (not the status bar icons' colour, which is the iPhone's), with the tab bar and
+chapter controls where the phone's screen puts them (`REGIONS_BY_PLATFORM`). On Android
+they also fail on the system's "isn't responding" and "keeps stopping" dialogs.
 
 The text is read from the image, as on the iPhone, so a word cut short or a verse number
 split across lines fails the same way on both. Apple's Vision runs only on a Mac, so

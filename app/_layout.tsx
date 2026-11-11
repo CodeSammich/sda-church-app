@@ -5,6 +5,10 @@ import { shouldShowWhatsNew, WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION } from '@/con
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LaunchSplash } from '@/components/LaunchSplash';
 import {
+  getScreenStatusBarStyle,
+  useLightStatusBarRequested,
+} from '@/components/LightStatusBar';
+import {
   getDefaultTextScale,
   getEffectiveTextScale,
   parseStoredTextScale,
@@ -86,6 +90,7 @@ import {
   LogBox,
   Platform,
   StatusBar,
+  type StatusBarStyle,
   StyleSheet,
   useColorScheme,
   useWindowDimensions,
@@ -947,6 +952,25 @@ export default function RootLayout() {
   );
 }
 
+/**
+ * The app's root Stack. On iOS its screens set the status bar's style, which
+ * every screen below falls back to (see components/LightStatusBar.tsx). Only
+ * this re-renders when a hero comes out from under the status bar.
+ */
+function RootStack({ statusBarStyle }: { statusBarStyle: StatusBarStyle }) {
+  const lightRequested = useLightStatusBarRequested();
+  const screenStatusBarStyle = getScreenStatusBarStyle(statusBarStyle, lightRequested);
+  return (
+    <Stack
+      screenOptions={
+        Platform.OS === 'ios' ? { statusBarStyle: screenStatusBarStyle } : undefined
+      }
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    </Stack>
+  );
+}
+
 function RootLayoutNav({
   theme,
   showSetup,
@@ -1187,9 +1211,7 @@ function RootLayoutNav({
         <StatusBar
           barStyle={statusBarStyle}
         />
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
+        <RootStack statusBarStyle={statusBarStyle} />
         <AppAlertHost />
         {installAvailable && (
           <InstallPrompt onInstall={onInstall} onDismiss={onDismissInstall} />

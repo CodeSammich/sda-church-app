@@ -52,7 +52,7 @@ if (!existsSync(iosRoot) || forcePrebuild) {
     'expo',
     'prebuild',
     '--template',
-    'expo-template-bare-minimum@58.0.31',
+    'expo-template-bare-minimum@58.0.32',
     '--platform',
     'ios',
     '--clean',

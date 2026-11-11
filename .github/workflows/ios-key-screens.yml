@@ -158,7 +158,7 @@ jobs:
         if: ${{ matrix.builds }}
         run: >-
           npx expo prebuild
-          --template expo-template-bare-minimum@58.0.31
+          --template expo-template-bare-minimum@58.0.32
           --platform ios --clean --no-install
 
       - name: Install CocoaPods dependencies
