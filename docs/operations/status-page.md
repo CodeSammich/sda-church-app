@@ -1,7 +1,7 @@
 # Status page
 
-The [status page](https://new-york-chinese-seventh-day-adventist.github.io/sda-church-app-status/)
-checks the services the app depends on every 5 minutes. For each one, it shows
+The [status page](https://new-york-chinese-seventh-day-adventist.github.io/sda-church-app-status/),
+also at `app.nyccsda.org/status`, checks the services the app depends on every 5 minutes. For each one, it shows
 whether the service is up, how fast it answers, and its history. It runs on
 [Upptime](https://upptime.js.org) in a separate public repository,
 [sda-church-app-status](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app-status),
@@ -26,7 +26,7 @@ phones.
 - [The GitHub App](#the-github-app)
 - [Upkeep](#upkeep)
 - [Setting it up](#setting-it-up)
-- [A custom address](#a-custom-address)
+- [The short address](#the-short-address)
 
 ## What it checks
 
@@ -184,15 +184,23 @@ If **Setup CI** fails with "Permission … denied to github-actions[bot]", the
 workflow didn't get the App's token: check the variable's and the secret's names
 and where they're saved, then run it again.
 
-## A custom address
+## The short address
 
-The page can move to `status.nyccsda.org`. In Cloudflare, add a `status`
-CNAME record to `new-york-chinese-seventh-day-adventist.github.io`, DNS only
-(not proxied). In the organization's **Settings → Pages**, verify the domain.
-Then replace `baseUrl` with `cname: status.nyccsda.org` in `.upptimerc.yml`.
-`nyccsda.org` is also the church's email domain, so don't change its other
-records.
+`app.nyccsda.org/status` leads to the dashboard. A Cloudflare redirect rule,
+**Status page short link**, sends `/status` and `/status/` on `app.nyccsda.org`,
+in any capitalisation, to the dashboard with a temporary (302) redirect. It
+comes just before the rule that sends the rest of `app.nyccsda.org` to the app's
+website ([The app website](admin-runbook.md#the-app-website-appnyccsdaorg)).
+Cloudflare uses the first redirect rule that matches
+([Cloudflare's docs](https://developers.cloudflare.com/rules/url-forwarding/#execution-order)),
+so if the order is swapped, `/status` leads to a missing page on the app's
+website. The rule's expression is:
 
-Don't use `app.nyccsda.org/status`. That address's redirect rule keeps the path,
-so it would lead to the app's own website
-([The app website](admin-runbook.md#the-app-website-appnyccsdaorg)).
+```
+(http.host eq "app.nyccsda.org" and lower(http.request.uri.path) in {"/status" "/status/"})
+```
+
+If `app.nyccsda.org` ever serves the app's website itself instead of
+redirecting, as the runbook plans for app links, Cloudflare's redirect rules no
+longer apply to it. The short address then needs another home, such as a page at
+`public/status/index.html` that forwards to the dashboard.

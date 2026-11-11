@@ -406,7 +406,8 @@ are copied as they are.
 **How the address works:** a Cloudflare redirect rule sends `app.nyccsda.org` to that
 GitHub Pages address with a permanent (301) redirect, keeping the path and any query.
 So `app.nyccsda.org/download?stay` becomes `…/sda-church-app/download?stay`. Both stores
-accept a redirect. Two similar addresses are not the app website:
+accept a redirect. One rule comes before it: `app.nyccsda.org/status` goes to the
+[status page](status-page.md#the-short-address). Two similar addresses are not the app website:
 
 - `nyccsda.org` is the church's main website, which forwards to adventistchurch.org, so
   `nyccsda.org/sda-church-app/…` and `nyccsda.org/privacy-policy.html` don't work.
@@ -430,7 +431,8 @@ Links, needs `app.nyccsda.org` to serve the site itself instead of redirecting, 
 Apple doesn't follow redirects for the file that enables it. That means setting
 `app.nyccsda.org` as the GitHub Pages custom domain, pointing a Cloudflare CNAME at
 `new-york-chinese-seventh-day-adventist.github.io` in place of the redirect rule, and
-changing the web build's base path from `/sda-church-app` to `/`.
+changing the web build's base path from `/sda-church-app` to `/`. The
+[status page's short address](status-page.md#the-short-address) then needs another home.
 
 ## The Cloudflare account and domain
 
