@@ -77,6 +77,16 @@ export const getScreenshotPopup = <T extends string>(
     : null;
 
 /**
+ * A state or place a key-screen path asks a screen for, other than a popup, if
+ * it's one the screen knows: the bulletin's `state=load-failed`, a bulletin
+ * that couldn't load, or its `section=program`, scrolled to the worship
+ * program (#456). No tap can bring either about on a build runner. As with
+ * `popup=`, it's always null outside a key-screens build.
+ */
+export const getScreenshotState: typeof getScreenshotPopup = (value, states) =>
+  getScreenshotPopup(value, states);
+
+/**
  * Whether a key-screen path asks the Bible to play its chapter's audio, with
  * `play=1`, as a tap on Play would (#551). The iPhone key screens check that
  * its elapsed time moves. Outside a key-screens build it's always false, so a

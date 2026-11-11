@@ -3134,7 +3134,8 @@ export default function BibleScreen() {
   // verseStart's details, or popup=audio-settings once the chapter has audio.
   // popup=audio-download-tip opens it as the marked button would, with the
   // line that playback keeps stopping to load (#595). popup=book opens the
-  // book list, as the book pill would (#723).
+  // book list, as the book pill would (#723), and popup=chapter the chapter
+  // list, as the chapter pill would (#456).
   // A chapter change clears chapterData first, so a loaded chapter that
   // matches the link is the linked one.
   const screenshotPopupOpened = useRef(false);
@@ -3145,12 +3146,13 @@ export default function BibleScreen() {
       'audio-settings',
       'audio-download-tip',
       'book',
+      'chapter',
     ]);
     if (!screenshotPopup) return;
     if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
-    if (screenshotPopup === 'book') {
+    if (screenshotPopup === 'book' || screenshotPopup === 'chapter') {
       screenshotPopupOpened.current = true;
-      setModalType('book');
+      setModalType(screenshotPopup);
       return;
     }
     if (screenshotPopup !== 'verse') {

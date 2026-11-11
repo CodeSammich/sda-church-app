@@ -4,6 +4,7 @@ import { WrappingButton as Button } from '@/components/WrappingButton';
 import { contentColumnStyle } from '@/constants/Layout';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
+  CHURCH_BUILDING_IMAGE_URL,
   CHURCH_EMAIL,
   CHURCH_PHONE,
   ELMHURST_SABBATH_URLS,
@@ -23,6 +24,12 @@ import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Card, Divider, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
+
+// The fellowships' photos show members' faces, so a key-screens build shows
+// the church building's photo, the one the Team page's header shows, in their
+// place (#456), and no one's face reaches the key screens' shots.
+const photo = (url: string) =>
+  process.env.EXPO_PUBLIC_KEY_SCREENS === '1' ? CHURCH_BUILDING_IMAGE_URL : url;
 
 const allLabels = {
   en: {
@@ -213,7 +220,7 @@ export default function FellowshipsScreen() {
           title={labels.title}
           verse={labels.expansionVerse}
           reference={labels.expansionRef}
-          imageSource={{ uri: FLUSHING_FELLOWSHIP_IMAGE_URL }}
+          imageSource={{ uri: photo(FLUSHING_FELLOWSHIP_IMAGE_URL) }}
           verseColors={theme.dark
             ? ['#241C3D', '#38245E', '#44306B']
             : ['#312E81', '#5B21B6', '#7C3AED']}
@@ -230,7 +237,7 @@ export default function FellowshipsScreen() {
           </View>
 
           <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} mode="outlined">
-            <Card.Cover source={{ uri: ELMHURST_SABBATH_URLS[0] }} style={styles.cardCover} />
+            <Card.Cover source={{ uri: photo(ELMHURST_SABBATH_URLS[0]) }} style={styles.cardCover} />
             <Card.Content style={styles.cardContent}>
               {/* Verse Card */}
               <View style={[styles.verseCard, { backgroundColor: theme.colors.surfaceVariant, borderLeftColor: theme.colors.tertiary }]}>
@@ -350,7 +357,7 @@ export default function FellowshipsScreen() {
 
           <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} mode="outlined">
             <Card.Cover
-              source={{ uri: FLUSHING_FELLOWSHIP_IMAGE_URL }}
+              source={{ uri: photo(FLUSHING_FELLOWSHIP_IMAGE_URL) }}
               style={styles.cardCover}
             />
             <Card.Content style={styles.cardContent}>

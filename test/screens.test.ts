@@ -41,11 +41,35 @@ describe('key screen list (test/screens/screens.json)', () => {
     }
   });
 
-  it('leaves out screens that show members’ names or photos', () => {
-    // The repository and its pull requests are public.
+  it('shows members’ pages only with made-up data, or with no one’s name in them (#456)', () => {
+    // The repository and its pull requests are public, and so are the runs'
+    // screenshots, the text read from them, and their downloads. In a
+    // key-screens build the bulletin and the Team page show made-up data
+    // (test/key-screens-fixtures.test.ts), and Fellowships and Sabbath
+    // Worship are written into the app, with no one's name in them. Any other
+    // page with members on it stays out.
+    const allowed: Record<string, string> = {
+      'home/bulletin': 'made up',
+      'home/team': 'made up',
+      'home/fellowship': 'app/(tabs)/home/fellowship.tsx',
+      'home/worship': 'app/(tabs)/home/worship.tsx',
+    };
     for (const screen of config.screens) {
-      expect(screen.path).not.toMatch(/bulletin|team|fellowship|worship/);
+      const route = screen.path.split('?')[0];
+      if (!/bulletin|team|fellowship|worship|roster|member|leader|elder/.test(route)) continue;
+      expect({ path: screen.path, allowed: Object.hasOwn(allowed, route) }).toEqual({ path: screen.path, allowed: true });
     }
+    for (const file of Object.values(allowed).filter((value) => value.endsWith('.tsx'))) {
+      // Nothing from the network, a service, or the team's list.
+      expect({ file, reads: /fetch\(|@\/services\/|TeamData/.test(repoFile(file)) }).toEqual({ file, reads: false });
+      // Its photos show members' faces, so a key-screens build shows the
+      // church building in their place.
+      const photos = repoFile(file).match(/\buri: [^}]+/g) || [];
+      for (const photo of photos) expect({ file, photo }).toEqual({ file, photo: expect.stringMatching(/^uri: photo\(/) });
+    }
+    expect(repoFile('app/(tabs)/home/fellowship.tsx')).toMatch(
+      /const photo = \(url: string\) =>\s+process\.env\.EXPO_PUBLIC_KEY_SCREENS === '1' \? CHURCH_BUILDING_IMAGE_URL : url;/,
+    );
   });
 
   it('reproduces the iPhone bugs fixed in 0.42.0', () => {
@@ -104,6 +128,19 @@ describe('key screen list (test/screens/screens.json)', () => {
     expect(shotCost(shot)).toBe(shot.wait + RECORDS[shot.record].typical + 10 + 5);
     const lesson = shots.find((each: { name: string }) => each.name === 'sabbath-school-lesson-viewer-default');
     expect(shotCost(lesson)).toBe(lesson.wait + RECORDS[lesson.record].typical + 5);
+  });
+
+  it('asks a screen only for a state or section it knows, from its path (#456)', () => {
+    const screenFiles: Record<string, string> = { 'home/bulletin': 'app/(tabs)/home/bulletin.tsx' };
+    const asking = config.screens.filter((screen: { path: string }) => /[?&](state|section)=/.test(screen.path));
+    expect(asking.map((screen: { name: string }) => screen.name).sort()).toEqual(['bulletin-load-failed', 'bulletin-program']);
+    for (const screen of asking) {
+      const [route, query] = screen.path.split('?');
+      for (const [key, value] of new URLSearchParams(query)) {
+        const reads = new RegExp(`getScreenshotState\\(param${key[0].toUpperCase()}${key.slice(1)}, \\[[^\\]]*'${value}'`);
+        expect({ path: screen.path, reads: reads.test(repoFile(screenFiles[route])) }).toEqual({ path: screen.path, reads: true });
+      }
+    }
   });
 
   it('opens only popups the screen can open from its path (#372)', () => {
@@ -1074,13 +1111,16 @@ describe('iPad key screens (#324)', () => {
     expect(ipadNames).toEqual(expect.arrayContaining(['bible-cuv-landscape-zh', 'bible-cuvs-landscape-zh-cn', 'bible-spanish-landscape-es']));
   });
 
-  it("flags a group's iPad shots over 7 minutes of capture, the same reminder to prune", () => {
+  it("flags a group's iPad shots over 8 minutes of capture, the same reminder to prune", () => {
     // Measured 20 seconds a shot on the 13-inch iPad, against the iPhone's 14
     // (#324), which shotCost counts. Each runner takes them after its iPhone
-    // shots, so the slowest group's total sets the release PR's wait.
+    // shots, so the slowest group's total sets the release PR's wait. Raised
+    // from 7 minutes to 8, the iPhone's, in #456, when worship-and-you took
+    // the bulletin and Sabbath Worship: on 1.8.0's release run its iPhone and
+    // iPad shots took 12.4 minutes, against 18.4 to 20.5 on the other groups.
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(ipad, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 420 }).toMatchObject({ group, over: false });
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 480 }).toMatchObject({ group, over: false });
     }
     expect(shotCost(ipad[0])).toBe(shotCost({ ...ipad[0], platform: 'ios' }) + 5);
   });
