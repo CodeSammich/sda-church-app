@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+
 import {
   getCenteredVerseScrollY,
+  getChapterLoadKey,
   getTopVisibleVerse,
   getTranslationSwitchPosition,
   isNewReaderLink,
@@ -104,5 +107,31 @@ describe('links into the Bible reader', () => {
 
   it('are ignored when the reader was opened without one', () => {
     expect(isNewReaderLink(null, null)).toBe(false);
+  });
+});
+
+describe('the verse positions a link scrolls to (#742)', () => {
+  const reader = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+
+  it('come from new verse rows for every chapter loaded, even the same text again', () => {
+    const psalm = { book: 'PSA', chapter: 23 };
+    const samePsalmAgain = { book: 'PSA', chapter: 23 };
+    expect(getChapterLoadKey(psalm)).toBe(getChapterLoadKey(psalm));
+    expect(getChapterLoadKey(samePsalmAgain)).not.toBe(getChapterLoadKey(psalm));
+    expect(getChapterLoadKey(null)).toBe(0);
+    // A row kept from the last load reports its position only if it moved.
+    expect(reader).toContain('<Fragment key={getChapterLoadKey(chapterData)}>');
+  });
+
+  it('are forgotten for a new chapter before its verses report theirs, never after', () => {
+    // Only one place forgets them: a layout effect, which runs before any
+    // onLayout of the chapter just drawn. A passive effect can run after some
+    // verses have reported, and the link then waits for a verse that never
+    // reports again.
+    expect(reader.match(/versePositions\.current = \{\}/g)).toHaveLength(1);
+    const reset = reader.indexOf('versePositions.current = {}');
+    const effect = reader.lastIndexOf('Effect(() => {', reset);
+    expect(reader.slice(effect - 'useLayout'.length, effect)).toBe('useLayout');
+    expect(reader.slice(effect, reset)).toBe('Effect(() => {\n    if (chapterData) ');
   });
 });
