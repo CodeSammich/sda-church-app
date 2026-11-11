@@ -93,6 +93,8 @@ one place. Church admins can start at [Operate](#operate).
     the script's source directory
 - [External dependency monitor](docs/operations/external-dependency-monitor.md): the
   daily check of every outside service the app uses, and what to do when it fails
+- [Status page](docs/operations/status-page.md): the audio hosts, the bulletin API and
+  a few other services, checked every 5 minutes from a separate repository
 - [Bible audio verse times](docs/operations/bible-audio-verse-times.md): how the times
   that let the reader follow the audio were made and checked, and how to make them for a
   new narrator or language
