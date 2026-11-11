@@ -860,8 +860,8 @@ screens, such as the Bible reader's layout or the library, listed under `groups`
 the App Store copies. The release PR waits only for the slowest group.
 
 **Adding a key screen.** Give it the `group` for its part of the app, as `groups`
-describes. A test fails if any group would take more than 8 minutes to capture on the
-iPhone or the iPad. The limit is a reminder to prune, not a rule:
+describes. A test fails if any group would take more than 9 minutes to capture on the
+iPhone or Android, or 8 on the iPad. The limit is a reminder to prune, not a rule:
 
 1. Prune first: drop variants that repeat what another shot already shows, such as a
    dark or Chinese copy of a screen whose layout doesn't change, and screens no longer
@@ -1126,8 +1126,8 @@ Store release, are how iPad layouts get tested.
   landscape, which App Store Connect's **iPad 13-inch display** slot takes.
 - **Time.** About 20 seconds a shot, against the iPhone's 14 (`shotCost` adds 5), and 5
   to 7 more to read each shot's text. A test flags a group whose iPad shots would take
-  more than 8 minutes, like the iPhone's: a reminder to prune, then to rebalance the
-  groups, and only then to raise the limit. It was 7 until #456, when
+  more than 8 minutes, against the iPhone's 9: a reminder to prune, then to rebalance
+  the groups, and only then to raise the limit. It was 7 until #456, when
   `worship-and-you` took the bulletin's shots: on
   [1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635) that group's iPhone and iPad shots took 12.5
   minutes, against 18.4 to 20.5 on the others. The busiest group's runner takes about 10

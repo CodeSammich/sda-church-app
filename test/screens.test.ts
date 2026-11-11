@@ -676,7 +676,7 @@ describe('key-screen groups', () => {
     }
   });
 
-  it('flags a group over 8 minutes of capture, as a reminder to prune its screenshots', () => {
+  it('flags a group over 9 minutes of capture, as a reminder to prune its screenshots', () => {
     // The 6-minute limit is a reminder, not a rule. When a group passes it,
     // first prune: drop variants that repeat what another shot already shows
     // (say, a dark or Chinese copy of a screen whose layout doesn't change),
@@ -688,9 +688,13 @@ describe('key-screen groups', () => {
     // 1.7.0: its release run took 37 minutes on worship-and-you, with the
     // iPad's shots after the iPhone's, against 24 on library, so Sabbath
     // School moved to library, whose iPhone shots then came to 7.5 minutes.
+    // Raised to 9 in #456, when home took Sabbath Worship and the bulletin
+    // that couldn't load: on the first run with them, 42935088042 on the
+    // fork, home's iPhone and iPad shots took 13 minutes, the fastest group,
+    // against 22.7 on worship-and-you, which had held them.
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 480 }).toMatchObject({ group, over: false });
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 540 }).toMatchObject({ group, over: false });
     }
   });
 
@@ -1559,10 +1563,11 @@ describe('Android key screens (#372)', () => {
   });
 
   it('keeps every Android group within the same reminder to prune', () => {
-    // 8 minutes, as on the iPhone, since Sabbath School moved to library (1.7.0).
+    // 9 minutes, as on the iPhone, since home took Sabbath Worship and the
+    // bulletin that couldn't load (#456).
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(android, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, over: seconds > 480 }).toEqual({ group, over: false });
+      expect({ group, over: seconds > 540 }).toEqual({ group, over: false });
     }
   });
 
