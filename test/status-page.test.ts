@@ -10,7 +10,7 @@ import {
 
 /**
  * The status page (#618) checks the app's audio hosts and bulletin API every
- * 5 minutes, from the table in docs/operations/status-page.md, copied into
+ * hour, from the table in docs/operations/status-page.md, copied into
  * `.upptimerc.yml` in the sda-church-app-status repository. When the app's own
  * addresses change, such as after the audio is uploaded to Adventist Connect
  * again, this test fails: update the table and `.upptimerc.yml` together.
@@ -37,10 +37,10 @@ const mandarin = ([] as string[]).concat(Object.values(getAudioPowerCuvChapterLi
 const helloaoBase = repoFile('services/BibleAudioDownloads.ts').match(/const HELLOAO_AUDIO = '([^']+)'/)?.[1];
 
 describe('status page checks', () => {
-  it('lists ten checks, each with its own name and address', () => {
-    expect(rows).toHaveLength(10);
-    expect(checks.size).toBe(10);
-    expect(new Set(rows.map(([, url]) => url)).size).toBe(10);
+  it('lists nine checks, each with its own name and address', () => {
+    expect(rows).toHaveLength(9);
+    expect(checks.size).toBe(9);
+    expect(new Set(rows.map(([, url]) => url)).size).toBe(9);
   });
 
   it("checks John 3 at each of the app's Mandarin sources, in the app's order", () => {

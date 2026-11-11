@@ -948,7 +948,7 @@ alert and doesn't close itself: do the cleanup it describes. See
 ## Status page alerts
 
 **Repository:** `sda-church-app-status`, where Upptime checks the audio hosts,
-the bulletin API and a few other services every 5 minutes.
+the bulletin API and a few other services every hour.
 
 It opens an issue in that repository when a service is down and closes it when
 the service is back. Its issues never appear in this repository. See

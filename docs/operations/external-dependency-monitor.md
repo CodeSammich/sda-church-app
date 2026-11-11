@@ -4,7 +4,7 @@ The app's web/PWA preview and native clients depend on public APIs, media hosts,
 directories, and user-facing external destinations. `.github/workflows/external-dependency-monitor.yml`
 checks them daily at 5:17 PM America/New_York time and can also be run manually.
 The [status page](status-page.md) checks the audio hosts, the bulletin API and a
-few other services every 5 minutes, but only that each one answers.
+few other services every hour, but only that each one answers.
 
 ## Traffic policy
 

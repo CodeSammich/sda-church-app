@@ -1,8 +1,9 @@
 # Status page
 
 The [status page](https://new-york-chinese-seventh-day-adventist.github.io/sda-church-app-status/),
-also at `app.nyccsda.org/status`, checks the services the app depends on every 5 minutes. For each one, it shows
-whether the service is up, how fast it answers, and its history. It runs on
+also at `app.nyccsda.org/status`, checks the services the app depends on every
+hour. For each one, it shows whether the service is up, how fast it answers,
+and its history. It runs on
 [Upptime](https://upptime.js.org) in a separate public repository,
 [sda-church-app-status](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app-status),
 using only GitHub Actions, Issues and Pages. It costs nothing, and it can't open
@@ -11,7 +12,7 @@ issues in this repository.
 The [external dependency monitor](external-dependency-monitor.md) checks once a
 day that each service still gives the app what it expects: catalogs, file
 lists, the bulletin's fields. The status page only checks that each service
-answers, but it does so every few minutes. An outage shows within minutes, and so
+answers, but it does so every hour. An outage shows within the hour, and so
 does a host that starts refusing the church's files, for example Adventist
 Connect answering 403 or 429
 ([#618](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/618)).
@@ -46,7 +47,6 @@ with 206 ([measured on #618](https://github.com/New-York-Chinese-Seventh-day-Adv
 | Audio Power, Mandarin fallback | `https://theaudiopower.com/CUV/Recordings/%E7%BA%A6%E7%BF%B0%E7%A6%8F%E9%9F%B3%203.mp3` | `HEAD` |
 | HelloAO, English audio | `https://audio.bible.helloao.org/api/BSB/JHN/3/audio/souer.mp3` | `HEAD` |
 | Bulletin API | `https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec?changeovers=1&client=check` | `GET`; down unless the answer contains `"ok":true` |
-| Hymns for Worship, English hymnal | `https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/` | `HEAD` |
 | Chinese hymnal pages | `https://m.zgaxr.com/index.php?m=content&c=index&a=lists&catid=59` | `HEAD` |
 | EGW Writings | `https://text.egwwritings.org/` | `HEAD` |
 
@@ -65,9 +65,16 @@ Some services aren't on the status page:
   ([measured on #618](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/618#issuecomment-6784525193),
   [status repository #1](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app-status/issues/1)).
   The app already copes: each phone offers the last video it found. Checked
-  every 5 minutes, the feed would only open issues that need nothing done. The
+  every hour, the feed would only open issues that need nothing done. The
   daily monitor checks it instead. It ignores the feed's errors until Friday,
   then warns.
+- **Hymns for Worship**, which the hymnal opens for English scores. On
+  2026-11-11 it stopped answering GitHub's servers for several minutes, while it
+  answered other networks in under a second
+  ([sda-church-app-status#4](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app-status/pull/4)).
+  It's a small site whose owner gave the church permission for its scores, and
+  frequent checks from a data centre are what a security plugin flags. The app
+  only links to it, and the daily monitor checks it.
 - **HelloAO's Bible text API.** The app ships the text it uses, so it never
   calls the API.
 - Anything that needs a closer look than "does it answer". The daily monitor
@@ -86,8 +93,9 @@ repository.
 To get them, watch the status repository with **Watch → Custom → Issues**. The
 config is public, so it names no assignees and doesn't show who's on call.
 
-A short outage needs nothing done. For one that lasts, open the address in a
-browser:
+A short outage needs nothing done. To check again without waiting for the next
+hour, run **Actions → Uptime CI → Run workflow** in the status repository. For
+an outage that lasts, open the address in a browser:
 
 - If Adventist Connect refuses the church's audio (403 or 429), or a file has
   gone, see [Adventist Connect media](adventist-connect-media.md) and
@@ -100,7 +108,12 @@ browser:
 ## Changing the checks
 
 Edit `.upptimerc.yml` in the status repository on GitHub, or open a pull
-request to it. Committing it to `master` starts **Setup CI**
+request to it. `workflowSchedule.uptime` sets how often it checks: every hour,
+at 17 minutes past, away from the top of the hour when GitHub is busiest.
+Upptime's default is every 5 minutes
+([Upptime's configuration](https://upptime.js.org/docs/configuration/)), more
+than the church needs. Upptime has one fixed schedule, so it can't check more
+often while something is down. Committing it to `master` starts **Setup CI**
 ([`setup.yml`](https://github.com/upptime/upptime/blob/master/.github/workflows/setup.yml)), which rebuilds the workflows and the page. Only list public
 addresses, never the bulletin spreadsheet or anything with names, and use `HEAD`
 for files so a check never downloads one.
@@ -148,7 +161,7 @@ so that maintainer wouldn't hear about the issues the token opens.
   [`graphs.yml`](https://github.com/upptime/upptime/blob/master/.github/workflows/graphs.yml)), and a commit is the activity known to count
   ([Maintenance releases](admin-runbook.md#maintenance-releases)), so they stay
   on. GitHub may also
-  start a 5-minute schedule late at busy times
+  start a scheduled run late at busy times
   ([GitHub scheduled workflow behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)).
 - **Cost:** none. It's a public repository on GitHub's free plan, and nothing in
   it has a payment method ([Payment methods](../architecture.md#payment-methods)).

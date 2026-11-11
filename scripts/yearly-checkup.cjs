@@ -116,7 +116,7 @@ const CHECKLIST = [
         'what-the-monitor-cant-check',
       ],
       [
-        'Status page: its dashboard shows checks from the last hour, its checks still match the app\'s audio hosts and bulletin API, and its GitHub App is installed only on `sda-church-app-status`.',
+        'Status page: its dashboard shows a check from the last few hours, its checks still match the app\'s audio hosts and bulletin API, and its GitHub App is installed only on `sda-church-app-status`.',
         'docs/operations/status-page.md',
         'upkeep',
       ],

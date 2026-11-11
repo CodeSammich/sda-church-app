@@ -166,7 +166,7 @@ and may not be possible, so protect them above everything else.
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
   - a [status page](operations/status-page.md) that checks the audio hosts, the
-    bulletin API and a few other services every 5 minutes, from its own
+    bulletin API and a few other services every hour, from its own
     repository, `sda-church-app-status`, where its outage issues stay;
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
@@ -432,7 +432,7 @@ downloads data from the service; "Link" means the app only opens the site in the
 browser; "Build script only" means the app ships files a build script downloaded from it,
 and never contacts it. The [external dependency monitor](operations/external-dependency-monitor.md)
 checks nearly all of them daily, and the [status page](operations/status-page.md)
-checks the audio hosts and the bulletin API every 5 minutes.
+checks the audio hosts and the bulletin API every hour.
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
@@ -515,7 +515,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
-| Every 5 minutes (automated) | [Status page](operations/status-page.md) | Opens an issue in the status repository while a service is down; see [Alerts](operations/status-page.md#alerts) |
+| Hourly (automated) | [Status page](operations/status-page.md) | Opens an issue in the status repository while a service is down; see [Alerts](operations/status-page.md#alerts) |
 | Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
