@@ -53,11 +53,16 @@ describe('the key screens’ made-up bulletin (#456)', () => {
     expect(bulletin.brooklyn.sermon).toBe('Thomas B.');
   });
 
-  it('fails as the API out of service would, for state=load-failed', async () => {
+  it('fails as the API does when it can’t build the bulletin, for state=load-failed', async () => {
     const { fetchBulletin } = loadBulletinService(true);
     const fetch = fetchSpy();
+    const { CONFIG } = (() => {
+      const context = createContext({});
+      runInContext(`${repoFile('google-apps-script/BulletinApi.gs')}\nthis.CONFIG = CONFIG;`, context);
+      return context as unknown as { CONFIG: { unavailableMessage: string } };
+    })();
     await expect(fetchBulletin('2026-11-14', undefined, 'load-failed')).rejects.toThrow(
-      'Bulletin request failed (503)',
+      CONFIG.unavailableMessage,
     );
     expect(fetch).not.toHaveBeenCalled();
   });

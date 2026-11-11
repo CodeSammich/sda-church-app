@@ -46,8 +46,9 @@ describe('key screen list (test/screens/screens.json)', () => {
     // screenshots, the text read from them, and their downloads. In a
     // key-screens build the bulletin and the Team page show made-up data
     // (test/key-screens-fixtures.test.ts), and Fellowships and Sabbath
-    // Worship are written into the app, with no one's name in them. Any other
-    // page with members on it stays out.
+    // Worship are written into the app, with no one's name in them;
+    // Fellowships shows the church building in place of its photos of
+    // members. Any other page with members on it stays out.
     const allowed: Record<string, string> = {
       'home/bulletin': 'made up',
       'home/team': 'made up',
@@ -1116,8 +1117,9 @@ describe('iPad key screens (#324)', () => {
     // (#324), which shotCost counts. Each runner takes them after its iPhone
     // shots, so the slowest group's total sets the release PR's wait. Raised
     // from 7 minutes to 8, the iPhone's, in #456, when worship-and-you took
-    // the bulletin and Sabbath Worship: on 1.8.0's release run its iPhone and
-    // iPad shots took 12.4 minutes, against 18.4 to 20.5 on the other groups.
+    // the bulletin and Sabbath Worship: on 1.8.0's release run, 42843605635,
+    // its iPhone and iPad shots took 12.5 minutes, against 18.4 to 20.5 on the
+    // other groups.
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(ipad, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
       expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 480 }).toMatchObject({ group, over: false });

@@ -106,31 +106,35 @@ const makeBulletin = (date: string): ApiBulletin => ({
 
 /**
  * Stands in for the Bulletin API's response in a key-screens build: the
- * made-up bulletin for the date, or, for a path's `state=load-failed`, the
- * API out of service, as when it's busy or being deployed. Only `ok`, `status`
- * and `json`, which fetchBulletin reads, and the bulletin goes through JSON as
- * it would over the network.
+ * made-up bulletin for the date, or, for a path's `state=load-failed`, what
+ * the API's doGet answers when building the bulletin fails, its
+ * unavailableMessage (BulletinApi.gs). Apps Script can't set an HTTP status,
+ * so that comes back as a success with ok false. Only `ok`, `status` and
+ * `json`, which fetchBulletin reads, and the answer goes through JSON as it
+ * would over the network.
  */
 export const getKeyScreensBulletinResponse = (
   date: string,
   state?: KeyScreensBulletinState | null,
 ): Pick<Response, 'ok' | 'status' | 'json'> => {
-  if (state === 'load-failed') {
-    return { ok: false, status: 503, json: async () => ({ ok: false, error: 'Service unavailable' }) };
-  }
-  const body = JSON.stringify({ ok: true, bulletin: makeBulletin(date) });
+  const body = JSON.stringify(
+    state === 'load-failed'
+      ? { ok: false, error: 'The bulletin is unavailable right now. Please try again later.' }
+      : { ok: true, bulletin: makeBulletin(date) },
+  );
   return { ok: true, status: 200, json: async () => JSON.parse(body) };
 };
 
 /**
  * The Team page's staff in a key-screens build: made up, with the church
  * building's photo, the one the page's header already shows, in place of a
- * face. The pastor's name is the longest, so a wrapped name shows on the first
- * card, and the second has a role note, as the Bible worker's does.
+ * face. The pastor's name is the longest, on the first card, where a name that
+ * wrapped would show, and the second has a role note, as the Bible worker's
+ * does.
  */
 export const KEY_SCREENS_TEAM_MEMBERS: TeamMember[] = [
   {
-    name: translated('Jonathan Applewood-Sinclair', '林以諾', '林以诺', 'Jonathan Applewood-Sinclair'),
+    name: translated('Jonathan Applewood-Sinclair', '陳立恆', '陈立恒', 'Jonathan Applewood-Sinclair'),
     roleKey: 'seniorPastor',
     imageUrl: CHURCH_BUILDING_IMAGE_URL,
     description: translated(

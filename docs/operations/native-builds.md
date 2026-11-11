@@ -620,9 +620,10 @@ failed batch's log says which group it took:
   app, giving up at once if the compiling runner's job ends without it. As a defense
   against GitHub's degraded availability, when its Mac runners are in short supply,
   they wait as long as the compiling runner is compiling, and up to 45 minutes while
-  it's still queued for a Mac. Their job limit is 110 minutes, against the compiling
-  runner's 50: 45 minutes queued, 50 compiling, and about 10 to install and capture,
-  plus a margin. A fixed 25-minute wait used to fail runs whose compiling runner merely
+  it's still queued for a Mac. Their job limit is 130 minutes, against the compiling
+  runner's 70: 45 minutes queued, 50 compiling, and the rest to install the app and
+  take the iPhone's and the iPad's shots, plus a margin
+  ([iPad key screens](#ipad-key-screens)). A fixed 25-minute wait used to fail runs whose compiling runner merely
   got its Mac late.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
@@ -905,27 +906,29 @@ iPhone or the iPad. The limit is a reminder to prune, not a rule:
 
    **Made-up data.** These screenshots, the text read from them, and the run's
    downloads are public, so the pages that show members' names or faces show made-up
-   data in a key-screens build (`services/KeyScreensFixtures.ts`, #456):
+   data or no faces in a key-screens build (#456):
 
-   - The bulletin's network call returns a made-up answer of the Bulletin API's shape,
+   - The bulletin's network call returns a made-up answer of the Bulletin API's shape
+     (`services/KeyScreensFixtures.ts`),
      which goes through the same checks as a real one. Its names are shortened as the
      public API shortens them, and it holds the worst cases on purpose, such as the
      longest first name and a role with three people, so the text checks can name
      exact lines. The bulletin keeps no stored copy there, so each shot gets the same
      bulletin whichever shot came before it.
-   - The Team page shows made-up staff, and Team and Fellowships show the church
-     building's photo in place of faces.
+   - The Team page shows made-up staff from the same file, and Team and Fellowships
+     show the church building's photo in place of faces (Fellowships' in
+     `app/(tabs)/home/fellowship.tsx`).
 
    Expo writes `EXPO_PUBLIC_KEY_SCREENS` into the app when it's built, and the
    made-up data is loaded only behind that condition, written out where it's loaded,
    so Metro leaves it out of store builds. `test/key-screens-fixtures.test.ts` checks
    that, that the made-up bulletin never reaches the network, and that every name in
-   it is one the API's shortening leaves as it is.
+   it is "Name withheld" or one the API's shortening leaves as it is.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
    wait (9 for the Bible, which measured settles within 6), so a group's 21 to 31 shots
-   take about 6 to 10 minutes: 5.5 to 9.6 on [1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635),
-   before #456 added 13. While it
+   take about 6 to 10 minutes: 5.6 to 9.7 on [1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635),
+   before #456 added 13 shots. While it
    waits, it takes a screenshot every 2 seconds and records in
    `screens/settle-times.json` when each screen stopped changing, so the waits can be
    shortened from measurements (#453). Three Simulators on one runner were tried and
@@ -1049,10 +1052,10 @@ step 2 of the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-
 To add a screen, add an entry to `test/screens/screens.json`: a `name`, its `group`
 (see **Adding a key screen**, above), the deep link `path` without the scheme, any Bible
 `settings`, the `variants` to take, and any `checks`. Leave out screens that show
-members' names or faces, unless a key-screens build makes them up, as it does for the
-bulletin, Team, and Fellowships ([Made-up data](#key-screens), above).
-`test/screens.test.ts` allows only those, and Sabbath Worship, which has no one's name
-in it. A new
+members' names or faces, unless a key-screens build makes up the names and hides the
+faces, as it does for the bulletin, Team, and Fellowships ([Made-up data](#key-screens),
+above). `test/screens.test.ts` allows only those, and Sabbath Worship, which has
+neither. A new
 setting also needs its storage key in the script's `SETTING_KEYS`, and the test checks
 the app still reads that key. A screen whose content changes every day, such as Home
 with its verse of the day and countdown, is marked `changesDaily`, for when these images
@@ -1126,7 +1129,7 @@ Store release, are how iPad layouts get tested.
   more than 8 minutes, like the iPhone's: a reminder to prune, then to rebalance the
   groups, and only then to raise the limit. It was 7 until #456, when
   `worship-and-you` took the bulletin's shots: on
-  [1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635) that group's iPhone and iPad shots took 12.4
+  [1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635) that group's iPhone and iPad shots took 12.5
   minutes, against 18.4 to 20.5 on the others. The busiest group's runner takes about 10
   minutes more than it did without the iPad, so the compiling runner's job limit is 70
   minutes and the others' 130.
