@@ -511,10 +511,6 @@ function createPrintedBulletinFromPrompt() {
   return null;
 }
 
-// Staff-facing text (dialogs, alerts, errors, notes) is in English and
-// Simplified Chinese, because the people who run the bulletin read Simplified.
-// Everything printed stays in Traditional Chinese on purpose. Keep the two
-// apart: see "Chinese script" in docs/operations/bulletin-automation.md.
 // Shown above a dialog's PERMISSION_DENIED error. A browser signed in to more
 // than one Google account runs the dialog's server calls as its first
 // account, which may not be the one with the sheet open; Google gives the
@@ -526,6 +522,10 @@ var PRINTED_BULLETIN_ACCOUNT_HINT =
   '此浏览器登录了多个 Google 账号，Google 用了另一个账号来运行。请打开无痕（隐私）窗口，' +
   '只登录教会账号，打开表格后再试。';
 
+// Staff-facing text (dialogs, alerts, errors, notes) is in English and
+// Simplified Chinese, because the people who run the bulletin read Simplified.
+// Everything printed stays in Traditional Chinese on purpose. Keep the two
+// apart: see "Chinese script" in docs/operations/bulletin-automation.md.
 function buildPrintedBulletinPromptHtml_(defaultDate) {
   var englishTranslationOptions = Object.keys(PRINTED_BIBLE_TRANSLATION_OPTIONS.english)
     .map(function (key) {
