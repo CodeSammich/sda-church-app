@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext, runInContext } from 'node:vm';
+import { BIBLE_BOOK_ABBREVIATIONS } from '../services/BibleBookAbbreviations';
+import { BIBLE_BOOK_NAMES, parseScriptureReference } from '../services/BibleService';
 
 // HymnalData.gs is made at deploy (#619), so the tests make it the same way.
 const HYMNAL_DATA_GS: string = require('../scripts/build-hymnal-apps-script.cjs').buildHymnalAppsScript();
@@ -796,6 +798,30 @@ describe('printed bulletin Apps Script helpers', () => {
     );
     expect(output.verseProblem).toContain('无法读取“Weekly Data”中的“Bible Verses”：“Jhon 3:17”、“18”');
     expect(output.verseProblem).not.toContain('“John 3:16”');
+  });
+
+  it('reads a Chinese reference as the pastor types it, with or without a space (#751)', () => {
+    ['创50：19-20', '创 50:19-20', '創世記50:19-20', '创世记 50：19–20', '创５０：１９－２０', 'Gen 50:19-20'].forEach(
+      (verse) => {
+        const output = promptDataFor(verse);
+        expect(output.verseProblem).toBe('');
+        expect(output.verseLabels).toEqual({
+          english: 'Genesis 50:19–20',
+          chinese: '創世記 50:19–20',
+        });
+      },
+    );
+  });
+
+  it('quotes an unreadable passage as typed, and says Chinese works', () => {
+    // 創世紀 is a common miswriting of 創世記, in no published list.
+    const output = promptDataFor('創世紀50：19-20');
+
+    expect(output.verseLabels).toBeNull();
+    expect(output.verseProblem).toContain('can\'t be read: “創世紀50：19-20”.');
+    expect(output.verseProblem).toContain('in English or Chinese, such as John 3:16, John 3:16-18 or 约3:16');
+    expect(output.verseProblem).toContain('无法读取“Weekly Data”中的“Bible Verses”：“創世紀50：19-20”。');
+    expect(output.verseProblem).toContain('中英文都可以');
   });
 
   it('won\'t create the Doc without a readable Weekly Data verse, whatever the request says', () => {
@@ -2898,10 +2924,117 @@ describe('printed bulletin Apps Script helpers', () => {
       english: 'Jeremiah 29:11–15 (BSB)',
       chinese: '耶利米書 29:11–15（和合本）',
     });
-    expect(output.worshipReference).toBe('約翰福音 3:14–17（和合本）\nJohn 3:14–17 (BSB)');
+    // The worship row only points to the passage; Today's Verse names the translations (#751).
+    expect(output.worshipReference).toBe('約翰福音 3:14–17\nJohn 3:14–17');
     expect(output.warning).toContain('approximately 9 verses');
     expect(output.fiveVerseWarning).toBe('');
     expect(output.shortWarning).toBe('');
+  });
+
+  it('reads every book name and short form the app\'s Bible reader reads, as the same book (#751)', () => {
+    const context = loadAppsScript({});
+    const forms = Object.entries(BIBLE_BOOK_NAMES).flatMap(([bookId, names]) =>
+      [bookId, ...Object.values(names), ...(BIBLE_BOOK_ABBREVIATIONS[bookId] ?? [])].flatMap((form) =>
+        // Chinese is often typed with no space before the chapter.
+        /[\u3400-\u9fff]/.test(form) ? [`${form} 1:1`, `${form}1:1`] : [`${form} 1:1`],
+      ),
+    );
+    const script = JSON.parse(
+      runInContext(
+        `JSON.stringify(${JSON.stringify(forms)}.map(function (form) {
+          var passages = parsePhysicalBibleReferences_(form);
+          return passages.length ? passages[0].bookId : null;
+        }))`,
+        context,
+      ) as string,
+    );
+    const mismatches = forms.filter(
+      (form, index) => script[index] !== parseScriptureReference(form)?.bookId,
+    );
+
+    expect(forms.length).toBeGreaterThan(400);
+    expect(mismatches).toEqual([]);
+  });
+
+  it('reads short forms, Roman numerals and full-width digits, and asks HelloAO for Nahum as NAM', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          cuv: parsePhysicalBibleReferences_('林前13:4-7；约一1:9'),
+          english: parsePhysicalBibleReferences_('1 Cor 13:4; I Co 13:5; 1co 13:6; Matt. 5:3'),
+          fullWidth: parsePhysicalBibleReferences_('约３：１６'),
+          translationNote: parsePhysicalBibleReferences_('约3:16（和合本）'),
+          nahum: parsePhysicalBibleReferences_('Nahum 1:7'),
+          nahumLabels: formatPrintedBibleVerseLabels_('鸿1:7'),
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output.cuv).toEqual([
+      { bookId: '1CO', chapter: 13, verseStart: 4, verseEnd: 7 },
+      { bookId: '1JN', chapter: 1, verseStart: 9, verseEnd: 9 },
+    ]);
+    expect(output.english.map((passage: { bookId: string }) => passage.bookId)).toEqual([
+      '1CO', '1CO', '1CO', 'MAT',
+    ]);
+    expect(output.fullWidth).toEqual([{ bookId: 'JHN', chapter: 3, verseStart: 16, verseEnd: 16 }]);
+    expect(output.translationNote).toEqual([{ bookId: 'JHN', chapter: 3, verseStart: 16, verseEnd: 16 }]);
+    // HelloAO has no NAH: Nahum is NAM, as in USFM.
+    expect(output.nahum).toEqual([{ bookId: 'NAM', chapter: 1, verseStart: 7, verseEnd: 7 }]);
+    expect(output.nahumLabels).toEqual({ english: 'Nahum 1:7', chinese: '那鴻書 1:7' });
+  });
+
+  it('prints a two-language special music title Chinese over English (#751)', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          chineseFirst: formatSpecialMusicTitleForPrint_('能不能 (Let Me Stay)'),
+          englishFirst: formatSpecialMusicTitleForPrint_('Let Me Stay (能不能)'),
+          mixedBrackets: formatSpecialMusicTitleForPrint_('我的心，你要称颂耶和华 （Praise the Lord, O My Soul)'),
+          english: formatSpecialMusicTitleForPrint_('It Is Well'),
+          chinese: formatSpecialMusicTitleForPrint_('能不能'),
+          twoLines: formatSpecialMusicTitleForPrint_('能不能\\nLet Me Stay'),
+          tbd: formatSpecialMusicTitleForPrint_('TBD'),
+          blank: formatSpecialMusicTitleForPrint_(''),
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output.chineseFirst).toBe('能不能\nLet Me Stay');
+    expect(output.englishFirst).toBe('能不能\nLet Me Stay');
+    expect(output.mixedBrackets).toBe('我的心，你要称颂耶和华\nPraise the Lord, O My Soul');
+    expect(output.english).toBe('—\nIt Is Well');
+    expect(output.chinese).toBe('能不能\n—');
+    expect(output.twoLines).toBe('能不能\nLet Me Stay');
+    expect(output.tbd).toBe('尚未確定\nTBD');
+    expect(output.blank).toBe('');
+  });
+
+  it('puts what to do above a PERMISSION_DENIED error in the dialog (#751)', () => {
+    const context = loadAppsScript({});
+    const html = runInContext(`buildPrintedBulletinPromptHtml_('2026-11-21')`, context) as string;
+    const script = /var accountHint=.*?;function serverErrorText\(error\)\{.*?\}(?=function |document\.)/.exec(html);
+    expect(script).not.toBeNull();
+    const dialog = createContext({});
+    runInContext(script![0], dialog);
+    const denied = runInContext(
+      `serverErrorText({ message: "We're sorry, a server error occurred while reading from storage. Error code PERMISSION DENIED." })`,
+      dialog,
+    ) as string;
+    const other = runInContext(`serverErrorText(new Error('Weekly Data is busy'))`, dialog) as string;
+
+    expect(denied).toMatch(/^This browser is signed in to more than one Google account/);
+    expect(denied).toContain('incognito (private) window signed in only to the church account');
+    expect(denied).toContain('此浏览器登录了多个 Google 账号');
+    expect(denied).toContain('Error code PERMISSION DENIED.');
+    expect(other).toBe('Weekly Data is busy');
+    // Every server call in the dialog uses it.
+    expect(html.match(/withFailureHandler/g)).toHaveLength(4);
+    expect(html.match(/[(+=]serverErrorText\(error\)/g)).toHaveLength(4);
   });
 
   it('does not repeat the long-verse warning after confirmation', () => {
