@@ -134,4 +134,14 @@ describe('the verse positions a link scrolls to (#742)', () => {
     expect(reader.slice(effect - 'useLayout'.length, effect)).toBe('useLayout');
     expect(reader.slice(effect, reset)).toBe('Effect(() => {\n    if (chapterData) ');
   });
+
+  it('are kept when a link opens the chapter already on screen', () => {
+    // The reset runs for a new chapter only. Every link re-renders the tabs,
+    // which hand down a new setMenuVisible; a reset that also ran then wiped
+    // a chapter's positions on the emulator, and links to it, such as a
+    // second tap on the widget, stopped at the chapter's top.
+    const reset = reader.indexOf('versePositions.current = {}');
+    const deps = reader.indexOf('}, [', reset);
+    expect(reader.slice(deps, reader.indexOf(']);', deps) + 3)).toBe('}, [chapterData]);');
+  });
 });

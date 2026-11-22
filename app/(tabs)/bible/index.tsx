@@ -2689,9 +2689,13 @@ export default function BibleScreen() {
 
   // Forgets the last chapter's verse positions as soon as a new chapter is
   // drawn, before its verses report theirs. Each load draws new verse rows
-  // (getChapterLoadKey), and every row reports once it's laid out. A passive
-  // effect could run after some had already reported and lose them, so a
-  // link, such as the widget's verse of the day, never found its verse (#742).
+  // (getChapterLoadKey), and every row reports once it's laid out. Only a new
+  // chapter does this. The reset used to sit in the effect below, which also
+  // runs whenever the tabs hand down a new setMenuVisible, as every link
+  // makes them do. A link to the chapter on screen then wiped positions that
+  // no row reported again, and the reader gave up at the chapter's top. A
+  // passive effect could also run after some verses had reported and lose
+  // them. Either way the widget's verse of the day wasn't found (#742).
   useLayoutEffect(() => {
     if (chapterData) versePositions.current = {};
   }, [chapterData]);
