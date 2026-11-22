@@ -112,7 +112,7 @@ upkeep, such as yearly Apple renewals and runner image retirements, is under
 
 `scripts/build-android-native.mjs` reuses an existing generated `android/` project
 for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
-`expo-template-bare-minimum@58.0.32`, including when `--no-install` is used. A clean
+`expo-template-bare-minimum@58.0.35`, including when `--no-install` is used. A clean
 GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
 plugin, or another native setting changes, force regeneration with either:
 
@@ -164,7 +164,7 @@ Android project with the exact template version used by the build script:
 ```sh
 npm install
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.32 \
+  --template expo-template-bare-minimum@58.0.35 \
   --platform android
 ```
 
@@ -177,7 +177,7 @@ Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.32 \
+  --template expo-template-bare-minimum@58.0.35 \
   --platform android \
   --no-install
 ```
