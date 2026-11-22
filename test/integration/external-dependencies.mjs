@@ -239,8 +239,10 @@ await record('daily audio samples', 'Adventist Connect', (warn) =>
     label: ({ filename }) => filename,
   }));
 
-// WordProject's recordings have no fallback host (see docs/LEGAL.md), so a
-// failure here means their listeners have no audio.
+// The church's copies are the only host for the Spanish recording, and the
+// fallback for Cantonese after HelloAO's (#749); WordProject's own servers are
+// never used (see docs/LEGAL.md). A failure here means Spanish listeners have
+// no audio.
 for (const [label, prefix, manifestPath, salt] of [
   ['Cantonese', 'CANTONESE', 'constants/CantoneseAdventistAudioManifest.ts', 23],
   ['Spanish RV1909', 'RV1909', 'constants/Rv1909AdventistAudioManifest.ts', 29],
@@ -760,6 +762,25 @@ for (const { id } of JSON.parse(await readFile('assets/bible/bsb/books.biblejson
 
 await record('daily BSB narrator samples from the app', 'HelloAO', (warn) =>
   spotCheck(bsbNarratorLinks, 37, ({ url }) => probe(url, { binary: true }), warn, {
+    label: ({ label }) => label,
+  }));
+
+// The Chinese Union Version recordings play from HelloAO first, then the
+// church's copies (#749), so check that HelloAO still serves both.
+const helloaoCuvLinks = [];
+for (const { id, numberOfChapters } of JSON.parse(await readFile('assets/bible/bsb/books.biblejson', 'utf8'))) {
+  for (let chapter = 1; chapter <= numberOfChapters; chapter += 1) {
+    for (const recording of ['mandarin', 'wordproject_cantonese']) {
+      helloaoCuvLinks.push({
+        label: `${id} ${chapter} ${recording}`,
+        url: `https://audio.bible.helloao.org/api/cmn_cuv/${id}/${chapter}/audio/${recording}.mp3`,
+      });
+    }
+  }
+}
+
+await record('daily Mandarin and Cantonese samples, played first', 'HelloAO', (warn) =>
+  spotCheck(helloaoCuvLinks, 41, ({ url }) => probe(url, { binary: true }), warn, {
     label: ({ label }) => label,
   }));
 

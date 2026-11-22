@@ -134,9 +134,10 @@ CDN with Wasabi storage. Free to the church as
 part of NAD's church-website platform, with no agreement or published limits. The
 full hosting chain and scaling analysis are in
 [Adventist Connect media hosting](adventist-connect-media.md): at congregation scale
-it carries about 22 GB of audio a month, which is ordinary traffic for that platform;
-at wide adoption, terabytes a month could draw attention under Cloudflare's CDN
-terms.
+it would carry about 22 GB of audio a month if all listening went through it, which is
+ordinary traffic for that platform; at wide adoption, terabytes a month could draw
+attention under Cloudflare's CDN terms. Since the Chinese recordings play from HelloAO
+first, it carries the Spanish listening, and the Chinese only while HelloAO fails.
 
 ### Internet Archive
 

@@ -39,7 +39,7 @@ On 2026-11-10, all six audio hosts answered `HEAD` with 200 and a range request
 with 206 ([measured on #618](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/618#issuecomment-6784525193)).
 HelloAO's Mandarin and Cantonese copies, which the app has played first since
 [#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749),
-answered the same on 2026-11-22.
+answered the same on 2026-11-22 ([measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)).
 
 | Check | Address | Request |
 | --- | --- | --- |

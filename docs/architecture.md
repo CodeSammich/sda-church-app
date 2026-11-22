@@ -298,8 +298,8 @@ on them directly; see [Third-party APIs and websites](#third-party-apis-and-webs
 
 | Media | Primary | Other copies |
 | --- | --- | --- |
-| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app plays HelloAO's copy first, and falls back to the Internet Archive, then Audio Power ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)) |
-| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app plays HelloAO's copy first ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and never WordProject's servers, which its terms don't allow without its approval |
+| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app plays HelloAO's copy first, then this one, then the Internet Archive's, then Audio Power's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)) |
+| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app plays HelloAO's copy first, then this one ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and never WordProject's servers, which its terms don't allow without its approval |
 | Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, for the same reason |
 | Church photos and hymnal lookup charts | Adventist Connect | Google Drive backup |
 | Bulletin cover art, logo, QR codes | Google Drive | See [Files not in this repository](#files-not-in-this-repository) |

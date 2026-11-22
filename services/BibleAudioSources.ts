@@ -8,8 +8,9 @@ export interface TranslationBookChapterAudioLinks {
 }
 
 // HelloAO's Free Use Bible API hosts both CUV recordings, the same files the
-// church hosts, with the church's verse timings (#749):
+// church hosts, with the church's verse timings (#749). Mandarin:
 // https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592
+// Both, measured: https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847
 // Its terms: "Cache, store and download without expiry".
 const HELLOAO_CUV_AUDIO_BASE = 'https://audio.bible.helloao.org/api/cmn_cuv';
 const AUDIO_POWER_CUV_RECORDINGS_BASE =

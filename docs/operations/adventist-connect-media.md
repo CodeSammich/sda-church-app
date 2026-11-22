@@ -147,7 +147,7 @@ church-website platform.
   each manifest has all 1,189 entries and requests three sampled files from each a
   day.
 
-The design reasons for the three-tier setup are in
+The design reasons for the order of the copies are in
 [Bible integration design](../feature_designs/bible_integration_design.md).
 
 ## Updating the audio manifest
@@ -201,7 +201,11 @@ Limits and costs for every other service the app uses are in
 
 These are the listening scenarios from the
 [load model](service-limits-and-costs.md#load-model), as audio bytes delivered to
-listeners through Cloudflare.
+listeners through Cloudflare. Since
+[#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)
+the Chinese recordings play from HelloAO first, so Adventist Connect delivers these
+bytes for Chinese listening only while HelloAO fails. The table is that worst case;
+Spanish listening is part of it every day.
 
 | Scenario | Listening | Per day | Per month | Peak bandwidth |
 | --- | --- | --- | --- | --- |
@@ -250,7 +254,7 @@ plan, which the church can't see. This is the limit most likely to matter.
   on this.
 - **Wide adoption** (terabytes a month of a single church's audio) could stand out
   to Adventist Connect or Cloudflare. At that point, talk to them or move the
-  primary copy (see below).
+  church's copies (see below).
 
 ### Conclusion
 

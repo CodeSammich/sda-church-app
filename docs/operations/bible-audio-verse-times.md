@@ -42,7 +42,8 @@ terms first, and record them in [LEGAL.md](../LEGAL.md).
 
 ## Otherwise: line up the text with the recording
 
-The church's Mandarin, Cantonese, and Spanish recordings have no published times. A speech
+The church's Mandarin, Cantonese, and Spanish recordings had no published times (HelloAO
+has since published the church's Mandarin and Cantonese times with its copies, #749). A speech
 model lines up the bundled text with each recording (forced alignment), and each verse's
 time is where its first word starts. Speech recognizers that don't share the model then
 check the result. The scripts are in `scripts/bible-audio-alignment/`.

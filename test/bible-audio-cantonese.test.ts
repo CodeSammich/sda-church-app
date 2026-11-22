@@ -124,7 +124,7 @@ describe('Cantonese CUV audio from WordProject', () => {
     expect((queue[1].source as { uri: string }).uri).toBe(
       'https://audio.bible.helloao.org/api/cmn_cuv/MAT/1/audio/wordproject_cantonese.mp3',
     );
-    expect(queue[1].fallbacks.map(({ source }) => (source as { uri: string }).uri)).toEqual([
+    expect((queue[1].fallbacks ?? []).map(({ source }) => (source as { uri: string }).uri)).toEqual([
       'https://assets.adventistconnect.org/newyork2/2026/09/30180001/CANTONESE_B40C001.mp3',
     ]);
   });

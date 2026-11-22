@@ -39,9 +39,9 @@ translation's text from either:
   (`scripts/build-bible-audio-timings.mjs`, #561). HelloAO's
   [terms](https://bible.helloao.org/docs/) allow it: "Cache, store and download
   without expiry", and "AO Lab adds no restrictions". Since November 2026 HelloAO
-  also hosts both Chinese Union Version recordings, Mandarin and Cantonese, with
-  the church's verse times, and the app plays them from HelloAO first
-  ([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592), [#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)).
+  also hosts both Chinese Union Version recordings, Mandarin
+  ([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592)) and Cantonese (listed in [its API](https://bible.helloao.org/api/cmn_cuv/JHN/3.json)), with the
+  church's verse times, and the app plays them from HelloAO first ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)).
 - [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
   same way from its public-domain `spa_rv`, whose normalized resource keeps the
   edition's translation footnotes. It's also the source of the original-language
@@ -62,15 +62,16 @@ Chinese Union Version audio is streamed chapter by chapter from
 recordings to 基督徒团契 (Christian Fellowship). The app plays HelloAO's copies
 first, then the church's copies on Adventist Connect, with Internet Archive and Audio
 Power copies as the last fallbacks ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)); the repository does not bundle
-the recordings. All four are the same files. Audio Power's owner
+the recordings. All four serve the same recording, in files of the same size
+([measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)). Audio Power's owner
 explicitly approved the church app's use, download, and self-hosting of these recordings in
 [issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
 
 Cantonese audio for the same editions comes from WordProject, played from HelloAO's
 copies first and then the church's copies on Adventist Connect, never from
 WordProject's servers; see
-[WordProject Cantonese audio](#wordproject-cantonese-audio). So does the Reina-Valera
-1909 audio; see
+[WordProject Cantonese audio](#wordproject-cantonese-audio). The Reina-Valera 1909
+audio comes from WordProject too, played only from the church's copies; see
 [WordProject Spanish audio](#wordproject-spanish-audio-reina-valera-1909).
 
 ### Chinese Union Version text (1919)
@@ -263,12 +264,13 @@ repository doesn't bundle them. The app contacts no new service, so the privacy
 policy doesn't change.
 
 **HelloAO's copies (November 2026).** HelloAO's Free Use Bible API added both CUV
-recordings, with the church's verse times, after the church asked
-([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592)). On 2026-11-13 HelloAO wrote that it had asked WordProject
-about its audio and hadn't heard back. HelloAO's copies are on HelloAO's servers, not
-WordProject's, and every chapter is the same file as the church's copy: on 2026-11-22,
-all 1,189 chapters of both recordings on HelloAO had the size the app expects, and five
-of each matched byte for byte. The app plays HelloAO's copies first, and the church's
+recordings, with the church's verse times, after the church asked: the Mandarin on
+2026-11-13 ([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592)), and the Cantonese soon after
+(listed in [its API](https://bible.helloao.org/api/cmn_cuv/JHN/3.json)). In the same comment HelloAO wrote that it had asked
+WordProject about its audio and hadn't heard back. HelloAO's copies are on HelloAO's
+servers, not WordProject's, and they appear to be the church's files: on 2026-11-22,
+all 1,189 chapters of both recordings on HelloAO had the size the app expects, and the
+five chapters of each compared matched byte for byte ([measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)). The app plays HelloAO's copies first, and the church's
 if HelloAO fails ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). If WordProject objects to HelloAO's copy, or
 HelloAO removes it, take HelloAO out of `getCantoneseCuvChapterUrls` in
 `services/BibleAudioSources.ts`.

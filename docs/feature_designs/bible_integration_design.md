@@ -91,8 +91,8 @@ Spanish page.
 
 The Mandarin CUV recording is represented as one narrator with four ordered hosting
 sources rather than four narrator choices. HelloAO's Free Use Bible API, which hosts the
-same files with the church's verse times
-([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592)),
+same recording with the church's verse times
+([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592), [measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)),
 is first, as it is for the English narrators ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). The generated Adventist
 Connect manifest supplies the church-controlled copy second, the complete
 [Internet Archive collection](https://archive.org/download/CUV_201911) is the third
@@ -103,7 +103,7 @@ to select a different host. The manifest generator extracts only public asset UR
 the WordPress upload HAR; authentication data and other HAR contents must not be checked
 into the repository.
 
-The primary tier is storage-provider agnostic at runtime. The checked-in manifest maps
+The church's tier is storage-provider agnostic at runtime. The checked-in manifest maps
 canonical chapter filenames to stable public HTTPS URLs; it currently points to the
 church's files on `assets.adventistconnect.org`, the managed asset host used by Adventist
 Connect. A future deployment may use an S3-compatible bucket, CDN, or another
@@ -567,8 +567,8 @@ and keeps following.
   recording is the one the app plays and the verse numbers match the bundled text. That
   leaves out Leviticus 19 for all three, and one psalm each for two of them. Gilbert has no
   times.
-- **Mandarin, Cantonese, and Spanish:** the church's copies of these recordings have no
-  published times, so they were made by forced alignment
+- **Mandarin, Cantonese, and Spanish:** these recordings had no published times, so they
+  were made by forced alignment
   ([Bible audio verse times](../operations/bible-audio-verse-times.md) has the steps, for
   a new narrator or language too): a speech model lines up the
   bundled text with each recording, and the start of each verse's first word is its time,

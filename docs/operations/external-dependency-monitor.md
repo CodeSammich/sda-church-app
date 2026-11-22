@@ -19,7 +19,9 @@ layers instead:
 
 This means the 1,189-file audio collections (Mandarin and Cantonese CUV, and Spanish
 RV1909) each receive three sampled media requests per host per daily run, not 1,189
-requests. Project Gutenberg receives three sampled
+requests. HelloAO's copies of the two Chinese recordings, which the app plays first
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)),
+share three samples a day between them. Project Gutenberg receives three sampled
 public-domain book requests, and EGW Writings receives three sampled book requests
 for each supported edition language. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly
