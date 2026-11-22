@@ -37,9 +37,14 @@ and Upptime sends a real `HEAD` request
 ([its request code](https://github.com/upptime/uptime-monitor/blob/master/src/helpers/request.ts)).
 On 2026-11-10, all six audio hosts answered `HEAD` with 200 and a range request
 with 206 ([measured on #618](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/618#issuecomment-6784525193)).
+HelloAO's Mandarin and Cantonese copies, which the app has played first since
+[#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749),
+answered the same on 2026-11-22.
 
 | Check | Address | Request |
 | --- | --- | --- |
+| HelloAO, Mandarin audio | `https://audio.bible.helloao.org/api/cmn_cuv/JHN/3/audio/mandarin.mp3` | `HEAD` |
+| HelloAO, Cantonese audio | `https://audio.bible.helloao.org/api/cmn_cuv/JHN/3/audio/wordproject_cantonese.mp3` | `HEAD` |
 | Adventist Connect, Mandarin audio | `https://assets.adventistconnect.org/newyork2/2026/08/12224153/CUV_B43C003.mp3` | `HEAD` |
 | Adventist Connect, Cantonese audio | `https://assets.adventistconnect.org/newyork2/2026/09/30185746/CANTONESE_B43C003.mp3` | `HEAD` |
 | Adventist Connect, Spanish audio | `https://assets.adventistconnect.org/newyork2/2026/09/30215519/RV1909_B43C003.mp3` | `HEAD` |
@@ -100,7 +105,8 @@ an outage that lasts, open the address in a browser:
 - If Adventist Connect refuses the church's audio (403 or 429), or a file has
   gone, see [Adventist Connect media](adventist-connect-media.md) and
   [#616](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/616).
-  Cantonese and Spanish have no other copy.
+  Mandarin and Cantonese play from HelloAO first, so members notice only if
+  HelloAO is down too. Spanish has no other copy.
 - If the bulletin API is down, see
   [Bulletin automation](bulletin-automation.md). The app shows each week's
   stored copy with an error, so only a week a phone never loaded is blank.

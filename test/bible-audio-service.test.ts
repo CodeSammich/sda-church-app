@@ -285,13 +285,11 @@ describe('Bible audio playback', () => {
     expect(queued.source).toEqual(
       expect.objectContaining({ uri: expect.stringContaining('archive.org') }),
     );
-    expect(queued.fallbacks).toHaveLength(2);
-    expect(queued.fallbacks?.map(({ source }) => (source as any).uri)).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('assets.adventistconnect.org'),
-        expect.stringContaining('theaudiopower'),
-      ]),
-    );
+    expect(queued.fallbacks?.map(({ source }) => (source as any).uri)).toEqual([
+      expect.stringContaining('audio.bible.helloao.org'),
+      expect.stringContaining('assets.adventistconnect.org'),
+      expect.stringContaining('theaudiopower'),
+    ]);
   });
 });
 
@@ -320,6 +318,7 @@ describe('Downloaded Bible audio in the queue (#556)', () => {
       .toEqual([
         DOWNLOADED,
         expect.stringContaining('archive.org'),
+        expect.stringContaining('audio.bible.helloao.org'),
         expect.stringContaining('assets.adventistconnect.org'),
         expect.stringContaining('theaudiopower'),
       ]);

@@ -1,9 +1,9 @@
 # Adventist Connect media hosting
 
-The app loads the church's own pictures, its primary copy of the Mandarin Chinese
-Union Version (CUV) Bible audio, and its only copies of the Cantonese CUV and Spanish
-Reina-Valera 1909 (RV1909) Bible audio from the church's media library on Adventist
-Connect, the
+The app loads the church's own pictures, its own copies of the Mandarin and Cantonese
+Chinese Union Version (CUV) Bible audio, which it plays when HelloAO's copies fail, and
+its only copy of the Spanish Reina-Valera 1909 (RV1909) Bible audio from the church's
+media library on Adventist Connect, the
 North American Division's managed WordPress platform. This page records what is
 hosted there, how the request path works, and how much load the setup can be relied
 on to carry.
@@ -51,16 +51,19 @@ The church also keeps a copy of all three in Google Drive, as part of its
 
 ```mermaid
 flowchart LR
-  app[App<br/>iOS · Android · web] -- HTTPS, byte ranges --> cdn
-  subgraph primary["1. Primary: church's copy on Adventist Connect (NAD)"]
+  app[App<br/>iOS · Android · web] -- HTTPS, byte ranges --> helloao["1. HelloAO<br/>audio.bible.helloao.org<br/>Mandarin and Cantonese"]
+  helloao -. "if it fails" .-> cdn
+  subgraph church["2. Church's copy on Adventist Connect (NAD)"]
     cdn[assets.adventistconnect.org<br/>NAD's Cloudflare CDN] -- cache miss only --> wasabi[(Wasabi object storage<br/>us-east-2, N. Virginia)]
   end
-  primary -. "if it fails" .-> ia["2. Internet Archive"]
-  ia -. "if it also fails" .-> ap["3. Audio Power"]
+  church -. "Mandarin: if it also fails" .-> ia["3. Internet Archive"]
+  ia -. "if it also fails" .-> ap["4. Audio Power"]
 ```
 
 The app tries the sources in order and uses only one at a time; the fallbacks
-are not a separate path. See [How the app fetches audio](#how-the-app-fetches-audio)
+are not a separate path. Mandarin has all four copies. Cantonese plays from
+HelloAO, then the church's copy, and Spanish only from the church's copy
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). See [How the app fetches audio](#how-the-app-fetches-audio)
 for when it moves on.
 
 Headers observed on 2026-09-25:
@@ -83,12 +86,13 @@ church-website platform.
 
 ## How the app fetches audio
 
-- [`BibleAudioSources.ts`](../../services/BibleAudioSources.ts) looks up each
-  chapter's Adventist Connect URL in the checked-in manifest and returns it first,
-  followed by the Internet Archive and Audio Power copies of the same recording.
-  The Internet Archive comes second so that an outage here doesn't move every
-  listener onto Audio Power's single small server. The Cantonese and Spanish
-  narrators have only their Adventist Connect URLs.
+- [`BibleAudioSources.ts`](../../services/BibleAudioSources.ts) returns
+  HelloAO's copy of each Mandarin and Cantonese chapter first, then the
+  chapter's Adventist Connect URL from the checked-in manifest, and for
+  Mandarin the Internet Archive and Audio Power copies of the same recording
+  ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). The Internet Archive comes before Audio Power so that an
+  outage of both earlier copies doesn't move every listener onto Audio Power's
+  single small server. The Spanish narrator has only its Adventist Connect URL.
 - If a source fails, the app moves on to the next one without asking the
   listener ([`BibleAudioFailover.ts`](../../services/BibleAudioFailover.ts)):
   - **A source that fails outright** (an HTTP error such as `404` or `403`, a web
@@ -124,13 +128,16 @@ church-website platform.
     above.
 
   Listeners can also choose a source themselves in the audio settings.
-- An Adventist Connect outage therefore shifts Mandarin load to the Internet Archive
-  rather than stopping playback. Audio Power is reached only if that fails too.
-  Cantonese and Spanish audio stop until the library recovers. Cantonese listeners
-  can switch to the Mandarin narrator meanwhile.
+- Mandarin and Cantonese play from HelloAO, so an Adventist Connect outage
+  affects them only if HelloAO is down too. Then Mandarin moves to the Internet
+  Archive rather than stopping, and Audio Power is reached only if that fails
+  too; Cantonese stops until one of its two copies recovers, and its listeners
+  can switch to the Mandarin narrator meanwhile. Spanish audio stops until the
+  library recovers.
 - The player streams with byte-range requests. On a phone, a member can also
   download a book, a section, a Testament, or the whole Bible to listen offline (#556),
-  only when they tap it: one file a chapter, church copy first. The phone's own
+  only when they tap it: one file a chapter, from the same sources in the same
+  order as streaming, so Mandarin and Cantonese come from HelloAO first. The phone's own
   downloader runs a few chapters at a time, so a download goes on while the phone is
   locked (#611).
   See [What the app keeps on the phone](../feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
@@ -259,10 +266,10 @@ not capacity:
 - The church can't see traffic figures, so a problem would first show up as failed
   requests, not as a warning.
 
-For Mandarin listeners, the Internet Archive and Audio Power fallbacks cover all of
-these, with the load going to the Internet Archive first. Cantonese and Spanish have
-no fallback, so an outage stops them until the library recovers, and the Google Drive
-copies are how they would be restored.
+Mandarin and Cantonese listeners play HelloAO's copies first, so these matter to
+them only if HelloAO fails too; Mandarin then has the Internet Archive and Audio Power
+behind the library. Spanish has no fallback, so an outage stops it until the library
+recovers, and the Google Drive copies are how the library would be restored.
 
 ## Warning signs and fallback plan
 
@@ -273,9 +280,10 @@ Watch for:
 - An outage issue from the [status page](status-page.md), which checks John 3 in
   each recording every hour.
 - Reports that audio takes several seconds to start, or that the lock screen or
-  notification title ends in `(Internet Archive)` or `(Audio Power)` instead of
-  `(NYCCSDA.org)`: the app is falling back, which suggests the primary source is
-  failing.
+  notification title ends in something other than the first source: `(HelloAO)`
+  for Mandarin and Cantonese, `(NYCCSDA.org)` for Spanish. A Mandarin or
+  Cantonese title ending in `(NYCCSDA.org)` means HelloAO is failing; one ending
+  in `(Internet Archive)` or `(Audio Power)` means the library is failing too.
   The audio settings don't show this; they show the source the listener chose.
 - Listening growing towards the "wide adoption" row, for example from app store
   install counts.

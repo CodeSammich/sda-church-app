@@ -132,7 +132,7 @@ describe('generated external dependency URLs', () => {
     expect(sabbath(new Date(2026, 11, 28))).toBe(new Date(2027, 0, 2).toDateString());
   });
 
-  it('generates all 1,189 CUV chapters with three ordered, valid origins', () => {
+  it('generates all 1,189 CUV chapters with four ordered, valid origins', () => {
     const chapters = CUV_BOOKS.flatMap(([book, count]) =>
       Array.from({ length: count }, (_, index) =>
         urls(getAudioPowerCuvChapterLinks(book, index + 1)),
@@ -141,8 +141,9 @@ describe('generated external dependency URLs', () => {
 
     expect(chapters).toHaveLength(1189);
     for (const chapter of chapters) {
-      expect(chapter).toHaveLength(3);
+      expect(chapter).toHaveLength(4);
       expect(chapter.map((value) => new URL(value).hostname)).toEqual([
+        'audio.bible.helloao.org',
         'assets.adventistconnect.org',
         'archive.org',
         'theaudiopower.com',
@@ -151,7 +152,7 @@ describe('generated external dependency URLs', () => {
     }
 
     const allUrls = chapters.flat();
-    expect(new Set(allUrls).size).toBe(1189 * 3);
+    expect(new Set(allUrls).size).toBe(1189 * 4);
     expect(Object.keys(CUV_ADVENTIST_AUDIO_URLS)).toHaveLength(1189);
   });
 

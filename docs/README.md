@@ -129,7 +129,7 @@ screen shows, update its key screens and text checks; see
 
 The **Android audio e2e** workflow, on the release pull request into `main`, builds the
 debug APK, boots an Android emulator, and plays real Bible chapters to check what only a
-real player shows: switching hosts when the church's audio host is down, moving to the
+real player shows: switching hosts when HelloAO's and the church's audio hosts are down, moving to the
 next chapter with the screen off, and recovering after the network drops. First it
 presses each tab and checks the app doesn't crash, which the key screens, opening
 every screen by deep link, can't see. It's a
@@ -157,9 +157,9 @@ E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
   `scroll-by-hand`, `scroll-while-paused`, and `follow-after-screen-off`.
 - The reader's scenarios need a build made with `EXPO_PUBLIC_AUDIO_E2E=1`, so the reader
   logs what it decides, and `ffmpeg` on your path (or `FFMPEG`) to compare screenshots.
-- `primary-host-down` runs only with `E2E_PRIMARY_BLOCKED=1`, and needs the church's
-  audio host, `assets.adventistconnect.org`, to be unreachable. The workflow arranges
-  both, with a local DNS server on the runner.
+- `primary-host-down` runs only with `E2E_PRIMARY_BLOCKED=1`, and needs HelloAO's and
+  the church's audio hosts, `audio.bible.helloao.org` and `assets.adventistconnect.org`,
+  to be unreachable. The workflow arranges both, with a local DNS server on the runner.
 - Set `ADB` if `adb` isn't on your path, and `ADB_ARGS=-e` if a phone is also connected.
   On WSL, use `ADB=adb.exe ADB_ARGS=-e`.
 - It tests the debug build, `org.nyccsda.app.preview`, by default. To test a store

@@ -25,12 +25,15 @@ import {
   CUV_AUDIO_READERS,
   getAudioReaderPreferenceKey,
   getCantoneseCuvChapterUrl,
+  getCantoneseCuvChapterUrls,
   getCuvChapterAudioLinks,
 } from '@/services/BibleAudioSources';
 
 const MANDARIN_READER = '基督徒团契 (Audio Power)';
 const JOHN_3 =
   'https://assets.adventistconnect.org/newyork2/2026/09/30180002/CANTONESE_B43C003.mp3';
+const HELLOAO_JOHN_3 =
+  'https://audio.bible.helloao.org/api/cmn_cuv/JHN/3/audio/wordproject_cantonese.mp3';
 
 const books = (['MAL', 'MAT'] as const).map((id) => ({
   id,
@@ -64,11 +67,18 @@ describe('Cantonese CUV audio from WordProject', () => {
     ]);
   });
 
-  it("plays only the church's copy, never WordProject's servers", () => {
+  it("plays HelloAO's copy, then the church's, never WordProject's servers (#749)", () => {
     expect(getCuvChapterAudioLinks('JHN', 3)[CANTONESE_CUV_READER]).toEqual([
+      HELLOAO_JOHN_3,
       JOHN_3,
     ]);
+    expect(getCantoneseCuvChapterUrls('jhn', 3)).toEqual([HELLOAO_JOHN_3, JOHN_3]);
+    expect(getCantoneseCuvChapterUrls('JHN', 4)).toEqual([]);
+    expect(getBibleAudioSourceLabel(HELLOAO_JOHN_3)).toBe('HelloAO');
     expect(getBibleAudioSourceLabel(JOHN_3)).toBe('NYCCSDA.org');
+    for (const url of getCuvChapterAudioLinks('JHN', 3)[CANTONESE_CUV_READER]) {
+      expect(new URL(url).hostname).not.toMatch(/wordproject|wordproaudio/);
+    }
   });
 
   it('names every CUV narrator by its spoken language, in both scripts', () => {
@@ -94,7 +104,7 @@ describe('Cantonese CUV audio from WordProject', () => {
     expect(getAudioReaderPreferenceKey('BSB')).toBe('BSB');
   });
 
-  it('queues the next Cantonese chapters, across a book boundary, without fallbacks', () => {
+  it("queues the next Cantonese chapters, across a book boundary, with the church's copy as the fallback", () => {
     const queue = buildBibleAudioQueue({
       albumTitle: 'Bible audio',
       artist: `CUV • ${CANTONESE_CUV_READER}`,
@@ -112,8 +122,10 @@ describe('Cantonese CUV audio from WordProject', () => {
       'MAT 1',
     ]);
     expect((queue[1].source as { uri: string }).uri).toBe(
-      'https://assets.adventistconnect.org/newyork2/2026/09/30180001/CANTONESE_B40C001.mp3',
+      'https://audio.bible.helloao.org/api/cmn_cuv/MAT/1/audio/wordproject_cantonese.mp3',
     );
-    expect(queue[1].fallbacks).toEqual([]);
+    expect(queue[1].fallbacks.map(({ source }) => (source as { uri: string }).uri)).toEqual([
+      'https://assets.adventistconnect.org/newyork2/2026/09/30180001/CANTONESE_B40C001.mp3',
+    ]);
   });
 });

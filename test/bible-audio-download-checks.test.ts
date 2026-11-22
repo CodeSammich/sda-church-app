@@ -198,16 +198,16 @@ describe('Bible audio downloads turn down a chapter that is not the recording', 
   beforeEach(() => {
     warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
   });
-  it("try Mandarin's mirror when a Wi-Fi's sign-in page answers for the church's copy", async () => {
+  it("try Mandarin's mirror when a Wi-Fi's sign-in page answers for HelloAO's copy", async () => {
     const download = mockDownloads(async (url, destination) => {
-      if (url.includes('adventistconnect')) mockFiles.set(destination.uri, SIGN_IN_PAGE);
+      if (url.includes('helloao')) mockFiles.set(destination.uri, SIGN_IN_PAGE);
       else mockChapterFile(destination.uri, url);
       return destination;
     });
     downloadBibleAudio('cuv-mandarin', JUDE);
     await until(() => !getBibleAudioScopeStatus('cuv-mandarin', JUDE).downloading);
-    expect(download.mock.calls.map(([url]) => new URL(url).hostname)).toEqual(['assets.adventistconnect.org', 'archive.org']);
-    expect(mockFiles.get('document/bible-audio/cuv-mandarin/JUD/1.mp3')).toContain('archive.org');
+    expect(download.mock.calls.map(([url]) => new URL(url).hostname)).toEqual(['audio.bible.helloao.org', 'assets.adventistconnect.org']);
+    expect(mockFiles.get('document/bible-audio/cuv-mandarin/JUD/1.mp3')).toContain('adventistconnect');
     expect(getBibleAudioScopeStatus('cuv-mandarin', JUDE)).toMatchObject({
       downloadedChapters: 1,
       downloadedBytes: chapterBytes('cuv-mandarin', 'JUD', 1),
