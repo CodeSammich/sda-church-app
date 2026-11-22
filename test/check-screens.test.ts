@@ -2,6 +2,7 @@ import { describeChineseMissionSpotlight } from '@/features/sabbath-school/Chine
 
 const {
   checkAdvance,
+  checkPopupWidth,
   checkShot,
   fromStrip,
   planChecks,
@@ -583,5 +584,23 @@ describe("the lesson open in Quick Look, its title read with the iPad's dropdown
     expect(checkShot(ipad, [retitled('Kindergarten (ages 4-6) v'), ...pageIpad])).toEqual([titleRule]);
     expect(checkShot(ipad, [retitled('Beginner (ages 1-3) vv'), ...pageIpad])).toEqual([titleRule]);
     expect(checkShot(ipad, [retitled('Beginner (ages 1-3) Students'), ...pageIpad])).toEqual([titleRule]);
+  });
+});
+
+describe('the saved verses, full screen on purpose (#750)', () => {
+  const ipad = planChecks(loadConfig(), 'ipad').find(
+    (candidate: { name: string }) => candidate.name === 'bible-saved-verses-landscape',
+  );
+
+  it("skip only the popup width check, which every other popup's shot keeps", async () => {
+    expect(ipad).toMatchObject({ fullScreenPopup: true });
+    // It returns before reading the screenshot, so no file is needed.
+    await expect(checkPopupWidth(ipad, 'no-such-file.png')).resolves.toEqual([]);
+    const others = planChecks(loadConfig(), 'ipad').filter(
+      (candidate: { name: string; fullScreenPopup?: boolean }) => candidate.fullScreenPopup,
+    );
+    expect(others.map(({ name }: { name: string }) => name)).toEqual(['bible-saved-verses-landscape']);
+    // Its text still has to stay in the column.
+    expect(ipad.wideContent).toBeUndefined();
   });
 });

@@ -4884,6 +4884,7 @@ export default function BibleScreen() {
                   styles.fullScreenPopup,
                   {
                     width: viewportWidth,
+                    height: viewportHeight,
                     paddingTop: insets.top,
                     paddingBottom: insets.bottom,
                     backgroundColor: theme.colors.background,
@@ -6119,13 +6120,15 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       textDecorationLine: 'underline',
     },
     // Saved verses' full-screen popup (#750): no margins, corners, or height
-    // limit, with the safe areas as padding and the reading column inside.
+    // limit, with the safe areas as padding and the reading column inside. It
+    // gets the window's height, not flex: on iOS, Paper's Modal draws its
+    // Surface as a container, which passes flex only to its outer view, and the
+    // list in the inner one shrank to nothing. A height reaches both.
     fullScreenPopupWrapper: {
       marginTop: 0,
       marginBottom: 0,
     },
     fullScreenPopup: {
-      flex: 1,
       alignSelf: 'center',
       borderRadius: 0,
     },

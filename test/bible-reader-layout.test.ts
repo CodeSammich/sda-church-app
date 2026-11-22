@@ -402,6 +402,11 @@ describe('Bible reader text scaling', () => {
     // The selection popups share one Modal; only saved verses take its full-screen shape.
     const selection = bible.slice(bible.indexOf('{/* Selection Modals */}'));
     expect(selection).toMatch(/style=\{savedVersesFullScreen \? styles\.fullScreenPopupWrapper : undefined\}\s+contentContainerStyle=\{\s+savedVersesFullScreen\s+\? \[\s+styles\.fullScreenPopup,/);
+    // A height, not flex: on iOS, Paper's Modal passes flex only to its
+    // Surface's outer view, and the list inside shrank to nothing.
+    expect(selection).toMatch(/width: viewportWidth,\s+height: viewportHeight,/);
+    const fullScreen = bible.slice(bible.indexOf('    fullScreenPopup: {'), bible.indexOf('    fullScreenPopupInner: {'));
+    expect(fullScreen).not.toMatch(/\bflex: 1/);
     // Each passage shows in full, no longer cut off after three lines.
     const savedList = bible.slice(bible.indexOf("lastActiveType === 'saved' ?"), bible.indexOf("lastActiveType === 'verse-detail' ?"));
     expect(savedList).not.toContain('numberOfLines');
