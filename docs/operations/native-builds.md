@@ -893,7 +893,8 @@ iPhone or Android, or 8 on the iPad. The limit is a reminder to prune, not a rul
    `popup=audio-settings`, once the chapter has audio (#372), or its
    `popup=audio-download-tip`, the same popup as the tip opens it when playback keeps
    stopping to load (#595), or its `popup=book`, the book list (#723), or its
-   `popup=chapter`, the chapter list (#456), or Sabbath School's
+   `popup=chapter`, the chapter list (#456), or its `popup=saved`, the saved
+   verses (#750), or Sabbath School's
    `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
    a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens

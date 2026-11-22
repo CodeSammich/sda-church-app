@@ -69,6 +69,8 @@ const SETTING_KEYS = {
   // and whatsNewStep 'dark' opens its second.
   whatsNewSeen: 'whats-new-seen',
   whatsNewStep: 'screenshot-whats-new-step',
+  // The Bible's saved verses, as [{ bookId, chapter, verse, savedAt }] (#750).
+  savedVerses: 'saved-bible-verses-v1',
 };
 
 // Settings of the simulated phone rather than the app, by platform. A variant
