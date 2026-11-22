@@ -84,11 +84,11 @@ describe('popup shots (#372)', () => {
     ];
     expect(checkShot(shot('bible-verse-popup-default'), popup(0.36))).toEqual([]);
     expect(checkShot(shot('bible-verse-popup-default'), popup(0.64))).toEqual([
-      '/^Footnote/ is not above /^Koine Greek \\(Original\\)/',
+      '/^Footnote/ is not above /\\bKoine Greek \\(Original\\)/',
     ]);
     // The Greek itself has to show too.
     expect(checkShot(shot('bible-verse-popup-default'), popup(0.36).filter(({ text }) => !text.startsWith('Koine')))).toEqual([
-      'no line matches /^Koine Greek \\(Original\\)/',
+      'no line matches /\\bKoine Greek \\(Original\\)/',
     ]);
   });
 

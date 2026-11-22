@@ -1,5 +1,5 @@
 {
- "$comment": "Text Apple Vision read from real key-screen screenshots (#331), unedited, for testing scripts/check-screens.cjs against what Vision really returns. clean: a good run (home-default from 1.7.0's run, #593, where Vision read the Courier countdown's \"1d\" as \"ld\"; text-size-xl from the first popup shots, #372; bible-verse-popup-default from #456's first run, Luke 2:14 with its Hymns button, where Vision read the hymn icon as $ and the save icon as *); openPrompt: a run where iOS covered each screen with its Open in prompt; bottomSheet: the 1.3.2 release PR's audio settings popup, which still sat at the bottom of the screen. Vision garbles some text that is fine on screen, such as small print in images and superscript footnote numbers: in library-zh, ANDKPW MUKKA is ANDREW MURRAY on the Humility cover image (the app's own caption below it reads Andrew Murray), and in bible-scrolled-default, eternal life4. is John 3:15 with the BSB's footnote 4. The checks look only for particular labels in particular places, so text like this can't pass or fail them.",
+ "$comment": "Text Apple Vision read from real key-screen screenshots (#331), unedited, for testing scripts/check-screens.cjs against what Vision really returns. clean: a good run (home-default from 1.7.0's run, #593, where Vision read the Courier countdown's \"1d\" as \"ld\"; text-size-xl from the first popup shots, #372, where Vision read the share icon as <; bible-verse-popup-default from the run that moved it to 1 Corinthians 15:5, #745, where Vision read the footnote number as '); openPrompt: a run where iOS covered each screen with its Open in prompt; bottomSheet: the 1.3.2 release PR's audio settings popup, which still sat at the bottom of the screen. Vision garbles some text that is fine on screen, such as small print in images and superscript footnote numbers: in library-zh, ANDKPW MUKKA is ANDREW MURRAY on the Humility cover image (the app's own caption below it reads Andrew Murray), and in bible-scrolled-default, eternal life4. is John 3:15 with the BSB's footnote 4. The checks look only for particular labels in particular places, so text like this can't pass or fail them.",
  "clean": {
   "bible-dual-default": [
    {
@@ -1175,124 +1175,115 @@
     "text": "9:41",
     "box": [
      0.145,
-     0.026,
-     0.088,
+     0.027,
+     0.086,
      0.017
     ]
    },
    {
-    "text": "-",
+    "text": "third day according to the Scriptures,",
     "box": [
-     0.281,
-     0.063,
-     0.016,
-     0.009
-    ]
-   },
-   {
-    "text": "-",
-    "box": [
-     0.331,
-     0.061,
-     0.028,
-     0.01
-    ]
-   },
-   {
-    "text": "14 \"Glory to God in the highest,",
-    "box": [
-     0.018,
-     0.104,
-     0.575,
-     0.025
-    ]
-   },
-   {
-    "text": "and on earth peace to men",
-    "box": [
-     0.072,
-     0.135,
-     0.493,
-     0.025
-    ]
-   },
-   {
-    "text": "on whom His favor rests!\"",
-    "box": [
-     0.075,
-     0.163,
-     0.474,
-     0.024
-    ]
-   },
-   {
-    "text": "15 When the anaels had left them and aone into",
-    "box": [
-     0.019,
-     0.225,
-     0.874,
-     0.016
-    ]
-   },
-   {
-    "text": "Luke 2:14",
-    "box": [
-     0.388,
-     0.263,
-     0.224,
-     0.021
-    ]
-   },
-   {
-    "text": "\"Glory to God in the highest,",
-    "box": [
-     0.076,
-     0.324,
-     0.489,
+     0.073,
+     0.065,
+     0.688,
      0.022
     ]
    },
    {
-    "text": "and on earth peace to men",
+    "text": "5 and that He appeared to Cephas' and then to",
     "box": [
-     0.078,
-     0.347,
-     0.456,
-     0.024
+     0.041,
+     0.105,
+     0.855,
+     0.025
     ]
    },
    {
-    "text": "on whom His favor rests!\"",
+    "text": "the Twelve.",
+    "box": [
+     0.072,
+     0.139,
+     0.219,
+     0.017
+    ]
+   },
+   {
+    "text": "6 After that, He appeared to more than five",
+    "box": [
+     0.038,
+     0.18,
+     0.785,
+     0.02
+    ]
+   },
+   {
+    "text": "hundred brothers at once, most of whom are",
+    "box": [
+     0.076,
+     0.209,
+     0.814,
+     0.021
+    ]
+   },
+   {
+    "text": "still living, though some have fallen asleep.",
+    "box": [
+     0.073,
+     0.238,
+     0.779,
+     0.02
+    ]
+   },
+   {
+    "text": "1 Corinthians 15:5",
+    "box": [
+     0.29,
+     0.285,
+     0.413,
+     0.022
+    ]
+   },
+   {
+    "text": "and that He appeared to Cephas' and then to the",
     "box": [
      0.079,
+     0.346,
+     0.823,
+     0.019
+    ]
+   },
+   {
+    "text": "Twelve.",
+    "box": [
+     0.082,
      0.373,
-     0.442,
-     0.018
+     0.136,
+     0.016
     ]
    },
    {
-    "text": "1",
+    "text": "Footnote '",
     "box": [
-     0.022,
-     0.404,
-     0.016,
-     0.01
+     0.082,
+     0.433,
+     0.139,
+     0.013
     ]
    },
    {
-    "text": "1",
+    "text": "That is, Peter",
     "box": [
-     0.022,
-     0.475,
-     0.019,
-     0.012
+     0.082,
+     0.457,
+     0.221,
+     0.02
     ]
    },
    {
     "text": "11",
     "box": [
      0.019,
-     0.547,
+     0.542,
      0.032,
      0.013
     ]
@@ -1301,26 +1292,17 @@
     "text": "Koine Greek (Original)",
     "box": [
      0.082,
-     0.436,
+     0.519,
      0.287,
-     0.013
+     0.012
     ]
    },
    {
-    "text": "\"Aóža Ẻv ú·íotoıç°©zũ, kaì ẺnÌyйç sỉpńvn",
-    "box": [
-     0.076,
-     0.461,
-     0.801,
-     0.026
-    ]
-   },
-   {
-    "text": "Ẻv ảv0púnoıç sủбoкíаç!\"",
+    "text": "kał ötı üpen Knoã, zїta oїç бứбека.",
     "box": [
      0.079,
-     0.494,
-     0.473,
+     0.544,
+     0.71,
      0.026
     ]
    },
@@ -1328,81 +1310,72 @@
     "text": "Source: Statistical Restoration Greek New Testament. Edited by",
     "box": [
      0.082,
-     0.538,
+     0.586,
      0.779,
-     0.012
+     0.013
     ]
    },
    {
     "text": "Alan Bunning for the Center for New Testament Restoration.",
     "box": [
      0.082,
-     0.554,
+     0.603,
      0.77,
-     0.013
+     0.012
     ]
    },
    {
     "text": "Licensed CC BY 4.0.",
     "box": [
-     0.082,
-     0.571,
-     0.256,
-     0.01
-    ]
-   },
-   {
-    "text": "1!",
-    "box": [
-     0.022,
-     0.619,
-     0.022,
-     0.01
+     0.079,
+     0.621,
+     0.262,
+     0.012
     ]
    },
    {
     "text": "* Save",
     "box": [
      0.221,
-     0.671,
+     0.703,
      0.139,
-     0.019
+     0.018
     ]
    },
    {
     "text": "Share Verse",
     "box": [
-     0.64,
-     0.671,
-     0.202,
-     0.016
-    ]
-   },
-   {
-    "text": "$ Hymns",
-    "box": [
-     0.416,
-     0.724,
-     0.174,
-     0.022
-    ]
-   },
-   {
-    "text": "10",
-    "box": [
-     0.36,
-     0.858,
-     0.038,
+     0.634,
+     0.705,
+     0.208,
      0.013
+    ]
+   },
+   {
+    "text": "The Resurrection of the Dead",
+    "box": [
+     0.044,
+     0.77,
+     0.647,
+     0.021
+    ]
+   },
+   {
+    "text": "U",
+    "box": [
+     0.375,
+     0.859,
+     0.022,
+     0.012
     ]
    },
    {
     "text": "30",
     "box": [
-     0.593,
-     0.855,
-     0.047,
-     0.016
+     0.596,
+     0.859,
+     0.038,
+     0.012
     ]
    },
    {
@@ -1424,20 +1397,20 @@
     ]
    },
    {
-    "text": "Luke v",
+    "text": "1 Corinthians v",
     "box": [
-     0.268,
-     0.943,
-     0.12,
-     0.013
+     0.192,
+     0.942,
+     0.249,
+     0.015
     ]
    },
    {
-    "text": "2v",
+    "text": "15 v",
     "box": [
-     0.549,
+     0.533,
      0.942,
-     0.06,
+     0.076,
      0.015
     ]
    },

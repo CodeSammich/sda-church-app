@@ -220,14 +220,14 @@
     {
       "name": "bible-verse-popup",
       "group": "bible-reading",
-      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The verse's footnote comes before its Greek (#745). 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), so the Greek's credit still shows below them on the iPhone and the iPad; John 3:16's pushed it out of view. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813). Vision reads the share icon before Share Verse as <.",
+      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The verse's footnote comes before its Greek (#745). 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), so the Greek's credit still shows below them on the iPhone and the iPad; John 3:16's pushed it out of view. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813), and on the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <.",
       "path": "bible?bookId=1CO&chapter=15&translationId=BSB&verseStart=5&verseEnd=5&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
       "mustShowLines": [
         "^1 ?Corinthians 15:5$",
-        { "line": "^Footnote", "above": "^Koine Greek \\(Original\\)" },
+        { "line": "^Footnote", "above": "\\bKoine Greek \\(Original\\)" },
         "\\bShare Verse$",
         "^Source: Statistical Restoration\\b",
         "\\bCC BY 4\\.0\\b"
