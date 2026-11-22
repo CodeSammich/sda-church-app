@@ -73,6 +73,25 @@ describe('popup shots (#372)', () => {
     expect(checkShot(shot('bible-audio-settings-zh'), centred)).toEqual([]);
   });
 
+  it("catch the verse's footnote back below its Greek (#745)", () => {
+    const popup = (footnoteTop: number) => [
+      line('1 Corinthians 15:5', 0.24),
+      line('Footnote 1', footnoteTop),
+      line('Koine Greek (Original)', 0.45),
+      line('Source: Statistical Restoration Greek New Testament. Edited by', 0.55),
+      line('Licensed CC BY 4.0.', 0.6),
+      line('< Share Verse', 0.7),
+    ];
+    expect(checkShot(shot('bible-verse-popup-default'), popup(0.36))).toEqual([]);
+    expect(checkShot(shot('bible-verse-popup-default'), popup(0.64))).toEqual([
+      '/^Footnote\\b/ is not above /^Koine Greek \\(Original\\)/',
+    ]);
+    // The Greek itself has to show too.
+    expect(checkShot(shot('bible-verse-popup-default'), popup(0.36).filter(({ text }) => !text.startsWith('Koine')))).toEqual([
+      'no line matches /^Koine Greek \\(Original\\)/',
+    ]);
+  });
+
   it('catch a Close or Apply button coming back', () => {
     expect(checkShot(shot('bible-verse-popup-default'), [...verse, line('Close', 0.8)])).toEqual([
       '"Close" matches /^Close$/, which must not show',
