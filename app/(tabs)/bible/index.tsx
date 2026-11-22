@@ -6047,10 +6047,12 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     backgroundAudioGuidanceAction: {
       flexGrow: 1,
     },
+    // Each saved passage shows in full (#750), so a row can be many lines tall:
+    // its remove button stays beside the reference, at the top.
     savedVerseRow: {
       width: '100%',
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
     },
     savedSortRow: {
       flexDirection: 'row',
