@@ -604,3 +604,51 @@ describe('the saved verses, full screen on purpose (#750)', () => {
     expect(ipad.wideContent).toBeUndefined();
   });
 });
+
+describe("the Sabbath countdown, with the colon Vision may read as full-width (#759)", () => {
+  // What Vision read on the iPad's Simplified Chinese Home on 2026-11-22 (fork
+  // run 44998716858): the countdown's second colon came out as "：".
+  const read: Line[] = [
+    {text: "9:41AM Sun Nov 22", box: [0.023, 0.007, 0.136, 0.009]},
+    {text: "三今0", box: [0.903, 0.007, 0.076, 0.014]},
+    {text: "今日经文", box: [0.422, 0.04, 0.155, 0.031]},
+    {text: "你们所遇见的试探、无非是人所能受的、神是信实的，必不叫你们受试探过于所", box: [0.107, 0.087, 0.797, 0.022]},
+    {text: "能受的，在受试探的时候、总要给你们开一条出路、叫你们能忍受得住。", box: [0.143, 0.115, 0.703, 0.023]},
+    {text: "哥林多前书10:13", box: [0.426, 0.141, 0.178, 0.017]},
+    {text: "分享经文", box: [0.287, 0.186, 0.082, 0.018]},
+    {text: "目查阅经文", box: [0.634, 0.186, 0.12, 0.017]},
+    {text: "距离安息日还有", box: [0.436, 0.266, 0.126, 0.015]},
+    {text: "5d 12:13：02", box: [0.395, 0.288, 0.211, 0.02]},
+    {text: "纽约", box: [0.481, 0.318, 0.037, 0.015]},
+    {text: "观看直播", box: [0.118, 0.371, 0.072, 0.015]},
+    {text: "每周周报", box: [0.521, 0.371, 0.072, 0.015]},
+    {text: "吗", box: [0.533, 0.442, 0.072, 0.052]},
+    {text: "奉献", box: [0.118, 0.535, 0.037, 0.015]},
+    {text: "诗歌本", box: [0.521, 0.535, 0.054, 0.015]},
+    {text: "J", box: [0.545, 0.605, 0.056, 0.055]},
+    {text: "本周安息日学课程", box: [0.118, 0.699, 0.145, 0.015]},
+    {text: "新会友/访客", box: [0.521, 0.699, 0.109, 0.015]},
+    {text: "介", box: [0.298, 0.942, 0.031, 0.022]},
+    {text: "首页", box: [0.298, 0.969, 0.031, 0.013]},
+    {text: "中", box: [0.422, 0.937, 0.031, 0.028]},
+    {text: "圣经", box: [0.422, 0.969, 0.031, 0.013]},
+    {text: "◎", box: [0.547, 0.939, 0.031, 0.025]},
+    {text: "探索", box: [0.545, 0.969, 0.033, 0.013]},
+    {text: "您", box: [0.676, 0.969, 0.017, 0.013]},
+  ];
+  const ipad = planChecks(loadConfig(), 'ipad').find((candidate: { name: string }) => candidate.name === 'home-zh-cn');
+  const withCountdown = (text: string) =>
+    read.map((line) => (line.text === '5d 12:13：02' ? { ...line, text } : line));
+
+  it('passes it as Vision read it, and with plain colons', () => {
+    expect(checkShot(ipad, read)).toEqual([]);
+    expect(checkShot(ipad, withCountdown('5d 12:13:02'))).toEqual([]);
+    expect(checkShot(ipad, withCountdown('5d 12：13：02'))).toEqual([]);
+  });
+
+  it('still fails a countdown that is cut off or has another mark', () => {
+    const rule = 'no line matches /^(\\S{1,3} ?)?\\d{1,2}[:：]\\d\\d[:：]\\d\\d$/';
+    expect(checkShot(ipad, withCountdown('5d 12:13'))).toEqual([rule]);
+    expect(checkShot(ipad, withCountdown('5d 12;13:02'))).toEqual([rule]);
+  });
+});
