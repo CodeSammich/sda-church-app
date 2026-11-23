@@ -49,10 +49,12 @@ describe('key-screen text checks on real screenshots', () => {
 
 describe('popup shots (#372)', () => {
   const verse = samples.clean['bible-verse-popup-default'] as Line[];
+  const footnote = samples.clean['bible-verse-footnote-default'] as Line[];
   const textSize = samples.clean['text-size-xl'] as Line[];
 
   it("don't need the tab bar or the verse button, which the popup covers or dims", () => {
     expect(checkShot(shot('bible-verse-popup-default'), verse)).toEqual([]);
+    expect(checkShot(shot('bible-verse-footnote-default'), footnote)).toEqual([]);
     expect(checkShot(shot('text-size-xl'), textSize)).toEqual([]);
   });
 
@@ -75,20 +77,19 @@ describe('popup shots (#372)', () => {
 
   it("catch the verse's footnote back below its Greek (#745)", () => {
     const popup = (footnoteTop: number) => [
-      line('John 20:16', 0.24),
+      line('1 Corinthians 15:5', 0.24),
       line('Footnote 1', footnoteTop),
       line('Koine Greek (Original)', 0.45),
       line('Source: Statistical Restoration Greek New Testament. Edited by', 0.55),
       line('Licensed CC BY 4.0.', 0.6),
       line('< Share Verse', 0.7),
-      line('$ Hymns', 0.75),
     ];
-    expect(checkShot(shot('bible-verse-popup-default'), popup(0.36))).toEqual([]);
-    expect(checkShot(shot('bible-verse-popup-default'), popup(0.64))).toEqual([
+    expect(checkShot(shot('bible-verse-footnote-default'), popup(0.36))).toEqual([]);
+    expect(checkShot(shot('bible-verse-footnote-default'), popup(0.64))).toEqual([
       '/^Footnote/ is not above /\\bKoine Greek \\(Original\\)/',
     ]);
     // The Greek itself has to show too.
-    expect(checkShot(shot('bible-verse-popup-default'), popup(0.36).filter(({ text }) => !text.startsWith('Koine')))).toEqual([
+    expect(checkShot(shot('bible-verse-footnote-default'), popup(0.36).filter(({ text }) => !text.startsWith('Koine')))).toEqual([
       'no line matches /\\bKoine Greek \\(Original\\)/',
     ]);
   });
