@@ -79,7 +79,7 @@ describe('yearly checkup checklist', () => {
     expect(title).toBe('Yearly checkup, 2027');
     for (const text of [
       'card on file hasn\'t expired',
-      'credit card with a hard limit of about $200–300',
+      'hard limit covers ten years of the domain at this year\'s price',
       'billing page lists only the domain',
       'nothing else in the account is on a paid plan',
       'The Free plan still covers DNS',

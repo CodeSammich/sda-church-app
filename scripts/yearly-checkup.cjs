@@ -21,7 +21,7 @@ const CHECKLIST = [
     'Money',
     [
       [
-        'Cloudflare: the card on file hasn\'t expired, it\'s still a credit card with a hard limit of about $200–300, auto-renew is on for `nyccsda.org`, and the domain\'s paid-through date is at least a year away.',
+        'Cloudflare: the card on file hasn\'t expired, it\'s still a credit card whose hard limit covers ten years of the domain at this year\'s price plus every other subscription on it, with a buffer (about $200–300 for now; re-set it if the price or the subscriptions changed), auto-renew is on for `nyccsda.org`, and the domain\'s paid-through date is at least a year away.',
         'docs/operations/admin-runbook.md',
         'the-cloudflare-account-and-domain',
       ],
@@ -41,7 +41,7 @@ const CHECKLIST = [
         'google-cloud-play-upload-service-account',
       ],
       [
-        'No other service has gained a payment method: Cloudflare is still the only one with a card. If the church ever makes an exception, that card has the same hard limit of about $200–300, well above a year\'s charges on it.',
+        'No other service has gained a payment method: Cloudflare is still the only one with a card, unless the church decided to add a subscription. Any such subscription is on that same capped card, and the limit was re-set to cover it.',
         'docs/architecture.md',
         'payment-methods',
       ],

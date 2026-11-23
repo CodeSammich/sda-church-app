@@ -107,8 +107,8 @@ one place. Church admins can start at [Operate](#operate).
   every three months, export all of the church's email and files and copy it onto two
   separate drives, off Google
 - [Payment methods](docs/architecture.md#payment-methods): which service has a card
-  on file (only Cloudflare, for the domain), why no other may, and the hard limit of
-  about $200–300 on any card on file
+  on file (only Cloudflare, for the domain), why no other may, and how the hard limit
+  on any card on file is set (about $200–300 for now)
 - [Credentials that need attention](docs/operations/admin-runbook.md#credentials-that-need-attention):
   each secret and key, where it's kept, and when to act
 - [Pastors and elders](docs/operations/admin-runbook.md#updating-pastors-and-elders):

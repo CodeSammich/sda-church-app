@@ -446,15 +446,16 @@ lapses, the privacy policy, support, and download pages above go down with it.
 
 - **Use a credit card, not a debit card,** so a wrong or unauthorized charge can be
   disputed with the bank before any church money leaves the account.
-- **Give it a hard limit of about $200–300.** Ask the bank to decline any charge
+- **Give it a hard limit, about $200–300 for now.** Ask the bank to decline any charge
   over the limit. Not opting in to over-limit charges isn't enough: it only waives
   the fee, and the bank may still approve the charge
   ([Regulation Z §1026.56](https://www.consumerfinance.gov/rules-policy/regulations/1026/56/)). Use a card kept only for
   the church's paid services, such as an employee card or a virtual card number
-  with its own limit, so the limit is the card's own. At about $11 a year, the
-  domain leaves plenty of room, even for a ten-year renewal. Don't set the limit
-  just above the renewal: a price rise would be declined, and the domain could
-  lapse.
+  with its own limit, so the limit is the card's own. The limit covers ten years of
+  the domain at its current price, about $110 today, plus a buffer for subscriptions
+  the church may add ([how it's set](../architecture.md#payment-methods)). Don't set
+  it just above one year's renewal: a price rise would be declined, and the domain
+  could lapse.
 - **Turn on the bank's alert for every charge,** so anything other than the yearly
   renewal is noticed right away.
 - **Keep the card current and auto-renew on.** Don't remove the card: the domain
@@ -484,8 +485,11 @@ lapses, the privacy policy, support, and download pages above go down with it.
 
 - Each administrator logs in, which proves the backups work. Remove anyone who has left.
 - The account's billing page lists only the domain registration.
-- The card on file hasn't expired, its hard limit is still about $200–300, and
-  auto-renew is on.
+- The card on file hasn't expired, and auto-renew is on.
+- The card's hard limit still covers ten years of the domain at this year's price,
+  plus a year of every other subscription on the card, with a buffer. If the price
+  or the subscriptions changed, re-set it
+  ([how it's set](../architecture.md#payment-methods)).
 - The Free plan still covers everything in the next section.
 
 ### Why only the domain costs money
@@ -1346,7 +1350,7 @@ exits.
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
 | App Store Connect API key (`APP_STORE_CONNECT_API_*`) | `store-upload` Environment secrets | It doesn't expire. If it leaks, revoke it under **Users and Access → Integrations** in App Store Connect, create a new one with the **Developer** role, and replace the three secrets. |
 | Status page GitHub App key (`GH_APP_PRIVATE_KEY`) | Actions secret in the `sda-church-app-status` repository | It doesn't expire. If it may have leaked, generate a new key, replace the secret, and delete the old key; see [The GitHub App](status-page.md#the-github-app). |
-| Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. Its replacement keeps the hard limit of about $200–300. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
+| Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. Its replacement keeps the same hard limit. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
 | Faith Comes By Hearing Bible Brain API key | The church's IT Admin shared drive, which only certain administrators can open | Not used yet ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). Never put it in the app, the repository, an issue, a pull request, or a chat. If it may have leaked, ask FCBH for a new one and replace the stored copy. |
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 
