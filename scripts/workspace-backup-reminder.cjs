@@ -56,7 +56,7 @@ const STEPS = [
     'downloading-it',
   ],
   [
-    'Copy the whole folder onto the second backup drive: a separate external drive, kept unplugged and away from the computer between backups, so one fire, theft, or ransomware attack can\'t reach both copies.',
+    'Copy the whole folder onto the second backup drive: a separate external drive, kept unplugged between backups and stored in another room or building, so one fire, theft, or ransomware attack can\'t reach both copies.',
     'copying-it-to-the-second-drive',
   ],
   [

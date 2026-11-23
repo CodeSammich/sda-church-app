@@ -84,8 +84,8 @@ and may not be possible, so protect them above everything else.
 ### Cloudflare
 
 - **Registrar and DNS** for `nyccsda.org`. The domain costs about $10 per year and
-  can be registered up to 10 years at a time. Keep an active payment method on
-  file for renewal. Renewal notices go to the Super Administrators.
+  can be registered up to 10 years at a time. Keep a payment method on file for
+  renewal: a credit card with a hard limit ([Payment methods](#payment-methods)). Renewal notices go to the Super Administrators.
 - **DNS** points the domain's email at Google Workspace, and a Cloudflare redirect
   rule sends `app.nyccsda.org` to the [app website](#website-appnyccsdaorg) on
   GitHub Pages. It also holds the DNS TXT record that proves the church owns
@@ -494,7 +494,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 
 **Every card on file is a credit card with a hard limit of about $200–300.** That
 covers every service the church pays for, which today is only the domain, and any
-paid service added later:
+exception the church ever makes to the rule above:
 
 - **The limit sits well above a year's charges on the card,** so a renewal is never
   declined. The domain is about $10 a year, or about $100 to renew ten years at once
@@ -502,11 +502,12 @@ paid service added later:
   plenty of room. Don't set the limit just above the renewal: a price rise or a
   renewal of several years would be declined, and the domain could lapse.
 - **The limit caps the damage** if the card number leaks or someone misuses an
-  account that holds it: no one can charge more than the limit. A credit card's
-  charges can also be disputed with the bank before any church money leaves the
-  account.
-- **The limit is the card's own,** so use a card kept only for the church's paid
-  services, not one with a larger limit that is also used for everyday spending.
+  account that holds it, as long as the bank declines any charge over the limit.
+  Ask the bank for that: without it, a bank may approve an over-limit charge and
+  only waive the fee ([Regulation Z §1026.56](https://www.consumerfinance.gov/rules-policy/regulations/1026/56/)). A credit card's charges can also
+  be disputed with the bank before any church money leaves the account.
+- **Use a card whose limit is its own,** kept only for the church's paid services,
+  not one with a larger limit that is also used for everyday spending.
 
 How to set it up and check it each year:
 [The Cloudflare account and domain](operations/admin-runbook.md#the-cloudflare-account-and-domain).

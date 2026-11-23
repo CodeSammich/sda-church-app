@@ -447,7 +447,9 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - **Use a credit card, not a debit card,** so a wrong or unauthorized charge can be
   disputed with the bank before any church money leaves the account.
 - **Give it a hard limit of about $200–300.** Ask the bank to decline any charge
-  over the limit, and don't opt in to over-limit charges. Use a card kept only for
+  over the limit. Not opting in to over-limit charges isn't enough: it only waives
+  the fee, and the bank may still approve the charge
+  ([Regulation Z §1026.56](https://www.consumerfinance.gov/rules-policy/regulations/1026/56/)). Use a card kept only for
   the church's paid services, such as an employee card or a virtual card number
   with its own limit, so the limit is the card's own. At about $10 a year, the
   domain leaves plenty of room, even for a ten-year renewal. Don't set the limit
@@ -470,7 +472,8 @@ lapses, the privacy policy, support, and download pages above go down with it.
 
 - **Every administrator is a super administrator,** as on every system, so losing one
   login doesn't lock the church out. The card limit above keeps that safe: even a
-  stolen login can't charge more than the limit.
+  stolen login can't charge more than the limit, since the bank declines anything
+  over it.
 - **Every administrator uses two-factor login** with an authenticator app, passkey, or
   security key, not text messages, and keeps their own backup codes somewhere they'd
   still have if their phone died.
@@ -637,8 +640,8 @@ there in File Explorer. Then each export is on two separate drives.
 
 - **The second drive is an external one,** a different physical drive from the first,
   and not the computer's system drive.
-- **Keep it unplugged and stored away from the computer between backups,** so one
-  fire, theft, power surge, or ransomware attack can't reach both copies. Plug it in
+- **Keep it unplugged between backups, and stored in another room or building,** so
+  one fire, theft, power surge, or ransomware attack can't reach both copies. Plug it in
   only to copy an export and check it.
 - **Guard it like the first:** it holds the same email and files.
 
@@ -651,7 +654,8 @@ Check both copies, the one on each drive:
   which also holds `Status Report.html`) must be exactly that many bytes. In Windows,
   that's its **Properties → Size**, not **Size on disk**.
 - No file in the folder ends in `_.gstmp`. Those are downloads that didn't finish; run
-  the download again, then copy the folder to the second drive again.
+  the download again. Then delete the folder on the second drive and copy it
+  again.
 
 Then comment on the issue with the export's date and size, and close it. Keep the older
 exports while the drives have room. When one runs low, delete its oldest export, but

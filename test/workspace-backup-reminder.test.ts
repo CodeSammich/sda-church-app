@@ -68,7 +68,7 @@ describe('Google Workspace backup issue', () => {
       '_.gstmp',
       'two copies off Google, on two separate drives',
       'second backup drive',
-      'kept unplugged and away from the computer',
+      'kept unplugged between backups and stored in another room or building',
       'Check both copies',
       'keep the two newest on each drive',
     ]) {

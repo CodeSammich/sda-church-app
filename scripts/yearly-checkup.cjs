@@ -41,7 +41,7 @@ const CHECKLIST = [
         'google-cloud-play-upload-service-account',
       ],
       [
-        'No other service has gained a payment method: Cloudflare is still the only one with a card. If another service ever needs one, its card has the same hard limit of about $200–300, well above a year\'s charges on it.',
+        'No other service has gained a payment method: Cloudflare is still the only one with a card. If the church ever makes an exception, that card has the same hard limit of about $200–300, well above a year\'s charges on it.',
         'docs/architecture.md',
         'payment-methods',
       ],
