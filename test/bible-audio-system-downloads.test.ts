@@ -210,7 +210,7 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
   it('try the next source when one fails, as on Android or when the iPhone drops it', async () => {
     downloadBibleAudio(MANDARIN, JUDE);
     await poll();
-    const [first, second, third] = getBibleAudioDownloadUrls(MANDARIN, 'JUD', 1);
+    const [first, second, third, fourth] = getBibleAudioDownloadUrls(MANDARIN, 'JUD', 1);
     expect(lastEnqueue()[0][0].url).toBe(first);
     // Android: a failed download stays listed.
     mockSystem.tasks.get('cuv-mandarin/JUD/1')!.state = 'failed';
@@ -223,6 +223,10 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     // Android retrying a host that doesn't answer: the mirror, now.
     Object.assign(mockSystem.tasks.get('cuv-mandarin/JUD/1')!, { state: 'paused', reason: 'retry' });
     await poll(2);
+    expect(lastEnqueue()[0][0].url).toBe(fourth);
+    // After the last source, the first again.
+    mockSystem.tasks.get('cuv-mandarin/JUD/1')!.state = 'failed';
+    await poll(2);
     expect(lastEnqueue()[0][0].url).toBe(first);
     expect(getBibleAudioScopeStatus(MANDARIN, JUDE).downloading).toBe(true);
   });
@@ -231,9 +235,10 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     mockSystem.triesEverySource = true;
     downloadBibleAudio(MANDARIN, JUDE);
     await poll();
-    const [first, second, third] = getBibleAudioDownloadUrls(MANDARIN, 'JUD', 1);
-    expect(lastEnqueue()[0][0]).toMatchObject({ url: first, fallbacks: [second, third] });
-    // Three rounds of all three sources, as the in-app downloader tries them, then it gives up.
+    const [first, ...rest] = getBibleAudioDownloadUrls(MANDARIN, 'JUD', 1);
+    expect(rest).toHaveLength(3);
+    expect(lastEnqueue()[0][0]).toMatchObject({ url: first, fallbacks: rest });
+    // Three rounds of every source, as the in-app downloader tries them, then it gives up.
     for (let round = 1; round <= 3; round += 1) {
       mockSystem.tasks.get('cuv-mandarin/JUD/1')!.state = 'failed';
       await poll(2);

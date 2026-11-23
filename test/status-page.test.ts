@@ -4,7 +4,7 @@ import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json
 import { BULLETIN_API_BASE_URL } from '@/constants/ExternalLinks';
 import {
   getAudioPowerCuvChapterLinks,
-  getCantoneseCuvChapterUrl,
+  getCantoneseCuvChapterUrls,
   getRv1909ChapterLinks,
 } from '@/services/BibleAudioSources';
 
@@ -37,22 +37,26 @@ const mandarin = ([] as string[]).concat(Object.values(getAudioPowerCuvChapterLi
 const helloaoBase = repoFile('services/BibleAudioDownloads.ts').match(/const HELLOAO_AUDIO = '([^']+)'/)?.[1];
 
 describe('status page checks', () => {
-  it('lists nine checks, each with its own name and address', () => {
-    expect(rows).toHaveLength(9);
-    expect(checks.size).toBe(9);
-    expect(new Set(rows.map(([, url]) => url)).size).toBe(9);
+  it('lists eleven checks, each with its own name and address', () => {
+    expect(rows).toHaveLength(11);
+    expect(checks.size).toBe(11);
+    expect(new Set(rows.map(([, url]) => url)).size).toBe(11);
   });
 
   it("checks John 3 at each of the app's Mandarin sources, in the app's order", () => {
     expect(mandarin).toEqual([
+      check('HelloAO, Mandarin audio'),
       check('Adventist Connect, Mandarin audio'),
       check('Internet Archive, Mandarin fallback'),
       check('Audio Power, Mandarin fallback'),
     ]);
   });
 
-  it("checks the church's Cantonese and Spanish copies of John 3", () => {
-    expect(check('Adventist Connect, Cantonese audio')).toBe(getCantoneseCuvChapterUrl('JHN', 3));
+  it("checks John 3 at each of the app's Cantonese sources, and the church's Spanish copy", () => {
+    expect(getCantoneseCuvChapterUrls('JHN', 3)).toEqual([
+      check('HelloAO, Cantonese audio'),
+      check('Adventist Connect, Cantonese audio'),
+    ]);
     expect(Object.values(getRv1909ChapterLinks('JHN', 3)).flat()).toEqual([
       check('Adventist Connect, Spanish audio'),
     ]);
@@ -72,7 +76,7 @@ describe('status page checks', () => {
 
   it('asks audio hosts for headers only, never the recording', () => {
     const audioRows = page.split('\n').filter((line) => /\| `https:\/\/[^`]+\.mp3` \|/.test(line));
-    expect(audioRows).toHaveLength(6);
+    expect(audioRows).toHaveLength(8);
     for (const row of audioRows) expect(row).toMatch(/\| `HEAD` \|$/);
   });
 });

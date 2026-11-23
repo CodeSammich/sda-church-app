@@ -547,7 +547,10 @@ describe('Android audio e2e', () => {
     expect(workflow).toContain('name: Bible audio on an Android emulator');
   });
 
-  it('runs the scenarios with the church host blocked, as they expect', () => {
+  it("runs the scenarios with HelloAO's and the church's hosts blocked, as they expect", () => {
+    // Mandarin plays from HelloAO first, then the church's copy (#749), so
+    // both are blocked for the Internet Archive to be reached.
+    expect(workflow).toContain('--local=/audio.bible.helloao.org/');
     expect(workflow).toContain('--local=/adventistconnect.org/');
     expect(workflow).toContain("E2E_PRIMARY_BLOCKED: '1'");
     expect(workflow).toContain('scripts/e2e/android-bible-audio.sh');
@@ -555,7 +558,8 @@ describe('Android audio e2e', () => {
 
   it('bounds the DNS tool install, so a hung Ubuntu mirror fails in minutes, not at the job limit', () => {
     // On 2026-11-05 apt-get hung for 88 minutes, until the 90-minute job limit.
-    const start = workflow.indexOf("- name: Make the church's audio host unreachable");
+    const start = workflow.indexOf("- name: Make HelloAO's and the church's audio hosts unreachable");
+    expect(start).toBeGreaterThan(-1);
     const step = workflow.slice(start, workflow.indexOf('- name:', start + 1));
     expect(step).toContain('timeout-minutes: 10');
     expect(step).toContain('sudo timeout --kill-after=10 240 apt-get update -qq &&');

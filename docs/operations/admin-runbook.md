@@ -1283,8 +1283,8 @@ Bible chapters to check what only a real player shows:
   no crash in the log. The key screens open every screen by deep link and never
   press a tab, so they missed 1.7.0's first test builds crashing on every tab press.
 - **Primary host down:** a local DNS server on the runner makes
-  `assets.adventistconnect.org` unreachable, and Genesis 1 must play from the
-  Internet Archive.
+  `audio.bible.helloao.org` and `assets.adventistconnect.org` unreachable, and
+  Genesis 1 must play from the Internet Archive, its third copy ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)).
 - **Next chapter with the screen off:** Psalm 117 moves on to Psalm 118 by itself,
   the screen stays off, and the media foreground service stays up.
 - **Dead zone with the screen off:** Play offline, wait 90 seconds, then reconnect.

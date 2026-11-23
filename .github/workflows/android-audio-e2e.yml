@@ -95,10 +95,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # A local DNS server answers "no such domain" for the church's audio
-      # host, so the primary source fails as it would in an outage, without
-      # changing the app. Every other name resolves normally.
-      - name: Make the church's audio host unreachable
+      # A local DNS server answers "no such domain" for HelloAO's audio host
+      # and the church's, the first two copies of the Mandarin recording
+      # (#749), so both fail as they would in an outage, without changing the
+      # app. Every other name resolves normally.
+      - name: Make HelloAO's and the church's audio hosts unreachable
         # Ubuntu's package servers can hang without a word: on 2026-11-05 this
         # step sat for 88 minutes, until the job's own limit. Each try at the
         # install gets 4 minutes, with one more try after a pause.
@@ -119,6 +120,7 @@ jobs:
           dns_ip="$(hostname -I | awk '{print $1}')"
           sudo dnsmasq --listen-address="$dns_ip" --bind-interfaces --no-hosts \
             --resolv-file=/run/systemd/resolve/resolv.conf \
+            --local=/audio.bible.helloao.org/ \
             --local=/adventistconnect.org/ \
             --log-queries --log-facility="$RUNNER_TEMP/dnsmasq.log" \
             --pid-file="$RUNNER_TEMP/dnsmasq.pid"
@@ -169,17 +171,19 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get install -y --no-install-recommends ffmpeg >/dev/null
 
-      - name: Check that only the church's host is blocked
+      - name: Check that only HelloAO's and the church's hosts are blocked
         run: |
           set -euo pipefail
-          blocked="$(adb shell ping -c 1 -W 2 assets.adventistconnect.org 2>&1 | tr -d '\r' || true)"
+          for host in audio.bible.helloao.org assets.adventistconnect.org; do
+            blocked="$(adb shell ping -c 1 -W 2 "$host" 2>&1 | tr -d '\r' || true)"
+            echo "$host: $blocked"
+            grep -i 'unknown host' <<< "$blocked" >/dev/null || {
+              echo "$host still resolves; the host block is not working." >&2
+              exit 1
+            }
+          done
           allowed="$(adb shell ping -c 1 -W 2 archive.org 2>&1 | tr -d '\r' || true)"
-          echo "assets.adventistconnect.org: $blocked"
           echo "archive.org: $allowed"
-          grep -i 'unknown host' <<< "$blocked" >/dev/null || {
-            echo 'The church audio host still resolves; the host block is not working.' >&2
-            exit 1
-          }
           grep -i 'unknown host' <<< "$allowed" >/dev/null && {
             echo 'archive.org does not resolve; the emulator has no working DNS.' >&2
             exit 1

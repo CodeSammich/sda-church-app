@@ -121,16 +121,23 @@ describe('Bible audio downloads', () => {
     expect(getDownloadableBibleAudioNarrator('BSB')).toBeNull();
   });
 
-  it("download Mandarin from the church's copy first, then its mirrors", () => {
+  it("download Mandarin from HelloAO first, then the church's copy and its mirrors (#749)", () => {
     expect(getBibleAudioDownloadUrls('cuv-mandarin', 'JHN', 3).map((url) => new URL(url).hostname)).toEqual([
+      'audio.bible.helloao.org',
       'assets.adventistconnect.org',
       'archive.org',
       'theaudiopower.com',
     ]);
   });
 
-  it("download the WordProject recordings only from the church's copies, never WordProject's servers", () => {
-    for (const narrator of ['cuv-cantonese', 'rv1909']) {
+  it("download the WordProject recordings from HelloAO's copy and the church's, never WordProject's servers", () => {
+    // HelloAO hosts the Cantonese recording too (#749); the Spanish one only
+    // the church does.
+    const hosts = {
+      'cuv-cantonese': ['audio.bible.helloao.org', 'assets.adventistconnect.org'],
+      rv1909: ['assets.adventistconnect.org'],
+    };
+    for (const [narrator, expected] of Object.entries(hosts)) {
       for (const [bookId, chapters] of BIBLE_AUDIO_BOOKS) {
         for (let chapter = 1; chapter <= chapters; chapter += 1) {
           const urls = getBibleAudioDownloadUrls(narrator, bookId, chapter);
@@ -138,7 +145,7 @@ describe('Bible audio downloads', () => {
             narrator,
             bookId,
             chapter,
-            ['assets.adventistconnect.org'],
+            expected,
           ]);
         }
       }
@@ -230,15 +237,19 @@ describe('Bible audio downloads', () => {
     expect(snapshotDownloadedChapters(null)('JUD', 1)).toBeNull();
   });
 
-  it("move to the next mirror when the church's copy fails", async () => {
+  it('move to the next mirror when HelloAO and the church\'s copy fail', async () => {
     const download = mockDownloads(async (url, destination) => {
-      if (url.includes('adventistconnect')) throw new Error('HTTP 503');
+      if (url.includes('helloao') || url.includes('adventistconnect')) throw new Error('HTTP 503');
       mockChapterFile(destination.uri, url);
       return destination;
     });
     downloadBibleAudio('cuv-mandarin', JUDE);
     await until(isDone(JUDE));
-    expect(download.mock.calls.map(([url]) => new URL(url).hostname)).toEqual(['assets.adventistconnect.org', 'archive.org']);
+    expect(download.mock.calls.map(([url]) => new URL(url).hostname)).toEqual([
+      'audio.bible.helloao.org',
+      'assets.adventistconnect.org',
+      'archive.org',
+    ]);
     expect(mockFiles.get('document/bible-audio/cuv-mandarin/JUD/1.mp3')).toContain('archive.org');
   });
 

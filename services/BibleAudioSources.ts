@@ -7,6 +7,12 @@ export interface TranslationBookChapterAudioLinks {
   [reader: string]: string | string[];
 }
 
+// HelloAO's Free Use Bible API hosts both CUV recordings, the same files the
+// church hosts, with the church's verse timings (#749). Mandarin:
+// https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592
+// Both, measured: https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847
+// Its terms: "Cache, store and download without expiry".
+const HELLOAO_CUV_AUDIO_BASE = 'https://audio.bible.helloao.org/api/cmn_cuv';
 const AUDIO_POWER_CUV_RECORDINGS_BASE =
   'https://theaudiopower.com/CUV/Recordings';
 const ARCHIVE_ORG_CUV_RECORDINGS_BASE =
@@ -74,8 +80,15 @@ export const BIBLE_AUDIO_READERS_STORAGE_KEY = 'user-bible-audio-readers';
 export const getAudioReaderPreferenceKey = (translationId: string) =>
   supportsAudioPowerCuv(translationId) ? 'cuv' : translationId;
 
+/** HelloAO's copy of a CUV chapter, by its name for the recording (#749). */
+const getHelloAoCuvChapterUrl = (
+  bookId: string,
+  chapter: number,
+  recording: 'mandarin' | 'wordproject_cantonese',
+) => `${HELLOAO_CUV_AUDIO_BASE}/${bookId.toUpperCase()}/${chapter}/audio/${recording}.mp3`;
+
 /**
- * Builds the three ordered mirrors for an Audio Power CUV chapter recording.
+ * Builds the four ordered mirrors for an Audio Power CUV chapter recording.
  *
  * Audio Power's owner explicitly approved the church app's use, download, and
  * self-hosting of these recordings. Preserve the permission record when
@@ -107,12 +120,15 @@ export const getAudioPowerCuvChapterLinks = (
   const churchHostedUrl = CUV_ADVENTIST_AUDIO_URLS[canonicalFilename];
 
   // These are mirrors of one recording, not separate narrator choices. These
-  // fallback URLs are valid only for the Audio Power narrator. The Internet
-  // Archive comes before Audio Power's own server: if the church copy fails,
-  // every listener moves to the next mirror at once, and a small ministry's
-  // single server shouldn't absorb that load.
+  // fallback URLs are valid only for the Audio Power narrator. HelloAO comes
+  // first, as it does for the English narrators: it's built to serve the
+  // whole Bible to apps, so the church's own copy is the first fallback
+  // (#749). The Internet Archive comes before Audio Power's own server: if
+  // both copies before it fail, every listener moves to the next mirror at
+  // once, and a small ministry's single server shouldn't absorb that load.
   return {
     [AUDIO_POWER_CUV_READER]: [
+      getHelloAoCuvChapterUrl(bookId, chapter, 'mandarin'),
       ...(churchHostedUrl ? [churchHostedUrl] : []),
       `${ARCHIVE_ORG_CUV_RECORDINGS_BASE}/${canonicalFilename}`,
       `${AUDIO_POWER_CUV_RECORDINGS_BASE}/${sourceFilename}`,
@@ -132,10 +148,11 @@ export const WORDPROJECT_CANTONESE_AUDIO_URL =
  * isn't one. Files are named `<prefix>_B<book>C<chapter>.mp3`, such as
  * `CANTONESE_B43C003.mp3` for John 3.
  *
- * WordProject's terms forbid apps from linking whole Bibles to its servers, so
- * there is deliberately no fallback mirror: never add `wordproaudio.net` or
- * another WordProject host here without WordProject's written approval. See
- * the WordProject sections of docs/LEGAL.md.
+ * WordProject's terms forbid apps from linking whole Bibles to its servers:
+ * never add `wordproaudio.net` or another WordProject host here without
+ * WordProject's written approval. HelloAO's copy of the Cantonese recording
+ * isn't on WordProject's servers (#749). See the WordProject sections of
+ * docs/LEGAL.md.
  */
 const getWordProjectChapterUrl = (
   manifest: Readonly<Record<string, string>>,
@@ -169,6 +186,16 @@ export const getCantoneseCuvChapterUrl = (bookId: string, chapter: number) =>
   );
 
 /**
+ * Where a CUV chapter's Cantonese recording streams from, in the order tried:
+ * HelloAO's copy, then the church's (#749). Empty for a book or chapter that
+ * doesn't exist.
+ */
+export const getCantoneseCuvChapterUrls = (bookId: string, chapter: number): string[] => {
+  const church = getCantoneseCuvChapterUrl(bookId, chapter);
+  return church ? [getHelloAoCuvChapterUrl(bookId, chapter, 'wordproject_cantonese'), church] : [];
+};
+
+/**
  * Every narrator for a CUV chapter, in the order the narrator list shows them:
  * the Mandarin recording first, so it stays the default, then Cantonese.
  */
@@ -177,8 +204,8 @@ export const getCuvChapterAudioLinks = (
   chapter: number,
 ): TranslationBookChapterAudioLinks => {
   const links = getAudioPowerCuvChapterLinks(bookId, chapter);
-  const cantonese = getCantoneseCuvChapterUrl(bookId, chapter);
-  return cantonese ? { ...links, [CANTONESE_CUV_READER]: [cantonese] } : links;
+  const cantonese = getCantoneseCuvChapterUrls(bookId, chapter);
+  return cantonese.length > 0 ? { ...links, [CANTONESE_CUV_READER]: cantonese } : links;
 };
 
 /** The spoken language of a CUV recording. */
