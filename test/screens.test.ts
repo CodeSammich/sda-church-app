@@ -15,6 +15,8 @@ const {
   writeAppStoreCopy,
   manifestPath,
   statusBarClear,
+  statusBarIcons,
+  CHECKS,
   looksBlank,
   looksLikeSplash,
   takeFinalShot,
@@ -61,7 +63,26 @@ describe('key screen list (test/screens/screens.json)', () => {
   });
 
   it('only uses checks the script knows', () => {
-    for (const shot of shots) for (const check of shot.checks) expect(check).toBe('statusBarClear');
+    for (const shot of [...shots, ...planCaptures(config, 'ipad')]) {
+      for (const check of shot.checks) expect(Object.keys(CHECKS)).toContain(check);
+    }
+    // Android's script knows only this one.
+    for (const platform of ['android', 'android-tablet']) {
+      for (const shot of planCaptures(config, platform)) {
+        for (const check of shot.checks) expect(check).toBe('statusBarClear');
+      }
+    }
+  });
+
+  it("checks the iPhone's status bar icons over the heroes and on Home (#733)", () => {
+    const checksOf = (name: string, platform = 'ios') =>
+      planCaptures(config, platform).find((shot: { name: string }) => shot.name === name)?.checks;
+    for (const name of ['library-default', 'library-dark', 'hymnal-selection-default', 'hymnal-default']) {
+      expect(checksOf(name)).toContain('lightStatusBarIcons');
+    }
+    for (const name of ['home-default', 'home-dark']) expect(checksOf(name)).toContain('themeStatusBarIcons');
+    expect(checksOf('library-default', 'android')).toEqual([]);
+    expect(checksOf('home-default', 'android')).toEqual([]);
   });
 
   it('gives every shot a stable, unique file name', () => {
@@ -743,6 +764,48 @@ describe('status bar check', () => {
 
   it('ignores text that starts below the status bar', async () => {
     expect(await statusBarClear(await screenshot('below', { island: true, textAt: 190 }))).toBe(true);
+  });
+});
+
+describe('status bar icon check', () => {
+  const sharp = require('sharp');
+  const { mkdtempSync } = require('node:fs');
+  const { tmpdir } = require('node:os');
+  const { join } = require('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'icons-'));
+
+  // A 1320 × 2868 screenshot whose clock is four strokes in `clock`, over `behind`.
+  const screenshot = async (name: string, behind: string, clock: string) => {
+    const file = join(dir, `${name}.png`);
+    const strokes = [200, 230, 260, 285].map((left) => ({
+      input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="60"><rect width="12" height="60" fill="${clock}"/></svg>`),
+      left,
+      top: 60,
+    }));
+    await sharp({ create: { width: 1320, height: 2868, channels: 3, background: behind } })
+      .composite(strokes)
+      .png()
+      .toFile(file);
+    return file;
+  };
+
+  it('tells light icons over a dark hero from dark icons on a light page', async () => {
+    expect(await statusBarIcons(await screenshot('light', '#1d2226', '#ffffff'))).toBe('light');
+    expect(await statusBarIcons(await screenshot('dark', '#f3e6df', '#000000'))).toBe('dark');
+  });
+
+  it("fails a hero whose dark clock can't be read", async () => {
+    const file = await screenshot('unreadable', '#1d2226', '#000000');
+    expect(await statusBarIcons(file)).toBeNull();
+    expect(await CHECKS.lightStatusBarIcons(file)).toBe(false);
+  });
+
+  it("expects the theme's icons on Home", async () => {
+    const light = await screenshot('theme-light', '#1d2226', '#ffffff');
+    const dark = await screenshot('theme-dark', '#f3e6df', '#000000');
+    expect(await CHECKS.themeStatusBarIcons(light, { settings: { theme: 'dark' } })).toBe(true);
+    expect(await CHECKS.themeStatusBarIcons(dark, { settings: { theme: 'light' } })).toBe(true);
+    expect(await CHECKS.themeStatusBarIcons(dark, { settings: { theme: 'dark' } })).toBe(false);
   });
 });
 

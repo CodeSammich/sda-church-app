@@ -407,6 +407,20 @@ describe('audio that keeps playing (#551)', () => {
     expect(checkAdvance(playing, dock('0:04'), dock('0:07'))).toHaveLength(1);
   });
 
+  it("reads the iPad's elapsed time, not its status bar clock further left (#739)", () => {
+    // As Vision read the iPad in landscape: the clock with its date at the
+    // far left of the status bar, then the dock's elapsed time and length.
+    const ipadDock = (elapsed: string) => [
+      { text: '9:41 AM Sun Nov 22', box: [0.017, 0.008, 0.103, 0.016] },
+      { text: `${elapsed}→`, box: [0.275, 0.793, 0.057, 0.021] },
+      { text: '1:11', box: [0.703, 0.797, 0.022, 0.012] },
+    ];
+    expect(checkAdvance(playing, ipadDock('0:03'), ipadDock('0:18'))).toEqual([]);
+    expect(checkAdvance(playing, ipadDock('0:03'), ipadDock('0:03'))).toEqual([
+      'the time shown went from 0:03 to 0:03 in 10 seconds, not on by at least 5',
+    ]);
+  });
+
   it('fails when the later shot or its time is missing', () => {
     expect(checkAdvance(playing, dock('0:04'), undefined)).toEqual(['no later screenshot']);
     const noTime = [{ text: 'Psalms v', box: [0.24, 0.865, 0.158, 0.015] }];

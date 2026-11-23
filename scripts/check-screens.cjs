@@ -300,11 +300,18 @@ const secondsOf = (match) => Number(match[1]) * 60 + Number(match[2]);
  * `mustAdvance`, a regular expression whose first two groups are its minutes
  * and seconds: the audio player's elapsed time, left of its length.
  */
+// The status bar's clock reads as a time too, and on the iPad in landscape it's
+// the leftmost line, "9:41 AM Sun Nov 22" (#739). Its top is within the top 3%
+// of the screen on the iPhone (0.026) and the iPad (0.008), so a time must start
+// below this.
+const BELOW_STATUS_BAR_CLOCK = 0.05;
+
 const checkAdvance = (shot, lines, laterLines) => {
   if (!shot.mustAdvance || !shot.later) return [];
   const pattern = new RegExp(shot.mustAdvance, 'u');
   const timeIn = (read) =>
     [...(read || [])]
+      .filter((line) => line.box[1] >= BELOW_STATUS_BAR_CLOCK)
       .sort((a, b) => a.box[0] - b.box[0])
       .map((line) => pattern.exec(line.text.trim()))
       .find(Boolean);
