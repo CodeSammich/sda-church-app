@@ -113,7 +113,7 @@ jobs:
         with:
           # Nothing in this job pushes, so its steps (and the tools they run) get no token.
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -279,7 +279,7 @@ jobs:
 
       - name: Share the app with the other runners
         if: ${{ matrix.builds }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-simulator-app-${{ github.run_id }}
           path: ${{ runner.temp }}/ios-simulator-app/app.zip
@@ -338,7 +338,7 @@ jobs:
 
       - name: Download the shared app
         if: ${{ !matrix.builds }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ios-simulator-app-${{ github.run_id }}
           path: ${{ runner.temp }}/ios-simulator-app
@@ -431,7 +431,7 @@ jobs:
 
       - name: Upload this group
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: key-screens-${{ github.run_id }}-${{ matrix.group }}
           path: ${{ runner.temp }}/ios-pr-preview/
@@ -481,7 +481,7 @@ jobs:
 
       - name: Upload this group's iPad shots
         if: ${{ always() && steps.ipad.outcome != 'skipped' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: key-screens-${{ github.run_id }}-${{ matrix.group }}-ipad
           path: ${{ runner.temp }}/ipad-part/
@@ -508,7 +508,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -518,7 +518,7 @@ jobs:
         run: npm ci
 
       - name: Download the groups
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: key-screens-${{ github.run_id }}-*
           path: ${{ runner.temp }}/parts
@@ -549,7 +549,7 @@ jobs:
 
       - name: Upload the iPhone screenshots
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-iphone-1
           path: ${{ runner.temp }}/review/iphone-1/
@@ -558,7 +558,7 @@ jobs:
 
       - name: Upload the iPhone screenshots, part 2
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-iphone-2
           path: ${{ runner.temp }}/review/iphone-2/
@@ -567,7 +567,7 @@ jobs:
 
       - name: Upload the iPhone screenshots, part 3
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-iphone-3
           path: ${{ runner.temp }}/review/iphone-3/
@@ -576,7 +576,7 @@ jobs:
 
       - name: Upload the iPad screenshots
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-ipad-1
           path: ${{ runner.temp }}/review/ipad-1/
@@ -585,7 +585,7 @@ jobs:
 
       - name: Upload the iPad screenshots, part 2
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-ipad-2
           path: ${{ runner.temp }}/review/ipad-2/
@@ -594,7 +594,7 @@ jobs:
 
       - name: Upload the iPad screenshots, part 3
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-ipad-3
           path: ${{ runner.temp }}/review/ipad-3/
@@ -605,7 +605,7 @@ jobs:
       # inside: together they passed it with three languages' sets (#681).
       - name: Upload the App Store's iPhone copies
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-app-store
           path: ${{ runner.temp }}/review/app-store/
@@ -614,7 +614,7 @@ jobs:
 
       - name: Upload the App Store's iPad copies
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-app-store-ipad
           path: ${{ runner.temp }}/review/app-store-ipad/
@@ -623,7 +623,7 @@ jobs:
 
       - name: Upload the Simulator app
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ios-pr-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-arm64
           path: ${{ runner.temp }}/ios-pr-preview/

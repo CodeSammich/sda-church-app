@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -72,7 +72,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6
         with:
           distribution: temurin
           java-version: 17
@@ -108,7 +108,7 @@ jobs:
           npm run build:android:apk:debug:intel -- --output "$RUNNER_TEMP/android-key-screens-app/app.apk"
 
       - name: Share the app with the emulator runners
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-emulator-app-${{ github.run_id }}
           path: ${{ runner.temp }}/android-key-screens-app/app.apk
@@ -165,7 +165,7 @@ jobs:
       - name: Free disk space for the emulator
         run: scripts/free-runner-disk.sh
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -174,7 +174,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6
         with:
           distribution: temurin
           java-version: 17
@@ -281,7 +281,7 @@ jobs:
           done
 
       - name: Download the app
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: android-emulator-app-${{ github.run_id }}
           path: ${{ runner.temp }}/android-key-screens-app
@@ -335,7 +335,7 @@ jobs:
 
       - name: Upload this group
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.run_id }}-${{ matrix.group }}
           path: ${{ runner.temp }}/android-key-screens/
@@ -361,7 +361,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -371,7 +371,7 @@ jobs:
         run: npm ci
 
       - name: Download the groups
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: android-key-screens-${{ github.run_id }}-*
           path: ${{ runner.temp }}/parts
@@ -397,7 +397,7 @@ jobs:
 
       - name: Upload the screenshots
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-1
           path: ${{ runner.temp }}/review/android-1/
@@ -406,7 +406,7 @@ jobs:
 
       - name: Upload the screenshots, part 2
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-2
           path: ${{ runner.temp }}/review/android-2/
@@ -415,7 +415,7 @@ jobs:
 
       - name: Upload the screenshots, part 3
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-3
           path: ${{ runner.temp }}/review/android-3/
@@ -424,7 +424,7 @@ jobs:
 
       - name: Upload the tablet screenshots
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-tablet-1
           path: ${{ runner.temp }}/review/android-tablet-1/
@@ -433,7 +433,7 @@ jobs:
 
       - name: Upload the tablet screenshots, part 2
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-tablet-2
           path: ${{ runner.temp }}/review/android-tablet-2/
@@ -442,7 +442,7 @@ jobs:
 
       - name: Upload the tablet screenshots, part 3
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-tablet-3
           path: ${{ runner.temp }}/review/android-tablet-3/
@@ -451,7 +451,7 @@ jobs:
 
       - name: Upload the Google Play copies
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play
           path: ${{ runner.temp }}/review/google-play/
@@ -460,7 +460,7 @@ jobs:
 
       - name: Upload the Google Play tablet copies
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play-tablet
           path: ${{ runner.temp }}/review/google-play-tablet/
