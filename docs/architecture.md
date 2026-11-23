@@ -115,8 +115,9 @@ and may not be possible, so protect them above everything else.
 - Where a service still signs in with an account outside the Workspace, move access
   to a `nyccsda.org` account or the `technology@nyccsda.org` group wherever the
   service allows it.
-- A super administrator regularly exports all of the Workspace's data and keeps a
-  copy off Google, in case the account itself is ever lost; see
+- A super administrator regularly exports all of the Workspace's data and keeps
+  two copies off Google, on two separate drives, in case the account itself is ever
+  lost; see
   [Google Workspace backups](operations/admin-runbook.md#google-workspace-backups).
 
 > [!IMPORTANT]
@@ -491,9 +492,28 @@ the church. Keep it that way: when a new service asks for a card, choose another
 service. Nothing else in the Cloudflare account costs money, and anything added
 there must stay on a free plan that fails at its limits instead of billing.
 
+**Every card on file is a credit card with a hard limit of about $200–300.** That
+covers every service the church pays for, which today is only the domain, and any
+paid service added later:
+
+- **The limit sits well above a year's charges on the card,** so a renewal is never
+  declined. The domain is about $10 a year, or about $100 to renew ten years at once
+  ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)), which leaves
+  plenty of room. Don't set the limit just above the renewal: a price rise or a
+  renewal of several years would be declined, and the domain could lapse.
+- **The limit caps the damage** if the card number leaks or someone misuses an
+  account that holds it: no one can charge more than the limit. A credit card's
+  charges can also be disputed with the bank before any church money leaves the
+  account.
+- **The limit is the card's own,** so use a card kept only for the church's paid
+  services, not one with a larger limit that is also used for everyday spending.
+
+How to set it up and check it each year:
+[The Cloudflare account and domain](operations/admin-runbook.md#the-cloudflare-account-and-domain).
+
 | Service | Payment method | Why |
 | --- | --- | --- |
-| Cloudflare | **A card** | Renews `nyccsda.org`, about $10 a year. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
+| Cloudflare | **A credit card with a hard limit of about $200–300** | Renews `nyccsda.org`, about $10 a year. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
 | Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
 | Google Play | None | The one-time $25 registration is paid; nothing recurs. |
 | Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
@@ -508,10 +528,10 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Developer membership and resubmit nonprofit status | App removed from the App Store |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Distribution certificate and provisioning profile, update GitHub secrets, and record the new dates; see the [renewal checklist](operations/app-store-setup.md#renewal-checklist) | iOS builds fail; app can't be updated |
 | First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, due February 28) | Work through the checklist, which covers the yearly rows below and more | A card expires, a bill starts, or an account can't be recovered, unnoticed |
-| Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
+| Yearly (in the checkup) | Check the Cloudflare card hasn't expired and still has its hard limit of about $200–300, the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
 | Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
-| First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and keep a copy off Google | If the account is suspended or taken over, its email and files are gone |
+| First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and copy it onto two separate drives, off Google | If the account is suspended or taken over, its email and files are gone |
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
@@ -526,7 +546,8 @@ Priority; see [Maintenance issues](operations/admin-runbook.md#maintenance-issue
 
 - **Apply for nonprofit status** wherever a provider offers it, using the church's
   own EIN and D-U-N-S number rather than the conference's.
-- **Free services only**, apart from small necessities such as the domain. **Never
+- **Free services only**, apart from small necessities such as the domain, which go
+  on a [card with a hard limit](#payment-methods) of about $200–300. **Never
   add a payment method to a service that bills by usage**, such as
   [Google Cloud](#google-cloud-free-only): a surprise bill is too great a risk.
 - **Two-factor authentication for every user, everywhere**, including on the

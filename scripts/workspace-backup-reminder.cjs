@@ -2,10 +2,11 @@
  * The Google Workspace backup reminder (#461). Every three months, on the
  * first Monday of January, April, July, and October,
  * .github/workflows/workspace-backup-reminder.yml opens an issue asking a super
- * administrator to export all of the church's Workspace data and keep a copy
- * off Google. The steps are in docs/operations/admin-runbook.md, under
- * "Google Workspace backups"; test/workspace-backup-reminder.test.ts checks
- * that every link still points at a real heading.
+ * administrator to export all of the church's Workspace data and keep two
+ * copies off Google, on two separate drives. The steps are in
+ * docs/operations/admin-runbook.md, under "Google Workspace backups";
+ * test/workspace-backup-reminder.test.ts checks that every link still points
+ * at a real heading.
  *
  * Called from actions/github-script, which passes its `github`, `context`, and
  * `core` objects in:
@@ -47,7 +48,7 @@ const STEPS = [
     'downloading-it',
   ],
   [
-    'Make a folder named for the export date, such as `Jan 4 2027 export backup`, on the backup drive: not the computer\'s system drive, and not a folder that syncs to a cloud account.',
+    'Make a folder named for the export date, such as `Jan 4 2027 export backup`, on the first backup drive: not the computer\'s system drive, and not a folder that syncs to a cloud account.',
     'downloading-it',
   ],
   [
@@ -55,11 +56,15 @@ const STEPS = [
     'downloading-it',
   ],
   [
-    'Check the copy: the downloaded export folder is exactly as many bytes as the export, and no file ends in `_.gstmp`.',
+    'Copy the whole folder onto the second backup drive: a separate external drive, kept unplugged and away from the computer between backups, so one fire, theft, or ransomware attack can\'t reach both copies.',
+    'copying-it-to-the-second-drive',
+  ],
+  [
+    'Check both copies: on each drive, the export folder is exactly as many bytes as the export, and no file ends in `_.gstmp`.',
     'checking-the-copy',
   ],
   [
-    'Comment here with the export\'s date and size. If the drive is low on space, delete the oldest export, but keep the two newest.',
+    'Comment here with the export\'s date and size. If a drive is low on space, delete its oldest export, but keep the two newest on each drive.',
     'checking-the-copy',
   ],
 ];
@@ -68,7 +73,7 @@ const STEPS = [
 const buildWorkspaceBackup = (year, month, repoUrl) => ({
   title: workspaceBackupTitle(year, month),
   body: [
-    'Every three months, back up the church\'s Google Workspace: export all of its email, files, and other data, and keep a copy off Google, in case the account is ever suspended, taken over, or emptied. Tick each box as you go, and close this issue when the copy is checked.',
+    'Every three months, back up the church\'s Google Workspace: export all of its email, files, and other data, and keep two copies off Google, on two separate drives, in case the account is ever suspended, taken over, or emptied. Tick each box as you go, and close this issue when both copies are checked.',
     '',
     // Read by .github/workflows/due-date-reminders.yml, which comments here
     // 30 and 7 days before this date, and once after it passes, while the

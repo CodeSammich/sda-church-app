@@ -104,10 +104,11 @@ one place. Church admins can start at [Operate](#operate).
 - [Upkeep calendar](docs/architecture.md#upkeep-calendar): what to renew or check each
   quarter or year, and what breaks if it's missed
 - [Google Workspace backups](docs/operations/admin-runbook.md#google-workspace-backups):
-  every three months, export all of the church's email and files and keep a copy off
-  Google
+  every three months, export all of the church's email and files and copy it onto two
+  separate drives, off Google
 - [Payment methods](docs/architecture.md#payment-methods): which service has a card
-  on file (only Cloudflare, for the domain), and why no other may
+  on file (only Cloudflare, for the domain), why no other may, and the hard limit of
+  about $200–300 on any card on file
 - [Credentials that need attention](docs/operations/admin-runbook.md#credentials-that-need-attention):
   each secret and key, where it's kept, and when to act
 - [Pastors and elders](docs/operations/admin-runbook.md#updating-pastors-and-elders):

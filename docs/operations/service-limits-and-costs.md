@@ -27,7 +27,10 @@ provider changes its terms.
 "At the limit" says what happens if the app exceeds the provider's limit. **No
 service in this table can bill the church for usage.** The only recurring cost in the
 whole system is the domain, and Cloudflare, which renews it, is the only service with
-a card on file (see [Payment methods](../architecture.md#payment-methods)).
+a card on file. Like any card on file, it's a credit card with a hard limit of about
+$200–300: well above the domain's yearly renewal, so the renewal never fails, and low
+enough to cap the damage if the card or account is misused (see
+[Payment methods](../architecture.md#payment-methods)).
 
 | Service | Used for | Cost | Published limit | At the limit | Load concern |
 | --- | --- | --- | --- | --- | --- |
@@ -407,6 +410,7 @@ Checked 2026-09-28.
 
 The domain, about $10 a year, is the **only recurring cost**; DNS and the redirect are
 free, and no usage-billed product may be added to the account, which keeps a card on file
+with a hard limit of about $200–300
 ([The Cloudflare account and domain](admin-runbook.md#the-cloudflare-account-and-domain)).
 
 ### App stores
