@@ -52,7 +52,7 @@
   },
   "groups": {
     "home": "The Home tab and the pages it opens: Discover, About, Give, Sabbath Worship, and a bulletin that couldn't load, and first-launch setup over it. Home's other pages are in other groups, for time: the hymnals and the bulletin in worship-and-you, and Team, Fellowships, Joining the Church and Give's Other Sponsors popup in bible-text (#456).",
-    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, the popup a tapped verse opens, the chapter list, the saved verses, and Offline Bible Audio, which its audio settings open, with its narrator popup.",
+    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, the popup a tapped verse opens, with a hymn and with a footnote, the chapter list, the saved verses, and Offline Bible Audio, which its audio settings open, with its narrator popup.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah. Its runner compiles the app first, so it takes the group shotCost's estimate puts lightest, and with it some of Home's pages that fit nowhere else: Team, Fellowships, Joining the Church, and Give's Other Sponsors popup.",
     "library": "The Explore tab, Sabbath School, and the Library: featured books, shelves, and each collection. Also, on the iPhone only, a children's lesson open in Quick Look (#551). Sabbath School moved here from worship-and-you in 1.7.0, whose release run took 37 minutes on that group, with the iPad's shots, against 24 on this one.",
     "worship-and-you": "Worship: the hymnals and the Weekly Bulletin, with its program (#456). Then the You tab with its open-source licenses page and its Text size and Language dialogs. Also, on the iPhone only, Bible audio playing (#551). On 1.8.0's release run (https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635) its iPhone and iPad shots took 12.5 minutes against 18.4 to 20.5 on the other groups, so it took the bulletin's shots. On the first run with them (https://github.com/CodeSammich/sda-church-app/actions/runs/42935088042) it was the slowest, with the most shots and its tab presses, so Sabbath Worship and the bulletin that couldn't load moved to home, whose shots were the fastest there."
@@ -226,6 +226,23 @@
       "variants": ["default"],
       "ipadVariants": ["landscape"],
       "mustShowLines": ["^Luke 2:14$", { "line": "\\bShare Verse$", "platforms": ["ios", "android"] }, { "line": "\\bShare$", "platforms": ["ipad"] }, { "line": "^Verse$", "platforms": ["ipad"] }, "\\bHymns$", "^Source: Statistical Restoration Greek\\b", "\\bCC BY 4\\.0\\b"],
+      "mustNotShowLines": ["^Close$"]
+    },
+    {
+      "name": "bible-verse-footnote",
+      "group": "bible-reading",
+      "$comment": "A verse with a footnote in the popup a tapped verse opens, opened by popup=verse (#745): the footnote comes before the Greek. 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), and no hymn names it, so with no Hymns button the Greek's credit still shows below the footnote on the iPhone, the iPad and the Android phone. bible-verse-popup checks the Hymns button on Luke 2:14, which has no footnote: one verse with both, John 20:16, filled the popup to its height limit on every device, with the credit below the fold (fork runs 45110485284 and 45110488597). The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813), and on the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <.",
+      "path": "bible?bookId=1CO&chapter=15&translationId=BSB&verseStart=5&verseEnd=5&popup=verse",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": [
+        "^1 ?Corinthians 15:5$",
+        { "line": "^Footnote", "above": "\\bKoine Greek \\(Original\\)" },
+        "\\bShare Verse$",
+        "^Source: Statistical Restoration\\b",
+        "\\bCC BY 4\\.0\\b"
+      ],
       "mustNotShowLines": ["^Close$"]
     },
     {

@@ -14,8 +14,9 @@
  * - a screen's own `mustShowLines` in test/screens/screens.json match the start
  *   of some line, which catches a verse number split across two lines (a rule
  *   with `minLeft` also needs the line to start that far across, for
- *   right-aligned text, and one with `maxTop` no farther down than that, such
- *   as a popup's title), and its
+ *   right-aligned text, one with `maxTop` no farther down than that, such
+ *   as a popup's title, and one with `above` higher up than the first line
+ *   another pattern matches, such as a verse's footnote above its Greek), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
  *   such as the Bible header's names, required on the Android phone at 100% only;
  * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
@@ -264,11 +265,13 @@ const checkShot = (shot, lines) => {
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {
-    // A rule is a regular expression, or { line, minLeft, maxTop } for a line
-    // that must also start at least minLeft of the way across, such as
+    // A rule is a regular expression, or { line, minLeft, maxTop, above } for a
+    // line that must also start at least minLeft of the way across, such as
     // right-aligned text, or have its top no more than maxTop of the way down,
-    // such as a popup's title, which sits high when the popup is centred.
-    const { line: pattern, minLeft, maxTop } = typeof rule === 'string' ? { line: rule } : rule;
+    // such as a popup's title, which sits high when the popup is centred, or
+    // sit higher than the first line matching `above`, which must show too,
+    // such as a verse's footnote above its Greek (#745).
+    const { line: pattern, minLeft, maxTop, above } = typeof rule === 'string' ? { line: rule } : rule;
     const matches = lines.filter((line) => new RegExp(pattern, 'u').test(line.text.trim()));
     if (!matches.length) {
       problems.push(`no line matches /${pattern}/`);
@@ -282,6 +285,13 @@ const checkShot = (shot, lines) => {
       problems.push(
         `/${pattern}/ is ${Math.round(highest * 100)}% of the way down, not at most ${Math.round(maxTop * 100)}%`,
       );
+    } else if (above !== undefined) {
+      const lower = lines.filter((line) => new RegExp(above, 'u').test(line.text.trim()));
+      if (!lower.length) {
+        problems.push(`no line matches /${above}/`);
+      } else if (!matches.some((line) => line.box[1] < Math.min(...lower.map(({ box }) => box[1])))) {
+        problems.push(`/${pattern}/ is not above /${above}/`);
+      }
     }
   }
   for (const rule of forPlatform(shot.mustNotShowLines, shot.platform)) {

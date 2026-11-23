@@ -1005,8 +1005,10 @@ every screen must show:
   number split across two lines fails, and its `mustNotShowLines`, which no line may
   match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a
   line that must start at least that far across, such as Psalm 9's right-aligned
-  "Selah", or `{ "line": …, "maxTop": 0.4 }`, for one that must start no farther
-  down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header opened from Home uses
+  "Selah", or `{ "line": …, "above": … }`, for one that must start higher than the
+  first line another pattern matches, such as the verse popup's footnote above its
+  Greek (#745), or `{ "line": …, "maxTop": 0.4 }`, for one that must start no farther
+  down than that, such as the centred audio settings popup's title. `variantRules` adds any of these for one variant. The Bible header opened from Home uses
   them: its translation button must show both full names at 100%, and on the iPhone at
   150% and 200% too, while the Android phone's narrower screen may drop them there;
 - no system prompt ("Open in"), setup screen ("Get Started"), or unfilled value
