@@ -75,12 +75,13 @@ describe('popup shots (#372)', () => {
 
   it("catch the verse's footnote back below its Greek (#745)", () => {
     const popup = (footnoteTop: number) => [
-      line('1 Corinthians 15:5', 0.24),
+      line('John 20:16', 0.24),
       line('Footnote 1', footnoteTop),
       line('Koine Greek (Original)', 0.45),
       line('Source: Statistical Restoration Greek New Testament. Edited by', 0.55),
       line('Licensed CC BY 4.0.', 0.6),
       line('< Share Verse', 0.7),
+      line('$ Hymns', 0.75),
     ];
     expect(checkShot(shot('bible-verse-popup-default'), popup(0.36))).toEqual([]);
     expect(checkShot(shot('bible-verse-popup-default'), popup(0.64))).toEqual([

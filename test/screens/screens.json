@@ -220,15 +220,18 @@
     {
       "name": "bible-verse-popup",
       "group": "bible-reading",
-      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The verse's footnote comes before its Greek (#745). 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), so the Greek's credit still shows below them on the iPhone and the iPad; John 3:16's pushed it out of view. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813), and on the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <.",
-      "path": "bible?bookId=1CO&chapter=15&translationId=BSB&verseStart=5&verseEnd=5&popup=verse",
+      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. John 20:16 is named by a hymn and has a footnote, so the popup's Hymns button must show beside Share Verse (#456), and its footnote above the Greek (#745). Its verse and footnote (\"Or in Aramaic\") are short, so the Greek's credit still shows below them on the iPhone and the iPad, where John 3:16's footnote pushed it out of view; Luke 2:14, on eight hymns, has no footnote. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. With Save, the three buttons share the iPad's 560-point popup at 150%, so Share Verse wraps inside its button there, onto two lines. Android's OCR drops spaces, as it read 1Corinthians and Footnote1 when this shot was 1 Corinthians 15:5 (fork run 44996503813), so the title may be John20:16. On the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <.",
+      "path": "bible?bookId=JHN&chapter=20&translationId=BSB&verseStart=16&verseEnd=16&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
       "mustShowLines": [
-        "^1 ?Corinthians 15:5$",
+        "^John ?20:16$",
         { "line": "^Footnote", "above": "\\bKoine Greek \\(Original\\)" },
-        "\\bShare Verse$",
+        { "line": "\\bShare Verse$", "platforms": ["ios", "android"] },
+        { "line": "\\bShare$", "platforms": ["ipad"] },
+        { "line": "^Verse$", "platforms": ["ipad"] },
+        "\\bHymns$",
         "^Source: Statistical Restoration\\b",
         "\\bCC BY 4\\.0\\b"
       ],
