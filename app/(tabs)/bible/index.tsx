@@ -10,8 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { addNetworkStateListener } from 'expo-network';
 import {
+  Fragment,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -140,6 +142,7 @@ import {
 } from '@/services/BiblePinyinService';
 import {
   getCenteredVerseScrollY,
+  getChapterLoadKey,
   getTopVisibleVerse,
   getTranslationSwitchPosition,
   isNewReaderLink,
@@ -756,8 +759,8 @@ export default function BibleScreen() {
   const lastScrollY = useRef(0);
   const readerScrollY = useRef(0);
   // Each verse's last layout, for following the verse being read (#561).
-  // Never cleared: onLayout only fires when a verse's layout changes, and a
-  // new chapter can reuse a verse's view, so a cleared entry might not return.
+  // Never cleared: each chapter load draws new verse rows (getChapterLoadKey),
+  // and each overwrites its verse's entry once it's laid out.
   const verseLayouts = useRef<Record<number, { y: number; height: number }>>({});
   // Whether the reader follows the verse being read aloud (#561), and the
   // timer that starts following again after a scroll by hand.
@@ -2684,6 +2687,19 @@ export default function BibleScreen() {
     );
   };
 
+  // Forgets the last chapter's verse positions as soon as a new chapter is
+  // drawn, before its verses report theirs. Each load draws new verse rows
+  // (getChapterLoadKey), and every row reports once it's laid out. Only a new
+  // chapter does this. The reset used to sit in the effect below, which also
+  // runs whenever the tabs hand down a new setMenuVisible, as every link
+  // makes them do. A link to the chapter on screen then wiped positions that
+  // no row reported again, and the reader gave up at the chapter's top. A
+  // passive effect could also run after some verses had reported and lose
+  // them. Either way the widget's verse of the day wasn't found (#742).
+  useLayoutEffect(() => {
+    if (chapterData) versePositions.current = {};
+  }, [chapterData]);
+
   // Scroll to top when chapter content changes
   useEffect(() => {
     // Restore the surrounding app chrome on mount or chapter change.
@@ -2691,7 +2707,6 @@ export default function BibleScreen() {
 
     if (chapterData) {
       clearSelection();
-      versePositions.current = {}; // Clear previous chapter positions
       clearTimeout(followResumeTimeout.current);
       followsReadingVerse.current = true;
 
@@ -4092,7 +4107,9 @@ export default function BibleScreen() {
           <ActivityIndicator style={ReaderStyles.loader} color={theme.colors.primary} />
         ) : (
           <>
-            {chapterData?.chapter.content.map((c, i) => renderContent(c, i))}
+            <Fragment key={getChapterLoadKey(chapterData)}>
+              {chapterData?.chapter.content.map((c, i) => renderContent(c, i))}
+            </Fragment>
             {chapterData?.translation.attribution && !loading && (
               <Text
                 variant="labelSmall"

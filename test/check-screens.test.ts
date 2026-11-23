@@ -253,9 +253,14 @@ describe('screen rules', () => {
     expect(checkShot(homeEs, [...tabs, line('Versículo de', 0.09), line('hoy', 0.17)])).toEqual([]);
     // What the 0.43.0 run showed: the heading broken mid-word.
     expect(checkShot(homeEs, [...tabs, line('Versícul', 0.08), line('o de hoy', 0.12)]))
-      .toEqual(['no line matches /^Vers[ií]culo\\b/']);
+      .toEqual(['no line matches /^Vers[ií]culo(\\b|de\\b)/']);
     // Vision can drop the accent when the photo's cross runs behind the heading.
     expect(checkShot(homeEs, [...tabs, line('Versiculo de', 0.08), line('hoy', 0.12)])).toEqual([]);
+    // Or the space after it, as on the Android phone at its largest font on
+    // 2026-11-22, where the cross ran between the two words (fork run 44994494002).
+    expect(checkShot(homeEs, [...tabs, line('Versículode', 0.051), line('hoy', 0.124)])).toEqual([]);
+    expect(checkShot(homeEs, [...tabs, line('Versículos', 0.051), line('hoy', 0.124)]))
+      .toEqual(['no line matches /^Vers[ií]culo(\\b|de\\b)/']);
     // English: Vision reads each button's icon as a character before its label.
     const homeEn = shot('home-xl-ios-large-text');
     const enTabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.94));
