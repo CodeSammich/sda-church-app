@@ -69,10 +69,8 @@ function appendCoverPanel_(cell, bulletin, format) {
 }
 
 function appendAnnouncementsPanel_(cell, bulletin, nextBulletin) {
-  // Printed bulletins may contain the full, human-approved announcement block.
-  // Keep this separate from the mobile bulletin: announcements are intentionally
-  // not rendered digitally because their content and formatting are fluid and
-  // they are already delivered in person and on the livestream.
+  // The same announcements the app shows, from Weekly Data (#562). Until then
+  // they were typed in the print dialog and printed only.
   appendCenteredText_(cell, 'Announcements | 報告事項', PRINTED_BULLETIN_TYPE.subheadingSize, true);
   appendPrintedAnnouncementsTable_(
     cell,

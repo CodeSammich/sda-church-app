@@ -1,6 +1,8 @@
 import Constants from 'expo-constants';
 
 import { getBulletinApiUrl } from '@/constants/ExternalLinks';
+import type { SupportedLanguage } from '@/constants/LanguageContext';
+import { traditionalToSimplified } from '@/services/BiblePinyinService';
 import { type CachedText, pruneCachedTexts, readCachedText, writeCachedText } from '@/services/CacheStore';
 
 /**
@@ -31,6 +33,18 @@ export type BulletinMetadataTranslation = {
   es: string;
 };
 
+/**
+ * One of a location's announcements (#562), a line of Weekly Data's
+ * Announcements cell, typed in any language. The API machine-translates it
+ * into each of these, Chinese in Traditional; a translation that failed is
+ * blank. A language added later is one more field, which this version ignores.
+ */
+export type BulletinAnnouncement = {
+  english: string;
+  chinese: string;
+  spanish?: string;
+};
+
 export type BulletinLocation = {
   hymnOfPraise: BilingualBulletinText;
   sermonTitle: BilingualBulletinText;
@@ -44,6 +58,11 @@ export type BulletinLocation = {
   sabbathSchoolHymns?: string[];
   /** The special music piece; specialMusic is who performs it. */
   specialMusicTitle?: string;
+  /**
+   * The week's announcements (#562). Bulletins served before it have none, or
+   * a blank string, as a phone's stored copy may still.
+   */
+  announcements?: BulletinAnnouncement[] | string;
   sermon: string;
   chairPastoralPrayer: string;
   offeringPrayer: string;
@@ -161,6 +180,30 @@ export const hasBulletinValue = (value: string | undefined) => {
   const normalized = value?.trim();
   return Boolean(normalized && normalized.toUpperCase() !== 'TBD');
 };
+
+const announcementText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+/**
+ * A location's announcements in the reader's language (#562): the Chinese for
+ * both scripts, converted for Simplified readers, the Spanish for Spanish
+ * readers, and the English otherwise. Where a language is missing, the other
+ * stands in, so no announcement is left out.
+ */
+export const getBulletinAnnouncements = (location: BulletinLocation, language: SupportedLanguage) =>
+  (Array.isArray(location.announcements) ? location.announcements : []).flatMap((announcement) => {
+    const english = announcementText(announcement?.english);
+    const chinese = announcementText(announcement?.chinese);
+    const spanish = announcementText(announcement?.spanish);
+    const shown =
+      language === 'zh'
+        ? chinese || english
+        : language === 'zh-cn'
+          ? (chinese && traditionalToSimplified(chinese)) || english
+          : language === 'es'
+            ? spanish || english || chinese
+            : english || chinese;
+    return shown ? [shown] : [];
+  });
 
 export const isBulletinLocationEmpty = (location: BulletinLocation) =>
   ![

@@ -22,7 +22,11 @@ var CONFIG = Object.freeze({
   cacheSeconds: 120,
   // Bump when the public bulletin shape or source contract changes so cached
   // pre-migration responses do not hide newly added roster fields.
-  cacheVersion: 'v8',
+  cacheVersion: 'v9',
+  // A machine translation is cached for up to this long, CacheService's
+  // longest, so an announcement is translated a few times a day, not per
+  // request.
+  translationCacheSeconds: 21600,
   dateHeaders: ['Date', 'Service Date', 'Sabbath Date', 'What date is this Sabbath?'],
   // The public API answers only for Sabbaths near today, so the roster's
   // history can't be read week by week. The app asks for this Sabbath and the
@@ -121,6 +125,10 @@ var BULLETIN_LOCATION_CONTENT_FIELDS = Object.freeze([
 // These headers are intentionally concise so final owners can correct a week's
 // content directly without an append-only response workflow.
 var BULLETIN_INTAKE_SCHEMA = Object.freeze([
+  // The week's announcement, for the app and the printed bulletin alike
+  // (#562): one, kept short, in any language. buildBulletin_
+  // machine-translates it into every language of BULLETIN_ANNOUNCEMENT_LANGUAGES.
+  { headers: ['Announcements'], path: ['announcementText'] },
   { headers: ['Bible Verses'], path: ['bibleVerses'] },
   { headers: ['English Sermon Title'], path: ['sermonTitle', 'english'] },
   { headers: ['Chinese Sermon Title'], path: ['sermonTitle', 'chinese'] },
@@ -180,10 +188,12 @@ var BULLETIN_SHEET_COLUMNS = Object.freeze({
     'Encouragement',
     'Sabbath School',
   ]),
-  // The speaker's columns, then the hymns in the order they're sung (#558).
+  // The announcements, then the speaker's columns, then the hymns in the
+  // order they're sung (#558, #562).
   'Weekly Data': Object.freeze([
     'Date',
     'Location',
+    'Announcements',
     'Bible Verses',
     'English Sermon Title',
     'Chinese Sermon Title',
@@ -841,6 +851,10 @@ function buildBulletin_(requestedDate, options) {
     bulletin.brooklyn,
     getBulletinIntakeRows_(spreadsheet, requestedDate, 'brooklyn'),
   );
+  // The app and the printed bulletin both get each announcement in English
+  // and Chinese, whatever it was typed in, and the app gets Spanish (#562).
+  bulletin.queens.announcements = translateBulletinAnnouncements_(bulletin.queens.announcements);
+  bulletin.brooklyn.announcements = translateBulletinAnnouncements_(bulletin.brooklyn.announcements);
 
   // The public app may localize these three English-only schedule metadata
   // fields. Bible text and Bible references must never pass through
@@ -919,6 +933,252 @@ function translateBulletinMetadataValue_(value) {
   return translations;
 }
 
+// The languages the API sends each announcement in (#562): the field each is
+// sent under and the translator's code for it. Each line is typed in any
+// language and machine-translated into every one of these. A language is added
+// here, as one more field, which older app versions ignore. The Chinese is
+// Traditional, as the bulletin prints it; the app converts it for Simplified
+// readers. See "Languages" in docs/feature_designs/announcements.md.
+var BULLETIN_ANNOUNCEMENT_LANGUAGES = Object.freeze([
+  Object.freeze({ field: 'english', code: 'en' }),
+  Object.freeze({ field: 'chinese', code: 'zh-TW' }),
+  Object.freeze({ field: 'spanish', code: 'es' }),
+]);
+
+// Whether an announcement is typed in Chinese: it has more Chinese characters
+// than words in Latin letters. Unlike a hymn (getBulletinHymnLanguage_), an
+// English line with a name in Chinese, such as "Please pray for 黃姊妹's
+// family", isn't, so it isn't printed on the Chinese line as typed.
+function isChineseBulletinAnnouncement_(line) {
+  var characters = (line.match(/[\u3400-\u9fff]/g) || []).length;
+  var words = (line.match(/[A-Za-z]+/g) || []).length;
+  return characters > words;
+}
+
+// The lines of a location's Announcements cell, which hold one announcement,
+// kept as written, without blank lines or a typed TBD.
+function splitBulletinAnnouncementLines_(value) {
+  return displayValue_(value)
+    .split(/\r?\n/)
+    .map(function (line) {
+      return line.trim();
+    })
+    .filter(function (line) {
+      return line !== '' && line.toUpperCase() !== 'TBD';
+    });
+}
+
+// The announcement the API sends for a location (#562): the cell, kept as
+// written, in every language of BULLETIN_ANNOUNCEMENT_LANGUAGES, as a list of
+// one, or none for a blank cell. The cell holds one announcement, kept short,
+// and the list leaves room for more without breaking older app versions. Its
+// lines are translated one by one, so a line break stays one; a language
+// is sent only when every line has it. If neither English nor Chinese came
+// out whole, it's sent as typed, as the English.
+function translateBulletinAnnouncements_(lines) {
+  if (!Array.isArray(lines) || !lines.length) {
+    return [];
+  }
+  var translated = translateBulletinAnnouncementLines_(lines);
+  var announcement = {};
+  BULLETIN_ANNOUNCEMENT_LANGUAGES.forEach(function (language) {
+    var parts = translated.map(function (line) {
+      return line[language.field];
+    });
+    announcement[language.field] = parts.every(Boolean) ? parts.join('\n') : '';
+  });
+  if (!announcement.english && !announcement.chinese) {
+    announcement.english = lines.join('\n');
+  }
+  return [announcement];
+}
+
+// An announcement's lines, each in every language of
+// BULLETIN_ANNOUNCEMENT_LANGUAGES, with the free LanguageApp translator the
+// metadata above uses (#562). The translator detects the language each line is
+// typed in, so a line can be in any language; one typed in Chinese is kept as
+// typed, in either script. Lines in Chinese and the rest go in separate
+// requests, since the translator detects one language a request. The lines not
+// already cached go in one request per target language, and every translation
+// is cached for hours (getBulletinTranslationCache_), so a busy Sabbath doesn't
+// translate the same line for each reader. A failed translation is blank: the
+// app then shows another language, and the printed bulletin prints the other
+// line alone. A line not in Chinese whose English failed is sent as typed.
+function translateBulletinAnnouncementLines_(lines) {
+  if (!Array.isArray(lines)) {
+    return [];
+  }
+  var chinese = lines.map(isChineseBulletinAnnouncement_);
+  var announcements = lines.map(function (line, index) {
+    var announcement = {};
+    BULLETIN_ANNOUNCEMENT_LANGUAGES.forEach(function (language) {
+      announcement[language.field] = '';
+    });
+    if (chinese[index]) {
+      announcement.chinese = line;
+    }
+    return announcement;
+  });
+  BULLETIN_ANNOUNCEMENT_LANGUAGES.forEach(function (language) {
+    [true, false].forEach(function (inChinese) {
+      var indexes = [];
+      lines.forEach(function (line, index) {
+        if (chinese[index] === inChinese && !announcements[index][language.field]) {
+          indexes.push(index);
+        }
+      });
+      var texts = indexes.map(function (index) {
+        return lines[index];
+      });
+      translateBulletinTexts_(texts, '', language.code).forEach(function (text, position) {
+        if (text) {
+          announcements[indexes[position]][language.field] = text;
+        }
+      });
+    });
+  });
+  announcements.forEach(function (announcement, index) {
+    if (!announcement.english && !chinese[index]) {
+      announcement.english = lines[index];
+    }
+  });
+  return announcements;
+}
+
+// These texts' translations, in order, with '' for any that failed.
+function translateBulletinTexts_(texts, source, target) {
+  var results = texts.map(function () {
+    return '';
+  });
+  if (!texts.length || typeof LanguageApp === 'undefined' || !LanguageApp.translate) {
+    return results;
+  }
+  var cache = getBulletinTranslationCache_();
+  var keys = cache
+    ? texts.map(function (text) {
+        return getBulletinTranslationCacheKey_(text, source, target);
+      })
+    : [];
+  var cached = {};
+  if (cache) {
+    try {
+      cached = cache.getAll(keys) || {};
+    } catch (error) {
+      logBulletinMessage_('Could not read cached translations: ' + error);
+    }
+  }
+  var pending = [];
+  texts.forEach(function (text, index) {
+    if (cache && cached[keys[index]]) {
+      results[index] = cached[keys[index]];
+    } else {
+      pending.push(index);
+    }
+  });
+  if (!pending.length) {
+    return results;
+  }
+  var translated = translateBulletinLinesTogether_(
+    pending.map(function (index) {
+      return texts[index];
+    }),
+    source,
+    target,
+  );
+  var fresh = {};
+  pending.forEach(function (index, position) {
+    if (translated[position]) {
+      results[index] = translated[position];
+      fresh[keys[index]] = translated[position];
+    }
+  });
+  if (cache && Object.keys(fresh).length) {
+    try {
+      cache.putAll(fresh, CONFIG.translationCacheSeconds);
+    } catch (error) {
+      logBulletinMessage_('Could not cache translations: ' + error);
+    }
+  }
+  return results;
+}
+
+// One request for all the lines when the translation keeps them apart, as it
+// usually does, and otherwise one per line. It stops at the first failure,
+// such as the day's quota running out, rather than try every line.
+function translateBulletinLinesTogether_(lines, source, target) {
+  var oneLine = function (text) {
+    return text.replace(/\s*\r?\n\s*/g, ' ').trim();
+  };
+  var together = callBulletinTranslator_(lines.join('\n'), source, target);
+  if (together === null) {
+    return lines.map(function () {
+      return '';
+    });
+  }
+  var parts = together.split(/\r?\n/).map(function (part) {
+    return part.trim();
+  });
+  if (parts.length === lines.length && parts.every(Boolean)) {
+    return parts;
+  }
+  if (lines.length === 1) {
+    return [oneLine(together)];
+  }
+  var results = [];
+  for (var index = 0; index < lines.length; index += 1) {
+    var translated = callBulletinTranslator_(lines[index], source, target);
+    if (translated === null) {
+      break;
+    }
+    results.push(oneLine(translated));
+  }
+  while (results.length < lines.length) {
+    results.push('');
+  }
+  return results;
+}
+
+// LanguageApp's translation, or null if it failed.
+function callBulletinTranslator_(text, source, target) {
+  try {
+    return displayValue_(LanguageApp.translate(text, source, target));
+  } catch (error) {
+    logBulletinMessage_('Announcement translation to ' + target + ' failed: ' + error);
+    return null;
+  }
+}
+
+// The script cache, or null where there's none, as in the tests.
+function getBulletinTranslationCache_() {
+  if (
+    typeof CacheService === 'undefined' ||
+    typeof Utilities === 'undefined' ||
+    typeof Utilities.computeDigest !== 'function'
+  ) {
+    return null;
+  }
+  return CacheService.getScriptCache();
+}
+
+// A cache key can be at most 250 characters, so the text goes in as a digest.
+function getBulletinTranslationCacheKey_(text, source, target) {
+  var digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    text,
+    Utilities.Charset.UTF_8,
+  );
+  return (
+    'translation:v1:' + (source || 'auto') + ':' + target + ':' +
+    Utilities.base64EncodeWebSafe(digest)
+  );
+}
+
+function logBulletinMessage_(message) {
+  if (typeof Logger !== 'undefined') {
+    Logger.log(message);
+  }
+}
+
 function populateOptionalBrooklynScheduleFields_(location, headers, row, includeFullNames) {
   [
     {
@@ -986,7 +1246,9 @@ function createLocation_() {
     bibleVerses: '',
     sabbathSchoolHymns: [],
     specialMusicTitle: '',
-    announcements: '',
+    // Weekly Data's announcements, each { english, chinese, spanish } (#562).
+    // Until #562 this was a string, always blank, which the app never read.
+    announcements: [],
   };
 }
 
@@ -1018,6 +1280,9 @@ function populateBulletinIntake_(location, intakeRows) {
       );
     });
   });
+  // The cell's lines; buildBulletin_ makes them the announcement the API sends.
+  location.announcements = splitBulletinAnnouncementLines_(location.announcementText);
+  delete location.announcementText;
   // A blank Hymn of Praise or Hymn of Response gets its default. A typed TBD
   // goes out blank instead, so the app shows its own TBD in the reader's
   // language, with no YouTube search for "TBD", and the printed bulletin its

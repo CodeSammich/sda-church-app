@@ -17,14 +17,14 @@ import type { Bulletin, BulletinLocation, KeyScreensBulletinState } from '@/serv
 
 /**
  * The bulletin as the API sends it, with the fields it sends that the app
- * doesn't read yet, such as announcements (#562).
+ * doesn't read: the Sabbath Calendar's own Announcements column and the
+ * sunset time.
  */
-type ApiLocation = BulletinLocation & { announcements: string };
 type ApiBulletin = Omit<Bulletin, 'queens' | 'brooklyn'> & {
   announcements: string;
   sunsetTime: string;
-  queens: ApiLocation;
-  brooklyn: ApiLocation;
+  queens: BulletinLocation;
+  brooklyn: BulletinLocation;
 };
 
 const quarterOf = (date: string) => `Q${Math.floor((Number(date.slice(5, 7)) - 1) / 3) + 1}`;
@@ -71,7 +71,15 @@ const makeBulletin = (date: string): ApiBulletin => ({
     bibleVerses: 'Psalm 46:1-3',
     sabbathSchoolHymns: ['AH 1 Praise to the Lord', 'AH 530 It Is Well With My Soul'],
     specialMusicTitle: 'It Is Well With My Soul (violin and piano)',
-    announcements: '',
+    // As the API sends Weekly Data's announcement (#562): one, typed in
+    // English, with its other languages machine-made.
+    announcements: [
+      {
+        english: 'Fellowship lunch after the service.',
+        chinese: '崇拜後有愛筵。',
+        spanish: 'Almuerzo de confraternidad después del culto.',
+      },
+    ],
     sermon: 'Jonathan P.',
     chairPastoralPrayer: 'Michael H.',
     offeringPrayer: 'Name withheld',
@@ -94,7 +102,7 @@ const makeBulletin = (date: string): ApiBulletin => ({
     bibleVerses: 'Psalm 119:105',
     sabbathSchoolHymns: ['AH 100 Great Is Thy Faithfulness'],
     specialMusicTitle: '',
-    announcements: '',
+    announcements: [],
     sermon: 'Thomas B.',
     chairPastoralPrayer: 'Sarah J.',
     offeringPrayer: 'Name withheld',
