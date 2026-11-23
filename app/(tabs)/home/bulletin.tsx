@@ -47,12 +47,13 @@ import {
   readCachedBulletin,
   setRefreshAvailableAt as persistRefreshAvailableAt,
 } from '@/services/BulletinService';
+import { getScreenshotState } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
-import { type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { type ComponentRef, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { ActivityIndicator, Card, Divider, IconButton, Text } from 'react-native-paper';
@@ -530,6 +531,32 @@ export default function WeeklyBulletinScreen() {
   const NavigationStyles = useNavigationStyles();
   const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
+  // The key-screen capture can't tap or cut the network, so its build reads
+  // the path for a bulletin that couldn't load (state=load-failed) or for the
+  // worship program scrolled into view (section=program) (#456).
+  const { state: paramState, section: paramSection } = useLocalSearchParams();
+  const screenshotState = getScreenshotState(paramState, ['load-failed'] as const);
+  const screenshotSection = getScreenshotState(paramSection, ['program'] as const);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const programRef = useRef<ComponentRef<typeof View>>(null);
+  // Each time the program moves, as when the lesson above it loads, so the
+  // shot is taken with the program's heading just below the header. Android
+  // ignores a scroll while the page slides in, so it's tried again once the
+  // page has settled, as Offline Bible Audio does.
+  const scrollToScreenshotSection = () => {
+    const content = scrollRef.current?.getInnerViewRef();
+    if (!screenshotSection || !content || !programRef.current) return;
+    programRef.current.measureLayout(
+      content,
+      (_left, top) => {
+        const scroll = () =>
+          scrollRef.current?.scrollTo({ y: Math.max(0, top - headerHeight - 12), animated: false });
+        scroll();
+        setTimeout(scroll, 500);
+      },
+      () => undefined,
+    );
+  };
   const [weekDates, setWeekDates] = useState(() => getUpcomingSabbathDates());
   const [weeks, setWeeks] = useState<WeekState[]>(() =>
     weekDates.map((date) => ({ date, loading: false })),
@@ -630,7 +657,7 @@ export default function WeeklyBulletinScreen() {
             ? { ...week, bulletin, error: undefined, loading: true }
             : { ...week, bulletin };
         });
-        const fetched = await fetchBulletin(date, signal);
+        const fetched = await fetchBulletin(date, signal, screenshotState);
         // A bulletin without its schedule (#580) gives way to a stored copy
         // that has one, as when the API fails.
         const bulletin = fetched.scheduleNotSet
@@ -651,7 +678,7 @@ export default function WeeklyBulletinScreen() {
         loadingWeeksRef.current.delete(date);
       }
     },
-    [weekDates],
+    [screenshotState, weekDates],
   );
 
   const refreshWeek = useCallback(
@@ -839,7 +866,7 @@ export default function WeeklyBulletinScreen() {
       : undefined;
 
     return (
-      <View style={styles.cardSection}>
+      <View ref={programRef} onLayout={scrollToScreenshotSection} style={styles.cardSection}>
         <View style={[styles.sectionHeading, { borderLeftColor: theme.colors.primary }]}>
           <Text
             variant="titleMedium"
@@ -1282,6 +1309,7 @@ export default function WeeklyBulletinScreen() {
         options={{ title: labels.title, showTitleChip: showHeaderTitle } as any}
       />
       <ScrollView
+        ref={scrollRef}
         style={DocumentStyles.container}
         onScroll={handleHeroScroll}
         scrollEventThrottle={16}

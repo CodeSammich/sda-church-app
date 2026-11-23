@@ -840,7 +840,7 @@ into `main`, and can be run manually on any branch.
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(96 screenshots of 40 screens in all), and checks their text with
+(142 screenshots of 63 screens in all, then their 90 iPad shots), and checks their text with
 `scripts/check-screens.cjs`. Two of them check that Bible audio plays and that a
 children's lesson opens in Quick Look (#551). If one fails, the group's step summary
 says whether the network was the cause. If it was, run the failed jobs again; if not,
