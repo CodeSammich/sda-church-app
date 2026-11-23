@@ -336,6 +336,15 @@ which the church relies on, as for the Cantonese and Spanish recordings. If an o
 comes forward, follow their terms. WordProject has no Haitian Creole
 ([#345](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/345)) or Tibetan ([#150](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/150)) audio.
 
+**HelloAO first.** A new language starts from what HelloAO has, and the church's
+own copies are only a short-term fallback, if a launch is an emergency ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). On
+2026-11-23 HelloAO's [chapter API](https://bible.helloao.org/docs/) served
+WordProject's recordings for Russian, Japanese, Arabic and English (KJV) among these,
+and for Korean and German, none with verse times ([#769](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/769)). HelloAO hosting a recording
+doesn't change its rights. The table above still applies, so the Arabic needs another
+source or its owners' permission, the KJV needs Intellectual Reserve's, and
+WordProject hasn't yet answered HelloAO about its recordings ([#769](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/769)).
+
 Dated copies of WordProject's pages for these languages and for Spanish are in
 [rights-records/audio-sources-2026-10-01](rights-records/audio-sources-2026-10-01/README.md),
 with [a summary of every file's tags](rights-records/audio-sources-2026-10-01/tag-summaries.md)

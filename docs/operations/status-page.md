@@ -81,7 +81,8 @@ Some services aren't on the status page:
   frequent checks from a data centre are what a security plugin flags. The app
   only links to it, and the daily monitor checks it.
 - **HelloAO's Bible text API.** The app ships the text it uses, so it never
-  calls the API.
+  calls the API. The printed bulletins' Apps Script fetches its verses there
+  when staff make a bulletin, and the daily monitor checks it.
 - Anything that needs a closer look than "does it answer". The daily monitor
   covers those.
 

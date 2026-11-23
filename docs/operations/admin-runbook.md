@@ -538,6 +538,8 @@ check once a year, each item linked to the doc that explains it:
 - the Faith Comes By Hearing key, kept in the IT Admin shared drive;
 - the Apple dates and Google Play's contact details and declarations;
 - the Workspace nonprofit terms;
+- HelloAO, the app's main Bible source: its terms, and the recordings the app plays
+  from it;
 - the scheduled workflows.
 
 Work through it, note anything that changed in a comment, and close it. It's due

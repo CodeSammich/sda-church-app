@@ -21,7 +21,10 @@ This means the 1,189-file audio collections (Mandarin and Cantonese CUV, and Spa
 RV1909) each receive three sampled media requests per host per daily run, not 1,189
 requests. HelloAO's copies of the two Chinese recordings, which the app plays first
 ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)),
-share three samples a day between them. Project Gutenberg receives three sampled
+share three samples a day between them, and the English narrators' recordings get
+three more. The printed bulletins fetch their verses from HelloAO's text API, so the
+monitor reads one chapter there each day, in English (BSB) and Chinese (CUV), as the
+bulletin's Apps Script does. Project Gutenberg receives three sampled
 public-domain book requests, and EGW Writings receives three sampled book requests
 for each supported edition language. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly
