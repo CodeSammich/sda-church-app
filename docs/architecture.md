@@ -166,8 +166,8 @@ and may not be possible, so protect them above everything else.
   - bulletin [QR code](operations/admin-runbook.md#bulletin-qr-codes) generation into
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
-  - a [status page](operations/status-page.md) that checks the audio hosts, the
-    bulletin API and a few other services every hour, from its own
+  - a [status page](operations/status-page.md) that checks the audio hosts, HelloAO's
+    Bible text, the bulletin API and a few other services every hour, from its own
     repository, `sda-church-app-status`, where its outage issues stay;
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
@@ -433,7 +433,7 @@ downloads data from the service; "Link" means the app only opens the site in the
 browser; "Build script only" means the app ships files a build script downloaded from it,
 and never contacts it. The [external dependency monitor](operations/external-dependency-monitor.md)
 checks nearly all of them daily, and the [status page](operations/status-page.md)
-checks the audio hosts and the bulletin API every hour.
+checks the audio hosts, HelloAO's Bible text and the bulletin API every hour.
 
 **HelloAO is a top-level dependency.** Most of the Bible comes from it: the English
 text and every book list the app ships with, the English narrators (their only
