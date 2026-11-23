@@ -257,9 +257,11 @@ closed test with 12 testers for 14 days before they can publish.
   [Google Search Console](https://search.google.com/search-console) by a DNS TXT
   record in Cloudflare (see [Cloudflare](../architecture.md#cloudflare)). Verify it
   with the same account that will own the Play developer account.
-- **A church credit or debit card** for the one-time US$25 registration fee.
-  Prepaid cards aren't accepted. There's no nonprofit waiver for this fee, and no
-  yearly fee.
+- **A church credit card** for the one-time US$25 registration fee: the card with
+  a hard limit from [Payment methods](../architecture.md#payment-methods), not a
+  debit card. Prepaid cards aren't accepted. There's no nonprofit waiver for this
+  fee, and no yearly fee, so remove the card from the account's payments profile
+  once the fee is paid.
 - **A church phone number** that stays in service.
 
 **Sign up:**
