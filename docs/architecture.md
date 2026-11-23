@@ -83,7 +83,7 @@ and may not be possible, so protect them above everything else.
 
 ### Cloudflare
 
-- **Registrar and DNS** for `nyccsda.org`. The domain costs about $10 per year and
+- **Registrar and DNS** for `nyccsda.org`. The domain costs about $11 a year as of 2026 and
   can be registered up to 10 years at a time. Keep a payment method on file for
   renewal: a credit card with a hard limit ([Payment methods](#payment-methods)). Renewal notices go to the Super Administrators.
 - **DNS** points the domain's email at Google Workspace, and a Cloudflare redirect
@@ -497,7 +497,7 @@ covers every service the church pays for, which today is only the domain, and an
 exception the church ever makes to the rule above:
 
 - **The limit sits well above a year's charges on the card,** so a renewal is never
-  declined. The domain is about $10 a year, or about $100 to renew ten years at once
+  declined. The domain is about $11 a year as of 2026, or about $110 to renew ten years at once
   ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)), which leaves
   plenty of room. Don't set the limit just above the renewal: a price rise or a
   renewal of several years would be declined, and the domain could lapse.
@@ -514,7 +514,7 @@ How to set it up and check it each year:
 
 | Service | Payment method | Why |
 | --- | --- | --- |
-| Cloudflare | **A credit card with a hard limit of about $200–300** | Renews `nyccsda.org`, about $10 a year. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
+| Cloudflare | **A credit card with a hard limit of about $200–300** | Renews `nyccsda.org`, about $11 a year as of 2026. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
 | Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
 | Google Play | None | The one-time $25 registration is paid; nothing recurs. |
 | Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |

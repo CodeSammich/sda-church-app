@@ -437,7 +437,7 @@ changing the web build's base path from `/sda-church-app` to `/`. The
 ## The Cloudflare account and domain
 
 `nyccsda.org` is registered through Cloudflare Registrar, and Cloudflare also runs its
-DNS and the `app.nyccsda.org` redirect. The renewal, about $10 a year, is the app's only
+DNS and the `app.nyccsda.org` redirect. The renewal, about $11 a year as of 2026, is the app's only
 recurring cost, so the account keeps a card on file. If a renewal fails and the domain
 lapses, the privacy policy, support, and download pages above go down with it.
 
@@ -451,7 +451,7 @@ lapses, the privacy policy, support, and download pages above go down with it.
   the fee, and the bank may still approve the charge
   ([Regulation Z §1026.56](https://www.consumerfinance.gov/rules-policy/regulations/1026/56/)). Use a card kept only for
   the church's paid services, such as an employee card or a virtual card number
-  with its own limit, so the limit is the card's own. At about $10 a year, the
+  with its own limit, so the limit is the card's own. At about $11 a year, the
   domain leaves plenty of room, even for a ten-year renewal. Don't set the limit
   just above the renewal: a price rise would be declined, and the domain could
   lapse.
@@ -493,8 +493,10 @@ lapses, the privacy policy, support, and download pages above go down with it.
 The card pays for one thing: registering `nyccsda.org`. Cloudflare Registrar charges
 only what the registry and ICANN charge it, with no markup
 ([Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)). That's about
-$10 a year for a `.org`, or about $100 paid once for ten years. Everything else the church
-uses runs on Cloudflare's Free plan, which has no usage charges:
+$11 a year for a `.org` as of 2026: the registry raised its price to $11.00 on June 1,
+2026 ([Domain Name Wire](https://domainnamewire.com/2026/03/12/org-prices-to-increase-on-june-1/)). Ten years, the longest
+Cloudflare renews for ([Renew domains](https://developers.cloudflare.com/registrar/account-options/renew-domains/)), cost
+about $110 paid at once. Everything else the church uses runs on Cloudflare's Free plan, which has no usage charges:
 
 - **DNS** for `nyccsda.org`, including the records for the church's Google Workspace
   email and for Google Search Console;

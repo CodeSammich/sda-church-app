@@ -48,7 +48,7 @@ enough to cap the damage if the card or account is misused (see
 | [GitHub Pages](#github-pages) | `app.nyccsda.org` | Free | 1 GB site, 100 GB/month soft | `429` or a GitHub email | None |
 | [Google Workspace](#google-workspace-and-drive) | Roster, Drive, Apps Script | Free (nonprofit) | 100 TB pooled storage | Quota errors | None |
 | [Google Cloud](#google-cloud-play-upload-service-account) | Service account for automatic Google Play uploads | Free; **never link a billing account** | Play Developer API: 3,000 queries per minute | Uploads fail with an error | None: under ten requests per release |
-| [Cloudflare](#cloudflare) | Domain, DNS, and the `app.nyccsda.org` redirect | **~$10/year** (domain only) | n/a | n/a | None |
+| [Cloudflare](#cloudflare) | Domain, DNS, and the `app.nyccsda.org` redirect | **~$11/year** as of 2026 (domain only) | n/a | n/a | None |
 | [App stores](#app-stores) | Distribution | Free (Apple nonprofit waiver; Play $25 paid once) | n/a | n/a | None |
 
 ## Load model
@@ -408,7 +408,10 @@ Checked 2026-09-28.
 
 ### Cloudflare
 
-The domain, about $10 a year, is the **only recurring cost**; DNS and the redirect are
+The domain, about $11 a year as of 2026, is the **only recurring cost**. The `.org`
+registry raised its price to $11.00 a year on June 1, 2026
+([Domain Name Wire](https://domainnamewire.com/2026/03/12/org-prices-to-increase-on-june-1/)), and Cloudflare Registrar adds no markup
+([Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)). DNS and the redirect are
 free, and no usage-billed product may be added to the account, which keeps a card on file
 with a hard limit of about $200–300
 ([The Cloudflare account and domain](admin-runbook.md#the-cloudflare-account-and-domain)).
