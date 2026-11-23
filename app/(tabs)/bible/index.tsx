@@ -860,6 +860,8 @@ export default function BibleScreen() {
 
   // To prevent the "content flash" during modal dismissal
   const [lastActiveType, setLastActiveType] = useState<typeof modalType>(null);
+  // Saved verses fill the screen (#750); see the Selection Modals.
+  const savedVersesFullScreen = lastActiveType === 'saved';
 
   // Multi-selection state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
@@ -3149,8 +3151,9 @@ export default function BibleScreen() {
   // verseStart's details, or popup=audio-settings once the chapter has audio.
   // popup=audio-download-tip opens it as the marked button would, with the
   // line that playback keeps stopping to load (#595). popup=book opens the
-  // book list, as the book pill would (#723), and popup=chapter the chapter
-  // list, as the chapter pill would (#456).
+  // book list, as the book pill would (#723), popup=chapter the chapter
+  // list, as the chapter pill would (#456), and popup=saved the saved
+  // verses, as the header's bookmark would (#750).
   // A chapter change clears chapterData first, so a loaded chapter that
   // matches the link is the linked one.
   const screenshotPopupOpened = useRef(false);
@@ -3162,10 +3165,15 @@ export default function BibleScreen() {
       'audio-download-tip',
       'book',
       'chapter',
+      'saved',
     ]);
     if (!screenshotPopup) return;
     if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
-    if (screenshotPopup === 'book' || screenshotPopup === 'chapter') {
+    if (
+      screenshotPopup === 'book' ||
+      screenshotPopup === 'chapter' ||
+      screenshotPopup === 'saved'
+    ) {
       screenshotPopupOpened.current = true;
       setModalType(screenshotPopup);
       return;
@@ -4883,14 +4891,36 @@ export default function BibleScreen() {
         <Modal
           visible={!!modalType}
           onDismiss={closeModal}
-          contentContainerStyle={[
-            ReaderStyles.modalContent,
-            popupWidthStyle,
-            { maxHeight: popupMaxHeight },
-            getPopupSurfaceStyle(theme),
-          ]}
+          // Saved verses fill the screen, so more of them, each in full, show
+          // at once (#750): the one popup past the 65% height limit, on
+          // purpose. Its X stays in the title row, and Back closes it.
+          style={savedVersesFullScreen ? styles.fullScreenPopupWrapper : undefined}
+          contentContainerStyle={
+            savedVersesFullScreen
+              ? [
+                  styles.fullScreenPopup,
+                  {
+                    width: viewportWidth,
+                    height: viewportHeight,
+                    paddingTop: insets.top,
+                    paddingBottom: insets.bottom,
+                    backgroundColor: theme.colors.background,
+                  },
+                ]
+              : [
+                  ReaderStyles.modalContent,
+                  popupWidthStyle,
+                  { maxHeight: popupMaxHeight },
+                  getPopupSurfaceStyle(theme),
+                ]
+          }
         >
-          <View style={ReaderStyles.modalInner}>
+          <View
+            style={[
+              ReaderStyles.modalInner,
+              savedVersesFullScreen && [styles.fullScreenPopupInner, readingColumnStyle],
+            ]}
+          >
             {lastActiveType === 'verse-hymns' ? (
               <>
                 {renderPopupHeader(labels.verseHymnsTitle, closeModal)}
@@ -5057,9 +5087,8 @@ export default function BibleScreen() {
                               {item.reference}
                             </Text>
                             {(item.text || savedVersesLoading) && (
+                              // The whole passage: the list has the screen (#750).
                               <Text
-                                ellipsizeMode="tail"
-                                numberOfLines={3}
                                 style={[
                                   styles.savedVerseDescription,
                                   { color: theme.colors.onSurfaceVariant },
@@ -6036,10 +6065,12 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     backgroundAudioGuidanceAction: {
       flexGrow: 1,
     },
+    // Each saved passage shows in full (#750), so a row can be many lines tall:
+    // its remove button stays beside the reference, at the top.
     savedVerseRow: {
       width: '100%',
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
     },
     savedSortRow: {
       flexDirection: 'row',
@@ -6104,6 +6135,22 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     },
     originalVerseLink: {
       textDecorationLine: 'underline',
+    },
+    // Saved verses' full-screen popup (#750): no margins, corners, or height
+    // limit, with the safe areas as padding and the reading column inside. It
+    // gets the window's height, not flex: on iOS, Paper's Modal draws its
+    // Surface as a container, which passes flex only to its outer view, and the
+    // list in the inner one shrank to nothing. A height reaches both.
+    fullScreenPopupWrapper: {
+      marginTop: 0,
+      marginBottom: 0,
+    },
+    fullScreenPopup: {
+      alignSelf: 'center',
+      borderRadius: 0,
+    },
+    fullScreenPopupInner: {
+      flex: 1,
     },
     savedEmptyState: {
       minHeight: 180,

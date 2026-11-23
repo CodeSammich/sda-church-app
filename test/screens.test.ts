@@ -429,6 +429,7 @@ describe('saved settings', () => {
       'constants/AppPreferences.ts',
       'services/ScreenshotRoute.ts',
       'constants/WhatsNew.ts',
+      'services/SavedVersesService.ts',
     ]
       .map(repoFile)
       .join('\n');

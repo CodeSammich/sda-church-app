@@ -387,11 +387,29 @@ describe('Bible reader text scaling', () => {
     const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     const modals = bible.split('<Modal').slice(1);
     expect(modals).toHaveLength(4);
+    const centred = /contentContainerStyle=\{[^]*?\[\s+ReaderStyles\.modalContent,\s+popupWidthStyle,\s+\{ maxHeight: popupMaxHeight \},/;
     for (const modal of modals) {
       // Each is as wide as the You tab's dialogs at most, on a wide screen (#324).
-      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}\s+contentContainerStyle=\{\[\s+ReaderStyles\.modalContent,\s+popupWidthStyle,\s+\{ maxHeight: popupMaxHeight \},/);
+      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}/);
+      expect(modal.slice(0, modal.indexOf('getPopupSurfaceStyle(theme)'))).toMatch(centred);
     }
     expect(createReaderStyles(2)).not.toHaveProperty('audioSettingsContent');
+  });
+
+  it('fills the screen with the saved verses only, the one popup past the height limit (#750)', () => {
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(bible).toContain("const savedVersesFullScreen = lastActiveType === 'saved';");
+    // The selection popups share one Modal; only saved verses take its full-screen shape.
+    const selection = bible.slice(bible.indexOf('{/* Selection Modals */}'));
+    expect(selection).toMatch(/style=\{savedVersesFullScreen \? styles\.fullScreenPopupWrapper : undefined\}\s+contentContainerStyle=\{\s+savedVersesFullScreen\s+\? \[\s+styles\.fullScreenPopup,/);
+    // A height, not flex: on iOS, Paper's Modal passes flex only to its
+    // Surface's outer view, and the list inside shrank to nothing.
+    expect(selection).toMatch(/width: viewportWidth,\s+height: viewportHeight,/);
+    const fullScreen = bible.slice(bible.indexOf('    fullScreenPopup: {'), bible.indexOf('    fullScreenPopupInner: {'));
+    expect(fullScreen).not.toMatch(/\bflex: 1/);
+    // Each passage shows in full, no longer cut off after three lines.
+    const savedList = bible.slice(bible.indexOf("lastActiveType === 'saved' ?"), bible.indexOf("lastActiveType === 'verse-detail' ?"));
+    expect(savedList).not.toContain('numberOfLines');
   });
 
   it('widens the verse-number column for larger system text and three-digit verses', () => {

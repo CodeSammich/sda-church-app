@@ -24,7 +24,8 @@
  * - on the iPad (#324), a page's text stays in the centred content column,
  *   no text touches the screen's left or right edge, and a popup is no wider
  *   than POPUP_MAX_WIDTH, measured from its surface's colour, since on iOS a
- *   popup could fill the screen with its text still in the middle. A screen
+ *   popup could fill the screen with its text still in the middle, except one
+ *   marked `fullScreenPopup`, which fills it on purpose (#750). A screen
  *   with `wideContent`, such as a web page the app shows, or the Library, whose
  *   shelves scroll sideways to the screen's edge, skips the first two;
  * - at the iPad's split window widths on Android, no Bible card control
@@ -462,7 +463,9 @@ const surfaceWidth = async (file, color = POPUP_SURFACE, { tolerance = 10, gap =
  * dimmed page is too close to the surface's colour.
  */
 const checkPopupWidth = async (shot, file) => {
-  if ((shot.platform !== 'ipad' && !androidWindow(shot)) || shot.wideContent || !showsPopup(shot) || shot.settings.theme === 'dark') {
+  // A popup marked fullScreenPopup fills the screen on purpose, as the saved
+  // verses do (#750); the column and edge checks still apply to it.
+  if ((shot.platform !== 'ipad' && !androidWindow(shot)) || shot.wideContent || shot.fullScreenPopup || !showsPopup(shot) || shot.settings.theme === 'dark') {
     return [];
   }
   const width = widthInPoints(shot);
@@ -550,6 +553,7 @@ const planChecks = (config, platform = 'ios') =>
       tabs: screen.tabs,
       ...(screen.wideContent ? { wideContent: true } : {}),
       ...(screen.popup ? { popup: true } : {}),
+      ...(screen.fullScreenPopup ? { fullScreenPopup: true } : {}),
       ...pointsFor(config, platform),
       mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
@@ -577,6 +581,7 @@ const planSplitChecks = (config, width) =>
       tabs: screen.tabs,
       ...(screen.wideContent ? { wideContent: true } : {}),
       ...(screen.popup ? { popup: true } : {}),
+      ...(screen.fullScreenPopup ? { fullScreenPopup: true } : {}),
       mustShowLines: forWindow.mustShowLines,
       mustNotShowLines: joinRules(screen.mustNotShowLines, forWindow.mustNotShowLines),
     };

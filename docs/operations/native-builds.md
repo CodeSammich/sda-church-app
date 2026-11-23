@@ -893,7 +893,8 @@ iPhone or Android, or 8 on the iPad. The limit is a reminder to prune, not a rul
    `popup=audio-settings`, once the chapter has audio (#372), or its
    `popup=audio-download-tip`, the same popup as the tip opens it when playback keeps
    stopping to load (#595), or its `popup=book`, the book list (#723), or its
-   `popup=chapter`, the chapter list (#456), or Sabbath School's
+   `popup=chapter`, the chapter list (#456), or its `popup=saved`, the saved
+   verses (#750), or Sabbath School's
    `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
    a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
@@ -1121,8 +1122,10 @@ Store release, are how iPad layouts get tested.
     screen, is at most 560 points wide. On iOS, a Paper popup given a percentage width
     filled 90% of the iPad with its text still in the middle, so its text alone can't
     show it; #587's narrator popup did, until `test/layout.test.ts` caught it. The
-    screens with `popup=` in their path are measured, and setup, marked `popup`. Light
-    theme only: in dark mode the dimmed page is too close to the surface's colour.
+    screens with `popup=` in their path are measured, and setup, marked `popup`, but not
+    one marked `fullScreenPopup`, the saved verses, which fill the screen on purpose
+    (#750); its text still has to stay in the column. Light theme only: in dark mode the
+    dimmed page is too close to the surface's colour.
 
   `test/screens.test.ts` checks each against the app's own sizes, and on November 3,
   2026, they passed all 52 of the earlier trial's 13-inch shots. A trial run then broke the
