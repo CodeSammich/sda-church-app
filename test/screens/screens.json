@@ -242,7 +242,7 @@
     {
       "name": "bible-saved-verses",
       "group": "bible-reading",
-      "$comment": "The saved verses, opened by popup=saved, with three saved in the build's storage (#750). They fill the screen so more show at once, each in full: the title sits at the top, not where a centred popup's would, and the last word of Psalm 23, the most recently saved passage, shows where three lines once cut it off. The reference reads Psalms 23:1-6, and \"forever.\" can wrap onto a line of its own, as on the Android phone (fork run 44994554397). The X stays in the title row, with no Close button.",
+      "$comment": "The saved verses, opened by popup=saved, with three saved in the build's storage (#750). They fill the screen so more show at once, each in full: the title sits at the top, not where a centred popup's would, and the last word of Psalm 23, the most recently saved passage, shows where three lines once cut it off. The reference reads Psalms 23:1-6, after the bookmark icon that Vision reads as \"•\" (fork run 45006745568), and \"forever.\" can wrap onto a line of its own, as on the Android phone (fork run 44994554397). The X stays in the title row, with no Close button.",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB&popup=saved",
       "fullScreenPopup": true,
       "settings": {
@@ -261,7 +261,7 @@
       },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": [{ "line": "^Saved Verses$", "maxTop": 0.15 }, "^Psalms? 23:1", "\\bforever\\.$"],
+      "mustShowLines": [{ "line": "^Saved Verses$", "maxTop": 0.15 }, "^(\\S )?Psalms? 23:1", "\\bforever\\.$"],
       "mustNotShowLines": ["^Close$"]
     },
     {
