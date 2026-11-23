@@ -226,6 +226,44 @@ describe('bulletin hymnal resolution', () => {
     ).toBe('1. Praise to the Lord');
   });
 
+  it('keeps a song no hymnal has as typed, rather than a hymn that shares words (#751)', () => {
+    // A Hymn of Response typed in both languages, a song in no hymnal. It
+    // shares most of AH 1's letter pairs and AH 25's first words.
+    expect(
+      resolveBulletinHymnPresentation(
+        { english: 'Praise the Lord, O My Soul', chinese: '我的心，你要称颂耶和华' },
+        'en',
+      ),
+    ).toEqual({
+      displayText: 'Praise the Lord, O My Soul',
+      youtubeSearchQuery: 'Praise the Lord, O My Soul',
+    });
+    expect(resolveBulletinHymnDisplayText({ english: 'Amazing Love', chinese: '' }, 'en')).toBe(
+      'Amazing Love',
+    );
+    expect(
+      resolveBulletinHymnDisplayText(
+        { english: 'Holy Spirit You Are Welcome Here', chinese: '' },
+        'en',
+      ),
+    ).toBe('Holy Spirit You Are Welcome Here');
+  });
+
+  it('still finds a misspelled title in either language', () => {
+    expect(
+      resolveBulletinHymnDisplayText({ english: 'Grate Is Thy Faithfulness', chinese: '' }, 'en'),
+    ).toBe('100. Great Is Thy Faithfulness');
+    expect(
+      resolveBulletinHymnDisplayText({ english: 'The Church Has One Fundation', chinese: '' }, 'en'),
+    ).toBe('348. The Church Has One Foundation');
+    expect(resolveBulletinHymnDisplayText({ english: 'Amazing Grase', chinese: '' }, 'en')).toBe(
+      '108. Amazing Grace',
+    );
+    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '赞美上猪' }, 'zh')).toBe(
+      '5. 赞美上主',
+    );
+  });
+
   it('expands the current Queens and Brooklyn number-only submissions', () => {
     expect(
       resolveBulletinHymnDisplayText(

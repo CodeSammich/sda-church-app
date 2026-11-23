@@ -281,6 +281,12 @@ Rules:
   blank, `TBD`, or has a passage it can't read, such as a misspelled book, a
   chapter the book doesn't have, or a bare `18` after a comma (#622). Write
   `John 3:16; John 3:18` instead.
+  - **The book may be in English or Chinese,** written in full or short, with
+    or without a space before the chapter, and with a Chinese keyboard's
+    full-width `：` and digits: `创50：19-20`, `創世記 50:19-20`, `Gen 50:19-20`
+    and `1 Cor 13:4` all work. The printed bulletin reads the same names and
+    short forms as the app's Bible reader (`PRINTED_BIBLE_BOOK_NAMES`, from the
+    app's `BIBLE_BOOK_NAMES` and `BIBLE_BOOK_ABBREVIATIONS`; #751).
 - `Sabbath School Hymn 1` to `3` each hold one opening hymn, typed in either
   language as a number, a title, or both, such as `第12首 讚美上帝大君王`,
   `AH 73 Holy, Holy, Holy`, or `還要等多久`. Chinese text or a bare number is
@@ -294,7 +300,10 @@ Rules:
   ready to copy into any of the hymn cells.
 - `Special Music Title` is the piece performed. Who performs it stays in the
   `Sabbath Calendar`'s `Special Music`, which is a Queens column, so Brooklyn's
-  piece shows with `TBD` for its performer.
+  piece shows with `TBD` for its performer. A piece typed in both languages,
+  `中文 (English)` or `English (中文)`, prints Chinese over English, split as
+  the hymn cells are (#751); the app shows it as typed. The same rule applies:
+  use parentheses only for the other language's title.
 - The week's Sabbath School lesson needs no column. Both bulletins read its
   title from the Adventech lesson catalog: the adult lesson whose week (Sabbath
   to Friday) ends the day before that Sabbath, since the class discusses the
@@ -1142,7 +1151,10 @@ about 14 points of the worship column.
 Printed worship tables have separate Chinese and English reference lines. A value
 such as `John 3:14-17` becomes a Chinese book reference such as
 `約翰福音 3:14–17` and a separate English `John 3:14–17`; the English reference
-must not be duplicated in the Chinese slot.
+must not be duplicated in the Chinese slot. The worship program's Bible Reading row
+only points to the passage, so it has no translation names. The Queens Today's
+Verse box quotes the text, so it adds them: `John 3:14–17 (BSB)` and
+`約翰福音 3:14–17（和合本）` (#751).
 
 The printed renderer uses the deterministic book map for references and the
 configured HelloAO Bible API for Bible text. Bible text and references must never
@@ -1281,7 +1293,8 @@ changes the URL and requires a coordinated mobile-app update.
 | Symptom | Likely cause | Corrective action |
 | --- | --- | --- |
 | App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
-| **Create Word Doc…** says Weekly Data has no Bible Verses, or can't read them | The Sabbath's `Weekly Data → Bible Verses` cell for that location is blank, `TBD`, or has a passage the parser can't read | Close the dialog, write each passage as `Book chapter:verse` with `;` between them, then open the dialog again. The app shows the same verse |
+| **Create Word Doc…** says Weekly Data has no Bible Verses, or can't read them | The Sabbath's `Weekly Data → Bible Verses` cell for that location is blank, `TBD`, or has a passage the parser can't read | Close the dialog, write each passage as `Book chapter:verse`, in English or Chinese, with `;` between them, then open the dialog again. The app shows the same verse |
+| A dialog says **PERMISSION DENIED** (or `PERMISSION_DENIED`), often on a phone | The browser is signed in to more than one Google account, and Google ran the dialog's request as its first account, not the one with the sheet open. The dialog puts this explanation above the error (#751) | Open the sheet in an incognito (private) window signed in only to the church account. Or sign out of every account and sign in to the church account first |
 | API returns `No schedule found for …`, or the app says the schedule isn't set | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag, unless it was renamed before the spreadsheet was opened after the deploy). Apps from 1.6.0 get the bulletin without its schedule instead of the error | Restore the tab and a matching Date row |
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
