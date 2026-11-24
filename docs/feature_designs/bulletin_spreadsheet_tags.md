@@ -19,9 +19,9 @@ a bulletin without its schedule instead of an error (item 3). Item 2, keeping an
 way of answering for older apps and retiring it once none is left, is in
 [Changeovers](#changeovers).
 
-**Status:** the rules are tested against a fake spreadsheet that models developer
-metadata, and the Apps Script calls were checked against Google's documentation. The
-first open after the 1.6.0 deploy is the first test on the live spreadsheet.
+**Status:** in use on the live spreadsheet since the 1.6.0 deploy. The rules are tested
+against a fake spreadsheet that models developer metadata, and the Apps Script calls
+were checked against Google's documentation.
 
 ## Principles
 
@@ -57,8 +57,8 @@ In order of priority. When two conflict, the earlier one wins.
 | **Tag** | Developer metadata with `DOCUMENT` visibility. A tab carries `bulletin.tab` with a value such as `sabbath-calendar`. A column carries `bulletin.column` with its label in lower case, such as `brooklyn offering prayer`, on the whole column (such as `C:C`) |
 | **Tagged** | The spreadsheet has been opened since the deploy that added tags, so what the scripts found by name then carries its tag |
 | **Effective headers** | The header row as the scripts read it, after the rules below: a renamed column's header replaced by its label, and the unread one of two same-named columns left out |
-| **Upkeep** | What each open does first: [open-time steps](../operations/bulletin-automation.md#header-protection-and-validation-automation) 1 to 8, from header protection to tagging. `onOpen` builds the menu first, checks the `Hymn Bank` with any time left (step 9), and shows the alert last (step 10) |
-| **Readers** | Everything that reads the bulletin tabs: the API, the printed bulletin, the [roster checks](../operations/bulletin-automation.md#roster-conflict-highlights-and-unknown-names), the [English-only guard](../operations/bulletin-automation.md#english-only-sabbath-calendar-input), the upkeep's quarter rows, `Weekly Data` repair, and row hiding (steps 4 to 6), and the alert |
+| **Upkeep** | What each open does first: [open-time steps](../operations/bulletin-automation.md#header-protection-and-validation-automation) 1 to 9, from header protection and the English-only rule to tagging. `onOpen` builds the menu first, checks the `Hymn Bank` with any time left (step 10), and shows the alert last (step 11) |
+| **Readers** | Everything that reads the bulletin tabs: the API, the printed bulletin, the [roster checks](../operations/bulletin-automation.md#roster-conflict-highlights-and-unknown-names), the [English-only guard](../operations/bulletin-automation.md#english-only-sabbath-calendar-input), the upkeep's quarter rows, `Weekly Data` repair, and row hiding (steps 5 to 7), and the alert |
 
 **Sources:** the lookup is in `google-apps-script/BulletinApi.gs` (`BULLETIN_TABS`,
 `BULLETIN_SHEET_COLUMNS`, `getBulletinSheet_`, `resolveBulletinHeaders_`). The

@@ -96,7 +96,7 @@ one place. Church admins can start at [Operate](#operate).
 - [External dependency monitor](docs/operations/external-dependency-monitor.md): the
   daily check of every outside service the app uses, and what to do when it fails
 - [Status page](docs/operations/status-page.md): the audio hosts, the bulletin API and
-  a few other services, checked every hour from a separate repository
+  a few other services, checked a few times a day from a separate repository
 - [Bible audio verse times](docs/operations/bible-audio-verse-times.md): how the times
   that let the reader follow the audio were made and checked, and how to make them for a
   new narrator or language
@@ -168,4 +168,4 @@ Google Play internal testing and TestFlight. Nothing reaches the public until a
 maintainer submits it in each store.
 
 The app uses one Expo source for the native apps and the web/PWA build: Expo SDK 58
-(`expo ~58.0.22`) with React Native 0.88.1.
+with React Native 0.88.1 (the exact versions are in `package.json`).

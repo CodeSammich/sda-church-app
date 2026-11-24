@@ -115,12 +115,13 @@ iPhone and 90 on a simulated iPad, and the Android key screens 140 on an Android
 emulator, in light and dark, at larger text sizes, and in
 Chinese and Spanish. `scripts/capture-ios-screens.cjs` and
 `scripts/capture-android-screens.cjs` take them, and `scripts/check-screens.cjs` reads
-their text with Apple's Vision framework and checks what each screen must show. The release then waits on the
+their text, the iPhone's and iPad's with Apple's Vision framework and Android's with
+RapidOCR, and checks what each screen must show. The release then waits on the
 **Screenshots reviewed** check until a release approver has looked at them.
 `npm test` includes `test/screens.test.ts`, which checks the screen list itself.
 
-Feature pull requests don't run it. To try a screen change earlier, start **iOS PR
-preview** by hand on your branch from the Actions tab. When a change affects what a
+Feature pull requests don't run them. To try a screen change earlier, start **iOS key
+screens** or **Android key screens** by hand on your branch from the Actions tab. When a change affects what a
 screen shows, update its key screens and text checks; see
 [Contributing](CONTRIBUTING.md#pull-request-format-and-issue-closing) and
 [Key screens](operations/native-builds.md#key-screens).

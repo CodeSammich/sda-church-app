@@ -291,7 +291,8 @@ Watch for:
 - The dependency monitor reporting `Adventist Connect` failures, especially `403`,
   `429`, or an HTML response where an MP3 was expected.
 - An outage issue from the [status page](status-page.md), which checks John 3 in
-  each recording every hour.
+  each recording a few times a day
+  ([how often](status-page.md#how-often-it-checks)).
 - Reports that audio takes several seconds to start, or that the lock screen or
   notification title ends in something other than the first source,
   `(HelloAO)`. A Mandarin, Cantonese or Spanish title ending in `(NYCCSDA.org)`

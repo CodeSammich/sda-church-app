@@ -1,8 +1,8 @@
 # Status page
 
 The [status page](https://new-york-chinese-seventh-day-adventist.github.io/sda-church-app-status/),
-also at `app.nyccsda.org/status`, checks the services the app depends on every
-hour. For each one, it shows whether the service is up, how fast it answers,
+also at `app.nyccsda.org/status`, checks the services the app depends on a few
+times a day ([How often it checks](#how-often-it-checks)). For each one, it shows whether the service is up, how fast it answers,
 and its history. It runs on
 [Upptime](https://upptime.js.org) in a separate public repository,
 [sda-church-app-status](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app-status),
@@ -12,7 +12,7 @@ issues in this repository.
 The [external dependency monitor](external-dependency-monitor.md) checks once a
 day that each service still gives the app what it expects: catalogs, file
 lists, the bulletin's fields. The status page only checks that each service
-answers, but it does so every hour. An outage shows within the hour, and so
+answers, but it does so several times a day. An outage shows within hours, and so
 does a host that starts refusing the church's files, for example Adventist
 Connect answering 403 or 429
 ([#618](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/618)).
@@ -22,6 +22,7 @@ phones.
 ## Contents
 
 - [What it checks](#what-it-checks)
+- [How often it checks](#how-often-it-checks)
 - [Alerts](#alerts)
 - [Changing the checks](#changing-the-checks)
 - [The GitHub App](#the-github-app)
@@ -82,7 +83,7 @@ Some services aren't on the status page:
   ([measured on #618](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/618#issuecomment-6784525193),
   [status repository #1](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app-status/issues/1)).
   The app already copes: each phone offers the last video it found. Checked
-  every hour, the feed would only open issues that need nothing done. The
+  several times a day, the feed would only open issues that need nothing done. The
   daily monitor checks it instead. It ignores the feed's errors until Friday,
   then warns.
 - **Hymns for Worship**, which the hymnal opens for English scores. On
@@ -94,6 +95,17 @@ Some services aren't on the status page:
   only links to it, and the daily monitor checks it.
 - Anything that needs a closer look than "does it answer". The daily monitor
   covers those.
+
+## How often it checks
+
+It's set to check every hour, at 17 minutes past (`workflowSchedule.uptime`; see
+[Changing the checks](#changing-the-checks)). GitHub starts a scheduled run when it
+can, and may start one late at busy times
+([GitHub scheduled workflow behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)).
+Here it's usually hours late: from 2026-11-11 to 2026-11-24 (UTC), GitHub ran
+**Uptime CI** on its schedule 44 times, 2 to 4 times a day, a median of 7.7 hours
+apart ([its scheduled runs](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app-status/actions/workflows/uptime.yml?query=event%3Aschedule)). So an outage can take hours to show, and a
+short one may never show at all.
 
 ## Alerts
 
@@ -108,8 +120,7 @@ repository.
 To get them, watch the status repository with **Watch → Custom → Issues**. The
 config is public, so it names no assignees and doesn't show who's on call.
 
-A short outage needs nothing done. To check again without waiting for the next
-hour, run **Actions → Uptime CI → Run workflow** in the status repository. For
+A short outage needs nothing done. To check again without waiting, run **Actions → Uptime CI → Run workflow** in the status repository. For
 an outage that lasts, open the address in a browser:
 
 - If Adventist Connect refuses the church's audio (403 or 429), or a file has
@@ -125,8 +136,9 @@ an outage that lasts, open the address in a browser:
 ## Changing the checks
 
 Edit `.upptimerc.yml` in the status repository on GitHub, or open a pull
-request to it. `workflowSchedule.uptime` sets how often it checks: every hour,
-at 17 minutes past, away from the top of the hour when GitHub is busiest.
+request to it. `workflowSchedule.uptime` sets how often it's meant to check:
+every hour, at 17 minutes past, away from the top of the hour when GitHub is
+busiest. GitHub often starts it later ([How often it checks](#how-often-it-checks)).
 Upptime's default is every 5 minutes
 ([Upptime's configuration](https://upptime.js.org/docs/configuration/)), more
 than the church needs. Upptime has one fixed schedule, so it can't check more
