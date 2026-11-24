@@ -89,6 +89,7 @@
         }
       ],
       "expo-status-bar",
+      "expo-background-task",
       "./plugins/withAndroidLocalSigning",
       "./plugins/withAndroidPhonePortrait",
       "./plugins/withAndroidBackupRules",
