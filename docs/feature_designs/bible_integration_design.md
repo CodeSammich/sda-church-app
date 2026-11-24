@@ -452,9 +452,9 @@ There is no modern Spanish translation in the app.
 
 ### 4.1 Caching and Offline Access
 
-The web/PWA preview's service worker (`public/sw.js`) is network-first: it caches the
-response to every GET request, including Bible chapters, and serves the cached copy when the network
-fails. Explicit persistence in `IndexedDB` is planned for that browser target. `IndexedDB`
+The web/PWA preview's service worker (`public/sw.js`) is network-first: it caches each
+complete answer to a GET request for the website's own files, including Bible chapters, and serves
+the cached copy when the network fails. Explicit persistence in `IndexedDB` is planned for that browser target. `IndexedDB`
 is preferred there over `AsyncStorage` due to the large payload size of full Bible chapters
 and better performance with structured data queries. On iOS and Android, the app caches
 a book's file in memory once it opens. Every reader translation ships with the app

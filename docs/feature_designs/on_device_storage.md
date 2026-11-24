@@ -88,10 +88,10 @@ Each lesson in the index has the days it's the lesson for: from the catalog, a q
 
 The other copies:
 
-- **The web app's offline copy.** `public/sw.js`, the service worker, is network-first: it keeps the response to every GET request, from the website or elsewhere, in the browser's Cache Storage under `sda-church-v<version>`, and serves that copy when the network fails. A new version deletes the older copies.
+- **The web app's offline copy.** `public/sw.js`, the service worker, is network-first: it keeps each complete answer to a GET request for the website's own files in the browser's Cache Storage under `sda-church-v<version>`, and serves that copy when the network fails. Requests to other sites, such as Bible audio, photos and the bulletin, go straight to the network and aren't kept there. A new version deletes the older copies.
 - **Bundled Bible files on Android.** These are the `expo-asset` copies above, in the cache directory, which the system may clear.
 - **The Android widget's verses.** `expo-widgets` keeps the widget's layout and the week of verses the app last gave it (#235) in the app's `expo.modules.widgets` shared preferences, a few kilobytes. `plugins/withAndroidBackupRules.js` leaves them out of Android's backup and a transfer to a new phone, since the app gives the widget its week again whenever it runs. The light or dark look a widget's button chose is in `verse_widget_theme`, by widget ID, also left out of the backup, since another phone's widgets have other IDs. Home makes the widget a new week once a day, or when the language changes, and keeps a copy with the day, language, and labels it was made for in `verse-of-the-day/widget.json` in the cache directory, to hand the widget each time the app runs (`services/VerseOfTheDayWidget.android.ts`).
-- **Streamed audio isn't saved by the app.** Bible audio streams through `expo-audio`, unless the member downloaded it (below). On the web, the browser and the service worker may keep what was fetched, as for any request.
+- **Streamed audio isn't saved by the app.** Bible audio streams through `expo-audio`, unless the member downloaded it (below). On the web, the browser may keep what was fetched, as for any request; the service worker doesn't.
 
 ## Bible audio downloaded to listen offline
 
