@@ -247,10 +247,11 @@ and `APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy). A third environment,
 [Screenshots reviewed](#key-screens) check for approval.
 
 To set up `production`, open **Settings → Environments** in the upstream repository and
-create or select `production`. Require at least one reviewer, and restrict deployment
-branches to `main` and `release-candidate`, so a manual QR code run from
-`release-candidate` can reach its approval step (the Apps Script deploy skips on any
-branch but `main`). The signing jobs themselves run only on `main`. Then:
+create or select `production`. Its current setting: the required reviewers are the
+`release-approvers` team, so only church IT admins approve its jobs, and its deployment
+branches are `main` and `release-candidate`. Every job that uses it runs only on `main`:
+the signed builds, the Apps Script deploy and the QR code upload skip on any other branch,
+and the test APK upload to Drive runs in `main`'s context. Then:
 
 - **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile
   are binary, so their secrets hold base64 text. Base64 is only an encoding; the GitHub
@@ -576,9 +577,9 @@ Drive through `production`; a download link reaches more testers, and needs neit
 
 **On Google Drive, optionally.** A phone's Drive app installs an APK without a GitHub
 sign-in, so `.github/workflows/android-preview-apk-drive.yml` can put the release PR's
-APK in Drive too. It needs `production`, whose branch rule accepts only `main`'s context,
-so it uses `pull_request_target`, and it never checks out or runs the pull request's
-code:
+APK in Drive too. It needs `production`, whose branch rule accepts `main`'s context but
+not a pull request's own ref, so it uses `pull_request_target`, and it never checks out or
+runs the pull request's code:
 
 - **Find the preview APK** waits for this workflow's run of the PR's head commit and
   finds its APK through GitHub's API, with the same checks as the comment: the name with
@@ -1451,9 +1452,10 @@ testers need it.
 
 Why a separate environment instead of `production`:
 
-- **`production` is shared.** The signed builds, the Apps Script deploy, and the QR code
-  upload all use it, and a QR code run can start from `release-candidate`. Any job that
-  names an environment can read every secret in it.
+- **`production` is shared.** The signed builds, the Apps Script deploy, the QR code
+  upload, and the test APK upload to Drive all use it, and it accepts runs from
+  `release-candidate` as well as `main`. Any job that names an environment can read every
+  secret in it.
   In `store-upload`, only the two upload jobs can reach the store credentials.
 - **One approval instead of two.** `production` requires a reviewer for every job.
   The upload jobs start after the builds finish, so in `production` each release would

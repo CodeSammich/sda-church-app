@@ -351,9 +351,13 @@ submitted for review before they appear on the App Store.
 
 ### Apple App Store
 
-- The church has an **Apple Business Manager** organization with nonprofit status,
-  registered with the church's own D-U-N-S number (not the conference's). That
-  waives the $99 annual developer fee.
+- The Apple Developer Program's $99 yearly fee is waived: the church applied for
+  Apple's [nonprofit fee waiver](https://developer.apple.com/help/account/membership/fee-waivers/)
+  with its own D-U-N-S number from Dun & Bradstreet (not the conference's). A church
+  that meets the 501(c)(3) requirements is tax exempt without applying to the IRS
+  ([IRS](https://www.irs.gov/charities-non-profits/churches-integrated-auxiliaries-and-conventions-or-associations-of-churches)).
+  Apple Business Manager played no part; it's a separate service
+  ([Apple Developer versus Apple Business Manager](operations/app-store-setup.md#apple-developer-versus-apple-business-manager)).
 - The **Apple Developer** account that publishes the app is registered to
   **`technology@nyccsda.org`**, the shared Google Group address, not to a person.
   The other active administrators are added to the team with their own individual
@@ -447,10 +451,11 @@ How it's published, and the rules that keep these pages working, are in
 [The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
 
 The same Expo source can also be built as a Progressive Web App (PWA), and that
-build is what GitHub Pages serves. It is a **developer preview only**. It isn't
-supported or tested as a way to use the app, because some mobile features conflict
-with running as a PWA, so it doesn't appear as a client in the diagrams. Members use
-the native iOS and Android apps.
+build is what GitHub Pages serves. It is a **maintained preview, not a release
+channel**: it's kept working for testing and previews
+([Web & PWA testing and preview](README.md#web--pwa-testing-and-preview)), but some
+mobile features conflict with running as a PWA, so members use the native iOS and
+Android apps, and it doesn't appear as a client in the diagrams.
 
 ## Third-party APIs and websites
 
@@ -560,7 +565,7 @@ How to set it up and check it each year:
 | Service | Payment method | Why |
 | --- | --- | --- |
 | Cloudflare | **A credit card with a hard limit, about $200–300 for now** | Renews `nyccsda.org`, about $11 a year as of 2026. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
-| Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
+| Apple Developer | None | The $99 yearly fee is waived for the church. |
 | Google Play | None | The one-time $25 registration is paid; nothing recurs. |
 | Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
 | Google Workspace | None | Workspace for Nonprofits: email, Drive, and Apps Script. |

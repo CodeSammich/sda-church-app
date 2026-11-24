@@ -821,8 +821,8 @@ example `牧[師师]` and `長老|长老`.
 
 ## Digital mobile bulletin behavior
 
-The native mobile app is the primary digital product. The PWA is a testing and
-preview surface, not the canonical release channel.
+The native mobile app is the primary digital product. The PWA is a maintained
+preview, not a release channel.
 
 ### Sections and location-specific rules
 

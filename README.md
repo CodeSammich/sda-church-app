@@ -8,7 +8,7 @@
 
 A React Native mobile application built with Expo for Seventh-day Adventist church
 community features. Native iOS and Android are the primary release targets; the web/PWA
-build remains a useful preview and fallback surface.
+build is a maintained preview, not a release channel.
 
 ## Quick start
 

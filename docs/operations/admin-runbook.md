@@ -49,8 +49,8 @@ does and what still needs a person.
 The `production` Environment holds the Google login (`CLASPRC_JSON`) and the Apple and
 Android signing credentials; the store upload settings are in the separate `store-upload`
 environment (see [Approving a production deployment](#approving-a-production-deployment)).
-It only accepts runs from `main` and `release-candidate` (and the retired
-`release/**`), and each run waits for a `release-approvers` member to approve it.
+It accepts runs from `main` and `release-candidate`. Each run waits for a
+`release-approvers` member to approve it, and only church IT admins approve.
 Admins can also bypass that approval. To require approval even from admins, turn off
 **Allow administrators to bypass configured protection rules** under **Settings →
 Environments → production**.
@@ -248,7 +248,7 @@ The QR codes and where they point are listed in
 | File | Destination |
 | --- | --- |
 | `queens_adventist_giving_qr_code_368x368.jpg` | The church's AdventistGiving page, which the app's **Tithe & Offering** page opens too |
-| `brooklyn_adventist_giving_qr_code_368x368.jpg` | The same AdventistGiving page as Queens's |
+| `brooklyn_adventist_giving_qr_code_368x368.jpg` | The same address as the Queens code: both giving codes encode one address |
 | `mobile_app_qr_code_368x368.jpg` | `https://app.nyccsda.org/download`, which sends phones to their app store |
 
 The app code uses the church's own `app.nyccsda.org` address, never the GitHub Pages
@@ -1391,7 +1391,7 @@ the policy, no release can merge into `main`**:
 | --- | --- | --- |
 | `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
 | `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
-| `.github/workflows/android-preview-apk-drive.yml` | The optional Google Drive upload of the release PR's test APK needs the `production` environment, whose branch rule accepts only `main`'s context. It checks out no pull request code: it takes the APK workflow's APK through GitHub's API, checks its SHA-256, and uploads it with `main`'s helper. | No |
+| `.github/workflows/android-preview-apk-drive.yml` | The optional Google Drive upload of the release PR's test APK needs the `production` environment, whose branch rule accepts `main`'s context but not a pull request's own ref. It checks out no pull request code: it takes the APK workflow's APK through GitHub's API, checks its SHA-256, and uploads it with `main`'s helper. | No |
 
 None runs code from a fork with secrets or a write token, which is what makes
 `pull_request_target` dangerous (a "pwn request"). `android-preview-apk.yml` used it
