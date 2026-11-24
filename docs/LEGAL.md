@@ -14,6 +14,7 @@ terms, ownership, or permissions will remain unchanged.
 - [Sabbath School Lessons](#sabbath-school-lessons)
 - [English Hymnal Integration and Link Safety](#english-hymnal-integration-and-link-safety)
 - [Chinese Hymnal Source and Link Safety](#chinese-hymnal-source-and-link-safety-rationale)
+- [Hymnal Cover Images](#hymnal-cover-images)
 - [Branding & Trademarks](#branding--trademarks)
 - [Privacy Policy](#privacy-policy)
 - [Legal Disclaimer](#legal-disclaimer)
@@ -23,8 +24,8 @@ terms, ownership, or permissions will remain unchanged.
 ## Bible Sources and Licensing
 
 Every reader translation ships with the app, so the Bible opens with no network. The
-build scripts got the text from two content services; the app doesn't request a
-translation's text from either:
+build scripts got the text from three content services; the app doesn't request a
+translation's text from any of them:
 
 - [HelloAO](https://bible.helloao.org/) is the source of the English reader text (the
   BSB) and every translation's book list. `scripts/build-bundled-bibles.mjs` builds
@@ -50,8 +51,10 @@ translation's text from either:
   edition's translation footnotes. It's also the source of the original-language
   critical editions shown in the verse-detail popup, which ship with the app too, so
   no Bible text loads over the network.
-- **The Chinese Union Version ships with the app**: the public-domain 1919 text,
-  in Traditional and Simplified characters, read with no network. See
+- [WordProject](https://www.wordproject.org/) is the source of the Chinese Union
+  Version: the public-domain 1919 text, from WordProject's Traditional Chinese download,
+  checked verse by verse and shipped in Traditional and Simplified characters
+  (`scripts/build-cuv-1919.mjs`). See
   [Chinese Union Version text](#chinese-union-version-text-1919).
 
 The BSB is public domain (HelloAO lists it so, and Berean dedicated it in 2023), and so
@@ -706,6 +709,26 @@ hymnals' sung buttons, search YouTube instead. The same limits apply as for zgax
 The mapping is [`features/hymnal/Chinese506YouTube.json`](../features/hymnal/Chinese506YouTube.json),
 regenerated with [`scripts/map-chinese-506-youtube.mjs`](../scripts/map-chinese-506-youtube.mjs)
 through the YouTube Data API.
+
+---
+
+## Hymnal Cover Images
+
+The hymnal page shows a picture of each of its six hymnals' covers with the book's
+title, so members can tell the books apart: the 1985 *Seventh-day Adventist Hymnal*,
+the Chinese 505 and 506 hymnals, and the three 707 editions of 頌讚詩歌 (*Hymns of
+Praise*). They're bundled in the app (`assets/images/hymnals/`, chosen in
+`features/hymnal/Hymnals.ts`).
+
+| Source | What the app uses | Rights basis |
+| --- | --- | --- |
+| The hymnals' publishers | One cover image per hymnal, shown only on the hymnal page to identify the book | The covers belong to their publishers, and the repository records no license for them. They're used only to identify the books the hymn lists come from, as the Library's cover thumbnails identify its books. This is a fair-use assessment, not an express license. The September 2026 store review called this use low risk ([store policy audit, item 3](operations/store-policy-audit.md#3-content-image-audio-and-trademark-rights--release-blocker)). |
+
+Rules for these images:
+
+- Keep them out of the store listings: the screenshots leave out the hymnal covers
+  ([Store listings](operations/store-listing.md#screenshots)).
+- If a publisher objects, replace its cover with a text tile or the app's own art.
 
 ---
 

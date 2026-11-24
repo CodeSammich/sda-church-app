@@ -4,136 +4,125 @@ The text for App Store Connect's **What's New in This Version** and Google Play'
 release notes, for the version being released, so it can be copied as it is once the
 release merges. Update it in the release's own PRs.
 
-## Version 1.7.1
+## Version 1.9.0
 
-Neither store's public version is newer than 1.4: no 1.5 or 1.6 version, nor 1.7.0,
-reached the App Store, so this covers everything from 1.5.0 to 1.7.1. Before pasting
-the Google Play text, check which version Play's production track has; it assumes
-1.4.x too.
-
-Before pasting the App Store text, run the iPhone background-download check on
-TestFlight. If it fails, hold the iOS release rather than paste the downloads line as it
-stands.
+This covers what changed from 1.8.0 to 1.9.0. Before pasting, check that each store's
+public version is 1.8.0; if one is older, its text needs that version's changes too.
 
 The verse of the day widget is Android only (#235; the iPhone's is #614), so only
-Google Play's text has it.
+Google Play's text has its line.
+
+The Library line is only in English and Spanish: Chinese readers already had those
+books.
 
 ### App Store
 
 #### English (U.S.)
 
-• iPad: the app now runs as an iPad app, in portrait or landscape and beside other apps, with larger text to start.
-• A new look: the tabs float in a bar near the bottom of the screen, and the Bible's audio and chapter controls float in a card just above it. Pages run all the way to the bottom edge. Prefer softer colors? Choose Standard under You → Contrast.
-• Offline Bible audio: under You → Offline Bible Audio, download a narrator's recordings by book, section, Testament or the whole Bible, and listen without internet. Downloads keep going while the phone is locked or you're in another app, and a notification tells you when they're done. On mobile data it asks first and shows the size.
-• Bible audio follows along: the verse being read is marked and kept in the middle of the screen. Scroll to look around, and a few seconds later it returns to the verse being read.
-• Tithe & Offering: a Fidelity Charitable button for donor-advised fund gifts, and a list of other sponsors.
-• The Weekly Bulletin's Sabbath School now lists its hymns and this week's lesson, and Special Music names the piece.
-• Share the App: under You → About & Support, a QR code a friend can scan to download the app, or a link to send them.
-• Sabbath School links this week's mission video: Mission Spotlight, or in Chinese, a weekly video in Mandarin.
-• A new launch animation, plus other fixes and improvements.
+• Weekly Bulletin: a new Announcements section shows this week's announcement, in your language.
+• Saved Verses now open full screen, with each passage in full.
+• Tap a verse to see its footnotes first, then the Greek or Hebrew. A psalm's title shows there too.
+• Verse links from Home, the Weekly Bulletin and search now go straight to the verse, even when its chapter is already open.
+• Bible audio in Mandarin, Cantonese and Spanish now plays and downloads from HelloAO first, with the church's own copy as a backup.
+• Library: seven more free books in English, including The Kneeling Christian, and a new Adventist Writers Today shelf.
+• Hymns in the Weekly Bulletin link to the right hymn more often, plus other fixes and improvements.
 
 #### Chinese (Simplified)
 
-• iPad：应用现在以 iPad 版运行，竖屏、横屏或与其他应用并排均可，文字默认也更大。
-• 全新外观：标签栏浮在屏幕底部附近，圣经的音频和章节控件则浮在它正上方的卡片中。页面一直延伸到屏幕底部边缘。喜欢较柔和的颜色？可在“您”→“对比度”中选择“标准”。
-• 离线圣经音频：在“您”→“离线圣经音频”中，可按书卷、类别、旧约或新约，或整本圣经下载朗读音频，没有网络也能收听。手机锁屏或切换到其他应用时也会继续下载，完成时会以通知告诉您。使用移动数据时会先询问，并显示文件大小。
-• 画面跟着朗读：播放圣经音频时，正在朗读的经文会标示出来，并保持在屏幕中间。您可以自行滑动查看，几秒后画面会回到正在朗读的经文。
-• 奉献：新增 Fidelity Charitable 按钮，可通过捐赠者建议基金奉献，并列出其他赞助机构。
-• 每周周报的安息日学现在列出诗歌及本周课程，特别音乐也会注明曲目。
-• 安息日学新增每周的“本周圣工剪影”普通话视频。
-• 精选书库新增“当代复临著作”书架。
-• 分享应用：在“您”→“关于与支持”中，朋友扫描二维码即可下载，也可以发送链接。
-• 全新的启动动画，以及其他修复与改进。
+• 每周周报：新增“报告事项”，以您的语言显示本周的报告。
+• “已保存经文”现在以全屏打开，每段经文完整显示。
+• 点按经文时，先显示脚注，再显示希腊文或希伯来文；诗篇的标题也会显示在这里。
+• 从首页、每周周报或搜索打开经文链接时，会直接跳到该节经文，即使该章已经打开。
+• 普通话、粤语和西班牙语的圣经音频现在优先从 HelloAO 播放和下载，教会自己的副本作为备用。
+• 每周周报中的诗歌会更准确地链接到对应的诗歌，以及其他修复与改进。
 
 #### Chinese (Traditional)
 
-• iPad：應用程式現在以 iPad 版執行，直向、橫向或與其他應用程式並排皆可，文字預設也較大。
-• 全新外觀：分頁列浮在畫面底部附近，聖經的音訊與章節控制項則浮在它正上方的卡片中。頁面一直延伸到畫面底部邊緣。喜歡較柔和的顏色？可在「您」→「對比度」中選擇「標準」。
-• 離線聖經音訊：在「您」→「離線聖經音訊」中，可按書卷、類別、舊約或新約，或整本聖經下載朗讀音訊，沒有網路也能收聽。手機鎖定或切換到其他應用程式時也會繼續下載，完成時會以通知告訴您。使用行動數據時會先詢問，並顯示檔案大小。
-• 畫面跟著朗讀：播放聖經音訊時，正在朗讀的經文會標示出來，並保持在畫面中間。您可以自行捲動查看，幾秒後畫面會回到正在朗讀的經文。
-• 奉獻：新增 Fidelity Charitable 按鈕，可透過捐贈者建議基金奉獻，並列出其他贊助機構。
-• 每週週報的安息日學現在列出詩歌及本週課程，特別音樂也會註明曲目。
-• 安息日學新增每週的「本週聖工剪影」國語影片。
-• 精選書庫新增「當代復臨著作」書架。
-• 分享應用程式：在「您」→「關於與支援」中，朋友掃描 QR 碼即可下載，也可以傳送連結。
-• 全新的啟動動畫，以及其他修正與改進。
+• 每週週報：新增「報告事項」，以您的語言顯示本週的報告。
+• 「已儲存經文」現在以全螢幕開啟，每段經文完整顯示。
+• 點按經文時，先顯示腳注，再顯示希臘文或希伯來文；詩篇的標題也會顯示在這裡。
+• 從首頁、每週週報或搜尋開啟經文連結時，會直接跳到該節經文，即使該章已經開啟。
+• 國語、粵語和西班牙語的聖經音訊現在優先從 HelloAO 播放和下載，教會自己的副本作為備用。
+• 每週週報中的詩歌會更準確地連結到對應的詩歌，以及其他修正與改進。
 
 #### Spanish (Mexico), and the same text for Spanish (Spain)
 
-• iPad: la app ahora funciona como app de iPad, en vertical u horizontal y junto a otras apps, con el texto más grande desde el inicio.
-• Un nuevo diseño: las pestañas flotan en una barra cerca del borde inferior de la pantalla, y los controles de audio y de capítulo de la Biblia flotan en una tarjeta justo encima. Las páginas llegan hasta el borde inferior. ¿Prefieres colores más suaves? Elige Estándar en Tú → Contraste.
-• Audio bíblico sin conexión: en Tú → Audio bíblico sin conexión, descarga las grabaciones de un narrador por libro, sección, Testamento o la Biblia entera, y escúchalas sin internet. Las descargas continúan aunque el teléfono esté bloqueado o estés en otra app, y una notificación te avisa cuando terminan. Con datos móviles, primero pregunta y muestra el tamaño.
-• El audio de la Biblia sigue la lectura: el versículo que se lee queda marcado y en el centro de la pantalla. Puedes desplazarte para mirar, y unos segundos después la pantalla vuelve al versículo que se lee.
-• Diezmos y Ofrendas: un botón de Fidelity Charitable para ofrendar a través de un fondo asesorado por donantes, y una lista de otros patrocinadores.
-• En el Boletín Semanal, la Escuela Sabática ahora muestra sus himnos y la lección de esta semana, y la Música Especial indica la pieza.
-• Compartir la App: en Tú → Información y Ayuda, un código QR para que un amigo descargue la app, o el enlace para enviárselo.
-• Una nueva animación al abrir la app, además de otras correcciones y mejoras.
+• Boletín Semanal: una nueva sección de Anuncios muestra el anuncio de la semana, en tu idioma.
+• Versículos guardados ahora se abre a pantalla completa, con cada pasaje completo.
+• Al tocar un versículo, primero ves sus notas al pie y luego el griego o el hebreo. El título de un salmo también aparece ahí.
+• Los enlaces a versículos desde Inicio, el Boletín Semanal y la búsqueda ahora van directo al versículo, aunque su capítulo ya esté abierto.
+• El audio bíblico en español, mandarín y cantonés ahora se reproduce y se descarga primero desde HelloAO, con la copia de la iglesia como respaldo.
+• Biblioteca: seis libros gratuitos en español en el nuevo estante Autores adventistas de hoy, y The Kneeling Christian en inglés.
+• Los himnos del Boletín Semanal enlazan con más precisión al himno correcto, además de otras correcciones y mejoras.
 
 ### Google Play (production), at most 500 characters each
 
 Promoting the internal testing build to production copies the testers' notes, the
 release PR's title; replace them with these. Keep Play's language tags: `en-US`;
-`zh-TW` and `zh-HK` (Traditional); `zh-CN` (Simplified); `es-US` and `es-419`
-(Spanish).
+`zh-TW` and `zh-HK` (Traditional, the same text); `zh-CN` (Simplified); `es-US` and
+`es-419` (Spanish, the same text).
 
 ```
 <en-US>
-• A new look: the tabs float near the bottom of the screen, with the Bible's audio controls in a card above them. Softer colors: You → Contrast.
-• Tablets: a centered page, larger text.
-• Offline Bible audio: download recordings under You → Offline Bible Audio. Downloads go on in the background.
-• A Today’s Verse home screen widget.
-• Bible audio follows the verse being read.
-• Tithe & Offering: a Fidelity Charitable button.
-• Sabbath School hymns in the Bulletin, Share the App, and more.
+• Weekly Bulletin: a new Announcements section, in your language.
+• Saved Verses open full screen.
+• Tap a verse: its footnotes come first, then the Greek or Hebrew.
+• Verse links go straight to the verse.
+• The Today’s Verse widget opens its verse every time.
+• Mandarin, Cantonese and Spanish Bible audio plays from HelloAO first.
+• Library: seven more free books in English and a new Adventist Writers Today shelf.
+• Better hymn links in the bulletin, and more.
 </en-US>
 
 <zh-TW>
-• 全新外觀：分頁列浮在畫面底部附近，聖經的音訊控制項則在它正上方的卡片中。較柔和的顏色：「您」→「對比度」。
-• 平板：頁面置中，文字較大。
-• 離線聖經音訊：在「您」→「離線聖經音訊」中下載朗讀音訊，在背景也會繼續下載。
-• 主畫面的「今日經文」小工具。
-• 聖經音訊播放時，畫面跟著朗讀的經文。
-• 奉獻：新增 Fidelity Charitable 按鈕。
-• 週報的安息日學詩歌、分享應用程式等等。
+• 每週週報新增「報告事項」，以您的語言顯示。
+• 「已儲存經文」改為全螢幕顯示。
+• 點按經文：先顯示腳注，再顯示希臘文或希伯來文。
+• 經文連結直接跳到該節經文。
+• 「今日經文」小工具每次都開啟該節經文。
+• 國語、粵語和西班牙語聖經音訊優先從 HelloAO 播放。
+• 週報的詩歌連結更準確，以及其他改進。
 </zh-TW>
 
 <zh-HK>
-• 全新外觀：分頁列浮在畫面底部附近，聖經的音訊控制項則在它正上方的卡片中。較柔和的顏色：「您」→「對比度」。
-• 平板：頁面置中，文字較大。
-• 離線聖經音訊：在「您」→「離線聖經音訊」中下載朗讀音訊，在背景也會繼續下載。
-• 主畫面的「今日經文」小工具。
-• 聖經音訊播放時，畫面跟著朗讀的經文。
-• 奉獻：新增 Fidelity Charitable 按鈕。
-• 週報的安息日學詩歌、分享應用程式等等。
+• 每週週報新增「報告事項」，以您的語言顯示。
+• 「已儲存經文」改為全螢幕顯示。
+• 點按經文：先顯示腳注，再顯示希臘文或希伯來文。
+• 經文連結直接跳到該節經文。
+• 「今日經文」小工具每次都開啟該節經文。
+• 國語、粵語和西班牙語聖經音訊優先從 HelloAO 播放。
+• 週報的詩歌連結更準確，以及其他改進。
 </zh-HK>
 
 <zh-CN>
-• 全新外观：标签栏浮在屏幕底部附近，圣经的音频控件则在它正上方的卡片中。较柔和的颜色：“您”→“对比度”。
-• 平板：页面居中，文字更大。
-• 离线圣经音频：在“您”→“离线圣经音频”中下载朗读音频，在后台也会继续下载。
-• 主屏幕的“今日经文”小组件。
-• 圣经音频播放时，画面跟着朗读的经文。
-• 奉献：新增 Fidelity Charitable 按钮。
-• 周报的安息日学诗歌、分享应用等等。
+• 每周周报新增“报告事项”，以您的语言显示。
+• “已保存经文”改为全屏显示。
+• 点按经文：先显示脚注，再显示希腊文或希伯来文。
+• 经文链接直接跳到该节经文。
+• “今日经文”小组件每次都打开该节经文。
+• 普通话、粤语和西班牙语圣经音频优先从 HelloAO 播放。
+• 周报的诗歌链接更准确，以及其他改进。
 </zh-CN>
 
 <es-US>
-• Nuevo diseño: las pestañas flotan abajo, con el audio de la Biblia en una tarjeta encima. Colores más suaves: Tú → Contraste.
-• Tabletas: página centrada y texto más grande.
-• Audio bíblico sin conexión: descarga grabaciones en Tú → Audio bíblico sin conexión, aun en segundo plano.
-• Widget «Versículo de hoy» para la pantalla de inicio.
-• El audio sigue el versículo que se lee.
-• Diezmos y Ofrendas: Fidelity Charitable.
-• Himnos de Escuela Sabática en el Boletín, Compartir la App y más.
+• Boletín Semanal: nueva sección de Anuncios, en tu idioma.
+• Versículos guardados, a pantalla completa.
+• Al tocar un versículo: primero las notas al pie, luego el griego o el hebreo.
+• Los enlaces van directo al versículo.
+• El widget Versículo de hoy abre su versículo cada vez.
+• Audio bíblico en español, mandarín y cantonés: primero desde HelloAO.
+• Biblioteca: seis libros gratuitos en español en el nuevo estante Autores adventistas de hoy.
+• Mejores enlaces a himnos, y más.
 </es-US>
 
 <es-419>
-• Nuevo diseño: las pestañas flotan abajo, con el audio de la Biblia en una tarjeta encima. Colores más suaves: Tú → Contraste.
-• Tabletas: página centrada y texto más grande.
-• Audio bíblico sin conexión: descarga grabaciones en Tú → Audio bíblico sin conexión, aun en segundo plano.
-• Widget «Versículo de hoy» para la pantalla de inicio.
-• El audio sigue el versículo que se lee.
-• Diezmos y Ofrendas: Fidelity Charitable.
-• Himnos de Escuela Sabática en el Boletín, Compartir la App y más.
+• Boletín Semanal: nueva sección de Anuncios, en tu idioma.
+• Versículos guardados, a pantalla completa.
+• Al tocar un versículo: primero las notas al pie, luego el griego o el hebreo.
+• Los enlaces van directo al versículo.
+• El widget Versículo de hoy abre su versículo cada vez.
+• Audio bíblico en español, mandarín y cantonés: primero desde HelloAO.
+• Biblioteca: seis libros gratuitos en español en el nuevo estante Autores adventistas de hoy.
+• Mejores enlaces a himnos, y más.
 </es-419>
 ```
