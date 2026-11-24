@@ -37,9 +37,9 @@ the lowest rating (ESRB Everyone, PEGI 3).
 | Controlled Substance | No | |
 | Promotion or Sale of Age-Restricted Products or Activities | No | |
 | Shares the user's precise location with other users | No | The app has no location permission. |
-| Purchase of digital goods | No | The giving button opens AdventistGiving in the browser and unlocks nothing. |
+| Purchase of digital goods | No | The giving button opens AdventistGiving in the in-app browser and unlocks nothing. |
 | Cash rewards, gift cards, crypto, or NFTs | No | |
-| Web browser or search engine | No | External pages open in the phone's browser; the app has no WebView browser. |
+| Web browser or search engine | No | Each website link opens its own page in the in-app browser, a Custom Tab: the phone's browser, shown over the app. The app opens no WebView, and has no address bar or web search of its own. |
 | Primarily news or educational | No | It's a church community app. |
 
 Since 1.4.0 the Bible text ships inside the app package, which moves it under
@@ -59,17 +59,18 @@ button. The audit's [item 4](store-policy-audit.md#4-children-and-age-declaratio
 recommends the same.
 
 The Sabbath School page's children's section doesn't change this. It lists lessons by
-age with Students and Teachers tabs, for parents and teachers, and each lesson opens
-on its publisher's website rather than in the app. If that section ever shows lesson
-content inside the app, revisit this answer.
+age with Students and Teachers tabs, for parents and teachers. Tapping a lesson
+downloads its publisher's PDF and opens it in the phone's own PDF viewer, not in the
+app's screens (#529); an age group with no PDF this week opens its Alive in Jesus
+website. If the app ever shows lesson content in its own screens, revisit this answer.
 
 Play shows a notice that 13–15-year-olds count as children in some countries, and
 offers a neutral age screen. The app needs no screen because it complies as a whole:
 its content is rated Everyone, and it has no ads, analytics, accounts, or personal data.
 
 Keep the listing consistent with this: no "for kids" wording, and no screenshots of the
-children's shelves. The current screenshots show Home, the Bible, Explore, and the
-Library's main page; see [`docs/store-assets/`](../store-assets/README.md).
+children's shelves. The current screenshots show Home, the Bible, Explore, the
+Library's main page, and You; see [`docs/store-assets/`](../store-assets/README.md).
 
 ## Ads and app access
 
@@ -84,15 +85,20 @@ listing then shows "No data collected" and "No data shared with third parties."
 
 - The app has no analytics, ads, crash reporting, push notifications, or over-the-air
   update SDK. These are the usual reasons an Expo app has to answer Yes.
-- Every network request fetches content: a Bible chapter, commentary, or audio file,
-  the bulletin for a date (only the date and the app's version are sent; the bulletin
-  script keeps only the last day an older version asked, nothing about who), a library or
-  lesson catalog, or a cover image. No search terms, form input, identifiers, or location
-  leave the phone; Bible, hymnal, and Library searches run on the phone.
+- Every network request fetches content: a Bible audio file (the Bible text ships with
+  the app), the bulletin for a date (only the date and the app's version are sent; the
+  bulletin script keeps only the last day an older version asked, nothing about who), a
+  library or lesson catalog, a children's lesson PDF, a YouTube channel's list of new
+  videos (to find the week's mission video in Chinese), or an image such as a cover. No
+  search terms, form input, identifiers, or location leave the phone; Bible, hymnal, and
+  Library searches run on the phone.
 - Settings and saved verses stay on the phone.
 - Sharing a verse is user-initiated, which Google exempts from "shared".
-- The giving button and other external links open the phone's browser, which Google
-  counts as the open web, not an in-app WebView.
+- The giving button and other website links open in a Custom Tab, the phone's browser
+  shown over the app, not a WebView, so the app doesn't control or see those pages.
+  Google counts data collected through a WebView only when the app controls what it
+  delivers, not where users navigate the open web
+  ([Data safety](https://support.google.com/googleplay/android-developer/answer/10787469)).
 - Content hosts see the phone's IP address in their ordinary server logs, like any
   web request. Google doesn't treat that as collection unless the app uses it, for
   example to estimate location, and this app doesn't.
@@ -161,10 +167,15 @@ News & magazines, Events (which means ticket sales), and Music & audio.
   no Chinese: the church's name in English and Spanish, the line in Spanish, "Biblia
   multilingüe · Audio · Boletín semanal · Himnos", and Spanish's own screenshots (#692). `scripts/make-play-feature-graphic.cjs` builds both
   from the phone screenshots, so run it again when they change.
-- **Phone screenshots:** one set of six, which every listing language shows, captured
-  as [Store listings](store-listing.md#screenshots) describes. The first submission had
-  eight in English and four in Traditional Chinese; this set replaced them on
-  September 30, 2026.
+- **Phone screenshots:** each listing language has its own set, in its own interface,
+  in `docs/store-assets/google-play/phone/`: seven in English, Simplified Chinese, and
+  Spanish, and eight in Traditional Chinese, captured as
+  [Store listings](store-listing.md#screenshots) describes. The first submission had
+  eight in English and four in Traditional Chinese; one set of six for every language
+  replaced them on September 30, 2026, and each language got its own from 1.7.1 (#681).
+- **Tablet screenshots:** a set of five per language, in
+  `docs/store-assets/google-play/tablet/`, uploaded to both the 7-inch and 10-inch
+  tablet slots.
 - **AI-generated declaration:** Play Console asks, for each image, whether AI generated
   or edited it. The feature graphic: yes, because an AI assistant designed its layout and
   wrote the script that builds it, though no image generator made any of its pixels. The icon and screenshots: no; they're the

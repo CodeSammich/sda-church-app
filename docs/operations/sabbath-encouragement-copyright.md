@@ -46,9 +46,14 @@ clearance or permission from the Ellen G. White Estate, a publisher, or a period
 
 ## What can and cannot be assumed
 
-The U.S. Copyright Office explains that works published in the United States before January 1,
-1931 are in the public domain. Works first published from 1923 through 1963 require a
-publication-date and renewal investigation; age alone is not enough for every edition.
+Works published in the United States before January 1, 1931 are in the public domain as of
+2026. Works first published from 1931 through 1963 require a publication-date and renewal
+investigation: one published with a copyright notice whose copyright wasn't renewed is in the
+public domain, and a renewed one stays in copyright for 95 years after publication
+([Cornell University Library's chart](https://guides.library.cornell.edu/copyright/publicdomain),
+current as of January 1, 2026, from the terms in the Copyright Office's
+[Circular 15A](https://www.copyright.gov/circs/circ15a.pdf)). Age alone is not enough for every
+edition.
 
 Translations, later editions, editorial selections, annotations, page design, and website
 transcriptions can have separate copyrights even when the underlying historical text is old.
@@ -77,8 +82,8 @@ to a manuscript is not, by itself, permission to reproduce the material.
 | 天路 | *Christ's Object Lessons*, 1900 | The 1900 US edition is within the pre-1931 public-domain category. | Use verified original wording only. |
 | 早期著作 | *Early Writings*, 1882 | The 1882 US edition is within the pre-1931 public-domain category. | Use verified original wording only. |
 | 证言, volumes 1–9 | *Testimonies for the Church*, volumes 1–9, published 1885–1909 | These original US volumes are pre-1931 editions and are generally treated as public-domain historical editions, subject to confirming the exact edition. | Prefer the cited original volume/page rather than a later compilation. |
-| 给传道人的证言 | *Testimonies to Ministers and Gospel Workers*, 1923 | The 1923 publication falls in the Copyright Office's renewal-investigation period, so its renewal and edition history should be checked rather than assumed. | Do not label it unconditionally public domain until that check is complete. |
-| 儿童指导 | *Child Guidance*, 1954 | A posthumous compilation published after 1929 may retain copyright in its selection, arrangement, and edition. | Locate the underlying pre-1931 source passage and cite that instead, or obtain permission. |
+| 给传道人的证言 | *Testimonies to Ministers and Gospel Workers*, 1923 | The 1923 US edition is within the pre-1931 public-domain category. | Use verified original wording only. |
+| 儿童指导 | *Child Guidance*, 1954 | A posthumous compilation published in 1931 or later may retain copyright in its selection, arrangement, and edition. | Locate the underlying pre-1931 source passage and cite that instead, or obtain permission. |
 | 证言精选 | *Testimony Treasures*, volumes 1–3, 1949 | These are posthumous compilations. The underlying selections may come from older volumes, but the compilation and edition are not automatically public domain. | Do not reproduce the compilation as such without a rights review; use original cited volumes where possible. |
 | 青年导报 | *The Youth's Instructor* periodical issues | A particular issue published before 1931 may be public domain, but issue date, page, and any later reprint must be verified. | Preserve the issue/date citation; do not copy a modern reprint or database transcription by default. |
 | 评论与通讯 | *The Review and Herald* periodical issues | The same issue-by-issue publication-date and edition analysis applies. | Preserve the issue/date citation and verify the historical issue. |

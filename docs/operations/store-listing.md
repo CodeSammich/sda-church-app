@@ -327,8 +327,10 @@ Las letras y partituras de los himnos, los libros de la biblioteca, las leccione
 - **Contact email** (Google Play, shown publicly): `technology@nyccsda.org`, the same
   address as the privacy policy and the support page. Use a church role address, never
   a personal one.
-- **Copyright** (App Store): the year and the church's legal name, exactly as in the
-  developer account, such as `2026 <legal name>`.
+- **Copyright** (App Store): `2026 New York Chinese Seventh-day Adventist Church`, the
+  year and the church's legal name, exactly as in the developer account (see
+  [App Store Connect answers](app-store-connect-answers.md)). Change the year each
+  January, on the new version.
 
 ## Reviewer notes
 

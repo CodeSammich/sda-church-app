@@ -23,13 +23,15 @@ the corresponding fixed external service link.
   <https://developer.spotify.com/images/guidelines/design/2024-spotify-logo-icon.zip>
 
 Downloaded September 12, 2026. Do not recolor, distort, crop, or use these assets
-in the app icon, app name, store listing graphics, or unrelated marketing. Review
-the current provider brand guidelines before changing their use. The app uses the
-high-resolution PNG exports because the project does not currently include a native
-SVG renderer. They are rendered without tinting; YouTube's transparent canvas is
-visually compensated at render time so its mark has appropriate weight without
-changing the provider-supplied pixels. The renderer selects the official colored
-variant in both themes.
+in the app icon, app name, store listing graphics, or unrelated marketing. Store
+screenshots, and the App Store headers built from them, may show them only as the
+app shows them, inside their controls: that's a picture of the app, not a use of the
+icon files on their own. Review the current provider brand guidelines before changing
+their use. The app uses the high-resolution PNG exports because the project does not
+currently include a native SVG renderer. They are rendered without tinting; YouTube's
+transparent canvas is visually compensated at render time so its mark has appropriate
+weight without changing the provider-supplied pixels. The renderer selects the
+official colored variant in both themes.
 
 The app intentionally does not bundle a Zoom logo. The Zoom link uses a generic
 video icon because the current Zoom terms grant logo rights in narrower partner

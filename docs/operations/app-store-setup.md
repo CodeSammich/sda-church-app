@@ -10,8 +10,12 @@ the accounts under church control and recover them, see
 
 > [!WARNING]
 > **Keep account-specific values out of this repository.** That means the Apple
-> Team ID, personal or church email addresses, certificate (`.p12`) and
-> provisioning profile (`.mobileprovision`) files, keystores, and every password.
+> Team ID, the email addresses the store accounts sign in with (such as an
+> administrator's personal address or own `nyccsda.org` account), certificate
+> (`.p12`) and provisioning profile (`.mobileprovision`) files, keystores, and every
+> password. The church's shared public address, `technology@nyccsda.org`, isn't one
+> of them: the privacy policy and Google Play listing show it, and this doc uses it
+> throughout.
 > Use placeholders in documentation, and never commit signing files or secrets.
 > Signing values live only in the protected `production` GitHub Environment, and the
 > store upload credentials only in the `store-upload` environment.
@@ -170,6 +174,13 @@ It comments every week until the renewal is recorded, which emails them again, t
 closes itself. The first reminder for the current dates arrives around July 26, 2027,
 two months before the membership renews on September 20, 2027.
 
+Apple's minimum iOS SDK for uploads doesn't expire, so it isn't in the table, but it
+rises about once a year: from April 2027, uploads must be built with the iOS 27 SDK or
+later ([submission requirements](https://developer.apple.com/app-store/submitting/)).
+The [store toolchain monitor](admin-runbook.md#store-toolchain-monitor-alerts) watches
+it, as it does Google Play's target API level. Building with the iOS 27 SDK also
+changes how the app fills the iPhone Duo's inner screen, which #432 covers.
+
 The monitor reads no Apple credentials, and the public issue shows only dates, which
 give no access to anything.
 
@@ -227,9 +238,12 @@ updates can be uploaded until it's renewed.
    last year's: the `.p12`, the `.mobileprovision`, and the `.p12` password, kept apart
    from the file.
 
-Once every date is more than 60 days away, the reminder issue closes on the next
-Monday run. To close it sooner, run **Actions → Apple Signing Monitor → Run
-workflow**.
+The monitor reads the file on `main`, so step 6's pull request changes nothing until a
+release carries it from `release-candidate` to `main`. Until then the reminder issue
+stays open and gets its weekly comment, and if someone closes it by hand, the next run
+opens a new one. Once every date on `main` is more than 60 days away, the reminder issue
+closes on the next Monday run. To close it sooner, run **Actions → Apple Signing
+Monitor → Run workflow**.
 
 ## Google Play
 
@@ -398,9 +412,12 @@ changed afterwards.
 
 Treat these accounts as organizational assets, not as one employee's personal
 accounts. Keep at least two authorized administrators, use organization-owned
-email addresses, store recovery methods securely, and record the legal entity
-name, address, EIN, D-U-N-S number, account IDs, and renewal dates, outside this
-repository.
+email addresses, and store recovery methods securely. Keep a record of the legal
+entity name, address, EIN, D-U-N-S number, and account IDs outside this repository,
+and keep the account IDs and D-U-N-S number out of it. The Apple renewal dates are in
+the repository on purpose, in `.github/apple-signing-expiry.json`, for the Apple
+Signing Monitor (see [Yearly Apple renewals](#yearly-apple-renewals)): they're only
+dates, and give no access to anything.
 
 ### Apple Developer versus Apple Business Manager
 
