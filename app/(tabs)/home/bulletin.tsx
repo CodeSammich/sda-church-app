@@ -34,6 +34,7 @@ import {
 } from '@/features/sabbath-school/AdultLesson';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import {
+  BULLETIN_LOCATION_STORAGE_KEY,
   Bulletin,
   BulletinLocation,
   BulletinMetadataTranslation,
@@ -48,13 +49,29 @@ import {
   readCachedBulletin,
   setRefreshAvailableAt as persistRefreshAvailableAt,
 } from '@/services/BulletinService';
+import {
+  declineAnnouncementNotifications,
+  getAnnouncementNotificationsOn,
+  setAnnouncementNotificationsEnabled,
+  shouldOfferAnnouncementNotifications,
+  subscribeAnnouncementNotifications,
+} from '@/services/AnnouncementNotifications';
 import { getScreenshotState } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { type ComponentRef, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  type ComponentRef,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { ActivityIndicator, Card, Divider, IconButton, Text } from 'react-native-paper';
@@ -77,6 +94,9 @@ const LABELS = {
     worshipProgram: 'Worship Program',
     serviceRoster: 'Service Roster',
     announcements: 'Announcements',
+    announcementOffer: 'Get a notification when the church publishes the announcements for {location}? Once a week at most.',
+    announcementOfferNotNow: 'Not now',
+    announcementOfferTurnOn: 'Turn on',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
     possibleJointService: 'Brooklyn service details are not listed for this Sabbath.',
@@ -157,6 +177,9 @@ const LABELS = {
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     announcements: '報告事項',
+    announcementOffer: '教會發佈{location}的報告事項時通知您？每週最多一次。',
+    announcementOfferNotNow: '以後再說',
+    announcementOfferTurnOn: '開啟',
     queens: '皇后區',
     brooklyn: '布魯克林',
     possibleJointService: '本安息日尚未列出布魯克林的聚會資料。',
@@ -237,6 +260,9 @@ const LABELS = {
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     announcements: '报告事项',
+    announcementOffer: '教会发布{location}的报告事项时通知您？每周最多一次。',
+    announcementOfferNotNow: '以后再说',
+    announcementOfferTurnOn: '开启',
     queens: '皇后区',
     brooklyn: '布鲁克林',
     possibleJointService: '本安息日尚未列出布鲁克林的聚会资料。',
@@ -317,6 +343,9 @@ const LABELS = {
     worshipProgram: 'Programa de Adoración',
     serviceRoster: 'Asignaciones de Servicio',
     announcements: 'Anuncios',
+    announcementOffer: '¿Recibir una notificación cuando la iglesia publique los anuncios de {location}? Una vez por semana como máximo.',
+    announcementOfferNotNow: 'Ahora no',
+    announcementOfferTurnOn: 'Activar',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
     possibleJointService: 'No hay detalles del servicio de Brooklyn para este sábado.',
@@ -392,7 +421,6 @@ const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
 const MIDNIGHT_RELOAD_SPREAD_MS = 5 * 60 * 1000;
 const midnightReloadDelay = () =>
   1000 + Math.floor(Math.random() * MIDNIGHT_RELOAD_SPREAD_MS);
-const BULLETIN_LOCATION_STORAGE_KEY = 'preferred-bulletin-location';
 
 type Labels = (typeof LABELS)['en'];
 type WeekState = {
@@ -605,6 +633,29 @@ export default function WeeklyBulletinScreen() {
       active = false;
     };
   }, []);
+
+  // The offer of a notice of the announcements (#709), on phones that can
+  // show one, until the member answers it.
+  const announcementNoticesOn = useSyncExternalStore(
+    subscribeAnnouncementNotifications,
+    getAnnouncementNotificationsOn,
+  );
+  const [offerAnnouncementNotices, setOfferAnnouncementNotices] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void shouldOfferAnnouncementNotifications().then((offer) => {
+      if (active) setOfferAnnouncementNotices(offer);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const answerAnnouncementOffer = (turnOn: boolean) => {
+    setOfferAnnouncementNotices(false);
+    void (turnOn ? setAnnouncementNotificationsEnabled(true) : declineAnnouncementNotifications()).catch(
+      () => undefined,
+    );
+  };
 
   const selectLocation = (location: BulletinLocationTab) => {
     setSelectedLocation(location);
@@ -1105,9 +1156,13 @@ export default function WeeklyBulletinScreen() {
 
   // The week's announcements from Weekly Data (#562), the same ones the
   // printed bulletin has, after the program as in print. None, no section.
-  const renderAnnouncements = (location: BulletinLocation) => {
+  // Below them, once, the offer of a notice when the church publishes them
+  // (#709), until the member answers it; You → Announcement notifications
+  // turns it on or off after.
+  const renderAnnouncements = (location: BulletinLocation, isQueens: boolean) => {
     const announcements = getBulletinAnnouncements(location, language);
     if (!announcements.length) return null;
+    const offer = offerAnnouncementNotices && !announcementNoticesOn;
     return (
       <View ref={announcementsRef} onLayout={scrollToScreenshotSection} style={styles.cardSection}>
         <View style={[styles.sectionHeading, { borderLeftColor: theme.colors.primary }]}>
@@ -1127,6 +1182,24 @@ export default function WeeklyBulletinScreen() {
             <Text variant="bodyMedium">{announcement}</Text>
           </View>
         ))}
+        {offer && (
+          <View
+            testID="announcement-notice-offer"
+            style={[styles.locationNotice, styles.announcementOffer, { backgroundColor: theme.colors.surfaceVariant }]}
+          >
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+              {labels.announcementOffer.replace('{location}', isQueens ? labels.queens : labels.brooklyn)}
+            </Text>
+            <View style={styles.announcementOfferActions}>
+              <Button mode="text" onPress={() => answerAnnouncementOffer(false)}>
+                {labels.announcementOfferNotNow}
+              </Button>
+              <Button mode="contained" icon="bell-outline" onPress={() => answerAnnouncementOffer(true)}>
+                {labels.announcementOfferTurnOn}
+              </Button>
+            </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -1256,7 +1329,7 @@ export default function WeeklyBulletinScreen() {
 
         {renderSabbathSchool(location, isQueens)}
         {renderProgram(location, isQueens, tithePurpose)}
-        {renderAnnouncements(location)}
+        {renderAnnouncements(location, isQueens)}
         {renderRoster(location, isQueens)}
       </Card.Content>
     </Card>
@@ -1605,6 +1678,16 @@ const styles = StyleSheet.create({
   },
   programAssignmentLabel: {
     opacity: 0.72,
+  },
+  announcementOffer: {
+    marginBottom: 0,
+    marginTop: 12,
+  },
+  announcementOfferActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'flex-end',
   },
   programActionLine: {
     alignItems: 'stretch',

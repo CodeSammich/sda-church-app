@@ -1,0 +1,16 @@
+// The notice of a week's announcements (#709), made on the phone: see ../index.ts.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'org.nyccsda'
+version = '1.0.0'
+
+android {
+  namespace "org.nyccsda.announcementnotifications"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}

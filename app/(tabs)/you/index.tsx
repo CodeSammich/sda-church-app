@@ -1,5 +1,5 @@
 import { UpdateContext } from '@/app/_layout';
-import { MenuCard } from '@/components/MenuCard';
+import { MenuCard, MenuCardSwitchVisual } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { ShareAppDialog } from '@/components/ShareAppDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
@@ -26,12 +26,18 @@ import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import packageJson from '@/package.json';
+import {
+  getAnnouncementNotificationsOn,
+  hasAnnouncementNotifications,
+  setAnnouncementNotificationsEnabled,
+  subscribeAnnouncementNotifications,
+} from '@/services/AnnouncementNotifications';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { List, Text, TouchableRipple } from 'react-native-paper';
@@ -53,6 +59,8 @@ const allLabels = {
     offlineAudio: 'Offline Bible Audio',
     offlineAudioSub: 'Download Bible audio to listen with no connection',
     offlineAudioSize: (size: string) => `Downloaded: ${size}`,
+    announcements: 'Announcement notifications',
+    announcementsSub: 'Once a week at most, when the church publishes them',
     language: 'Language',
     languageSub: 'Change app language',
     contact: 'Connect',
@@ -79,6 +87,8 @@ const allLabels = {
     offlineAudio: '離線聖經音訊',
     offlineAudioSub: '下載聖經音訊，在沒有網路時收聽',
     offlineAudioSize: (size: string) => `已下載：${size}`,
+    announcements: '報告事項通知',
+    announcementsSub: '教會發佈時通知，每週最多一次',
     language: '語言',
     languageSub: '更改應用程式語言',
     contact: '聯繫',
@@ -105,6 +115,8 @@ const allLabels = {
     offlineAudio: '离线圣经音频',
     offlineAudioSub: '下载圣经音频，在没有网络时收听',
     offlineAudioSize: (size: string) => `已下载：${size}`,
+    announcements: '报告事项通知',
+    announcementsSub: '教会发布时通知，每周最多一次',
     language: '语言',
     languageSub: '更改应用语言',
     contact: '联系',
@@ -131,6 +143,8 @@ const allLabels = {
     offlineAudio: 'Audio bíblico sin conexión',
     offlineAudioSub: 'Descarga audio bíblico para escuchar sin conexión',
     offlineAudioSize: (size: string) => `Descargado: ${size}`,
+    announcements: 'Notificaciones de anuncios',
+    announcementsSub: 'Una vez por semana como máximo, cuando la iglesia los publica',
     language: 'Idioma',
     languageSub: 'Cambiar idioma de la aplicación',
     contact: 'Conectar',
@@ -178,6 +192,7 @@ export default function YouScreen() {
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   // Phones only: the web streams Bible audio (#556).
   const offlineAudioBytes = useDownloadedBibleAudioBytes();
+  const announcementsOn = useSyncExternalStore(subscribeAnnouncementNotifications, getAnnouncementNotificationsOn);
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
 
   return (
@@ -277,6 +292,27 @@ export default function YouScreen() {
                     params: { backTo: '/you' },
                   } as any)
                 }
+              />
+            )}
+            {hasAnnouncementNotifications() && (
+              // The announcements' notice (#709): on only if the member wants
+              // it and the phone allows it, as after a change in Settings.
+              <MenuCard
+                title={labels.announcements}
+                description={labels.announcementsSub}
+                icon="bullhorn-outline"
+                iconColor={theme.colors.primary}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: announcementsOn }}
+                onPress={() => void setAnnouncementNotificationsEnabled(!announcementsOn)}
+                rightElement={() => (
+                  <MenuCardSwitchVisual
+                    active={announcementsOn}
+                    activeColor={theme.colors.primary}
+                    inactiveColor={theme.colors.outline}
+                    thumbColor={theme.colors.onPrimary}
+                  />
+                )}
               />
             )}
           </List.Section>

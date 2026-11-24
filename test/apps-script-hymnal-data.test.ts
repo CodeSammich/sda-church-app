@@ -376,13 +376,13 @@ describe('the Hymn Bank tab, kept on open with time to spare (#619, #639)', () =
   };
 
   it('runs last in onOpen, after the menu and the upkeep', () => {
-    expect(openWith(1e9).calls).toEqual(['menu', 'upkeep', 'hymn bank']);
+    expect(openWith(1e9).calls).toEqual(['menu', 'menu', 'upkeep', 'hymn bank']);
   });
 
   it('skips, and says so, when the open has used its budget, and the next open tries again', () => {
     const { calls, logs } = openWith(-1);
 
-    expect(calls).toEqual(['menu', 'upkeep']);
+    expect(calls).toEqual(['menu', 'menu', 'upkeep']);
     expect(logs.some((line) => /^Skipped the Hymn Bank check: this open has used \d+ ms\.$/.test(line))).toBe(true);
   });
 

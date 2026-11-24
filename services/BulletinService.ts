@@ -63,6 +63,12 @@ export type BulletinLocation = {
    * a blank string, as a phone's stored copy may still.
    */
   announcements?: BulletinAnnouncement[] | string;
+  /**
+   * When staff pressed Publish & Notify Phones for it (#709), as an ISO time,
+   * or blank: phones notify only of a published announcement. Missing from
+   * bulletins served before it.
+   */
+  announcementsPublishedAt?: string;
   sermon: string;
   chairPastoralPrayer: string;
   offeringPrayer: string;
@@ -118,6 +124,9 @@ export type CachedBulletin = {
   /** The app version that downloaded it. Copies saved before #702 have none. */
   appVersion?: string;
 };
+
+/** The bulletin location the member last chose, which the announcements' notice is also for (#709). */
+export const BULLETIN_LOCATION_STORAGE_KEY = 'preferred-bulletin-location';
 
 /** How long a downloaded bulletin counts as current (#702). */
 export const BULLETIN_MAX_AGE_MS = 30 * 60 * 1000;

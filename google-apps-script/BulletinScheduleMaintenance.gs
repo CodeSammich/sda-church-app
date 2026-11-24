@@ -624,10 +624,12 @@ var WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT =
   "Type the announcement in any language; it's translated automatically for the app and the printed " +
   'bulletin. Keep it short. For a new line in the cell, press Ctrl+Enter (⌘+Enter on a Mac). Anyone can ' +
   'read it in the app, so leave out private details, such as health news, addresses and phone numbers. ' +
-  'Translation can get names wrong: check them in the Google Doc before printing.\n' +
+  'Translation can get names wrong: check them in the Google Doc before printing. Phones get a ' +
+  'notification of it only after someone uses Publish & Notify Phones… in the Announcements menu.\n' +
   '通知可以用任何语言填写，会自动翻译，显示在应用中并印在周刊上。请尽量简短。单元格内换行请按 Ctrl+Enter' +
   '（Mac 按 ⌘+Enter）。任何人都能在应用中看到，请勿填写个人隐私，例如健康状况、地址和电话。' +
-  '机器翻译可能译错人名，打印前请在 Google 文档中核对。';
+  '机器翻译可能译错人名，打印前请在 Google 文档中核对。只有在 Announcements 菜单中使用 ' +
+  'Publish & Notify Phones… 后，手机才会收到通知。';
 
 var WEEKLY_DATA_HEADER_NOTES = Object.freeze({
   Announcements: WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT,

@@ -2,20 +2,26 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The app's notifications are only ones the member asked for (docs/UI_UX.md,
-// "Notifications"): today, a Bible audio download's (#610). The permission
-// can't be held only while a download runs (iOS can't take it back, and
-// Android stops asking after two refusals), so what the app does with it is
-// held to that instead: only modules/bible-audio-downloads posts one, from its
-// notifications files and its download job. Anything new needs its own
-// decision, and this test and the policy updated with it.
+// "Notifications"): a Bible audio download's (#610), and the notice of a
+// week's announcements once staff publish them (#709). The permission can't
+// be held only while one is wanted (iOS can't take it back, and Android stops
+// asking after two refusals), so what the app does with it is held to that
+// instead: only those two modules post one, from their notifications files and
+// the download job. Anything new needs its own decision, and this test and the
+// policy updated with it.
 const OWN_CODE = ['app', 'components', 'constants', 'features', 'hooks', 'modules', 'plugins', 'services', 'styles'];
 const DOWNLOADS = 'modules/bible-audio-downloads';
+const ANNOUNCEMENTS = 'modules/announcement-notifications';
 const POSTERS = [
   `${DOWNLOADS}/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioNotifications.kt`,
   // The download job's own, which Android requires.
   `${DOWNLOADS}/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioTransferService.kt`,
   `${DOWNLOADS}/ios/BibleAudioNotifications.swift`,
+  `${ANNOUNCEMENTS}/android/src/main/java/org/nyccsda/announcementnotifications/AnnouncementNotifications.kt`,
+  `${ANNOUNCEMENTS}/ios/AnnouncementNotifications.swift`,
 ];
+// Where the app asks for the permission: each kind's own service and module.
+const ASKERS = ['services/DownloadNotifications.ts', 'services/AnnouncementNotifications.ts'];
 
 const files = (folder: string): string[] =>
   readdirSync(folder).flatMap((name) => {
@@ -35,7 +41,7 @@ const POSTING = [
 ];
 
 describe('notifications', () => {
-  it('are posted only by the Bible audio downloads module, from its notifications and download job', () => {
+  it('are posted only by the downloads and announcements modules, from their notifications and the download job', () => {
     const posting = OWN_CODE.flatMap(files).filter(
       (file) => !POSTERS.includes(file) && POSTING.some((pattern) => pattern.test(readFileSync(file, 'utf8'))),
     );
@@ -52,11 +58,12 @@ describe('notifications', () => {
     expect(names.filter((name) => /notification|notifee|firebase|onesignal|push/i.test(name))).toEqual([]);
   });
 
-  it('ask for the permission only in the download notifications service, never at launch', () => {
+  it('ask for the permission only in the download and announcement services, never at launch', () => {
     const asking = OWN_CODE.flatMap(files).filter(
       (file) =>
         !file.startsWith(DOWNLOADS) &&
-        file !== 'services/DownloadNotifications.ts' &&
+        !file.startsWith(ANNOUNCEMENTS) &&
+        !ASKERS.includes(file) &&
         /requestNotificationPermission|requestPermissionsAsync|POST_NOTIFICATIONS|requestAuthorization/.test(readFileSync(file, 'utf8')),
     );
     expect(asking).toEqual([]);

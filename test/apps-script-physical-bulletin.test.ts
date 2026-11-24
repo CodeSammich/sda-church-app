@@ -164,21 +164,21 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(width('Wednesday 8:00–9:00 AM | 週三早 8:00–9:00')).toBeGreaterThan(184);
   });
 
-  it('adds the document and font actions to the Sheets menu', () => {
-    const menuItems: string[] = [];
-    let menuTitle = '';
-    const menu = {
-      addItem: (label: string) => {
-        menuItems.push(label);
-        return menu;
-      },
-      addToUi: () => menu,
-    };
+  it('adds the Announcements menu, then the document and font actions, to the Sheets menus', () => {
+    const menus: { title: string; items: [string, string][] }[] = [];
     const context = loadAppsScript({
       SpreadsheetApp: {
         getUi: () => ({
           createMenu: (title: string) => {
-            menuTitle = title;
+            const entry = { title, items: [] as [string, string][] };
+            menus.push(entry);
+            const menu = {
+              addItem: (label: string, handler: string) => {
+                entry.items.push([label, handler]);
+                return menu;
+              },
+              addToUi: () => menu,
+            };
             return menu;
           },
         }),
@@ -187,10 +187,17 @@ describe('printed bulletin Apps Script helpers', () => {
 
     runInContext(`onOpen()`, context);
 
-    expect(menuTitle).toBe('Printed Bulletin');
-    expect(menuItems).toEqual([
-      'Create Word Doc…',
-      'Fonts…',
+    // Publishing notifies phones, so it's a menu of its own, left of the
+    // one staff know for printing, which keeps its name (#709).
+    expect(menus).toEqual([
+      { title: 'Announcements', items: [['Publish & Notify Phones…', 'openPublishAnnouncementsDialog']] },
+      {
+        title: 'Printed Bulletin',
+        items: [
+          ['Create Word Doc…', 'createPrintedBulletinFromPrompt'],
+          ['Fonts…', 'openPrintedBulletinFontsDialog'],
+        ],
+      },
     ]);
   });
 
@@ -223,7 +230,9 @@ describe('printed bulletin Apps Script helpers', () => {
     );
     expect(() => runInContext('onOpen()', context)).not.toThrow();
 
-    expect(calls.slice(0, 4)).toEqual([
+    expect(calls.slice(0, 6)).toEqual([
+      'item Publish & Notify Phones…',
+      'menu shown',
       'item Create Word Doc…',
       'item Fonts…',
       'menu shown',

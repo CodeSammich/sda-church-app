@@ -390,6 +390,12 @@ function onOpen() {
   // The menu first: a simple trigger stops at 30 seconds, and an open that
   // ran out of time in the upkeep below once left staff with no menu at all.
   var ui = SpreadsheetApp.getUi();
+  // Its own menu, left of Printed Bulletin, as it notifies every phone that
+  // turned them on, rather than making a document (#709).
+  ui
+    .createMenu('Announcements')
+    .addItem('Publish & Notify Phones…', 'openPublishAnnouncementsDialog')
+    .addToUi();
   ui
     .createMenu('Printed Bulletin')
     .addItem('Create Word Doc…', 'createPrintedBulletinFromPrompt')

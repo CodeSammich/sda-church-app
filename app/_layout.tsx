@@ -71,6 +71,11 @@ import { getSunTimes } from '@/services/SunTimesService';
 import packageJson from '@/package.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadDownloadNotifications } from '@/services/DownloadNotifications';
+import {
+  checkAnnouncementNotice,
+  loadAnnouncementNotifications,
+  refreshAnnouncementNotificationPermission,
+} from '@/services/AnnouncementNotifications';
 import { isKeyScreensBuild, takeScreenshotRoute } from '@/services/ScreenshotRoute';
 import { ThemeProvider } from 'expo-router/react-navigation';
 import { useFonts } from 'expo-font';
@@ -85,6 +90,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
+  AppState,
   BackHandler,
   Dimensions,
   LogBox,
@@ -1007,6 +1013,20 @@ function RootLayoutNav({
   // in the app's language, for the phone to use with the app closed.
   useEffect(() => {
     if (Platform.OS !== 'web') void loadDownloadNotifications(language).catch(() => undefined);
+  }, [language]);
+  // The announcements' notice (#709): the member's choice, the channel's
+  // words, and a look at the coming Sabbath's bulletin, as the app opens and
+  // each time it comes back. Its background check does the rest.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    void loadAnnouncementNotifications(language).catch(() => undefined);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      void refreshAnnouncementNotificationPermission()
+        .then(() => checkAnnouncementNotice())
+        .catch(() => undefined);
+    });
+    return () => subscription.remove();
   }, [language]);
   const insets = useSafeAreaInsets();
   const pathname = usePathname();

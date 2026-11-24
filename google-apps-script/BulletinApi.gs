@@ -855,6 +855,14 @@ function buildBulletin_(requestedDate, options) {
   // and Chinese, whatever it was typed in, and the app gets Spanish (#562).
   bulletin.queens.announcements = translateBulletinAnnouncements_(bulletin.queens.announcements);
   bulletin.brooklyn.announcements = translateBulletinAnnouncements_(bulletin.brooklyn.announcements);
+  // When staff pressed Publish & Notify Phones for each (#709): phones notify
+  // only of a published announcement. Blank until then, and with none.
+  var published = readAnnouncementsPublished_()[requestedDate] || {};
+  BULLETIN_ANNOUNCEMENT_LOCATIONS.forEach(function (location) {
+    var at = published[location.key];
+    bulletin[location.key].announcementsPublishedAt =
+      bulletin[location.key].announcements.length && typeof at === 'string' ? at : '';
+  });
 
   // The public app may localize these three English-only schedule metadata
   // fields. Bible text and Bible references must never pass through
@@ -944,6 +952,48 @@ var BULLETIN_ANNOUNCEMENT_LANGUAGES = Object.freeze([
   Object.freeze({ field: 'chinese', code: 'zh-TW' }),
   Object.freeze({ field: 'spanish', code: 'es' }),
 ]);
+
+// The locations an announcement is published for (#709), with their names
+// in staff dialogs.
+var BULLETIN_ANNOUNCEMENT_LOCATIONS = Object.freeze([
+  Object.freeze({ key: 'queens', label: 'Queens / 皇后区' }),
+  Object.freeze({ key: 'brooklyn', label: 'Brooklyn / 布鲁克林' }),
+]);
+
+// When each Sabbath's announcement was published to phones, by location, as
+// { "2026-11-28": { "queens": "2026-11-25T19:02:11.000Z" } }: written by
+// Publish & Notify Phones… (AnnouncementPublishing.gs), never by the sheet.
+var ANNOUNCEMENTS_PUBLISHED_PROPERTY = 'announcements.published';
+
+// The spreadsheet the bulletin is made from: today the one this script is
+// bound to. Code that may move out of the sheet's own project goes through
+// this rather than the active spreadsheet.
+function getBulletinSpreadsheet_() {
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+// Where the publish times are kept: this project's Script Properties.
+function getAnnouncementsPublishedStore_() {
+  return PropertiesService.getScriptProperties();
+}
+
+// Nothing published where the property can't be read, so no phone notifies.
+function readAnnouncementsPublished_() {
+  try {
+    if (typeof PropertiesService === 'undefined') {
+      return {};
+    }
+    var value = JSON.parse(getAnnouncementsPublishedStore_().getProperty(ANNOUNCEMENTS_PUBLISHED_PROPERTY) || '{}');
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  } catch (error) {
+    logBulletinMessage_('Could not read the published announcements: ' + error);
+    return {};
+  }
+}
+
+function writeAnnouncementsPublished_(published) {
+  getAnnouncementsPublishedStore_().setProperty(ANNOUNCEMENTS_PUBLISHED_PROPERTY, JSON.stringify(published));
+}
 
 // Whether an announcement is typed in Chinese: it has more Chinese characters
 // than words in Latin letters. Unlike a hymn (getBulletinHymnLanguage_), an
@@ -1249,6 +1299,8 @@ function createLocation_() {
     // Weekly Data's announcements, each { english, chinese, spanish } (#562).
     // Until #562 this was a string, always blank, which the app never read.
     announcements: [],
+    // When staff published it to phones (#709), or blank.
+    announcementsPublishedAt: '',
   };
 }
 

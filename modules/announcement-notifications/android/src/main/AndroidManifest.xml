@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- The notice of a week's announcements (#709), asked for only when the
+       member turns it on, never at launch. -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <application>
+    <!-- Posts the notice at its time, even when the app isn't running: only
+         the app's own alarm sends it. -->
+    <receiver
+      android:name="org.nyccsda.announcementnotifications.AnnouncementNotificationReceiver"
+      android:exported="false" />
+  </application>
+</manifest>
