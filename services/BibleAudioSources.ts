@@ -13,6 +13,9 @@ export interface TranslationBookChapterAudioLinks {
 // Both, measured: https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847
 // Its terms: "Cache, store and download without expiry".
 const HELLOAO_CUV_AUDIO_BASE = 'https://audio.bible.helloao.org/api/cmn_cuv';
+// And WordProject's Spanish recording of the Reina-Valera 1909, the same files
+// as the church's copies (#770), measured: https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770#issuecomment-7121832434
+const HELLOAO_RV1909_AUDIO_BASE = 'https://audio.bible.helloao.org/api/spa_r09';
 const AUDIO_POWER_CUV_RECORDINGS_BASE =
   'https://theaudiopower.com/CUV/Recordings';
 const ARCHIVE_ORG_CUV_RECORDINGS_BASE =
@@ -150,9 +153,9 @@ export const WORDPROJECT_CANTONESE_AUDIO_URL =
  *
  * WordProject's terms forbid apps from linking whole Bibles to its servers:
  * never add `wordproaudio.net` or another WordProject host here without
- * WordProject's written approval. HelloAO's copy of the Cantonese recording
- * isn't on WordProject's servers (#749). See the WordProject sections of
- * docs/LEGAL.md.
+ * WordProject's written approval. HelloAO's copies of the Cantonese and
+ * Spanish recordings aren't on WordProject's servers (#749, #770). See the
+ * WordProject sections of docs/LEGAL.md.
  */
 const getWordProjectChapterUrl = (
   manifest: Readonly<Record<string, string>>,
@@ -253,17 +256,27 @@ export const supportsRv1909Audio = (translationId: string) =>
   translationId === 'spa_r09';
 
 /** The church's copy of WordProject's Spanish recording of an RV1909 chapter. */
+export const getRv1909ChapterUrl = (bookId: string, chapter: number) =>
+  getWordProjectChapterUrl(RV1909_ADVENTIST_AUDIO_URLS, 'RV1909', bookId, chapter);
+
+/**
+ * Where an RV1909 chapter's Spanish recording plays from, in the order tried:
+ * HelloAO's copy, then the church's (#770), as for Cantonese. Empty for a
+ * book or chapter that doesn't exist.
+ */
 export const getRv1909ChapterLinks = (
   bookId: string,
   chapter: number,
 ): TranslationBookChapterAudioLinks => {
-  const url = getWordProjectChapterUrl(
-    RV1909_ADVENTIST_AUDIO_URLS,
-    'RV1909',
-    bookId,
-    chapter,
-  );
-  return url ? { [RV1909_READER]: [url] } : {};
+  const church = getRv1909ChapterUrl(bookId, chapter);
+  return church
+    ? {
+        [RV1909_READER]: [
+          `${HELLOAO_RV1909_AUDIO_BASE}/${bookId.toUpperCase()}/${chapter}/audio/wordproject.mp3`,
+          church,
+        ],
+      }
+    : {};
 };
 
 /** Whether a translation plays recordings the church hosts on Adventist Connect. */

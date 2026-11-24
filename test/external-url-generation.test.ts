@@ -1,4 +1,5 @@
 import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
+import { RV1909_ADVENTIST_AUDIO_URLS } from '@/constants/Rv1909AdventistAudioManifest';
 import {
   getAppAndSystemLine,
   getBibleRequestEmailUrl,
@@ -8,7 +9,7 @@ import {
   getMissionSpotlightUrl,
   getSupportEmailUrl,
 } from '@/constants/ExternalLinks';
-import { getAudioPowerCuvChapterLinks } from '@/services/BibleAudioSources';
+import { getAudioPowerCuvChapterLinks, getRv1909ChapterLinks } from '@/services/BibleAudioSources';
 import { getEnglishHymnUrl, getSortedHymns } from '@/features/hymnal/EnglishHymnal';
 import {
   getChinese505HymnUrl,
@@ -154,6 +155,26 @@ describe('generated external dependency URLs', () => {
     const allUrls = chapters.flat();
     expect(new Set(allUrls).size).toBe(1189 * 4);
     expect(Object.keys(CUV_ADVENTIST_AUDIO_URLS)).toHaveLength(1189);
+  });
+
+  it("generates all 1,189 RV1909 chapters with HelloAO's copy, then the church's (#770)", () => {
+    const chapters = CUV_BOOKS.flatMap(([book, count]) =>
+      Array.from({ length: count }, (_, index) => ({
+        book,
+        chapter: index + 1,
+        urls: urls(getRv1909ChapterLinks(book, index + 1)),
+      })),
+    );
+
+    expect(chapters).toHaveLength(1189);
+    for (const { book, chapter, urls: links } of chapters) {
+      expect(links).toEqual([
+        `https://audio.bible.helloao.org/api/spa_r09/${book}/${chapter}/audio/wordproject.mp3`,
+        expect.stringMatching(/^https:\/\/assets\.adventistconnect\.org\/newyork2\/.+\/RV1909_B\d\dC\d{3}\.mp3$/),
+      ]);
+    }
+    expect(new Set(chapters.flatMap(({ urls: links }) => links)).size).toBe(1189 * 2);
+    expect(Object.keys(RV1909_ADVENTIST_AUDIO_URLS)).toHaveLength(1189);
   });
 
   it('generates every English hymnal page URL', () => {

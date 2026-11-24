@@ -70,7 +70,10 @@ network() { # on|off
 
 # Opens a CUV chapter in a freshly started app, so each scenario starts clean.
 # A deep link with the same parameters as the last one is ignored, and a cold
-# start avoids that.
+# start avoids that. Every scenario plays the Mandarin recording: with
+# E2E_PRIMARY_BLOCKED, HelloAO's and the church's hosts are down, and Mandarin
+# is the one recording with a copy elsewhere. Cantonese and Spanish have no
+# third copy (#770), so they'd play from nowhere.
 open_chapter() { # book chapter
   sh_ am force-stop "$PKG" >/dev/null
   adb_ logcat -c

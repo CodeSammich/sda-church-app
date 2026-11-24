@@ -124,10 +124,9 @@ const covers = (request: BibleAudioDownloadScope, scope: BibleAudioDownloadScope
 
 /**
  * Where a narrator's chapter downloads from, in the order tried, as for
- * streaming. Mandarin and Cantonese come from HelloAO first, then the
+ * streaming. Mandarin, Cantonese and Spanish come from HelloAO first, then the
  * church's copy, and for Mandarin its two other mirrors, all the same file
- * (#749). The Spanish recording comes only from the church's copy (see
- * docs/LEGAL.md). The English ones come from HelloAO. HelloAO's terms say
+ * (#749, #770). The English ones come from HelloAO. HelloAO's terms say
  * "Cache, store and download without expiry".
  */
 export const getBibleAudioDownloadUrls = (narrator: string, bookId: string, chapter: number): string[] => {

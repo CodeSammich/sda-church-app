@@ -556,6 +556,16 @@ describe('Android audio e2e', () => {
     expect(workflow).toContain('scripts/e2e/android-bible-audio.sh');
   });
 
+  it('plays only the Mandarin recording, the one with a copy past the two blocked hosts', () => {
+    // Cantonese and Spanish play from HelloAO, then the church's copy, and
+    // nowhere else (#749, #770): with both blocked, they'd have no audio.
+    const script = readRepoFile('scripts/e2e/android-bible-audio.sh');
+    const links = script.match(/sdachurchapp:\/\/[^'"]+/g) ?? [];
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) expect(link).toContain('translationId=cmn_cuv');
+    expect(script).not.toMatch(/spa_r09|cuv-cantonese|wordproject/i);
+  });
+
   it('bounds the DNS tool install, so a hung Ubuntu mirror fails in minutes, not at the job limit', () => {
     // On 2026-11-05 apt-get hung for 88 minutes, until the 90-minute job limit.
     const start = workflow.indexOf("- name: Make HelloAO's and the church's audio hosts unreachable");

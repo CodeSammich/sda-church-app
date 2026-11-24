@@ -12,10 +12,11 @@ jest.mock('@/constants/Rv1909AdventistAudioManifest', () => ({
   },
 }));
 
-import { buildBibleAudioQueue } from '@/services/BibleAudioService';
+import { buildBibleAudioQueue, getBibleAudioSourceLabel } from '@/services/BibleAudioService';
 import {
   getAudioReaderPreferenceKey,
   getChurchHostedAudioLinks,
+  getRv1909ChapterUrl,
   hasChurchHostedAudio,
   RV1909_READER,
   WORDPROJECT_CREDITS,
@@ -24,13 +25,20 @@ import {
 
 const JOHN_3 =
   'https://assets.adventistconnect.org/newyork2/2026/10/01120000/RV1909_B43C003.mp3';
+const HELLOAO_JOHN_3 = 'https://audio.bible.helloao.org/api/spa_r09/JHN/3/audio/wordproject.mp3';
 
 describe('Reina-Valera 1909 audio from WordProject', () => {
-  it("plays only the church's copy of each chapter", () => {
+  it("plays HelloAO's copy, then the church's, never WordProject's servers (#770)", () => {
     expect(hasChurchHostedAudio('spa_r09')).toBe(true);
     expect(getChurchHostedAudioLinks('spa_r09', 'jhn', 3)).toEqual({
-      [RV1909_READER]: [JOHN_3],
+      [RV1909_READER]: [HELLOAO_JOHN_3, JOHN_3],
     });
+    expect(getRv1909ChapterUrl('JHN', 3)).toBe(JOHN_3);
+    expect(getBibleAudioSourceLabel(HELLOAO_JOHN_3)).toBe('HelloAO');
+    expect(getBibleAudioSourceLabel(JOHN_3)).toBe('NYCCSDA.org');
+    for (const url of getChurchHostedAudioLinks('spa_r09', 'JHN', 3)[RV1909_READER]) {
+      expect(new URL(url).hostname).not.toMatch(/wordproject|wordproaudio/);
+    }
   });
 
   it("has no audio for a chapter that isn't uploaded or doesn't exist", () => {
@@ -51,7 +59,7 @@ describe('Reina-Valera 1909 audio from WordProject', () => {
     });
   });
 
-  it('queues the next RV1909 chapter without fallbacks', () => {
+  it("queues the next RV1909 chapter from HelloAO, with the church's copy as the fallback", () => {
     const queue = buildBibleAudioQueue({
       albumTitle: 'Audio de la Biblia',
       artist: `RVR09 • ${RV1909_READER}`,
@@ -76,6 +84,11 @@ describe('Reina-Valera 1909 audio from WordProject', () => {
     expect(queue.map(({ bookId, chapter }) => `${bookId} ${chapter}`)).toEqual([
       'JHN 4',
     ]);
-    expect(queue[0].fallbacks).toEqual([]);
+    expect((queue[0].source as { uri: string }).uri).toBe(
+      'https://audio.bible.helloao.org/api/spa_r09/JHN/4/audio/wordproject.mp3',
+    );
+    expect((queue[0].fallbacks ?? []).map(({ source }) => (source as { uri: string }).uri)).toEqual([
+      'https://assets.adventistconnect.org/newyork2/2026/10/01120001/RV1909_B43C004.mp3',
+    ]);
   });
 });

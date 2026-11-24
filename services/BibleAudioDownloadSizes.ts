@@ -20,9 +20,10 @@ const SIZES: Readonly<Record<string, Readonly<Record<string, readonly number[]>>
  * How far a chapter may be from its recorded size. Every host served the very
  * file measured, to the byte, Mandarin's two mirrors included (checked
  * November 2026, all 9,500 files), and HelloAO's copies of the Mandarin and
- * Cantonese recordings had every chapter's size too (#749, 2026-11-22), so this
- * only allows for a host that changes a file's tags. A host that replaces a
- * recording needs the sizes measured again.
+ * Cantonese recordings had every chapter's size too (#749, 2026-11-22), as did
+ * its copy of the Spanish one (#770, 2026-11-23), so this only allows for a
+ * host that changes a file's tags. A host that replaces a recording needs the
+ * sizes measured again.
  */
 export const CHAPTER_SIZE_TOLERANCE = 0.02;
 /** For a chapter whose size isn't known: the shortest recording is 60 KB. */

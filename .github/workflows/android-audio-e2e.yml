@@ -98,7 +98,9 @@ jobs:
       # A local DNS server answers "no such domain" for HelloAO's audio host
       # and the church's, the first two copies of the Mandarin recording
       # (#749), so both fail as they would in an outage, without changing the
-      # app. Every other name resolves normally.
+      # app. Every other name resolves normally. They're the only copies of
+      # the Cantonese and Spanish recordings (#770), so the scenarios play
+      # Mandarin only.
       - name: Make HelloAO's and the church's audio hosts unreachable
         # Ubuntu's package servers can hang without a word: on 2026-11-05 this
         # step sat for 88 minutes, until the job's own limit. Each try at the
