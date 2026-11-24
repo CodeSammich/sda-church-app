@@ -370,7 +370,8 @@ await record('directory publishes the expected English hymnal links', 'Hymns for
     expectedHosts: ['hymnsforworship.org'],
   });
   const numbers = new Set([...html.matchAll(/sdah-(\d{3})/g)].map((match) => Number(match[1])));
-  // The provider currently omits #262 from its directory, although the generated page is probed in rotation.
+  // The site leaves out the hymns it has no page for, such as #262, which the
+  // app links to this directory instead (#779).
   if (numbers.size < 690 || [...numbers].some((number) => number < 1 || number > 695)) {
     throw new Error(`directory lists ${numbers.size} valid hymn numbers`);
   }
@@ -398,9 +399,13 @@ const getHymnPage = async (number) => {
   return { url, response, html };
 };
 
+// The app links these to the directory, so they have no page to sample (#779).
+const { hymns: englishHymnsWithoutAPage } = await readJson('features/hymnal/EnglishHymnalMissingPages.json');
+
 await record('daily English hymn page samples', 'Hymns for Worship', (warn) =>
   spotCheck(
-    Array.from({ length: 695 }, (_, index) => index + 1),
+    Array.from({ length: 695 }, (_, index) => index + 1)
+      .filter((number) => !englishHymnsWithoutAPage.includes(number)),
     695,
     async (number) => describeResponse((await getHymnPage(number)).response),
     warn,
