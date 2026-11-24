@@ -171,11 +171,18 @@ so reaching Audio Power takes seconds rather than minutes.
 `bible.helloao.org` (text) and `audio.bible.helloao.org` (English BSB audio, and the
 Mandarin and Cantonese CUV audio, played first since [#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). Static
 files on AWS S3 behind CloudFront with a one-day cache (*measured*). Its
-documentation says: "No usage limits, no API Keys required, and no copyright
-restrictions whatsoever." The English text and every book list ship with the app, built
+[documentation](https://bible.helloao.org/docs/) says "No account, key or approval",
+"No published usage limit", and "Cache, store and download without expiry" (read on
+2026-11-23). The English text and every book list ship with the app, built
 from HelloAO's complete translations, so the app requests no text here.
-The printed bulletin's Apps Script also fetches its Bible verses here, caching each
-chapter.
+The printed bulletins' Apps Script also fetches their Bible verses here, Sabbath
+Encouragement's included, caching each chapter.
+
+HelloAO is a top-level dependency: the main source for the Bible's text and audio,
+and the first place to look for each new language ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). The church's copies on
+Adventist Connect are the Chinese recordings' fallback, and the Spanish recording's
+only source until the app plays HelloAO's copy too ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)); they're not the plan
+for new languages.
 
 Audio is the heavy HelloAO load. English is about 4.4 MB per chapter, streamed
 directly from HelloAO, with no church copy. That is fine at every scenario because it

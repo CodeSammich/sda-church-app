@@ -37,10 +37,21 @@ const mandarin = ([] as string[]).concat(Object.values(getAudioPowerCuvChapterLi
 const helloaoBase = repoFile('services/BibleAudioDownloads.ts').match(/const HELLOAO_AUDIO = '([^']+)'/)?.[1];
 
 describe('status page checks', () => {
-  it('lists eleven checks, each with its own name and address', () => {
-    expect(rows).toHaveLength(11);
-    expect(checks.size).toBe(11);
-    expect(new Set(rows.map(([, url]) => url)).size).toBe(11);
+  it('lists twelve checks, each with its own name and address', () => {
+    expect(rows).toHaveLength(12);
+    expect(checks.size).toBe(12);
+    expect(new Set(rows.map(([, url]) => url)).size).toBe(12);
+  });
+
+  it("checks HelloAO's Bible text where the printed bulletins read it", () => {
+    const script = repoFile('google-apps-script/PrintedBulletin.gs');
+    const base = script.match(/bibleApiBaseUrl: '([^']+)'/)?.[1];
+    const english = script.match(/bibleEnglishTranslation: '([^']+)'/)?.[1];
+    expect(base).toBeDefined();
+    expect(english).toBeDefined();
+    expect(check('HelloAO, Bible text')).toBe(`${base}/${english}/JHN/3.simple.json`);
+    // The script asks for the chapter's simple JSON.
+    expect(script).toContain("'.simple.json'");
   });
 
   it("checks John 3 at each of the app's Mandarin sources, in the app's order", () => {

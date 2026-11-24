@@ -784,6 +784,20 @@ await record('daily Mandarin and Cantonese samples, played first', 'HelloAO', (w
     label: ({ label }) => label,
   }));
 
+// The printed bulletins' Apps Script fetches its verses from HelloAO's text API
+// (fetchPhysicalBibleChapter_ in google-apps-script/PrintedBulletin.gs), in the
+// English and Chinese translations it uses by default. John 3 has 36 verses in both.
+await record('Bible text API, as the printed bulletins read it', 'HelloAO', async () => {
+  for (const translation of ['BSB', 'cmn_cuv']) {
+    const data = await getJson(`https://bible.helloao.org/api/${translation}/JHN/3.simple.json`);
+    const verses = (Array.isArray(data?.chapter?.content) ? data.chapter.content : []).filter(
+      (item) => item?.type === 'verse' && item.number,
+    );
+    if (verses.length !== 36) throw new Error(`${translation} John 3 has ${verses.length} verses, not 36`);
+  }
+  return 'BSB and CUV John 3';
+});
+
 const navigationLinks = [
   ['church building image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221703/church_building.jpg', true],
   ['pastor image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221020/moses_fang-1536x1024.jpg', true],

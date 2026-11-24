@@ -51,9 +51,17 @@ answered the same on 2026-11-22 ([measured on #749](https://github.com/New-York-
 | Internet Archive, Mandarin fallback | `https://archive.org/download/CUV_201911/CUV_B43C003.mp3` | `HEAD` |
 | Audio Power, Mandarin fallback | `https://theaudiopower.com/CUV/Recordings/%E7%BA%A6%E7%BF%B0%E7%A6%8F%E9%9F%B3%203.mp3` | `HEAD` |
 | HelloAO, English audio | `https://audio.bible.helloao.org/api/BSB/JHN/3/audio/souer.mp3` | `HEAD` |
+| HelloAO, Bible text | `https://bible.helloao.org/api/BSB/JHN/3.simple.json` | `GET`; down unless the answer contains `"type":"verse"` |
 | Bulletin API | `https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec?changeovers=1&client=check` | `GET`; down unless the answer contains `"ok":true` |
 | Chinese hymnal pages | `https://m.zgaxr.com/index.php?m=content&c=index&a=lists&catid=59` | `HEAD` |
 | EGW Writings | `https://text.egwwritings.org/` | `HEAD` |
+
+HelloAO's Bible text is the one check that isn't for the app: the app ships the
+text it uses, but the printed bulletins' Apps Script fetches every verse from
+HelloAO when staff make a bulletin (`fetchPhysicalBibleChapter_` in
+`google-apps-script/PrintedBulletin.gs`). The check reads John 3 in the BSB, as
+the script does, and it's down unless the chapter has verses. The daily monitor
+also counts them, in the BSB and the CUV.
 
 The bulletin API's `changeovers=1` answer
 ([Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers))
@@ -80,8 +88,6 @@ Some services aren't on the status page:
   It's a small site whose owner gave the church permission for its scores, and
   frequent checks from a data centre are what a security plugin flags. The app
   only links to it, and the daily monitor checks it.
-- **HelloAO's Bible text API.** The app ships the text it uses, so it never
-  calls the API.
 - Anything that needs a closer look than "does it answer". The daily monitor
   covers those.
 

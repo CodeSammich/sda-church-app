@@ -8,6 +8,14 @@ North American Division's managed WordPress platform. This page records what is
 hosted there, how the request path works, and how much load the setup can be relied
 on to carry.
 
+**Bible audio here is a fallback, not the plan.** HelloAO is the app's main source
+for Bible text and audio (see
+[Third-party APIs and websites](../architecture.md#third-party-apis-and-websites)).
+The Mandarin and Cantonese copies here back up HelloAO's, and the Spanish copy is the
+only one the app plays until it plays HelloAO's too ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). For a new language or
+recording, ask HelloAO to host it first ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). Uploading one here instead is only
+a short-term step, if a launch is an emergency, until HelloAO has it.
+
 Every `https://assets.adventistconnect.org/newyork2/...` URL in the code points to
 this library. The church's site is `newyorkchineseny.adventistchurch.org`, and files
 are uploaded through its WordPress media library.

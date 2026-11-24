@@ -166,8 +166,8 @@ and may not be possible, so protect them above everything else.
   - bulletin [QR code](operations/admin-runbook.md#bulletin-qr-codes) generation into
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
-  - a [status page](operations/status-page.md) that checks the audio hosts, the
-    bulletin API and a few other services every hour, from its own
+  - a [status page](operations/status-page.md) that checks the audio hosts, HelloAO's
+    Bible text, the bulletin API and a few other services every hour, from its own
     repository, `sda-church-app-status`, where its outage issues stay;
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
@@ -298,9 +298,9 @@ on them directly; see [Third-party APIs and websites](#third-party-apis-and-webs
 
 | Media | Primary | Other copies |
 | --- | --- | --- |
-| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app plays HelloAO's copy first, then this one, then the Internet Archive's, then Audio Power's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)) |
-| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app plays HelloAO's copy first, then this one ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and never WordProject's servers, which its terms don't allow without its approval |
-| Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, for the same reason |
+| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one, then the Internet Archive's, then Audio Power's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)) |
+| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and never WordProject's servers, which its terms don't allow without its approval |
+| Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, for the same reason, until it plays HelloAO's copy first ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)) |
 | Church photos and hymnal lookup charts | Adventist Connect | Google Drive backup |
 | Bulletin cover art, logo, QR codes | Google Drive | See [Files not in this repository](#files-not-in-this-repository) |
 
@@ -433,7 +433,18 @@ downloads data from the service; "Link" means the app only opens the site in the
 browser; "Build script only" means the app ships files a build script downloaded from it,
 and never contacts it. The [external dependency monitor](operations/external-dependency-monitor.md)
 checks nearly all of them daily, and the [status page](operations/status-page.md)
-checks the audio hosts and the bulletin API every hour.
+checks the audio hosts, HelloAO's Bible text and the bulletin API every hour.
+
+**HelloAO is a top-level dependency.** Most of the Bible comes from it: the English
+text and every book list the app ships with, the English narrators (their only
+source), the Mandarin and Cantonese recordings, played from HelloAO first
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and the verses the printed bulletins fetch, Sabbath Encouragement's
+included. Each new language starts from what HelloAO has ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). The church's
+copies on Adventist Connect are the Mandarin and Cantonese recordings' fallback, and
+the Spanish recording's only source until the app plays HelloAO's copy too
+([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). Hosting a new recording there instead is only a short-term step, if a
+launch is an emergency; see
+[Adventist Connect media hosting](operations/adventist-connect-media.md).
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
@@ -544,6 +555,7 @@ How to set it up and check it each year:
 | First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and copy it onto two separate drives, off Google | If the account is suspended or taken over, its email and files are gone |
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
+| Yearly (in the checkup) | Check that [HelloAO](operations/service-limits-and-costs.md#helloao)'s terms still let the app keep what it downloads, that it still serves the recordings the app plays from it, and whether WordProject has answered about its recordings ([#769](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/769)) | A change at the app's main Bible source goes unnoticed |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
 | Hourly (automated) | [Status page](operations/status-page.md) | Opens an issue in the status repository while a service is down; see [Alerts](operations/status-page.md#alerts) |
 | Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
@@ -556,6 +568,11 @@ Priority; see [Maintenance issues](operations/admin-runbook.md#maintenance-issue
 
 - **Apply for nonprofit status** wherever a provider offers it, using the church's
   own EIN and D-U-N-S number rather than the conference's.
+- **HelloAO first for the Bible's text and audio**, wherever it has them. It's free,
+  needs no account, and [its terms](https://bible.helloao.org/docs/) let the app keep
+  what it downloads ("Cache, store and download without expiry"). The church hosts its
+  own copies as a fallback, or for a short time if a launch is an emergency (see
+  [Third-party APIs and websites](#third-party-apis-and-websites)).
 - **Free services only**, apart from small necessities such as the domain, which go
   on a [card with a hard limit](#payment-methods), about $200–300 for now. **Never
   add a payment method to a service that bills by usage**, such as

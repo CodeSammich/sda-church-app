@@ -101,6 +101,11 @@ const CHECKLIST = [
         'why-this-architecture',
       ],
       [
+        'HelloAO, the app\'s main Bible source: its terms still say "Cache, store and download without expiry", it still serves the English narrators and the Mandarin and Cantonese recordings the app plays from it, and any answer from WordProject about its recordings is recorded (#769).',
+        'docs/LEGAL.md',
+        'bible-sources-and-licensing',
+      ],
+      [
         'Re-read the service limits and costs, and update anything that changed.',
         'docs/operations/service-limits-and-costs.md',
         'summary',
