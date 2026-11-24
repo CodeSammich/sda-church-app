@@ -4,11 +4,28 @@ Where the app is going, and what is still undecided. The
 [project tenets](project-tenets.md) say how we choose; this page says what we're
 choosing toward.
 
-One question on this page is open on purpose:
-[one copy of the app for each church, or one app for many churches](#one-church-to-many-two-ways).
+## In short
+
+- **What it is.** A free app for a church's members: this Sabbath's bulletin, a Bible
+  and hymnal that work without a signal, and a short shelf of books. It has no
+  accounts, no ads, and nothing that tracks anyone.
+- **Who it's for.** Older members, people who listen more than they read, visitors,
+  and the volunteers who prepare the Sabbath, first at one church family in New York.
+- **Where it's going.** Other small churches should be able to have it too. There are
+  two ways: each church publishes its own copy, or churches join this one app and
+  members choose their church inside it.
+- **What is decided.** Nothing yet. The maintainers lean toward one app, because it is
+  easier to keep up and a small church could join without any technical person.
+- **What each way costs a church.** Its own copy: about $25 once, about $11 a year,
+  and a week of a technical volunteer's time over a month or two. Joining: nothing,
+  and about a day
+  ([the full figures](vision/another-church-starter-kit.md#in-short)).
+
+The parts marked **For the technical team** can be skipped by everyone else.
 
 ## Contents
 
+- [In short](#in-short)
 - [Who the app is for](#who-the-app-is-for)
 - [What the app is](#what-the-app-is)
 - [What the app isn't](#what-the-app-isnt)
@@ -151,19 +168,28 @@ Most of the work is the same under either:
   ([why](vision/another-church-starter-kit.md#the-bulletin-under-each-way)).
 
 This work helps this church today and comes first either way
-([proposed follow-up work](vision/another-church-starter-kit.md#proposed-follow-up-work)).
+([proposed follow-up work](vision/another-church-starter-kit.md#for-the-technical-team-proposed-follow-up-work)).
+
+<details>
+<summary><strong>For the technical team</strong></summary>
 
 The main difference in the code is *when* a church's details are read: when a church's
 copy of the app is built, or when a member picks their church. One app also needs the
 choice-of-church step, and must fit every church's shape at once. If the church details
-are plain data from the start, the choice can still be made late.
+are plain data from the start, the choice can still be made late. What each
+church-specific thing should become is sorted in
+[the plan](vision/another-church-starter-kit.md#for-the-technical-team-what-each-church-specific-thing-should-become),
+and every place the code names this church is in
+[the inventory](vision/church-specific-inventory.md).
+
+</details>
 
 ### How they compare
 
 | Question | A copy for each church | One app for many churches |
 | --- | --- | --- |
-| What must a church do to start? | Open store accounts as an organization, set up the stores' signing keys (files that prove each update comes from the church), and publish. The accounts and paperwork take weeks, and it is the step most likely to stall a small church ([what another church would have to do](vision/another-church-starter-kit.md)). | Ask the publisher to be added, send in its details, and set up a bulletin if it wants one. No store accounts. |
-| What does it cost a church? | Google Play's one-time $25 fee, a domain, and Apple's yearly fee unless it is waived for a nonprofit ([App stores](architecture.md#app-stores)). | Nothing; the publisher pays these once for everyone. |
+| What must a church do to start? | Open store accounts as an organization, set up the stores' signing keys (files that prove each update comes from the church), and publish. The accounts and paperwork take weeks, and it is the step most likely to stall a small church ([what it takes](vision/another-church-starter-kit.md#what-it-takes-for-a-church-to-publish-its-own-copy-of-this-app)). | Ask the publisher to be added, send in its details, and set up a bulletin if it wants one. No store accounts ([what it takes](vision/another-church-starter-kit.md#what-it-takes-for-a-church-to-join-this-app-under-the-new-york-chinese-sda-churchs-it-umbrella)). |
+| What does it cost a church? | Google Play's one-time $25 fee, a domain at about $11 a year, and Apple's $99 yearly fee unless it is waived for a nonprofit ([sources](vision/another-church-starter-kit.md#what-it-really-costs)). | Nothing; the publisher pays these once for everyone. |
 | Who publishes the app and answers to the stores? | Each church, for its own app. | One publisher, for every church in the app. Who that would be is open. |
 | Whose name and icon do members see? | Their own church's. | One shared name; their church appears inside. |
 | How do updates reach members? | Each church takes each update and releases it when it chooses. A church without a volunteer falls behind. | One release reaches every church, on the publisher's schedule. |
@@ -172,7 +198,7 @@ are plain data from the start, the choice can still be made late.
 | Who decides what content a church shows? | Each church, fully. | Each church, within what the shared app offers. |
 | Who may use the church symbol? | Each official church, with its own approval. | Approval must cover an app that serves many churches. |
 | How much new code? | Less in total, but each copy makes its own changes, such as a different number of locations or a new language. Every change it makes to shared code makes later updates harder to take. | More. The app must handle any number of locations, a way to choose a church, and each church's own languages and hymnals. |
-| What do the stores' rules say? | Apple allows it when each church submits its own copy from its own account; one church publishing copies for others would likely be rejected. Apple discourages near-identical apps, so a reviewer may ask how the copies differ ([guidelines 4.2.6 and 4.3](https://developer.apple.com/app-store/review/guidelines/#design), read 2026-11-24). Google Play's rules on repetitive apps still need checking ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)). | Apple names one app with a "picker" as an accepted model (guideline 4.2.6). How Google Play treats it still needs checking ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)). |
+| What do the stores' rules say? | Apple allows it when each church submits its own copy from its own account; one church publishing copies for others would likely be rejected. Apple discourages near-identical apps, so a reviewer may ask how the copies differ ([guidelines 4.2.6 and 4.3](https://developer.apple.com/app-store/review/guidelines/#design), read 2026-11-24). Google Play counts "multiple apps with highly similar functionality, content, and user experience" as repetitive, and suggests one app that gathers the content ([Spam policy](https://support.google.com/googleplay/android-developer/answer/9899034), read 2026-11-24). | Apple names one app with a "picker" as an accepted model (guideline 4.2.6). Google Play suggests it for small, similar apps (the same policy). |
 | What about a member visiting another church? | They install that church's app. | They switch churches inside the app. |
 | What does a bad release break? | One church's app. | Every church's app. |
 
@@ -183,7 +209,7 @@ the responsibility, in one publisher.** The store accounts are the hard part of 
 for each church, and nothing in the code can remove them. One app removes them for
 everyone except the publisher, who then answers for every church's content.
 
-**One app must still keep every tenet.** It could not have a shared server holding
+**One app must still keep the app's first principles.** It could not have a shared server holding
 churches' data, or member accounts ([tenets 1 to 3](project-tenets.md)). Each church's
 public details would be a plain file, shipped in the app or downloaded from a free
 website, and the choice of church would stay on the phone, like the language setting.

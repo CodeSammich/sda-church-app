@@ -1,88 +1,194 @@
 # What another church would have to do
 
-A plan, not a how-to. It walks through what a second church would do under each of the
-two ways described in [the vision](../VISION.md#one-church-to-many-two-ways): a copy of
-the app for each church, or one app for many churches. Then it sorts everything in
-[the inventory](church-specific-inventory.md) by what it should become. The project has
-not chosen between the two ways; the maintainers
+Two ways are being considered for bringing this app to another church
+([the vision](../VISION.md#one-church-to-many-two-ways)). This page says what each one
+would take: the money, the time, the people, and the steps. The project has not chosen
+between them; the maintainers
 [lean toward one app](../VISION.md#one-church-to-many-two-ways).
 
-The steps describe the app once the [follow-up work](#proposed-follow-up-work) is done,
-and none of it is done yet. The times are estimates, since no second church has done
-this. The steps are written for a church with **one volunteer who can follow
-instructions**, no developer, and no money beyond store fees and a domain. Step 7 of the first list
-is the exception: it needs someone at ease typing commands.
+## In short
+
+| | Publish its own copy | Join this app |
+| --- | --- | --- |
+| Money | About $25 once and about $11 a year, if Apple waives its $99 yearly fee for the church as a nonprofit | Nothing |
+| Time to start | About 6 to 8 working days of a volunteer's time, spread over one to two months of waiting | About a day |
+| Time every year | About 15 hours of upkeep | Minutes |
+| People | A volunteer at ease with typing commands, a second careful person, access to a Mac, and someone who can sign for the church | Someone who can fill in a form |
+| The bulletin, if wanted | A day to set up, then about an hour every week | The same |
+| Who carries the rest | The church itself | The New York Chinese SDA Church's IT team, for every church in the app |
+
+Neither way works like this yet. The steps describe the app once the
+[follow-up work](#for-the-technical-team-proposed-follow-up-work) is done. Every time
+on this page is the maintainers' estimate: no second church has done this. The waiting
+times come from Apple's and Google's own pages, linked beside each one.
+
+Each section opens with its bottom line. The parts marked **For the technical team**
+can be skipped by everyone else.
 
 ## Contents
 
-- [The steps under a copy for each church](#the-steps-under-a-copy-for-each-church)
-- [The steps under one app for many churches](#the-steps-under-one-app-for-many-churches)
+- [What it takes for a church to publish its own copy of this app](#what-it-takes-for-a-church-to-publish-its-own-copy-of-this-app)
+- [What it takes for a church to join this app, under the New York Chinese SDA Church's IT umbrella](#what-it-takes-for-a-church-to-join-this-app-under-the-new-york-chinese-sda-churchs-it-umbrella)
 - [The bulletin under each way](#the-bulletin-under-each-way)
-- [What the two lists show](#what-the-two-lists-show)
-- [What each church-specific thing should become](#what-each-church-specific-thing-should-become)
+- [For the technical team: what each church-specific thing should become](#for-the-technical-team-what-each-church-specific-thing-should-become)
   - [Church details](#church-details)
   - [Content that needs its own permission](#content-that-needs-its-own-permission)
   - [Code that assumes this church's shape](#code-that-assumes-this-churchs-shape)
   - [Left as it is](#left-as-it-is)
-- [Proposed follow-up work](#proposed-follow-up-work)
+- [For the technical team: proposed follow-up work](#for-the-technical-team-proposed-follow-up-work)
 
-## The steps under a copy for each church
+## What it takes for a church to publish its own copy of this app
+
+**Bottom line.** The church gets an app under its own name and icon, and carries all
+of it: store accounts, yearly renewals, and every update. The money is small. The
+paperwork and the technical day are what stop a small church, and it needs a volunteer
+who stays.
+
+### What it really costs
+
+| | What it really costs | Where the figure comes from |
+| --- | --- | --- |
+| Money, once | **$25** for the Google Play account | [Google](https://support.google.com/googleplay/android-developer/answer/6112435): "US$25 one-time registration fee" |
+| Money, every year | **About $11** for a domain. Apple's **$99** yearly fee is waived for a nonprofit that sells nothing through its apps, and the church confirms that each year | This church's domain price in 2026 ([costs](../operations/service-limits-and-costs.md#summary)); [Apple's price](https://developer.apple.com/programs/enroll/) and [fee waiver](https://developer.apple.com/help/account/membership/fee-waivers/) |
+| Everything else | **$0**. Each service the app uses is free | [Service limits and costs](../operations/service-limits-and-costs.md#summary) |
+| Time to start | **About 6 to 8 working days** of volunteer time, over **one to two months**, most of it waiting for the business ID and the stores | The steps below, added up. Apple says to allow [up to 5 business days](https://developer.apple.com/help/account/membership/D-U-N-S/) for the business ID; Google says [up to 30 days](https://support.google.com/googleplay/android-developer/answer/13628312) |
+| Time every year | **About 15 hours**: taking each update, the yearly Apple renewals, and answering reminders | Step 11, estimated at a few hours a quarter |
+| The bulletin, if wanted | **A day** to set up, then **about an hour every week**, about 50 hours a year | Step 8, an estimate |
+| People and skills | One volunteer at ease with typing commands. A second careful person for the signing day. Someone who can sign for the church. Access to a Mac | Steps 5 to 7 |
+| The hardest parts | Waiting for the store accounts (step 5), and the signing day (step 7) | |
+
+### The steps
 
 Days are calendar time, waiting included. Steps 8 and 9 are optional.
 
-| # | Step | Needs | What it really costs |
+| # | Step | What it needs | What it really costs |
 | --- | --- | --- | --- |
-| 1 | Confirm the church is an official Seventh-day Adventist church and may use the symbol. If not, replace it. | The pastor's approval | A conversation |
-| 2 | Copy the code on GitHub (a "fork") and fill in the church details. | A GitHub account | Half a day |
-| 3 | Publish the web app from the copy by hand, as a free preview of the church's details. | A computer with Node.js; the bulletin's address changed or removed, so the copy doesn't show this church's bulletin | An hour |
-| 4 | A domain with a working website and email on it. Google Workspace for Nonprofits gives shared mailboxes and files for free. | The entity's paperwork; about $11 a year for the domain | One to two weeks |
-| 5 | Apple: join the developer program as an organization, and apply for Apple's nonprofit fee waiver with the church's D-U-N-S number ([setup](../operations/app-store-setup.md#apple-app-store)). The yearly fee is waived only while the church stays a recognized nonprofit and the app stays free. | A legal entity, its tax number, a D-U-N-S number (a business ID from Dun & Bradstreet that Apple checks), someone who can sign for the church, an email address and website on the church's domain | **Weeks of waiting.** The step most likely to stall. |
-| 6 | Google Play: an organization account, with identity and website checks ([setup](../operations/app-store-setup.md#google-play)). | The same entity and D-U-N-S number; an account and website on the church's domain; a credit card for the one-time $25 | One to two weeks |
-| 7 | Signing files and upload access for both stores, saved as GitHub secrets (settings GitHub keeps hidden) ([Native builds](../operations/native-builds.md)). | A second careful person; a Mac; a copy that isn't a GitHub fork, or one whose build jobs have been changed to run in a fork | **A full day, and the hardest one.** The instructions assume someone at ease typing commands. |
-| 8 | The bulletin, if wanted: copy the spreadsheet, **deploy the bulletin script from the church's own Google account**, and put its address in the church details. | A Google account the church owns; someone who will fill in the roster every week | A day to set up, then **an hour every week**. Without it the bulletin goes stale. A church can leave the bulletin out. |
-| 9 | Backup copies of the Bible audio. The audio itself already plays from HelloAO in English, Mandarin, Cantonese and Spanish. A church that skips this removes this church's backup copies from its copy. | Permission from the Mandarin recording's publisher; the published terms for the Cantonese and Spanish recordings; somewhere to host the files | Days, with technical help. Most churches can skip this. |
-| 10 | Store listings: screenshots, text, privacy policy. Submit for review. | Steps 4 to 7 | Two or three days, plus the stores' review |
-| 11 | Keep it going: take each update, renew the Apple signing files and nonprofit status each year (the signing files need a Mac), answer the reminders the copy posts on GitHub. | A volunteer who looks in monthly | A few hours a quarter |
+| 1 | Confirm the church is an official Seventh-day Adventist church and may use the church symbol. If not, the symbol is replaced. | The pastor's approval | A conversation |
+| 2 | Make the church's own copy of the code and fill in the church's details: names, addresses, times, giving, contacts, links. | A free GitHub account (GitHub is the website that holds the code) | Half a day |
+| 3 | Put the copy on the web as a free preview, to check the details before any store work. | A computer | An hour |
+| 4 | Get a domain (a web address the church owns) with a working website and email on it. | The church's legal paperwork; about $11 a year | One to two weeks; about half a day of work |
+| 5 | Apple: join its developer program as an organization, and apply for its nonprofit fee waiver. | A legal entity and its tax number; a D-U-N-S number (a free business ID from Dun & Bradstreet that Apple and Google both check); someone who can sign for the church; the domain from step 4 | **Weeks of waiting**; about half a day of work. The step most likely to stall |
+| 6 | Google Play: open an organization account and pass its identity and website checks. | The same entity and business ID; the domain; a credit card for the one-time $25 | One to two weeks; about half a day of work |
+| 7 | Create the signing keys (files that prove each update comes from the church) for both stores, and connect them to the copy so it can build and upload the app. | A volunteer at ease with typing commands; a second careful person; a Mac | **A full day, and the hardest one** |
+| 8 | The bulletin, if wanted: copy the bulletin spreadsheet and set up its program **from the church's own Google account**. | A Google account the church owns; someone who will fill in the roster every week | A day to set up, then **an hour every week**. Without that person the bulletin goes stale. A church can leave the bulletin out |
+| 9 | Backup copies of the Bible audio, if wanted. The audio already plays from a free public source in English, Mandarin, Cantonese and Spanish. | The recordings' publishers' permission or terms; somewhere to keep the files | Days, with technical help. Most churches can skip this |
+| 10 | Write the store listings: screenshots, text, privacy policy. Send the app for review. | Steps 4 to 7 | Two or three days, plus the stores' review |
+| 11 | Keep it going: take each update, renew the Apple signing keys and confirm the nonprofit waiver each year, answer the reminders the copy sends. | A volunteer who looks in every month; a Mac once a year | A few hours a quarter |
+| | **Total: what it really costs** | **Three or four people for moments, one volunteer throughout** | **$25 once and about $11 a year; about 6 to 8 working days over one to two months; then about 15 hours a year, plus an hour a week for the bulletin** |
 
-## The steps under one app for many churches
+<details>
+<summary><strong>For the technical team</strong></summary>
 
-What a **church** would do:
+- **Step 2.** The copy is a fork. Today the church's details are spread over many
+  files in four languages ([inventory](church-specific-inventory.md#what-would-surprise-another-church));
+  "half a day" assumes follow-up 1 is done.
+- **Step 3.** The website deploy job skips itself in a GitHub fork, so the preview is
+  published by hand with `npm run deploy:dev`, from a computer with Node.js
+  ([Web builds and the website](../README.md#web-builds-and-the-website)). The
+  bulletin's address has to be changed or removed first, or the copy shows this
+  church's bulletin.
+- **Steps 5 and 6.** The account steps are in
+  [App Store and Google Play setup](../operations/app-store-setup.md). Google Workspace
+  for Nonprofits gives the shared mailboxes and files for free.
+- **Step 7.** The keys are saved as GitHub secrets
+  ([Native builds](../operations/native-builds.md)). The signed build jobs also skip
+  themselves in a fork, so the copy must not be a GitHub fork, or those jobs must be
+  changed to run in one.
+- **Step 8.** The program is the bulletin Apps Script
+  ([Bulletin automation](../operations/bulletin-automation.md)); see
+  [The bulletin under each way](#the-bulletin-under-each-way).
+- **Step 9.** A church that skips it removes this church's backup copies from its
+  copy. The Mandarin recording needs its publisher's permission; the Cantonese and
+  Spanish ones come under their publisher's published terms
+  ([Legal](../LEGAL.md#bible-sources-and-licensing)).
+- **Staying connected.** A copy made from a GitHub template has no link back to this
+  repository, so fixes don't flow to it. A fork keeps the link. The repository isn't
+  offered as a template until the direction is chosen ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)).
+- **Many copies.** One experienced volunteer can carry several churches through steps
+  5 to 7 much faster than each church alone.
 
-| # | Step | Needs | What it really costs |
+</details>
+
+## What it takes for a church to join this app, under the New York Chinese SDA Church's IT umbrella
+
+**Bottom line.** The church opens no accounts and pays nothing. It sends in its
+details, and its members choose it inside the app. The New York Chinese SDA Church's IT
+team then carries the stores, the releases and the responsibility for every church in
+the app, so the cost moves to that team and grows with each church.
+
+This is the way the maintainers lean toward. Whether this church or a wider body, such
+as a conference, would be the publisher is [still open](../VISION.md#what-is-undecided).
+
+### What it really costs
+
+| | For the church that joins | For this church's IT team |
+| --- | --- | --- |
+| Money | **$0** | **Nothing new.** The store accounts and domain it already has serve every church ([costs](../operations/service-limits-and-costs.md#summary)) |
+| Time to start | **About a day**: half a day for the details, an hour to check them | **About half a day** for each church, to review and add it. An estimate; none has been added yet |
+| Time every year | **Minutes**, when times, people or links change | **A few hours for each church**: reviewing its changes and checking it in each release. An estimate |
+| The bulletin, if wanted | **A day** to set up, then **about an hour every week** | Help with the first setup |
+| People and skills | Someone who can fill in a form, and the pastor's approval | The volunteers it has today, with more of their time |
+| Before the first church | Nothing | The app has to learn to serve more than one church, and the approvals and agreements below have to be in place. Not started |
+| The hardest part | Finding the person who keeps the details and the bulletin current | Answering for every church's content, for as long as it is in the app |
+
+### The steps for the church
+
+| # | Step | What it needs | What it really costs |
 | --- | --- | --- | --- |
-| 1 | Ask to be added, and show the church is an official Seventh-day Adventist church. | The pastor's approval | A conversation, plus the publisher's answer |
-| 2 | Fill in the church details and send them in. | A form or a file; no accounts | Half a day |
-| 3 | The bulletin, if wanted: copy the spreadsheet, **deploy the bulletin script from the church's own Google account**, and send in its address. | A Google account the church owns; someone who will fill in the roster every week | A day to set up, then **an hour every week** |
+| 1 | Ask to be added, and show the church is an official Seventh-day Adventist church. | The pastor's approval | A conversation, plus the IT team's answer |
+| 2 | Fill in the church's details and send them in. | A form or a file; no accounts | Half a day |
+| 3 | The bulletin, if wanted: copy the bulletin spreadsheet and set up its program **from the church's own Google account**. | A Google account the church owns; someone who will fill in the roster every week | A day to set up, then **an hour every week** |
 | 4 | Check the church in a preview before it reaches members. | A phone | An hour |
-| 5 | Keep the details current: send a change when times, people or links change. | Someone who notices | Minutes, a few times a year; members see the change after the publisher's next release |
+| 5 | Keep the details current: send a change when times, people or links change. | Someone who notices | Minutes, a few times a year. Members see the change after the next release |
+| | **Total: what it really costs** | **One person, and the pastor's approval** | **$0; about a day to start; minutes a year, plus an hour a week for the bulletin** |
 
-What the **publisher** would do, once and then for every church:
+### The steps for this church's IT team
 
 | # | Step | What it really costs |
 | --- | --- | --- |
-| 1 | Hold the store accounts, signing files, domain and yearly renewals for everyone. | What this church does today |
-| 2 | Decide who may be added, and review each church's details and each later change before release. | Time for each church, for as long as it is in the app |
-| 3 | Get approvals that cover every church: the symbol, and this church's backup audio copies if they are to serve everyone. | Unknown until each one answers |
-| 4 | Answer to Apple and Google for everything every church shows. | The publisher carries the risk for all |
+| 1 | Hold the store accounts, signing keys, domain and yearly renewals for everyone. | What it does today |
+| 2 | Decide who may be added, and review each church's details and each later change before release. | About half a day for each new church, then a few hours a year for each. An estimate |
+| 3 | Get approvals that cover every church: the church symbol, and this church's backup audio copies if they are to serve everyone. | Unknown until each one answers |
+| 4 | Answer to Apple and Google for everything every church shows, with an agreement with each church. | The team, and this church, carry the risk for all. It needs legal advice and the church board's approval ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)) |
 | 5 | Remove a church that asks to leave, or whose details nobody keeps up. | Rules that have to be written first |
 | 6 | Test every release against every church's details. | Grows with each church |
+| | **Total: what it really costs** | **No new money. About half a day to add each church and a few hours a year to keep it, on top of the one-time work of making the app serve many churches. The lasting cost is responsibility, not hours** |
+
+<details>
+<summary><strong>For the technical team</strong></summary>
+
+- Each church's details would be a plain file, shipped inside the app or downloaded
+  from a free website that only serves files. No shared server and no accounts
+  ([vision](../VISION.md#how-they-compare)).
+- The bulletin, the locations and the languages have to stop assuming this church's
+  shape before a second church can be added
+  ([Code that assumes this church's shape](#code-that-assumes-this-churchs-shape)).
+- The "choose your church" step is asked once, in the member's language.
+- The work is listed under
+  [proposed follow-up work](#for-the-technical-team-proposed-follow-up-work), items 10
+  to 13.
+
+</details>
 
 ## The bulletin under each way
 
-The bulletin is what makes the app a church's own, and it is the part that costs the
-most to keep going: someone has to fill in the roster every week.
+**Bottom line.** Under both ways, the bulletin needs one person every week, and each
+church must set it up from its own Google account. It is the part of the app that
+costs the most to keep going, and a church can leave it out.
 
-Under both ways, **each church's bulletin must be set up (deployed) from that church's
-own Google account**. The bulletin is a small program in Google Apps Script that runs
-under the Google account that set it up, and Google lets one account answer 30
-requests at the same moment. Reading Google's quota pages together, every request from
-every phone counts against it
+<details>
+<summary><strong>For the technical team</strong></summary>
+
+The bulletin is a small program in Google Apps Script that runs under the Google
+account that set it up (deployed it), and Google lets one account answer 30 requests
+at the same moment. Reading Google's quota pages together, every request from every
+phone counts against it
 ([Bulletin API](../operations/service-limits-and-costs.md#bulletin-api-apps-script)).
 One church family uses a small part of that. Several churches set up from one account
 would share it.
 
-- **A copy for each church** gets this right without trying. Each church sets up its
-  own bulletin and builds its address into its own app.
+- **A church's own copy** gets this right without trying. Each church sets up its own
+  bulletin and builds its address into its own app.
 - **One app for many churches** has to hold to it on purpose. The app would keep a
   list of bulletin addresses, one for each church, each set up from that church's
   account. One shared bulletin for every church would need something other than a
@@ -92,30 +198,12 @@ Under both, account ownership has to be settled on the first day. A bulletin's a
 is built into the app today, so moving a church's bulletin to another account later
 takes an app release, and older versions of the app keep asking the old address.
 
-## What the two lists show
+</details>
 
-- **A church can have the web app in about a day** under a copy for each church, once
-  the church details are in one place (follow-up 1). Today it needs someone who can
-  edit code.
-- **The store accounts are the wall** for a copy for each church. One experienced
-  volunteer can carry several churches through them much faster than each church
-  alone.
-- **A copy has to stay connected to take updates.** A copy made from a GitHub template
-  has no link back to this repository, so fixes don't flow to it. A fork keeps the
-  link. The repository isn't offered as a template until the direction is chosen
-  ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)).
-- **One app moves the wall, it doesn't remove it.** A church's own list loses the
-  store accounts, signing and listings: weeks of paperwork become about a day. The
-  publisher's list is new, never ends, and grows with each church.
-- **The bulletin costs the same under both.** A person fills in the roster every week,
-  and each church sets it up from its own Google account.
-- **The approvals are open under both.** The church symbol and this church's own
-  backup audio copies were approved for one church. Under one app they have to be
-  settled before the first other church is added, because one answer covers everyone.
+## For the technical team: what each church-specific thing should become
 
-## What each church-specific thing should become
-
-Four groups. The first three need work under both ways; the last columns of each table
+This part is for the people who maintain the code. It sorts everything in
+[the inventory](church-specific-inventory.md) into four groups. The first three need work under both ways; the last columns of each table
 say where the two ways differ. Effort is the maintainers' work, done once, not a
 church's.
 
@@ -175,7 +263,7 @@ can't simply reuse most of them under either way.
 - Nothing is built for churches outside the Seventh-day Adventist Church. They may use
   the code under its license, without the symbol.
 
-## Proposed follow-up work
+## For the technical team: proposed follow-up work
 
 Proposed, not filed. The first group helps under both ways and can start before the
 choice is made.
