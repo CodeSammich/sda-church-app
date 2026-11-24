@@ -45,7 +45,7 @@ From the repository root:
 ## Commands
 
 ```bash
-npm test -- test/apps-script-physical-bulletin.test.ts test/apps-script-bulletin-merge.test.ts test/apps-script-schedule-assignment-checks.test.ts
+npm test -- test/apps-script- test/bulletin-   # every Apps Script and bulletin test
 npm run apps-script:push      # upload the code
 npm run apps-script:deploy    # upload, then update the existing web-app deployment
 ```
@@ -60,3 +60,10 @@ The **Deploy Bulletin Apps Script** workflow does the same as
 `apps-script:deploy` from GitHub Actions. Every merge into `main` starts it, and it
 waits for `production` approval; see
 [Deploying the bulletin Apps Script](../docs/operations/admin-runbook.md#deploying-the-bulletin-apps-script).
+Before it pushes, it compares the live project with the last release and with this
+one, and warns **Apps Script edited outside git** for a file that matches neither,
+such as one changed in the Apps Script editor. It still deploys, which puts `main`'s
+code back; see
+[Apps Script edited outside git](../docs/operations/admin-runbook.md#apps-script-edited-outside-git).
+A local `apps-script:deploy` compares only when `APPS_SCRIPT_PREVIOUS_REF` names the
+last release's commit.

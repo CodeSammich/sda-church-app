@@ -134,8 +134,10 @@ clear whether the release is a patch, minor, or major. The click-by-click steps 
    included feature PRs into its description. This is the code maintainer's
    responsibility, not the fork contributor's. Do not rely on a reviewer to repair the
    merge commit message at the last moment.
-4. The release PR runs the slow checks below (**iOS key screens** takes 15 to 25
-   minutes, and **Android audio e2e** about 20), and **Screenshots reviewed** waits for a `release-approvers`
+4. The release PR runs the slow checks below (**iOS key screens** took 46 and 50
+   minutes on the 1.8.0 and 1.9.0 release PRs, [run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635) and
+   [run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/45462956251), and **Android audio e2e** 30 and 34,
+   [run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605237) and [run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/45462955824)), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
    Merging it into `main` closes the issues and deletes `release-candidate`, and
    **Release - After Merge** creates it again from `main`.

@@ -45,6 +45,7 @@ the damage if the card or account is misused (see
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons, the bulletin's lesson title | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese book cover thumbnails; Chinese books open in its reader | Free | None published | Unknown | Low: cached on the device for a day |
 | [EGW Writings covers](#egw-writings-covers) | Library thumbnails | Free | None published | Unknown | Low: Cloudflare |
+| [YouTube (CHTV's feed)](#youtube-chtvs-feed) | For Chinese readers, finding the week's Mandarin mission video | Free, no key | None published for the feed | The phone offers the last video it found | Low: one small request per visit to Sabbath School, until the week's video is found |
 | [Sunrise-Sunset](#sunrise-sunset) | Sunset times on the printed bulletins | Free, **attribution required** | "Reasonable" volume; `429` + `Retry-After` | Throttled | None: two requests per printed bulletin; the app no longer calls it |
 | [GitHub Actions](#github-actions) | Tests, builds, deploys | Free (public repo) | Fair use, concurrency | Queued jobs | None |
 | [GitHub Pages](#github-pages) | `app.nyccsda.org` | Free | 1 GB site, 100 GB/month soft | `429` or a GitHub email | None |
@@ -336,6 +337,17 @@ If a refresh fails, the cached covers stay in place.
 no published limits. The platform image cache keeps repeat loads down. Reading
 itself opens in the browser.
 
+### YouTube (CHTV's feed)
+
+`www.youtube.com/feeds/videos.xml`, the public feed of CHTV 希望電視台's channel,
+which needs no API key (`CHTV_FEED_URL` in
+`features/sabbath-school/ChineseMissionSpotlight.ts`, #508). With the app in Chinese,
+the Sabbath School screen reads it to find the week's Mandarin mission video
+(聖工剪影), which then opens in YouTube. A phone reads it each time that screen opens
+until it finds that Sabbath's video, and then not again that week. The web app never
+reads it. When YouTube answers with an error, the phone offers the last video it
+found. The daily [dependency monitor](external-dependency-monitor.md) reads it once.
+
 ### Sunrise-Sunset
 
 The app no longer uses `api.sunrise-sunset.org`. It calculates sunrise and sunset on
@@ -358,8 +370,10 @@ or calculate the times itself.
 `v1.fetch.bible`, static files on S3 and CloudFront (*measured*). The RV1909 text and the
 verse popup's Hebrew and Greek ship with the app, so the app never requests anything here;
 `scripts/build-bundled-bibles.mjs` downloads them when it runs. Its
-[access policy](https://fetch.bible/access/#no-limits-from-us) offers the CDN with
-"no API key, usage fee, request quota, or provider-imposed caching limit."
+[access policy](https://fetch.bible/access/#no-limits-from-us), under "No limits from
+us", says "you can use our service however you like", but "you must still abide by
+the terms of each individual Bible translation", and "Feel free to cache responses
+for as long as you like".
 
 ### GitHub Actions
 
@@ -381,9 +395,11 @@ that matter are tiny.
 ### Google Workspace and Drive
 
 Free under Google Workspace for Nonprofits, with 100 TB of storage pooled across the
-organization. It holds the roster, the bulletin files, and the media backup copy. The
-Android PR workflow uploaded its preview APKs there until 1.4.0, and those stay until
-someone clears them out; this is housekeeping, not a cost risk. Exceeding an API quota
+organization. It holds the roster, the bulletin files, and the media backup copy. A
+release pull request's Android preview APK goes there too, when someone approves its
+upload ([Android preview APKs](admin-runbook.md#android-preview-apks)). Until 1.4.0
+every preview APK went there, and those stay until someone clears them out; this is
+housekeeping, not a cost risk. Exceeding an API quota
 returns an error.
 
 The [Workspace data export](admin-runbook.md#google-workspace-backups) is free to
@@ -452,7 +468,7 @@ is paid. Both are nonprofit accounts, so the app must never earn money through t
 ## Link-only websites
 
 These only open in the browser, so the app puts no load on them and they have no
-cost: YouTube, Spotify, Zoom, AdventistGiving, zgaxr (Chinese hymnals), Hymns for
+cost: YouTube (apart from [CHTV's feed](#youtube-chtvs-feed)), Spotify, Zoom, AdventistGiving, zgaxr (Chinese hymnals), Hymns for
 Worship, the Adventech and Alive in Jesus lesson readers, EGW Writings reading,
 Project Gutenberg, the Internet Archive and HathiTrust book scans, Chapel Library,
 WordProject (the Bible audio credits), the Chinese Union Mission 506 hymnal store

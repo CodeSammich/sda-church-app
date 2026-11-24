@@ -91,11 +91,17 @@ the church's Workspace terms during annual maintenance.
 | `google-apps-script/PinyinPro.gs` | Generated on each push or deploy from the pinned `pinyin-pro` npm dependency; ignored by Git, never edited by hand |
 | `google-apps-script/HymnalData.gs` | Generated on each push or deploy by `scripts/build-hymnal-apps-script.cjs` from `features/hymnal/` (#619): the 1985 and 505 titles, Chinese in Traditional, their number maps, and the `Hymn Bank` tab's rows; ignored by Git, never edited by hand |
 | `services/BulletinService.ts` | App response types, date selection, local cache, refresh cooldown, and empty-location behavior |
-| `app/(tabs)/home/bulletin.tsx` | Digital bulletin sections, labels, privacy-safe names, translations, and staff link |
+| `app/(tabs)/home/bulletin.tsx` | Digital bulletin sections, labels, privacy-safe names, and translations |
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, sheet columns, privacy, lookup, QR, and maintenance regression tests |
 | `test/apps-script-bulletin-merge.test.ts` | Intake mapping and precedence regression tests |
 | `test/apps-script-schedule-assignment-checks.test.ts` | Roster conflict highlighting and unknown-name warning tests |
-| `test/apps-script-bulletin-resilience.test.ts` | Renamed and moved tabs and columns found by their tags, and bulletins without their schedule |
+| `test/apps-script-bulletin-resilience.test.ts` | Renamed and moved tabs and columns found by their tags, bulletins without their schedule, and changeovers kept for older apps |
+| `test/apps-script-printed-type.test.ts` | The printed bulletin's type rules (#603) and **Printed Bulletin → Fonts…** (#624) |
+| `test/apps-script-word-copy.test.ts` | The Word copy for printing on a Mac (#627) |
+| `test/apps-script-hymnal-data.test.ts` | The generated `HymnalData.gs` and the printed hymn lookup (#619) |
+| `test/apps-script-announcements.test.ts`, `test/apps-script-dialog-announcements.test.ts` | `Weekly Data`'s announcements, and the **Create Word Doc…** dialog's (#562) |
+| `test/apps-script-live-check.test.ts` | The deploy's check for code edited outside git (`scripts/apps-script-live-check.cjs`) |
+| `test/bulletin-changeovers.test.ts` | The monitor's cleanup issues for retired changeovers (`scripts/bulletin-changeovers.cjs`) |
 | `test/integration/bulletin-api.mjs` | Opt-in read-only production API contract check |
 
 ## The three mandatory sheets
@@ -169,6 +175,11 @@ Important structural columns:
   does not belong in the Queens Church at Study printed section.
 - `Technician`, `Encouragement`, and `Sabbath School` are Brooklyn fields.
   Printed Brooklyn uses `Encouragement`, not the older `Testimonies` wording.
+- An optional column for Brooklyn's chairman can be added, named `Brooklyn
+  Chair` or `Brooklyn Chairman`. A plain `Chair` or `Chairman` column is read as
+  Brooklyn's too, wherever it is, even on the Queens side
+  (`populateOptionalBrooklynScheduleFields_` in `BulletinApi.gs`). Without one,
+  or while it's blank, Brooklyn's chairman is its `Chair/Pastoral Prayer`.
 - `Announcements` and `Sunset Time` remain recognized legacy/API response aliases
   in the source, but they aren't expected columns, so nothing reports them
   missing. Neither the app nor the printed bulletin uses them: announcements
@@ -440,10 +451,13 @@ every cell as its own hymn, with the other cell in the row as its twin.
 
 ## Header protection and validation automation
 
-The bound spreadsheet's simple `onOpen` maintenance path runs for every user who
-can open the workbook. It is intentionally quiet and does not require an email
-allowlist. The visible custom menu exposes only the Google Doc creation action
-and **Fonts…**; maintenance and setup operations stay hidden. `onOpen` builds the
+The bound spreadsheet's simple `onOpen` maintenance path runs for each editor
+who opens the workbook: a simple `onOpen` runs only for a user with permission
+to edit, never for one who can only view or comment
+([Google](https://developers.google.com/apps-script/guides/triggers#onopene)).
+It is intentionally quiet and does not require an email allowlist. The visible
+custom menu exposes only **Create Word Doc…** and **Fonts…**; maintenance and
+setup operations stay hidden. `onOpen` builds the
 menu before anything else, because a simple trigger stops at 30 seconds: an
 open that runs out of time in the upkeep still has the menu. Each upkeep step
 logs how long it took, such as `Upkeep: conflict scan took 8123 ms`, so
@@ -455,17 +469,20 @@ On open, the script:
 2. normalizes the header protections and restricts their editors to
    `technology@nyccsda.org`;
 3. protects `Sabbath Calendar!A:B` for the technology group;
-4. appends missing Saturdays so the next three quarters always have rows, plus
-   the fourth quarter ahead when the current quarter is in its final 21 days;
-5. puts back a deleted `Weekly Data` tab or its missing columns, adds its rows
+4. sets the [English-only](#english-only-sabbath-calendar-input) data-validation
+   rule on `Sabbath Calendar!A2:Y` again;
+5. appends missing Saturdays so the next three quarters always have rows, plus
+   the fourth quarter ahead when the current quarter is in its final 21 days,
+   and then sets the English-only rule again to cover them;
+6. puts back a deleted `Weekly Data` tab or its missing columns, adds its rows
    for the next three Sabbaths, and sets its `Date` and `Location` rules;
-6. hides old schedule rows without deleting them;
-7. repaints the conflict highlights described below across every schedule row;
-8. tags the tabs and columns it finds by name, so a later rename doesn't lose
+7. hides old schedule rows without deleting them;
+8. repaints the conflict highlights described below across every schedule row;
+9. tags the tabs and columns it finds by name, so a later rename doesn't lose
    them (see [Columns are read by name](#columns-are-read-by-name)); and
-9. keeps the `Hymn Bank` tab the same as the app's hymnals, if this open has
+10. keeps the `Hymn Bank` tab the same as the app's hymnals, if this open has
    used less than 20 seconds (see [The `Hymn Bank` tab](#the-hymn-bank-tab));
-10. shows one alert, in English and Simplified Chinese, listing any expected
+11. shows one alert, in English and Simplified Chinese, listing any expected
    column or tab still missing from `Sabbath Calendar` or `Weekly Data`, and
    any tab or column renamed, or any name more than one column has, since the
    last notice.
@@ -528,9 +545,9 @@ bilingual popup explaining that the mobile app redacts last names for anonymity
 and that editors should use the `Name Dictionary` tab for approved English names.
 The popup comes from the script, so it appears a second or two after the edit.
 
-The script also installs a data-validation rule on the editable range, and
-expands it after automatic quarter rows are added. The rule deliberately has no
-help text and allows invalid input:
+On each open, the script also sets a data-validation rule on `A2:Y`, the first
+25 columns by position, and sets it again after automatic quarter rows are
+added. The rule deliberately has no help text and allows invalid input:
 
 - Sheets shows a rule's help text on *every* selected cell, not only on invalid
   input, so a long explanation there covered every cell a planner clicked.
@@ -541,7 +558,9 @@ help text and allows invalid input:
 
 The guard:
 
-- it applies only to `Sabbath Calendar` columns A:Y and data rows beginning at row 2;
+- it applies only to the `Sabbath Calendar`'s own columns, each found by its
+  header wherever it is (`getSabbathCalendarColumnNumbers_`), and to data rows
+  beginning at row 2. Only the backup rule above goes by position;
 - it clears edited or pasted cells containing CJK Han characters;
 - it does not alter other tabs or columns; and
 - it does not delete rows or rewrite unrelated content.
@@ -652,6 +671,12 @@ It installs an `onEdit` trigger for `onScheduleNameCheckEdit`, owned by that
 admin, and sets the `SCHEDULE_NAME_CHECK_TRIGGER` script property. After that,
 the plain alert stops, so an edit never shows two popups, and no other admin
 installs a duplicate.
+
+`PHYSICAL_BULLETIN_ADMIN_EMAILS` is set by hand, in **Extensions → Apps Script →
+Project Settings → Script properties**, to the bulletin admins' Google account
+addresses, separated by commas, semicolons, or new lines
+(`isPrintedBulletinAdmin_` in `PrintedBulletin.gs`). While it's empty, the
+dialog never installs, and editors keep getting the plain alert.
 
 If the owning admin's account is removed, its trigger stops. To recover,
 delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property. The next admin menu
@@ -1112,9 +1137,10 @@ columns:
 - **Invocation:** the two locations differ, on purpose (#707). Queens prints
   the sermon speaker, as in the Sermon row. Brooklyn prints its chair, as in
   its Chairman row.
-- **Chairman:** Queens's `Chair/Pastoral Prayer`. Brooklyn's is `Brooklyn
-  Chair` when the sheet has that column and it's filled in, or else Brooklyn's
-  `Chair/Pastoral Prayer`.
+- **Chairman:** Queens's `Chair/Pastoral Prayer`. Brooklyn's is its chairman
+  column (`Brooklyn Chair`, or a plain `Chair`; see
+  [`Sabbath Calendar`](#2-sabbath-calendar)) when the sheet has one and it's
+  filled in, or else Brooklyn's `Chair/Pastoral Prayer`.
 - **Pastoral Prayer:** the location's `Chair/Pastoral Prayer`.
 
 The app's Queens Invocation and Benediction rows show the sermon speaker too.
@@ -1149,8 +1175,8 @@ line in the printed layout.
 
 The Sabbath School hymns print in each Sabbath School panel's **Opening Hymns**
 row, after the opening prayer, each hymn with the Chinese on one line and the
-English on the next, like every other row, such as `第413首 教會根基` over
-`AH 348 The Church Has One Foundation` for a typed `第413首 教會根基`
+English on the next, like every other row, such as `第413首 教會基礎` over
+`AH 348 The Church Has One Foundation` for a typed `第413首 教會基礎`
 (`formatSabbathSchoolHymnsForPrint_`). On one line, a long title wrapped
 mid-word. Each cell has one hymn in either language. Where the map has the
 other language by number, both print. Otherwise the hymn prints once: as typed,
@@ -1289,8 +1315,14 @@ The deployment helper:
   from `features/hymnal/`;
 - writes ignored `.clasp.json` and `.clasp-deployment.json` from environment values;
 - accepts `APPS_SCRIPT_PROJECT_ID`, `APPS_SCRIPT_DEPLOYMENT_ID`, and an optional
-  `APPS_SCRIPT_DEPLOYMENT_DESCRIPTION` or `DEPLOYMENT_DESCRIPTION`; and
-- can write `CLASPRC_JSON` to the WSL clasp credential file for CI-style authentication.
+  `APPS_SCRIPT_DEPLOYMENT_DESCRIPTION` or `DEPLOYMENT_DESCRIPTION`;
+- can write `CLASPRC_JSON` to the WSL clasp credential file for CI-style authentication; and
+- before it pushes, when `APPS_SCRIPT_PREVIOUS_REF` names the last release's
+  commit, as **Deploy Bulletin Apps Script** sets it (`HEAD^`), pulls the live
+  project and warns **Apps Script edited outside git** for any file that matches
+  neither that commit nor this one (`scripts/apps-script-live-check.cjs`). The
+  deploy still goes ahead, which puts `main`'s code back; see
+  [Apps Script edited outside git](admin-runbook.md#apps-script-edited-outside-git).
 
 The current workflow is manual: use the printed-bulletin dialog after the reviewed
 sheet rows are ready. Remove any obsolete spreadsheet installable triggers left by
@@ -1334,21 +1366,21 @@ changes the URL and requires a coordinated mobile-app update.
 
 | Symptom | Likely cause | Corrective action |
 | --- | --- | --- |
-| App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
+| App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`. The API caches for 120 seconds, and a phone keeps its copy for up to 30 minutes, checking only when the bulletin opens, the app comes back to the front, or the week is switched. **Refresh** gets the new copy once the API's cache has expired (see [Caching and refresh](#caching-and-refresh)) |
 | **Create Word Doc…** says Weekly Data has no Bible Verses, or can't read them | The Sabbath's `Weekly Data → Bible Verses` cell for that location is blank, `TBD`, or has a passage the parser can't read | Close the dialog, write each passage as `Book chapter:verse`, in English or Chinese, with `;` between them, then open the dialog again. The app shows the same verse |
 | A dialog says **PERMISSION DENIED** (or `PERMISSION_DENIED`), often on a phone | The browser is signed in to more than one Google account, and Google ran the dialog's request as its first account, not the one with the sheet open. The dialog puts this explanation above the error (#751) | Open the sheet in an incognito (private) window signed in only to the church account. Or sign out of every account and sign in to the church account first |
 | API returns `No schedule found for …`, or the app says the schedule isn't set | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag, unless it was renamed before the spreadsheet was opened after the deploy). Apps from 1.6.0 get the bulletin without its schedule instead of the error | Restore the tab and a matching Date row |
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
 | A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |
-| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one. Until then, the bulletin shows that hymn's default |
+| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one. Until then, that field is blank in the bulletin, except that the two service hymns, `Hymn of Praise` and `Hymn of Response`, get their defaults |
 | A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
 | A roster cell is pale red | The same name is in another roster cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
-| No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Word Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
+| No unknown-name dialog, only an alert | `PHYSICAL_BULLETIN_ADMIN_EMAILS` is empty or doesn't list the admin, no bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Add the admin's address to `PHYSICAL_BULLETIN_ADMIN_EMAILS` if it's missing (see [Name not in the Name Dictionary](#name-not-in-the-name-dictionary-popup)), then have the admin open **Printed Bulletin → Create Word Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
 | A red cell shows no hover note | The cell already had a planner's own note, which the script keeps | Read the row to find the other role, or delete the planner's note so the script can add its own |
-| Chinese text appears in Sabbath Calendar | Typed or pasted into A:Y | The onEdit guard should clear it with a popup; if it stays with a red corner, check **Extensions → Apps Script → Executions** for errors. Use Name Dictionary for approved English names |
-| New quarter rows lack validation | Maintenance did not run or append failed | Open the workbook as an editor, inspect Apps Script logs, and rerun maintenance; do not manually limit the rule to X53 |
-| Old rows disappeared | They were hidden, not deleted | Unhide rows when historical planning is needed; maintenance is non-destructive |
+| Chinese text appears in Sabbath Calendar | Typed or pasted into one of its own columns | The onEdit guard should clear it with a popup; if it stays with a red corner, check **Extensions → Apps Script → Executions** for errors. Use Name Dictionary for approved English names |
+| New quarter rows lack validation | Maintenance did not run or append failed | Reload the sheet as an editor, which is the only way to run maintenance again, then check **Extensions → Apps Script → Executions** for its errors; do not manually limit the rule to X53 |
+| Old rows disappeared | They were hidden, not deleted | Unhide them to look back; maintenance is non-destructive. The next open hides them again |
 | Google Doc is in Trash or not updated | Saved ID points to a trashed/deleted file | Run generation again; the script treats it as missing and creates a new Doc in the configured folder |
 | The Doc, or its printout, has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Shorten the long text in the Doc (an announcement, a sermon title). If every week overflows, restore the renderer's panel/gutter structure; never clip text or go under 10 points to fit |
 | A Chinese character prints in a plainer font than the rest | It's a Simplified or rare character the bulletin's Chinese font lacks, so it uses the fallback font | Nothing, if it's spelled as intended. A Simplified name or title typed in Traditional prints in the bulletin's font; a rare character always prints in the fallback font. See [Type](#type) |
@@ -1377,7 +1409,10 @@ Before changing a bulletin field, sheet column, or layout:
 For header changes:
 
 - **Moving a column, or adding one the scripts don't read,** needs no code
-  change. On the `Sabbath Calendar`, add it at the far right (see above).
+  change. On the `Sabbath Calendar`, keep `Date` and `Quarter` in A and B, and
+  add it at the far right: the protection on `A:B` and the backup English-only
+  rule on `A2:Y` go by position (see
+  [English-only Sabbath Calendar input](#english-only-sabbath-calendar-input)).
 - **Renaming a tab or column in the spreadsheet** needs no code change; its tag
   keeps it read (see [Columns are read by name](#columns-are-read-by-name)).
 - **Changing the name the code expects for a column, or adding one the scripts

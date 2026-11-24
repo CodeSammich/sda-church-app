@@ -2,9 +2,11 @@
 
 The app's web/PWA preview and native clients depend on public APIs, media hosts, hymn
 directories, and user-facing external destinations. `.github/workflows/external-dependency-monitor.yml`
-checks them daily at 5:17 PM America/New_York time and can also be run manually.
-The [status page](status-page.md) checks the audio hosts, the bulletin API and a
-few other services every hour, but only that each one answers.
+checks them daily and can also be run manually. It's set for 5:17 PM America/New_York
+time, but GitHub starts it late: in November 2026 its scheduled runs started between
+8:25 PM and 1 AM ([its runs](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/workflows/external-dependency-monitor.yml?query=event%3Aschedule)). The [status page](status-page.md) checks the
+audio hosts, the bulletin API and a few other services several times a day, but only
+that each one answers.
 
 ## Traffic policy
 
@@ -26,8 +28,8 @@ too ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church
 more. The printed bulletins fetch their verses from HelloAO's text API, so the
 monitor reads one chapter there each day, in English (BSB) and Chinese (CUV), as the
 bulletin's Apps Script does. Project Gutenberg receives three sampled
-public-domain book requests, and EGW Writings receives three sampled book requests
-for each supported edition language. The Internet Archive receives one metadata
+public-domain book requests, and EGW Writings receives six for each supported
+edition language: three sampled covers and three sampled text pages. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly
 downloadable and dated before 1928 (see [Internet Archive sources](../LEGAL.md#internet-archive-sources)).
 HathiTrust receives one catalog request per Chinese library edition, which checks
@@ -41,9 +43,10 @@ redirect elsewhere on the site.
 Fixed app destinations and small API
 contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media
-remain strict. Two links also accept a refusal: the bulletin's schedule sheet
-(401 or 403, since it needs a sign-in) and Adventist Giving (403, from its bot
-protection). The app no longer opens the sheet (#553), but the bulletin is made
+remain strict. Five links also accept a refusal: the bulletin's schedule sheet
+(401 or 403, since it needs a sign-in), and Adventist Giving and the three
+donor-advised fund sites, Fidelity Charitable, DAFgiving360 and Vanguard
+Charitable (403, from their bot protection). The app no longer opens the sheet (#553), but the bulletin is made
 from it, so the monitor still checks that it's there.
 
 It checks that each children's Sabbath School age group will open this week's
@@ -130,7 +133,10 @@ When a run fails, the workflow:
 A new issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions
 variable, which notifies them even if they don't watch the repository; if that is
 empty, or GitHub rejects an assignee, the issue @mentions the run's actor instead
-(`scripts/monitor-alert-issue.cjs`). See
+(`scripts/monitor-alert-issue.cjs`). It gets the `maintenance` label and starts at
+Priority Medium, since most failures recover by the next run. A changeover's
+cleanup issue gets the same label and assignees, at Priority Low
+([Maintenance issues](admin-runbook.md#maintenance-issues)). See
 [Getting notified only when action is needed](admin-runbook.md#getting-notified-only-when-action-is-needed).
 
 The issue is closed automatically after the next successful run. This is
