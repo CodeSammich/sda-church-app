@@ -36,7 +36,7 @@ Days are calendar time, waiting included. Steps 8 and 9 are optional.
 | 2 | Copy the code on GitHub (a "fork") and fill in the church details. | A GitHub account | Half a day |
 | 3 | Publish the web app from the copy by hand, as a free preview of the church's details. | A computer with Node.js; the bulletin's address changed or removed, so the copy doesn't show this church's bulletin | An hour |
 | 4 | A domain with a working website and email on it. Google Workspace for Nonprofits gives shared mailboxes and files for free. | The entity's paperwork; about $11 a year for the domain | One to two weeks |
-| 5 | Apple: enroll as a nonprofit organization and join the developer program ([setup](../operations/app-store-setup.md#apple-app-store)). The yearly fee is waived only while the church stays a recognized nonprofit and the app stays free. | A legal entity, its tax number, a D-U-N-S number (a business ID from Dun & Bradstreet that Apple checks), someone who can sign for the church, an email address and website on the church's domain | **Weeks of waiting.** The step most likely to stall. |
+| 5 | Apple: join the developer program as an organization, and apply for Apple's nonprofit fee waiver with the church's D-U-N-S number ([setup](../operations/app-store-setup.md#apple-app-store)). The yearly fee is waived only while the church stays a recognized nonprofit and the app stays free. | A legal entity, its tax number, a D-U-N-S number (a business ID from Dun & Bradstreet that Apple checks), someone who can sign for the church, an email address and website on the church's domain | **Weeks of waiting.** The step most likely to stall. |
 | 6 | Google Play: an organization account, with identity and website checks ([setup](../operations/app-store-setup.md#google-play)). | The same entity and D-U-N-S number; an account and website on the church's domain; a credit card for the one-time $25 | One to two weeks |
 | 7 | Signing files and upload access for both stores, saved as GitHub secrets (settings GitHub keeps hidden) ([Native builds](../operations/native-builds.md)). | A second careful person; a Mac; a copy that isn't a GitHub fork, or one whose build jobs have been changed to run in a fork | **A full day, and the hardest one.** The instructions assume someone at ease typing commands. |
 | 8 | The bulletin, if wanted: copy the spreadsheet, **deploy the bulletin script from the church's own Google account**, and put its address in the church details. | A Google account the church owns; someone who will fill in the roster every week | A day to set up, then **an hour every week**. Without it the bulletin goes stale. A church can leave the bulletin out. |
@@ -100,6 +100,10 @@ takes an app release, and older versions of the app keep asking the old address.
 - **The store accounts are the wall** for a copy for each church. One experienced
   volunteer can carry several churches through them much faster than each church
   alone.
+- **A copy has to stay connected to take updates.** A copy made from a GitHub template
+  has no link back to this repository, so fixes don't flow to it. A fork keeps the
+  link. The repository isn't offered as a template until the direction is chosen
+  ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)).
 - **One app moves the wall, it doesn't remove it.** A church's own list loses the
   store accounts, signing and listings: weeks of paperwork become about a day. The
   publisher's list is new, never ends, and grows with each church.
@@ -201,7 +205,8 @@ choice is made.
 **Only for one app for many churches**
 
 10. Decide the publisher, and what today's app and store listings are called once they
-    serve more than one church.
+    serve more than one church. The questions for counsel and the conference are in
+    [#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617).
 11. Write the rules for adding, reviewing and removing a church.
 12. Design the "choose your church" step for older members, asked once.
 13. Ship each church's details inside the app, or download them from a free website

@@ -172,7 +172,7 @@ are plain data from the start, the choice can still be made late.
 | Who decides what content a church shows? | Each church, fully. | Each church, within what the shared app offers. |
 | Who may use the church symbol? | Each official church, with its own approval. | Approval must cover an app that serves many churches. |
 | How much new code? | Less in total, but each copy makes its own changes, such as a different number of locations or a new language. Every change it makes to shared code makes later updates harder to take. | More. The app must handle any number of locations, a way to choose a church, and each church's own languages and hymnals. |
-| What do Apple's rules say? | Allowed when each church submits its own copy. Apple discourages near-identical apps, so a reviewer may ask how the copies differ ([guidelines 4.2.6 and 4.3](https://developer.apple.com/app-store/review/guidelines/#design), read 2026-11-24). | Apple names one app with a "picker" as an accepted model (guideline 4.2.6). |
+| What do the stores' rules say? | Apple allows it when each church submits its own copy from its own account; one church publishing copies for others would likely be rejected. Apple discourages near-identical apps, so a reviewer may ask how the copies differ ([guidelines 4.2.6 and 4.3](https://developer.apple.com/app-store/review/guidelines/#design), read 2026-11-24). Google Play's rules on repetitive apps still need checking ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)). | Apple names one app with a "picker" as an accepted model (guideline 4.2.6). How Google Play treats it still needs checking ([#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617)). |
 | What about a member visiting another church? | They install that church's app. | They switch churches inside the app. |
 | What does a bad release break? | One church's app. | Every church's app. |
 
@@ -196,9 +196,11 @@ one more screen that can go wrong. It has to be asked once, in their language, a
 
 The two ways aren't the only ones:
 
-- **A conference edition.** One app run by a conference (the regional body over a group
-  of Adventist churches) for its churches. It is one app for many churches at a smaller
-  size, with a publisher that already exists and already answers for those churches.
+- **A conference, union or division publishes it.** One app run by a conference (the
+  regional body over a group of Adventist churches) or a body above it, with this
+  church contributing the code. It is one app for many churches with a publisher that
+  already exists, already answers for those churches, already hosts their websites and
+  media, and has legal and IT staff.
 - **One helper, many copies.** Each church keeps its own app, and one experienced
   volunteer carries several churches through the store accounts and signing. The
   volunteer is shared; the accounts aren't.
@@ -213,11 +215,22 @@ The two ways aren't the only ones:
 ### What is undecided
 
 - **Who would publish one app for many churches?** This church, a conference, or
-  another body.
+  another body. The publisher answers for every church's bulletin names, the privacy
+  policy, support, and requests to remove something, so it needs an agreement with
+  each church.
+- **May this church publish an app that other churches use, under its own nonprofit
+  status?** A free service to churches of the same faith plausibly fits its purpose;
+  fees would complicate that. It needs the conference's legal counsel and the church
+  board's approval before anything is offered.
 - **What would the shared app be called?** Today's app and listings carry this church's
   name.
 - **Will the approvals stretch?** The church's use of the symbol, and the backup audio
   copies it hosts, were settled for one church. The answers come from the North
   American Division for the symbol and from each rights holder for the audio.
+- **Will the free services hold at many times today's use?** The audio hosts and the
+  bulletin's limits are worked through in [#616](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/616).
 - **Does a second church want this?** Until one asks, every answer is a guess. The
   first real request should decide more than this page does.
+
+The conversations behind these questions, with counsel and with the conference, are
+tracked in [#617](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/617).
