@@ -24,10 +24,16 @@ const openDialog = (announcements = WEEKLY_DATA) => {
   }
   runInContext("getBulletinIntakeSheetUrl_ = function () { return 'https://example.invalid/sheet'; };", context);
   const html = runInContext("buildPrintedBulletinPromptHtml_('2026-11-28')", context) as string;
-  const script = /<script>([\s\S]*?)<\/script>/.exec(html)![1];
-  const dom = new JSDOM(html.replace(/<script>[\s\S]*?<\/script>/g, ''), { runScripts: 'outside-only' });
+  // jsdom runs none of the page's own scripts with outside-only, so the
+  // dialog's script is read from its element and removed through the DOM,
+  // then run below once google.script.run is in place.
+  const dom = new JSDOM(html, { runScripts: 'outside-only' });
   const window = dom.window as Window & typeof globalThis & { google?: unknown };
   const document: Document = window.document;
+  const scriptElements = [...document.querySelectorAll('script')];
+  expect(scriptElements.length).toBeGreaterThan(0);
+  const script = scriptElements.map((element) => element.textContent ?? '').join('\n');
+  scriptElements.forEach((element) => element.remove());
 
   const requests: Request[] = [];
   const answers: Record<string, (...args: never[]) => unknown> = {
