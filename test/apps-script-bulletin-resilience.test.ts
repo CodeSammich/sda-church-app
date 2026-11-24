@@ -258,6 +258,7 @@ const load = (
       getScriptCache: () => ({
         get: (key: string) => cache.get(key) ?? null,
         put: (key: string, value: string) => cache.set(key, value),
+        removeAll: (keys: string[]) => keys.forEach((key) => cache.delete(key)),
       }),
     },
     ContentService: {
@@ -283,6 +284,7 @@ const load = (
     'BulletinScheduleMaintenance.gs',
     'ScheduleAssignmentChecks.gs',
     'PrintedBulletin.gs',
+    'AnnouncementPublishing.gs',
   ].forEach((file) =>
     runInContext(readFileSync(join(process.cwd(), 'google-apps-script', file), 'utf8'), context),
   );
@@ -1122,5 +1124,156 @@ describe('announcements (#562)', () => {
     );
     expect(bulletin.queens.announcements).toEqual([]);
     expect(bulletin.brooklyn.announcements).toEqual([]);
+  });
+
+  // Phones notify only of an announcement staff published (#709), and only a
+  // short list of accounts can publish. Made-up accounts throughout.
+  describe('published to phones (#709)', () => {
+    const PUBLISHER = 'avery.publisher@example.org';
+    const QUEENS = 'Fellowship lunch after the service.\nEveryone is welcome.';
+    const publishing = (
+      { email = PUBLISHER, publishers = `${PUBLISHER}, casey.it@example.org`, brooklyn = '查經班改到週三。' } = {},
+      scriptProperties = new Map<string, string>(),
+    ) => {
+      if (publishers) scriptProperties.set('ANNOUNCEMENT_PUBLISHER_EMAILS', publishers);
+      const workbook = createWorkbook({
+        'Sabbath Calendar': [SCHEDULE_HEADERS, scheduleRow()],
+        'Weekly Data': [headers, weeklyRow('Queens', QUEENS), weeklyRow('Brooklyn', brooklyn)],
+        'Name Dictionary': [['English Name', 'Chinese Name'], ['Ada Lin', '林愛達']],
+        Leadership: [['Pastors', 'Elders'], ['Ada Lin', 'Ben Hall']],
+      });
+      const ui = { alerts: [] as string[], dialogs: [] as string[] };
+      const context = withTranslator(load(workbook, undefined, scriptProperties));
+      Object.assign(context, {
+        Session: { getActiveUser: () => ({ getEmail: () => email }), getScriptTimeZone: () => 'America/New_York' },
+        LockService: { getScriptLock: () => ({ waitLock: () => undefined, releaseLock: () => undefined }) },
+        HtmlService: {
+          createHtmlOutput: (html: string) => {
+            const output = { html, setWidth: () => output, setHeight: () => output };
+            return output;
+          },
+        },
+      });
+      (context as { SpreadsheetApp: Record<string, unknown> }).SpreadsheetApp.getUi = () => ({
+        ButtonSet: { OK: 'OK' },
+        alert: (_title: string, message: string) => ui.alerts.push(message),
+        showModalDialog: (output: { html: string }) => ui.dialogs.push(output.html),
+      });
+      return { context, scriptProperties, ui };
+    };
+    const api = (context: object) =>
+      JSON.parse(runInContext(`doGet({ parameter: { date: '${SABBATH}', appVersion: '1.10.0' } }).text`, context) as string)
+        .bulletin as { queens: Record<string, unknown>; brooklyn: Record<string, unknown> };
+    const publish = (context: object, texts: Record<string, string>, date = SABBATH) =>
+      run<{ published: string[]; at: string }>(context, `publishAnnouncementsFromDialog(${JSON.stringify({ date, texts })})`);
+    const stored = (scriptProperties: Map<string, string>) =>
+      JSON.parse(scriptProperties.get('announcements.published') ?? '{}');
+
+    it('is for the coming Sabbath, or next week’s once it’s the Sabbath', () => {
+      const { context } = publishing();
+      expect(run(context, `getAnnouncementsPublishDate_('2026-11-24')`)).toBe('2026-11-28');
+      expect(run(context, `getAnnouncementsPublishDate_('2026-11-27')`)).toBe('2026-11-28');
+      expect(run(context, `getAnnouncementsPublishDate_('2026-11-28')`)).toBe('2026-12-05');
+    });
+
+    it('sends no publish time until someone publishes, then each published location’s', () => {
+      const { context, scriptProperties } = publishing();
+      expect(api(context).queens.announcementsPublishedAt).toBe('');
+      expect(api(context).brooklyn.announcementsPublishedAt).toBe('');
+
+      const result = publish(context, { queens: QUEENS });
+      expect(result.published).toEqual(['queens']);
+      expect(stored(scriptProperties)).toEqual({ [SABBATH]: { queens: result.at } });
+      // The API's two-minute copy from before is cleared, so a phone gets it at once.
+      expect(api(context).queens.announcementsPublishedAt).toBe(result.at);
+      expect(api(context).brooklyn.announcementsPublishedAt).toBe('');
+      // No sheet changes: the time is only in Script Properties.
+      expect(JSON.stringify(api(context))).not.toContain(PUBLISHER);
+    });
+
+    it('publishes each location once', () => {
+      const { context, scriptProperties } = publishing();
+      const first = publish(context, { queens: QUEENS });
+      expect(publish(context, { queens: QUEENS, brooklyn: '查經班改到週三。' }).published).toEqual(['brooklyn']);
+      expect(stored(scriptProperties)[SABBATH].queens).toBe(first.at);
+    });
+
+    it('lets only the accounts on its own list publish, checked where the time is written', () => {
+      const refused = /Only a few accounts can publish announcements to phones[\s\S]*只有少数账号/;
+      // No list: nobody, not even a bulletin admin.
+      const scriptProperties = new Map([['PHYSICAL_BULLETIN_ADMIN_EMAILS', PUBLISHER]]);
+      const empty = publishing({ publishers: '' }, scriptProperties);
+      expect(() => publish(empty.context, { queens: QUEENS })).toThrow(refused);
+      expect(() => runInContext(`writeAnnouncementsPublished_({})`, empty.context)).toThrow(refused);
+      expect(scriptProperties.has('announcements.published')).toBe(false);
+      // Not on it, or Google doesn't say who it is.
+      expect(() => publish(publishing({ email: 'drew.editor@example.org' }).context, { queens: QUEENS })).toThrow(refused);
+      expect(() => publish(publishing({ email: '' }).context, { queens: QUEENS })).toThrow(refused);
+      // On it, in any case, with any separator.
+      const listed = publishing({ email: 'Casey.IT@example.org', publishers: `${PUBLISHER};\ncasey.it@example.org` });
+      expect(publish(listed.context, { queens: QUEENS }).published).toEqual(['queens']);
+    });
+
+    it('says so, rather than showing the dialog, to an account not on the list', () => {
+      const { context, ui } = publishing({ publishers: '' });
+      runInContext('openPublishAnnouncementsDialog()', context);
+      expect(ui.dialogs).toEqual([]);
+      expect(ui.alerts).toEqual([expect.stringContaining('ask the technology team (IT)')]);
+    });
+
+    it('publishes only what the dialog showed, for the Sabbath it showed', () => {
+      const { context, scriptProperties } = publishing({ brooklyn: '' });
+      expect(() => publish(context, { queens: 'Fellowship lunch.' })).toThrow(/changed in Weekly Data since this opened/);
+      expect(() => publish(context, { brooklyn: '' })).toThrow(/Weekly Data has no announcement/);
+      expect(() => publish(context, {})).toThrow(/Choose a location/);
+      expect(() => publish(context, { queens: QUEENS }, '2026-11-14')).toThrow(/This dialog is out of date/);
+      expect(scriptProperties.has('announcements.published')).toBe(false);
+    });
+
+    it('sends no time for a location without an announcement, and reads a broken property as nothing published', () => {
+      const scriptProperties = new Map([['announcements.published', JSON.stringify({ [SABBATH]: { brooklyn: '2026-11-04T15:00:00.000Z' } })]]);
+      expect(api(publishing({ brooklyn: '' }, scriptProperties).context).brooklyn.announcementsPublishedAt).toBe('');
+
+      const broken = publishing({}, new Map([['announcements.published', 'not json']]));
+      expect(api(broken.context).queens.announcementsPublishedAt).toBe('');
+      expect(api(broken.context).queens.announcements).toHaveLength(1);
+    });
+
+    it('drops Sabbaths more than five weeks old', () => {
+      const scriptProperties = new Map([
+        ['announcements.published', JSON.stringify({ '2026-09-26': { queens: 'x' }, '2026-10-31': { queens: 'y' }, junk: {} })],
+      ]);
+      const { context } = publishing({}, scriptProperties);
+      publish(context, { queens: QUEENS });
+      expect(Object.keys(stored(scriptProperties)).sort()).toEqual(['2026-10-31', SABBATH]);
+    });
+
+    it('shows the text and asks first, saying plainly in both languages that it notifies everyone', () => {
+      const { context, ui } = publishing({ brooklyn: '<b>Bring a dish</b> & a friend' }, new Map([
+        ['announcements.published', JSON.stringify({ [SABBATH]: { queens: '2026-11-04T15:00:00.000Z' } })],
+      ]));
+      // The dialog translates nothing, so Apps Script's date formatter is all it needs here.
+      Object.assign(context, {
+        Utilities: { formatDate: (date: Date, zone: string, pattern: string) => `${pattern} in ${zone}: ${date.toISOString()}` },
+      });
+      runInContext('openPublishAnnouncementsDialog()', context);
+      expect(ui.dialogs).toHaveLength(1);
+      const html = ui.dialogs[0];
+      expect(html).toContain('This notifies everyone with the app / 这会通知所有使用应用的人');
+      expect(html).toContain('within a few hours');
+      expect(html).toContain('some iPhones only when the app is next opened');
+      expect(html).toContain('after sunset on Friday');
+      expect(html).toContain('It can’t be taken back.');
+      expect(html).toContain('发布后无法撤回');
+      expect(html).toContain('Publish &amp; notify / 发布并通知');
+      expect(html).toContain(`Sabbath / 安息日：${SABBATH}`);
+      // Queens was published: it says when, and can't be again. Brooklyn's
+      // text shows as typed, never as markup.
+      expect(html).toContain('✓ Published / 已发布 · EEE, MMM d, h:mm a in America/New_York: 2026-11-04T15:00:00.000Z');
+      expect(html).toMatch(/value="queens" disabled/);
+      expect(html).toMatch(/value="brooklyn" checked/);
+      expect(html).toContain('&lt;b&gt;Bring a dish&lt;/b&gt; &amp; a friend');
+      expect(html).not.toContain('<b>Bring a dish</b>');
+    });
   });
 });

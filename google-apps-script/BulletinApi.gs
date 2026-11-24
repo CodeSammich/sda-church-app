@@ -972,7 +972,9 @@ function getBulletinSpreadsheet_() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
-// Where the publish times are kept: this project's Script Properties.
+// Where the publish times are kept: this project's Script Properties, and
+// nowhere else. The API reads them here; only writeAnnouncementsPublished_
+// (AnnouncementPublishing.gs) writes them.
 function getAnnouncementsPublishedStore_() {
   return PropertiesService.getScriptProperties();
 }
@@ -989,10 +991,6 @@ function readAnnouncementsPublished_() {
     logBulletinMessage_('Could not read the published announcements: ' + error);
     return {};
   }
-}
-
-function writeAnnouncementsPublished_(published) {
-  getAnnouncementsPublishedStore_().setProperty(ANNOUNCEMENTS_PUBLISHED_PROPERTY, JSON.stringify(published));
 }
 
 // Whether an announcement is typed in Chinese: it has more Chinese characters

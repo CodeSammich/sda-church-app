@@ -17,6 +17,56 @@
 // Old Sabbaths' entries are dropped after this, so the property stays small.
 var ANNOUNCEMENTS_PUBLISHED_KEEP_DAYS = 35;
 
+// Who may publish: a short list of its own, kept apart from the print and
+// admin lists so it stays short. The Google accounts in this Script Property,
+// separated by commas, semicolons, spaces or new lines. Unset or blank, nobody
+// can publish.
+var ANNOUNCEMENT_PUBLISHERS_PROPERTY = 'ANNOUNCEMENT_PUBLISHER_EMAILS';
+
+var ANNOUNCEMENT_PUBLISHER_REFUSAL =
+  'Only a few accounts can publish announcements to phones, and yours isn’t one of them. To be added, ' +
+  'ask the technology team (IT) to put your Google account in the ' +
+  ANNOUNCEMENT_PUBLISHERS_PROPERTY +
+  ' Script Property.\n' +
+  '只有少数账号可以向手机发布报告事项，您的账号不在其中。如需加入，请联系技术团队（IT），将您的 Google 账号加入 ' +
+  ANNOUNCEMENT_PUBLISHERS_PROPERTY +
+  ' 脚本属性。';
+
+function getAnnouncementPublisherEmails_() {
+  var listed = String(PropertiesService.getScriptProperties().getProperty(ANNOUNCEMENT_PUBLISHERS_PROPERTY) || '');
+  return listed
+    .split(/[;,\s]+/)
+    .map(function (email) {
+      return email.trim().toLowerCase();
+    })
+    .filter(Boolean);
+}
+
+// The account using the sheet, not the script's owner, is the one that must be
+// on the list. Google may not say who it is, and then it isn't.
+function isAnnouncementPublisher_() {
+  var email = '';
+  try {
+    email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
+  } catch (error) {
+    return false;
+  }
+  return Boolean(email) && getAnnouncementPublisherEmails_().indexOf(email) !== -1;
+}
+
+function requireAnnouncementPublisher_() {
+  if (!isAnnouncementPublisher_()) {
+    throw new Error(ANNOUNCEMENT_PUBLISHER_REFUSAL);
+  }
+}
+
+// The one place the publish times are written, so its first step is the
+// publishers check, whatever called it.
+function writeAnnouncementsPublished_(published) {
+  requireAnnouncementPublisher_();
+  getAnnouncementsPublishedStore_().setProperty(ANNOUNCEMENTS_PUBLISHED_PROPERTY, JSON.stringify(published));
+}
+
 // The Sabbath a publish is for: the coming one, or next week's on a Sabbath,
 // when phones no longer notify for that day's.
 function getAnnouncementsPublishDate_(today) {
@@ -57,9 +107,14 @@ function openPublishAnnouncementsDialog() {
 }
 
 function showPublishAnnouncementsDialog_(spreadsheet, today) {
+  var ui = SpreadsheetApp.getUi();
+  if (!isAnnouncementPublisher_()) {
+    ui.alert('Publish & Notify Phones / 发布并通知手机', ANNOUNCEMENT_PUBLISHER_REFUSAL, ui.ButtonSet.OK);
+    return;
+  }
   var data = getPublishAnnouncementsData_(spreadsheet, today);
   var output = HtmlService.createHtmlOutput(buildPublishAnnouncementsHtml_(data)).setWidth(560).setHeight(640);
-  SpreadsheetApp.getUi().showModalDialog(output, 'Publish & Notify Phones / 发布并通知手机');
+  ui.showModalDialog(output, 'Publish & Notify Phones / 发布并通知手机');
 }
 
 // The dialog's Publish & notify. Run by the dialog, so not ending in an
@@ -71,9 +126,11 @@ function publishAnnouncementsFromDialog(request) {
 /**
  * Publishes each location the dialog names, for the Sabbath it showed, if
  * Weekly Data still has the text it showed and it isn't published already.
- * Returns the locations published.
+ * Returns the locations published. Only for an account on the publishers
+ * list, checked here, where the publish time is written, whatever called it.
  */
 function publishAnnouncements_(spreadsheet, request, today, now) {
+  requireAnnouncementPublisher_();
   var date = String((request && request.date) || '');
   var texts = (request && request.texts) || {};
   if (date !== getAnnouncementsPublishDate_(today)) {
@@ -136,7 +193,9 @@ function publishAnnouncements_(spreadsheet, request, today, now) {
       'bulletin:' + CONFIG.cacheVersion + ':schedule-optional:' + date,
     ]);
   } catch (error) {
-    Logger.log('Could not clear the bulletin cache after publishing: ' + error);
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Could not clear the bulletin cache after publishing: ' + error);
+    }
   }
   return { published: done, at: at };
 }
