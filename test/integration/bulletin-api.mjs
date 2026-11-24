@@ -69,6 +69,18 @@ const assertLocation = (location, path, rosterFields) => {
   assertBilingual(location.sermonTitle, `${path}.sermonTitle`);
   assertBilingual(location.hymnOfResponse, `${path}.hymnOfResponse`);
   assertString(location.bibleVerses, `${path}.bibleVerses`);
+  // Weekly Data's announcements (#562), each in English, Chinese and Spanish.
+  // Until that script is deployed the field is a blank string, so either passes.
+  if (Array.isArray(location.announcements)) {
+    location.announcements.forEach((announcement, index) => {
+      const item = `${path}.announcements[${index}]`;
+      assertString(announcement?.english, `${item}.english`);
+      assertString(announcement?.chinese, `${item}.chinese`);
+      assertString(announcement?.spanish, `${item}.spanish`);
+    });
+  } else if (location.announcements !== undefined) {
+    assertString(location.announcements, `${path}.announcements`);
+  }
 
   for (const field of rosterFields) {
     assertPrivateRosterValue(location[field], `${path}.${field}`);

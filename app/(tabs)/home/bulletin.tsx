@@ -38,6 +38,7 @@ import {
   BulletinLocation,
   BulletinMetadataTranslation,
   fetchBulletin,
+  getBulletinAnnouncements,
   getCachedBulletin,
   getNextBulletinRolloverAt,
   getRefreshAvailableAt,
@@ -75,6 +76,7 @@ const LABELS = {
     sabbathSchoolProgram: 'Sabbath School',
     worshipProgram: 'Worship Program',
     serviceRoster: 'Service Roster',
+    announcements: 'Announcements',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
     possibleJointService: 'Brooklyn service details are not listed for this Sabbath.',
@@ -154,6 +156,7 @@ const LABELS = {
     sabbathSchoolProgram: '安息日學',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
+    announcements: '報告事項',
     queens: '皇后區',
     brooklyn: '布魯克林',
     possibleJointService: '本安息日尚未列出布魯克林的聚會資料。',
@@ -233,6 +236,7 @@ const LABELS = {
     sabbathSchoolProgram: '安息日学',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
+    announcements: '报告事项',
     queens: '皇后区',
     brooklyn: '布鲁克林',
     possibleJointService: '本安息日尚未列出布鲁克林的聚会资料。',
@@ -312,6 +316,7 @@ const LABELS = {
     sabbathSchoolProgram: 'Escuela Sabática',
     worshipProgram: 'Programa de Adoración',
     serviceRoster: 'Asignaciones de Servicio',
+    announcements: 'Anuncios',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
     possibleJointService: 'No hay detalles del servicio de Brooklyn para este sábado.',
@@ -532,21 +537,24 @@ export default function WeeklyBulletinScreen() {
   const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   // The key-screen capture can't tap or cut the network, so its build reads
-  // the path for a bulletin that couldn't load (state=load-failed) or for the
-  // worship program scrolled into view (section=program) (#456).
+  // the path for a bulletin that couldn't load (state=load-failed), or for the
+  // worship program (section=program, #456) or the announcements
+  // (section=announcements, #562) scrolled into view.
   const { state: paramState, section: paramSection } = useLocalSearchParams();
   const screenshotState = getScreenshotState(paramState, ['load-failed'] as const);
-  const screenshotSection = getScreenshotState(paramSection, ['program'] as const);
+  const screenshotSection = getScreenshotState(paramSection, ['program', 'announcements'] as const);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const programRef = useRef<ComponentRef<typeof View>>(null);
-  // Each time the program moves, as when the lesson above it loads, so the
-  // shot is taken with the program's heading just below the header. Android
+  const announcementsRef = useRef<ComponentRef<typeof View>>(null);
+  // Each time the section moves, as when the lesson above it loads, so the
+  // shot is taken with the section's heading just below the header. Android
   // ignores a scroll while the page slides in, so it's tried again once the
   // page has settled, as Offline Bible Audio does.
   const scrollToScreenshotSection = () => {
     const content = scrollRef.current?.getInnerViewRef();
-    if (!screenshotSection || !content || !programRef.current) return;
-    programRef.current.measureLayout(
+    const section = screenshotSection === 'announcements' ? announcementsRef.current : programRef.current;
+    if (!screenshotSection || !content || !section) return;
+    section.measureLayout(
       content,
       (_left, top) => {
         const scroll = () =>
@@ -1095,6 +1103,34 @@ export default function WeeklyBulletinScreen() {
     );
   };
 
+  // The week's announcements from Weekly Data (#562), the same ones the
+  // printed bulletin has, after the program as in print. None, no section.
+  const renderAnnouncements = (location: BulletinLocation) => {
+    const announcements = getBulletinAnnouncements(location, language);
+    if (!announcements.length) return null;
+    return (
+      <View ref={announcementsRef} onLayout={scrollToScreenshotSection} style={styles.cardSection}>
+        <View style={[styles.sectionHeading, { borderLeftColor: theme.colors.primary }]}>
+          <Text
+            variant="titleMedium"
+            style={{ color: theme.colors.primary, fontWeight: '700' }}
+          >
+            {labels.announcements}
+          </Text>
+        </View>
+        <Divider style={styles.sectionHeadingDivider} />
+        {announcements.map((announcement, index) => (
+          <View
+            key={`${index}:${announcement}`}
+            style={[styles.dataRow, index < announcements.length - 1 && styles.dataRowBorder]}
+          >
+            <Text variant="bodyMedium">{announcement}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderRoster = (location: BulletinLocation, isQueens: boolean) => {
     const rows: Array<[string, string | undefined]> = isQueens
       ? [
@@ -1220,6 +1256,7 @@ export default function WeeklyBulletinScreen() {
 
         {renderSabbathSchool(location, isQueens)}
         {renderProgram(location, isQueens, tithePurpose)}
+        {renderAnnouncements(location)}
         {renderRoster(location, isQueens)}
       </Card.Content>
     </Card>

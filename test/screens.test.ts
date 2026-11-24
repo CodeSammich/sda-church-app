@@ -155,7 +155,7 @@ describe('key screen list (test/screens/screens.json)', () => {
   it('asks a screen only for a state or section it knows, from its path (#456)', () => {
     const screenFiles: Record<string, string> = { 'home/bulletin': 'app/(tabs)/home/bulletin.tsx' };
     const asking = config.screens.filter((screen: { path: string }) => /[?&](state|section)=/.test(screen.path));
-    expect(asking.map((screen: { name: string }) => screen.name).sort()).toEqual(['bulletin-load-failed', 'bulletin-program']);
+    expect(asking.map((screen: { name: string }) => screen.name).sort()).toEqual(['bulletin-announcements', 'bulletin-load-failed', 'bulletin-program']);
     for (const screen of asking) {
       const [route, query] = screen.path.split('?');
       for (const [key, value] of new URLSearchParams(query)) {
