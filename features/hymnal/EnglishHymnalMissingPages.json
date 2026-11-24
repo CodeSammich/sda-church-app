@@ -1,0 +1,4 @@
+{
+  "$comment": "Seventh-day Adventist Hymnal (1985) hymns that Hymns for Worship has no page for (#779). Their score link opens the hymnal's directory instead of a page not found, and the External Dependency Monitor doesn't sample their pages. Add a hymn here if the site drops its page.",
+  "hymns": [262]
+}

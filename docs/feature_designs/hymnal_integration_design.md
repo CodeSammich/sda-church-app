@@ -24,6 +24,12 @@ context. If no hymn number is supplied, the app opens the site's 1985 hymnal dir
 Not every hymn page has a score. SDAH 509 points to sheet music elsewhere and has no
 `hymn-score` anchor, so its link opens at the top of the hymn page.
 
+One hymn has no page at all: Hymns for Worship has none for SDAH 262, Sweet, Sweet Spirit,
+and its directory leaves it out. Its link opens the directory instead of a page not found,
+as a Chinese 505 hymn with no page does (#606). The hymns with no page are listed in one
+place, `features/hymnal/EnglishHymnalMissingPages.json`, which the External Dependency
+Monitor reads too. Add a hymn there if the site drops its page (#779).
+
 This is a risk-reduction decision, not a declaration that the feature is "liability-free"
 or that every externally hosted score is licensed for every possible use.
 
@@ -164,7 +170,8 @@ browser. It:
 
 1. pads numeric IDs to three digits;
 2. appends `#hymn-score` for a selected hymn; and
-3. returns the official directory when no number is supplied.
+3. returns the official directory when no number is supplied, or for a hymn listed in
+   `EnglishHymnalMissingPages.json`, which the site has no page for.
 
 `openHymnal` passes that URL to `openURL` in `constants/ExternalLinks.ts`,
 which uses `WebBrowser.openBrowserAsync` on iOS and Android and a new tab on web. Links
@@ -247,9 +254,10 @@ When changing this integration:
 5. Recheck representative public-domain and copyrighted hymn pages and the site's Terms
    of Use periodically. The daily **External Dependency Monitor**
    (`test/integration/external-dependencies.mjs`) already checks that the 1985 directory
-   still lists at least 690 hymn links (the site's directory leaves out #262), that three
-   hymn pages sampled each day still load at their own `sdah-NNN` path with the expected
-   heading, and that SDAH 001 still has the `hymn-score` anchor. See
+   still lists at least 690 hymn links (the site's directory leaves out SDAH 262), that
+   three hymn pages sampled each day still load at their own `sdah-NNN` path with the
+   expected heading, and that SDAH 001 still has the `hymn-score` anchor. The samples skip
+   the hymns in `EnglishHymnalMissingPages.json`, which the app links to the directory. See
    [External dependency monitor](../operations/external-dependency-monitor.md).
 6. Remove or disable a link promptly if a rights holder or the source site objects, the
    domain changes ownership, the destination begins redirecting unexpectedly, or the
@@ -257,8 +265,9 @@ When changing this integration:
 7. Treat any future in-app score viewer as a new legal and architectural decision, not a
    cosmetic refactor.
 
-The focused URL tests live in `test/english-hymnal.test.ts` and should cover both padded
-hymn links and the no-number directory fallback. `test/external-url-generation.test.ts`
+The focused URL tests live in `test/english-hymnal.test.ts` and should cover padded hymn
+links, the no-number directory fallback, and the hymns with no page, such as SDAH 262.
+`test/external-url-generation.test.ts`
 also checks that the hymnal has all 695 hymns and that each produces an HTTPS
 `hymnsforworship.org` link.
 

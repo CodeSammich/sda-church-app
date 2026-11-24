@@ -39,15 +39,23 @@
  * scripts/map-english-hymnal-piano-youtube.mjs.
  */
 
+import missingPages from './EnglishHymnalMissingPages.json';
 import pianoData from './EnglishHymnalPianoYouTube.json';
 import { openURL } from '@/constants/ExternalLinks';
+
+const ENGLISH_HYMNAL_DIRECTORY_URL =
+  'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/';
+
+// Hymns the site has no page for, such as SDAH 262, open the directory, as a
+// 505 hymn with no page does (#606, #779), rather than a page not found.
+const HYMNS_WITHOUT_A_PAGE: ReadonlySet<number> = new Set(missingPages.hymns);
 
 export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
   const hId =
     typeof hymnNumber === 'string' || typeof hymnNumber === 'number' ? hymnNumber : '';
 
-  if (hId === '') {
-    return 'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/';
+  if (hId === '' || HYMNS_WITHOUT_A_PAGE.has(Number(hId))) {
+    return ENGLISH_HYMNAL_DIRECTORY_URL;
   }
 
   return `https://hymnsforworship.org/sdah-${hId.toString().padStart(3, '0')}#hymn-score`;
