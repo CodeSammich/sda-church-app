@@ -93,7 +93,7 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 | If a release adds | Revisit |
 | --- | --- |
 | Analytics, crash reporting, ads, accounts, forms, or push notifications | App Privacy, and Google Play's matching answers |
-| Local notifications, as a download's "done" since #610 | Nothing: they're made on the phone, need no entitlement, and send nothing |
+| Local notifications, as a download's "done" since #610, and the announcements' notice since #709 | Nothing: they're made on the phone, need no entitlement, and send nothing. The announcements' background check (the `processing` background mode, from `expo-background-task`) collects nothing either |
 | Ads, chat, user posts, a web browser, or medical or health content | Age Rating |
 | A new language, such as Japanese | A new localization, published with that release |
 | In-app purchases, subscriptions, or a paid app | Pricing, the Digital Services Act answer (selling may make the church a trader), and the audit's [item 1](store-policy-audit.md#1-nonprofit-identity-and-donation-flow--release-blocker) |

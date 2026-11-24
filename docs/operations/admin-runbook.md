@@ -319,7 +319,7 @@ hand from `main`.
 **Every approved run changes production.** There is one Apps Script project and one
 web-app deployment, and there is no test copy. Approving pushes the merged commit's
 code to the project and points the live deployment at it. The spreadsheet's **Printed Bulletin**
-menu and the app's bulletin use the new code at once. The workflow runs only for
+and **Announcements** menus and the app's bulletin use the new code at once. The workflow runs only for
 `main`: started from any other branch, it skips, so it is not a way to try a change
 out.
 
@@ -336,6 +336,13 @@ After a release merges into `main`:
    [Deployment and verification](bulletin-automation.md#deployment-and-verification):
    reload the spreadsheet, generate a test bulletin for each changed layout, and check
    the Doc and the public `/exec` response.
+3. Once, after the first deploy with **Announcements → Publish & Notify Phones…**
+   (#709): in the Apps Script editor, **Project Settings → Script properties**, add
+   `ANNOUNCEMENT_PUBLISHER_EMAILS` with the Google accounts that may publish
+   announcements to phones, separated by commas: the technology team and the one or
+   two people the church chooses. Keep it short, since each publish notifies every
+   member who turned notifications on. Until it's set, nobody can publish, and the
+   dialog says to ask the technology team. Change the list there when people change.
 
 To redeploy between releases, select **Run workflow**, choose **`main`** under *Use
 workflow from*, optionally enter a description, and approve it. The description is

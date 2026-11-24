@@ -81,6 +81,7 @@ the church's Workspace terms during annual maintenance.
 | `google-apps-script/BulletinApi.gs` | Public API, expected sheet columns, data joins, privacy filtering, and metadata translations |
 | `google-apps-script/BulletinScheduleMaintenance.gs` | Background `onOpen` maintenance, header protection, validation, hiding, and quarter expansion |
 | `google-apps-script/ScheduleAssignmentChecks.gs` | Same-day roster conflict highlights and Name Dictionary unknown-name warnings |
+| `google-apps-script/AnnouncementPublishing.gs` | **Announcements → Publish & Notify Phones…**: its dialog, the publishers check, and the publish times the API sends (#709) |
 | `google-apps-script/PrintedBulletin.gs` | Shared printed-bulletin code: Sheet menu and prompts, data preparation, Google Doc creation, page and table helpers, and the shared cover, giving, announcement, hymn, Bible, and QR helpers |
 | `google-apps-script/PrintedCommunionBulletin.gs` | Communion service content both locations print: fixed Communion/Foot Washing readings, response hymn, and ceremony panels |
 | `google-apps-script/PrintedQueensBulletin.gs` | Queens Regular and Queens Communion page layouts |
@@ -260,6 +261,18 @@ Rules:
   before printing, since "Wong" can come out as 黃 or 王; the app keeps the
   machine's version. Anyone can read it in the app, so leave out private
   details, such as health news, addresses or phone numbers, as the help says.
+- Typing it notifies no one. To send it to the phones of members who turned
+  announcement notifications on, someone on the publishers list uses
+  **Announcements → Publish & Notify Phones…** (#709). The dialog shows the
+  coming Sabbath's announcement for each location, and says, in English and
+  Simplified Chinese, that it notifies everyone who has the app and turned them
+  on: within a few hours, in the daytime, not after sunset on Friday, and it
+  can't be taken back. Each location is published once a Sabbath. Its text can
+  still change after: the app's bulletin shows the change, but no second notice
+  goes out, and clearing the cell stops the notice on phones that haven't
+  checked yet. Only the Google accounts in the `ANNOUNCEMENT_PUBLISHER_EMAILS`
+  Script Property can publish; to be added, ask the technology team. See
+  [Notifications](../feature_designs/announcements.md#notifications-709).
 - Chinese in the title, hymn, and announcement columns here prints exactly as
   typed. A character the bulletin's Chinese
   font lacks, such as most Simplified-only characters, prints in the fallback

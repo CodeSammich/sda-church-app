@@ -12,8 +12,9 @@ It's written for whoever builds or changes either part. What the people running
 the spreadsheet need to know, such as how to fill in the columns, is in
 [Bulletin automation](../operations/bulletin-automation.md#3-weekly-data).
 
-**Status:** part 1, announcements in the app and the printed bulletin, is built and
-tested against fake spreadsheets. Part 2, the notifications, isn't built yet.
+**Status:** part 1, announcements in the app and the printed bulletin, shipped in 1.9.0
+(#743). Part 2, the notifications (#709), is built and tested against fake spreadsheets
+and on the Android emulator.
 
 ## Decisions
 
@@ -219,40 +220,103 @@ that the upkeep already comes close to (#639). It's the existing column check wi
 one more name, read from the header row it already has. It writes only when it
 adds the column, and the tagging step then tags it, once.
 
-## Notifications (#709, not built yet)
+## Notifications (#709)
 
-Members choose to be notified of a week's announcements. Decided so far:
+Members can choose to get a notification of the week's announcement. It goes out only
+when someone presses **Publish** in the bulletin sheet, never because a cell changed.
 
-- **Made on each phone.** The app already downloads this Sabbath's bulletin and the
-  next. When one has announcements for the member's location, the phone sets one
-  notification for it, in the member's language. Nothing about the member leaves
-  the phone: no push token, no server, no new account, and the store listings keep
-  saying "Data Not Collected"
-  ([App Store](../operations/app-store-connect-answers.md#app-privacy)) and "No data
-  collected" ([Google Play](../operations/play-console-answers.md#data-safety)).
-  Push from the sheet was weighed and turned down: it needs every phone's token
-  stored somewhere, a Firebase or Expo push account with Apple and Google keys, and
-  store and privacy-policy changes, against [tenets](../project-tenets.md) 1 to 3.
-- **Off until the member turns it on,** asked when they first see announcements,
-  never at launch, as the download notifications are (#610).
-- **At most one per Sabbath,** and none for a week without announcements.
-- **The policy changes first.** The notification policy in
-  [UI/UX](../UI_UX.md#key-principles--exceptions) allows only download
-  notifications, made on the phone, and `test/notification-guard.test.ts` holds the
-  app to it. Both change with part 2.
+### Staff publish it from its own menu
 
-**The limit:** a phone learns of announcements when the app opens, or when the phone
-lets it check in the background. Android runs that check sometime after the
-interval the app asks for, 15 minutes at the shortest. iOS decides when, from
-battery, network and how the member uses the app, often ignores short intervals,
-and runs nothing for an app swiped away until it's opened again
-([Expo BackgroundTask](https://docs.expo.dev/versions/latest/sdk/background-task/)).
-Most members open the app on the Sabbath, when it also downloads the next Sabbath's
-bulletin. So announcements typed by the previous Sabbath reach every phone; ones
-typed midweek reach Android phones and some iPhones.
+**Announcements → Publish & Notify Phones…**, a menu of its own, left of **Printed
+Bulletin**. Renaming Printed Bulletin and adding a third item was weighed and turned down:
+staff know **Printed Bulletin → Create Word Doc…**, so it keeps its name and place, and a
+notice to every phone isn't one click away from the routine print. The cells' help text
+points to the new menu. `onOpen` only builds it; the menu reads nothing from the sheet
+(#639).
 
-Part 2 needs that background check, likely a new Expo package. It's added after
-#733's Expo update, so the two don't conflict.
+The dialog is for the coming Sabbath, or next week's on the Sabbath itself. It shows each
+location's announcement as typed in `Weekly Data`, with a box to tick, and says plainly,
+in English and Simplified Chinese, that everyone who has the app and turned these on for
+that location gets it, within a few hours, in the daytime, and not after sunset on Friday,
+and that it can't be taken back. **Publish & notify** confirms. A location already
+published says when, and can't be published again; one with no announcement can't be
+ticked. If Weekly Data's text changed after the dialog opened, nothing is published, and
+the dialog asks to open it again.
+
+Only the accounts in the `ANNOUNCEMENT_PUBLISHER_EMAILS` Script Property can publish: the
+technology team and one or two more. It's its own list, apart from
+`PHYSICAL_BULLETIN_ADMIN_EMAILS`, so it stays short. Unset or blank, nobody can publish,
+and the dialog says to ask the technology team. The check runs in the one function that
+writes the publish times (`writeAnnouncementsPublished_`), as its first step, as well as
+when the dialog opens. It compares the account using the sheet
+(`Session.getActiveUser()`), and a blank one, which Google sometimes gives, is refused.
+
+### What the API sends
+
+When each location's announcement was published, as `announcementsPublishedAt`, an ISO
+time, or blank until it's published and for a location with no announcement:
+
+```json
+"queens": {
+  "announcements": [{ "english": "Fellowship lunch after the service.", "chinese": "崇拜後有愛筵。", "spanish": "…" }],
+  "announcementsPublishedAt": "2026-11-25T14:02:11.000Z"
+}
+```
+
+The times are kept in one Script Property, `announcements.published`, by Sabbath and
+location, as `{ "2026-11-28": { "queens": "2026-11-25T14:02:11.000Z" } }`: not in the
+sheet, so nothing in it changes, and older Sabbaths go after five weeks. The API and the
+dialog reach it through one helper (`getAnnouncementsPublishedStore_`), and the spreadsheet
+through another (`getBulletinSpreadsheet_`), so the code can move into a project of its
+own later (#784). Publishing clears the API's two-minute copy of that Sabbath, so a phone
+that checks at once gets it. Older app versions ignore the field. It names no language
+([no one-way doors](#languages-no-one-way-doors)).
+
+### Made on each phone
+
+The app checks the coming Sabbath's bulletin when it opens, each time it comes back, and
+every few hours in the background, and hands the notice to the phone, which posts it at
+its time even with the app closed. Nothing about the member leaves the phone: no push
+token, no server, no new account, and the store listings keep saying "Data Not
+Collected" ([App Store](../operations/app-store-connect-answers.md#app-privacy)) and "No
+data collected" ([Google Play](../operations/play-console-answers.md#data-safety)). Push
+from the sheet was weighed and turned down: it needs every phone's token stored
+somewhere, a Firebase or Expo push account with Apple and Google keys, and store and
+privacy-policy changes, against [tenets](../project-tenets.md) 1 to 3.
+
+- **Off until the member turns it on.** Below the bulletin's announcements, the app offers
+  it once, with **Not now** and **Turn on**, and You → **Announcement notifications**
+  turns it on or off. It's never asked at launch.
+- **Only a published announcement,** for the member's location, the bulletin tab they last
+  chose, in the app's language, as "Announcements · Queens" with the announcement. A tap
+  opens the bulletin through the app's own link, `sdachurchapp://home/bulletin`
+  (`app/+native-intent.tsx`).
+- **At most one a Sabbath.** The phone keeps the ids it posted, so a change after
+  publishing shows in the bulletin but sends no second notice. Clearing the cell before a
+  phone checks stops that phone's notice.
+- **In the daytime, and not during the Sabbath.** At once between 9 am and 8 pm, or else
+  at the next 9 am, and only from sunset as one Sabbath ends to sunset on the Friday before
+  the next, at the church's location (`getAnnouncementNoticeWindow`). One whose time
+  passes that sunset isn't sent.
+- **Quiet:** no sound or vibration. On Android it's its own channel, **Announcements**,
+  which the member can turn off or change in Android's settings. iOS has no switch for one
+  kind of an app's notifications, so the app's switch is that.
+
+The phone posts it through the app's own module, `modules/announcement-notifications`,
+as the downloads' notifications are: no notification library. On Android, an inexact
+alarm, which needs no leave for exact alarms, posts it at its time; a restart loses the
+alarm, and the next check sets it again. On the iPhone, iOS keeps it through a restart.
+The module also opens the bulletin on a tap, through the iPhone's notification delegate.
+
+**The background check** is `expo-background-task`, Expo's own, with `expo-task-manager`,
+every three hours (`services/AnnouncementNotificationTask.ts`). Android runs it some time
+after that, through WorkManager, with no screens, so the task is defined in the app's
+entry, `index.ts`, before Expo Router starts. iOS decides when, from battery, network and
+how the member uses the app, and runs nothing for an app swiped away until it's opened
+again ([Expo BackgroundTask](https://docs.expo.dev/versions/latest/sdk/background-task/)).
+So most phones get it within a few hours of publishing, and some iPhones only once the
+app is next opened. A check reads the stored bulletin while it's current, so it asks the
+API at most every half hour, and none at all once this Sabbath's notice is posted.
 
 ## Open questions for the pastor
 
@@ -265,6 +329,5 @@ Part 1 ships with the answer in brackets, each easy to change:
    most are shared, a way to type one for both.]
 3. Is a machine translation all right in the app and in print, with names checked
    in the printed Doc? [Yes, as for `Special Remark` in the app.]
-4. How early are announcements ready, and on which day should the notification
-   come? [For part 2. A fixed time each week, such as Wednesday morning, three days
-   ahead, gives staff a deadline.]
+4. ~~How early are announcements ready, and on which day should the notification
+   come?~~ No longer a question: the notice goes out when someone publishes it (#709).

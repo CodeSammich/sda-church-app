@@ -662,20 +662,20 @@
     {
       "name": "bulletin-announcements",
       "group": "home",
-      "$comment": "The made-up bulletin's announcement, scrolled into view by section=announcements, in a key-screens build only (#562): the section after the worship program, with Weekly Data's one announcement. It was typed in English and the API made its other languages, so the English shot shows it in English and the Chinese shot in Chinese. The page ends soon after it, so its heading can't scroll near the top: on the first Android run (https://github.com/CodeSammich/sda-church-app/actions/runs/45114202700) it was 45% of the way down. The section's text showing at all, below the program, shows the scroll worked, so the heading has no position rule. It's in home, not with the bulletin's other shots in worship-and-you, for time, as the bulletin that couldn't load is. The date changes every week.",
+      "$comment": "The made-up bulletin's announcement, scrolled into view by section=announcements, in a key-screens build only (#562): the section after the worship program, with Weekly Data's one announcement. It was typed in English and the API made its other languages, so the English shot shows it in English and the Chinese shot in Chinese. The page ends soon after it, so its heading can't scroll near the top: on the first Android run (https://github.com/CodeSammich/sda-church-app/actions/runs/45114202700) it was 45% of the way down. The section's text showing at all, below the program, shows the scroll worked, so the heading has no position rule. It's in home, not with the bulletin's other shots in worship-and-you, for time, as the bulletin that couldn't load is. Below it, once, the offer of a notice when the church publishes its announcements (#709), with Not now and Turn on, as a phone that never answered it shows it. Vision reads the bell before Turn on, so that label isn't anchored at the start. The date changes every week.",
       "path": "home/bulletin?section=announcements",
       "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
       "variantRules": {
         "default": {
-          "mustShowLines": ["^Announcements$", "^Fellowship lunch after the service\\.$"]
+          "mustShowLines": ["^Announcements$", "^Fellowship lunch after the service\\.$", "^Get a notification when the church", "Turn on$"]
         },
         "zh": {
-          "mustShowLines": ["^報告事項$", "^崇拜後有愛筵。?$"],
+          "mustShowLines": ["^報告事項$", "^崇拜後有愛筵。?$", "^教會發佈", "開啟$"],
           "mustNotShowLines": ["^Fellowship lunch"]
         },
         "landscape": {
-          "mustShowLines": ["^Announcements$", "^Fellowship lunch after the service\\.$"]
+          "mustShowLines": ["^Announcements$", "^Fellowship lunch after the service\\.$", "^Get a notification when the church", "Turn on$"]
         }
       },
       "changesDaily": true
@@ -776,14 +776,14 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup. The Android tablet saves no text size, so Text size must read 150%, the size a tablet starts at (#695).",
+      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), Offline Bible Audio, which lists the Bible audio downloaded for listening offline (#556), and Announcement notifications, the last, the switch for the notice of the church's announcements (#709), off until the member turns it on; the web has neither. The tablets' landscape shots may leave it below the fold, so its rule is for the phones. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup. The Android tablet saves no text size, so Text size must read 150%, the size a tablet starts at (#695).",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "zh-cn", "android-display-large"],
       "ipadVariants": ["default", "landscape", "zh", "zh-cn"],
       "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$", { "line": "^Current: 150%$", "platforms": ["android-tablet"] }] },
-        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$", { "line": "^目前：150%$", "platforms": ["android-tablet"] }] },
+        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$", { "line": "^Announcement notifications$", "platforms": ["ios", "android"] }, { "line": "^Current: 150%$", "platforms": ["android-tablet"] }] },
+        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$", { "line": "^報告事項通知$", "platforms": ["ios", "android"] }, { "line": "^目前：150%$", "platforms": ["android-tablet"] }] },
         "es": { "mustShowLines": ["^Contraste$", "^Alto contraste$", { "line": "^Actual: 150%$", "platforms": ["android-tablet"] }] }
       }
     },
