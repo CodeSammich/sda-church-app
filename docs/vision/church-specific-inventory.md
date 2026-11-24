@@ -4,31 +4,14 @@ This page lists everything in the code that belongs to the New York Chinese Seve
 Adventist Church rather than to any church: its names, places, service times, bulletin
 spreadsheet, languages, hymnals, media, accounts, and the terms it works under. It was
 taken by reading the code at release 1.9.0 (2026-11-24), and it backs
-[the vision](../VISION.md) and [the starter kit](another-church-starter-kit.md).
-
-How to read the tables:
-
-- **Where** names files by path. The first mention of a file in a section links to it;
-  later mentions in that section don't. There are no line numbers, because they go
-  stale.
-- **Repeats** counts the separate places that hard-code the value, not how often it's
-  used through a constant. "About" means a count from searching the code.
-- **Already configurable?** is "No" when the value is a literal in code. "Partly" means
-  one copy goes through a constant, environment variable, script property, or data file,
-  and other copies don't.
-- IDs, account numbers, phone numbers, email addresses, and secrets are given by kind,
-  not by value. Secret and variable names are given, because a name holds no secret.
-
-The docs already tell another church to change the church details in `constants/`,
-such as [`ChurchData.ts`](../../constants/ChurchData.ts),
-[`TeamData.ts`](../../constants/TeamData.ts), and
-[`ExternalLinks.ts`](../../constants/ExternalLinks.ts) ([docs/README.md](../README.md)).
-They also point it at its own identifiers and credentials
-([native builds](../operations/native-builds.md#building-an-independent-fork)) and at its
-own GitHub Pages address (`docs/README.md`). Most of the church data below lives outside
-those three files.
+[the vision](../VISION.md) and [what another church would have to do](another-church-starter-kit.md).
 
 ## Contents
+
+- [What would surprise another church](#what-would-surprise-another-church)
+- [How to read the tables](#how-to-read-the-tables)
+
+The tables:
 
 1. [Church identity and branding](#1-church-identity-and-branding)
 2. [Store identity](#2-store-identity)
@@ -44,7 +27,109 @@ those three files.
 12. [Legal and branding terms the church works under](#12-legal-and-branding-terms-the-church-works-under)
 13. [Tests and key-screen checks with church-specific assertions](#13-tests-and-key-screen-checks-with-church-specific-assertions)
 14. [Already generic or config-driven](#14-already-generic-or-config-driven)
-- [Surprises](#surprises)
+
+## What would surprise another church
+
+What would break, or mislead, if another church started from this code as it is:
+
+1. **The app would read this church's live bulletin.** `BULLETIN_API_BASE_URL` in
+   [constants/ExternalLinks.ts](../../constants/ExternalLinks.ts) is a literal, so a copy
+   of the app shows this church's roster, with names shortened, until it's changed. The
+   same URL is a literal in five more places in the code: the integration workflow and
+   test, the dependency monitor, the changeovers script, and the Apps Script header. The
+   status page, in its own repository, checks it too.
+2. **The bulletin is two congregations wide, by type.** `Bulletin` in
+   [services/BulletinService.ts](../../services/BulletinService.ts) has exactly `queens`
+   and `brooklyn`.
+   [app/(tabs)/home/bulletin.tsx](../../app/%28tabs%29/home/bulletin.tsx) has `isQueens`
+   on 26 lines, Weekly Data takes only `Queens` and `Brooklyn` rows, and Apps Script
+   tells repeated Sabbath Calendar headers apart by their side of `Brooklyn Sermon`.
+   Announcements also belong to those two locations; they aren't a third. A
+   one-site church, or a third site, needs changes in the app, the API, and the sheet,
+   not just config.
+3. **Bible audio still falls back to this church's media library.** Mandarin,
+   Cantonese, and Spanish play from HelloAO first. The church's library is the first
+   fallback, and all 3,567 chapter
+   URLs in the three manifests still point at its `newyork2` path, with the source label
+   "NYCCSDA.org". WordProject's terms ask each user to host its own unmodified copies,
+   and the Audio Power permission was given to this church.
+4. **The app icon and launch animation use the NAD trademark.**
+   [docs/LEGAL_BRANDING.md](../LEGAL_BRANDING.md) limits it to official Seventh-day
+   Adventist organizations. A church outside the denomination must replace six icon
+   files and the symbol module.
+5. **`CHURCH_NAME` is unused.** The app's name is the `expo.name` in
+   [app.json](../../app.json), and the church's name is a literal in about a dozen code
+   files: screens, web pages, Apps Script, and graphics scripts. `CHURCH_LEGAL_NAME`
+   feeds only the Give page's sponsors popup. Editing the documented
+   constants file doesn't rename the app.
+6. **The three files the docs name aren't enough.** Service times live in
+   [app/(tabs)/home/worship.tsx](../../app/%28tabs%29/home/worship.tsx),
+   [app/(tabs)/home/fellowship.tsx](../../app/%28tabs%29/home/fellowship.tsx),
+   [google-apps-script/PrintedBulletin.gs](../../google-apps-script/PrintedBulletin.gs),
+   and
+   [google-apps-script/PrintedBrooklynBulletin.gs](../../google-apps-script/PrintedBrooklynBulletin.gs).
+   The church's history and affiliations are in
+   [app/(tabs)/home/about-my-church.tsx](../../app/%28tabs%29/home/about-my-church.tsx);
+   giving, Zelle, and EIN text in
+   [app/(tabs)/home/give.tsx](../../app/%28tabs%29/home/give.tsx), in four languages; the
+   "New York" labels in [app/(tabs)/index.tsx](../../app/%28tabs%29/index.tsx) and
+   [components/ThemeDialog.tsx](../../components/ThemeDialog.tsx); the Zoom meeting in
+   the printed Brooklyn bulletin; and the church photo URL in a store-graphics script.
+7. **The church's own copies disagree.** Brooklyn's
+   worship starts at 11:40 in the app and 11:30 on print. Elmhurst's Sabbath School is at
+   10:30 in the app and its study at 10:00 on print, and the printed cover gives
+   10:30 AM for both locations. Elmhurst's house number has three spellings (`76-06`,
+   `7606`, `760`), and the Chinese church name two (app and print). Copying one place
+   copies a disagreement.
+8. **`about-my-church.tsx` indexes `CHURCH_LOCATIONS[0]` to `[2]` directly.** It assumes
+   exactly three locations in a fixed order: with fewer it fails, and extra ones are
+   dropped without a word.
+9. **Repository-name gates turn things off, on purpose.**
+   [scripts/deploy-web-safety.cjs](../../scripts/deploy-web-safety.cjs),
+   [.github/workflows/release-validation.yml](../../.github/workflows/release-validation.yml),
+   and
+   [.github/workflows/ios-compile-cache.yml](../../.github/workflows/ios-compile-cache.yml)
+   compare against this repository's `owner/repo`, so a production web deploy from a
+   repository with another name refuses to run until the literal changes. Separately, 19
+   workflows skip themselves in a GitHub fork. The `/sda-church-app` base path is in four
+   places, three of them literals.
+10. **Drive and Sheet IDs are compiled-in fallbacks.** If a script property isn't set,
+    the printed bulletin uses this church's Drive folders and images. The QR workflow's
+    Drive folder ID is a workflow literal with no override, and the Sabbath Encouragement
+    source file ID in
+    [google-apps-script/SabbathEncouragement.gs](../../google-apps-script/SabbathEncouragement.gs)
+    has none either.
+11. **The New York time zone is in about 17 places.** That's nine
+    workflow schedules, a preview build's timestamp, three scripts, two integration
+    scripts, the Apps Script manifest, and the printed sunset config, plus tests that
+    assert it.
+12. **Download and store links point at this church's listings.**
+    [public/download.html](../../public/download.html), the README badges, and the Share
+    the App QR image send people to this church's App Store and Play listings, and the QR
+    is a pre-made image. The in-app Share link, the bulletin's app QR code, and the hosted
+    privacy and legal pages all use `app.nyccsda.org`.
+13. **The language set is fixed.** The bulletin model, the Name Dictionary, and the
+    printed text assume English plus Chinese, and `SupportedLanguage` is a closed union,
+    with label copies in about 38 files. Announcements show the other way: a language is
+    one more entry in one list. A church with a different language pair still touches
+    nearly every screen.
+14. **The native modules carry this church's name.** The offline audio and widget modules
+    use `org.nyccsda` package names, and three config plugins use `NYCCSDA_` markers. They
+    don't follow the app ID, so they keep this church's name under any other ID until
+    they're renamed.
+
+## How to read the tables
+
+- **Where** names files by path. The first mention of a file in a section links to it;
+  later mentions in that section don't. There are no line numbers, because they go
+  stale.
+- **Repeats** counts the separate places that hard-code the value, not how often it's
+  used through a constant. "About" means a count from searching the code.
+- **Already configurable?** is "No" when the value is a literal in code. "Partly" means
+  one copy goes through a constant, environment variable, script property, or data file,
+  and other copies don't.
+- IDs, account numbers, phone numbers, email addresses, and secrets are given by kind,
+  not by value. Secret and variable names are given, because a name holds no secret.
 
 ## 1. Church identity and branding
 
@@ -61,7 +146,7 @@ those three files.
 | Conference and union | `about-my-church.tsx` (`localConfName` Greater New York Conference, `unionConfName` Atlantic Union, with descriptions, in 4 languages); `ExternalLinks.ts` (`openGNYC`, `openAtlanticUnion`); the conference site is also in `external-dependencies.mjs` | Conference and union names and website URLs | 2 files + monitor | No |
 | Team members (pastor and Bible worker) | `TeamData.ts` (names in 4 languages, a role note, bios in 4 languages); photos through `PASTOR_IMAGE_URL` and `BIBLE_WORKER_IMAGE_URL` in `ExternalLinks.ts`; screen [app/(tabs)/home/team.tsx](../../app/%28tabs%29/home/team.tsx). Key-screen builds show made-up members from [services/KeyScreensFixtures.ts](../../services/KeyScreensFixtures.ts) instead | Staff names, bios, photo URLs (the photo file names contain staff names) | 1 data file + 2 URLs; the URLs again in `external-dependencies.mjs` | Partly: `TeamData.ts` is a data file, but its `roleKey` is a fixed union (`seniorPastor`, `bibleWorker`, `childrensMinistry`) |
 | Church photos (building, Flushing fellowship, Elmhurst Sabbath) | `ExternalLinks.ts` (`CHURCH_BUILDING_IMAGE_URL`, `FLUSHING_FELLOWSHIP_IMAGE_URL`, `ELMHURST_SABBATH_URLS`); the building photo heads 13 screens ([app/(tabs)/index.tsx](../../app/%28tabs%29/index.tsx), `home/*`, `explore/*`, [app/(tabs)/you/index.tsx](../../app/%28tabs%29/you/index.tsx)) and the key screens' made-up Team page; a literal again in [scripts/make-app-store-headers.cjs](../../scripts/make-app-store-headers.cjs) and `external-dependencies.mjs` | Media URLs on the church's Adventist Connect library | 3 places | Partly: one constant for the app; the store-graphics script and the monitor copy it |
-| Church phone | `ExternalLinks.ts` (`CHURCH_PHONE`, used by `team.tsx` and [app/(tabs)/home/fellowship.tsx](../../app/%28tabs%29/home/fellowship.tsx)); [test/link-opening.test.ts](../../test/link-opening.test.ts). The printed bulletin no longer prints it | Phone number | 1 + test | Yes (one constant) |
+| Church phone | `ExternalLinks.ts` (`CHURCH_PHONE`, used by `team.tsx` and [app/(tabs)/home/fellowship.tsx](../../app/%28tabs%29/home/fellowship.tsx)); [test/link-opening.test.ts](../../test/link-opening.test.ts). The printed bulletin doesn't print it | Phone number | 1 + test | Yes (one constant) |
 | Church email | `ExternalLinks.ts` (`CHURCH_EMAIL`, a pastor role address on the church domain, used by `team.tsx` and `fellowship.tsx`) | Role email | 1 | Yes (one constant) |
 | Brand blue `#00405C` | `app.json` (adaptive icon background, splash); [components/LaunchSplash.tsx](../../components/LaunchSplash.tsx) (`LAUNCH_BACKGROUND`); [constants/Themes.ts](../../constants/Themes.ts) (`floatingSurface` in the dark theme); `make-app-store-headers.cjs`; `make-play-feature-graphic.cjs`; [scripts/capture-ios-screens.cjs](../../scripts/capture-ios-screens.cjs) (fallback; it reads `app.json` first); the CSS of the four `public/*.html` pages; [test/screens.test.ts](../../test/screens.test.ts), [test/tab-bars.test.ts](../../test/tab-bars.test.ts), [test/contrast-setting.test.ts](../../test/contrast-setting.test.ts) | Hex colour, the NAD symbol's own blue from [assets/images/brand/nad-symbol.svg](../../assets/images/brand/nad-symbol.svg) | About 11 + tests | No |
 | Theme colours (ocean blue, metallic gold) | [constants/ThemeColors.ts](../../constants/ThemeColors.ts) (primary `#0369A1` light, `#D2B258` dark, kept in a file with no imports so the Android widget's build can read them); `Themes.ts` builds the themes from them; [README.md](../../README.md) badges; [test/theme-dark-reader-palette.test.ts](../../test/theme-dark-reader-palette.test.ts) | Hex colours | 1 colour file + tests | Yes, central. Not church-specific in themselves, but they're this app's look |
@@ -83,14 +168,14 @@ those three files.
 | Reviewer notes, declarations, category | `store-listing.md#reviewer-notes`, [docs/operations/app-store-connect-answers.md](../operations/app-store-connect-answers.md), [docs/operations/play-console-answers.md](../operations/play-console-answers.md), [docs/operations/store-policy-audit.md](../operations/store-policy-audit.md) | Store answers naming the church, its domain, and its accounts | 4 docs | Docs only |
 | Support, privacy, and marketing URLs for the listings | `store-listing.md#categories-urls-and-contact`; `app-store-connect-answers.md` | URLs on `app.nyccsda.org`; a contact role address | 2 docs | Docs only |
 | Store screenshots and graphics | [docs/store-assets/](../store-assets/) (107 files: App Store phone and iPad sets and headers in en-US, es, zh-Hant, and zh-Hans; Google Play phone and tablet sets in en-US, es, zh-TW, and zh-CN; two feature graphics; a foreground-service video); generators [scripts/make-app-store-headers.cjs](../../scripts/make-app-store-headers.cjs) (the church photo URL as a literal, the brand blue) and [scripts/make-play-feature-graphic.cjs](../../scripts/make-play-feature-graphic.cjs) (the church's name in English with Traditional Chinese, or in Spanish); `screens.json` `appStore`, `appStoreIpad`, `googlePlay`, `googlePlayTablet`, and `oneOff` (the Spanish sets, taken by hand) | Images showing the church's name, photo, and content; script literals | 107 files + 2 scripts | Partly: the shot lists are JSON; the graphics' text is in the scripts |
-| Store account model | [docs/architecture.md](../architecture.md#app-stores) (App stores), `app-store-setup.md` (Apple Business Manager as a nonprofit, D-U-N-S, a Play organization account on the church domain, Search Console verification) | Account and process descriptions | Docs | Docs only |
+| Store account model | [docs/architecture.md](../architecture.md#app-stores) (App stores), the Apple Business Manager nonprofit organization, and `app-store-setup.md` (D-U-N-S, a Play organization account on the church domain, Search Console verification) | Account and process descriptions | Docs | Docs only |
 
 ## 3. Domains, hosting, and website
 
 | Item | Where | Hard-coded value kind | Repeats | Already configurable? |
 | --- | --- | --- | --- | --- |
 | App website domain `app.nyccsda.org` | [package.json](../../package.json) (`homepage`); [constants/ExternalLinks.ts](../../constants/ExternalLinks.ts) (`APP_DOWNLOAD_URL`, `PRIVACY_POLICY_URL`, `LEGAL_DISCLAIMER_URL`); [features/library/LibraryCatalog.ts](../../features/library/LibraryCatalog.ts) (the Sabbath Encouragement PDF); [scripts/bulletin-qr-codes.json](../../scripts/bulletin-qr-codes.json); [scripts/yearly-checkup.cjs](../../scripts/yearly-checkup.cjs); [.github/workflows/deploy.yml](../../.github/workflows/deploy.yml); [.github/ISSUE_TEMPLATE/bug_report.md](../../.github/ISSUE_TEMPLATE/bug_report.md); [README.md](../../README.md); [public/download.html](../../public/download.html) (its inline QR code encodes it); [assets/images/app-download-qr.jpg](../../assets/images/app-download-qr.jpg) (the Share the App QR image in [components/ShareAppDialog.tsx](../../components/ShareAppDialog.tsx)); [test/integration/external-dependencies.mjs](../../test/integration/external-dependencies.mjs) (four website pages); [test/screens/screens.json](../../test/screens/screens.json) (`share-app` must show it) | Domain and URLs | About 12 in code + many docs | Partly: three app constants; the rest are literals, and two QR images encode it |
-| Church domain `nyccsda.org` (email) | `ExternalLinks.ts` (a pastor role address, `CHURCH_EMAIL`, and the technology group's address, `TECHNOLOGY_EMAIL`); [app/(tabs)/home/give.tsx](../../app/%28tabs%29/home/give.tsx) (the Zelle address, in 4 languages); [google-apps-script/PrintedBulletin.gs](../../google-apps-script/PrintedBulletin.gs) (the Zelle label); [google-apps-script/BulletinScheduleMaintenance.gs](../../google-apps-script/BulletinScheduleMaintenance.gs) (`BULLETIN_HEADER_PROTECTION_EDITOR`, the technology group); [public/support.html](../../public/support.html), [public/privacy-policy.html](../../public/privacy-policy.html), [public/legal.html](../../public/legal.html) (the technology address, 12 times); `yearly-checkup.cjs`. The printed bulletin no longer gives a treasury address | Role addresses on the church domain | About 21, in 8 files | No: one constant for the app, but the web pages, Apps Script, and checklists repeat it |
+| Church domain `nyccsda.org` (email) | `ExternalLinks.ts` (a pastor role address, `CHURCH_EMAIL`, and the technology group's address, `TECHNOLOGY_EMAIL`); [app/(tabs)/home/give.tsx](../../app/%28tabs%29/home/give.tsx) (the Zelle address, in 4 languages); [google-apps-script/PrintedBulletin.gs](../../google-apps-script/PrintedBulletin.gs) (the Zelle label); [google-apps-script/BulletinScheduleMaintenance.gs](../../google-apps-script/BulletinScheduleMaintenance.gs) (`BULLETIN_HEADER_PROTECTION_EDITOR`, the technology group); [public/support.html](../../public/support.html), [public/privacy-policy.html](../../public/privacy-policy.html), [public/legal.html](../../public/legal.html) (the technology address, 12 times); `yearly-checkup.cjs`. The printed bulletin gives no treasury address | Role addresses on the church domain | About 21, in 8 files | No: one constant for the app, but the web pages, Apps Script, and checklists repeat it |
 | GitHub Pages base path `/sda-church-app` | [app.json](../../app.json) (`experiments.baseUrl`); [app/+html.tsx](../../app/+html.tsx) (`WEB_BASE_PATH`); [app/_layout.tsx](../../app/_layout.tsx) (the service worker's path); [public/manifest.json](../../public/manifest.json) (`start_url`, `scope`) | Repository-name path | 4 | Partly: [public/deploy-web.js](../../public/deploy-web.js) reads `app.json`; the other three are literals |
 | Canonical repository name | [scripts/deploy-web-safety.cjs](../../scripts/deploy-web-safety.cjs) (`CANONICAL_REPOSITORY`: only that repository's `main` may publish); [.github/workflows/release-validation.yml](../../.github/workflows/release-validation.yml) and [.github/workflows/ios-compile-cache.yml](../../.github/workflows/ios-compile-cache.yml) (twice) (`github.repository ==` gates); `README.md` badges; user agents in [scripts/cuv-1919-witnesses.mjs](../../scripts/cuv-1919-witnesses.mjs) and `external-dependencies.mjs`; issue links in many comments | GitHub `owner/repo` | 4 functional + comments | No |
 | Hosted pages | `privacy-policy.html`, `legal.html`, `support.html`, `download.html` | Church name, role address, store links, "New York" sunrise wording, the brand blue, and the data practices of this church's Workspace | 4 files | No |
@@ -127,9 +212,9 @@ that script, and printed Google Docs that the same script makes for staff.
 | Name Dictionary (English and Chinese name pairs) | `ScheduleAssignmentChecks.gs`, `PrintedBulletin.gs`, `BulletinScheduleMaintenance.gs` | Assumes each person has an English name and an optional Chinese one | 3 files | Data-driven, but English and Chinese by design |
 | Hymn Bank tab | `BulletinScheduleMaintenance.gs` (keeps the tab in step with the app's hymnals); rows from [scripts/export-hymn-bank.cjs](../../scripts/export-hymn-bank.cjs), written into `HymnalData.gs` at each deploy by [scripts/build-hymnal-apps-script.cjs](../../scripts/build-hymnal-apps-script.cjs) | Every hymn of the church's two bulletin hymnals, 505 and 1985 (§7) | Generated | Generated from repo data |
 | Service times printed on bulletins | `PrintedBulletin.gs` (`studyTime` and `worshipTime` for Queens; the shared cover's Elmhurst, Brooklyn, and Flushing blocks); `PrintedBrooklynBulletin.gs` (Brooklyn's Sabbath School and worship times) | Service times | 4 places | No (see §5 for where they disagree with the app) |
-| Printed addresses | `PrintedBulletin.gs` (`appendSharedCoverPanel_`: one address under each location's title; `appendSharedCoverContactColumns_`: three contact blocks) | Street addresses and ZIP codes | 5 | No. The Brooklyn back-page contact block, the long-ZIP Elmhurst address, and the printed phone number are gone |
+| Printed addresses | `PrintedBulletin.gs` (`appendSharedCoverPanel_`: one address under each location's title; `appendSharedCoverContactColumns_`: three contact blocks) | Street addresses and ZIP codes | 5 | No. |
 | Brooklyn online meetings | `PrintedBrooklynBulletin.gs` (`appendBrooklynOnlineZoomPanel_`: the Zoom meeting's number and passcode, and three weekly online meetings with times, Mandarin only) | Zoom meeting number and passcode, meeting times | 1 (the same meeting as the app's Zoom link, §10) | No |
-| Printed giving block | `PrintedBulletin.gs` (`appendGivingText_`: the cash envelope instructions in English and Chinese; `getGivingQrItems_`: the Zelle label with its role address, a reserved Zelle slot for Queens, none for Brooklyn). The stocks and donor-advised fund line with the EIN and a treasury address is gone: print leaves it to the app's Give page | Giving text, role address, per-location slot rules | 1 | No |
+| Printed giving block | `PrintedBulletin.gs` (`appendGivingText_`: the cash envelope instructions in English and Chinese; `getGivingQrItems_`: the Zelle label with its role address, a reserved Zelle slot for Queens, none for Brooklyn). Print leaves stocks and donor-advised funds to the app's Give page | Giving text, role address, per-location slot rules | 1 | No |
 | Giving and app QR codes | [scripts/bulletin-qr-codes.json](../../scripts/bulletin-qr-codes.json) (file name → URL: Queens giving, Brooklyn giving, the app); [scripts/generate-qr.mjs](../../scripts/generate-qr.mjs) (`DEFAULT_URL`, the AdventistGiving link); [package.json](../../package.json) (`generate:qr:queens`, `generate:qr:brooklyn`); [scripts/upload-google-drive.mjs](../../scripts/upload-google-drive.mjs) (an allowlist of five QR file names, Zelle for both locations among them); the `<location>_<kind>_qr_code_368x368.jpg` names in `PrintedBulletin.gs` (`getPrintedBulletinQrImageFileName_`); the Zelle QR code is made by hand | URLs and file names per congregation | 5 | Partly (the JSON map drives the workflow) |
 | Sunset times on print | `PrintedBulletin.gs` (`sunsetLatitude`, `sunsetLongitude`, `sunsetTimeZone`) | Coordinates, time zone | 1 (copies the app's, §5) | No |
 | Printed Bible versions | `PrintedBulletin.gs` (`bibleEnglishTranslation`, `bibleChineseTranslation`, `PRINTED_BIBLE_TRANSLATION_OPTIONS`: BSB or KJV in English, the CUV in Traditional Chinese only, read from HelloAO's text API) | Translation choices | 1 | No |
@@ -150,7 +235,7 @@ that script, and printed Google Docs that the same script makes for staff.
 | **Times disagree** between the app and print | App: Elmhurst song service 10:00, Sabbath School 10:30, worship 11:40 (`worship.tsx`), and 10:00 AM–1:00 PM (`fellowship.tsx`); Brooklyn Sabbath School 10:00–11:30, worship 11:40–12:30, lunch 12:30–1:00 (`worship.tsx`); Flushing Thursday 6:30–9:00 PM, dinner 6:30–7:30 (`fellowship.tsx`). Print: the shared cover gives Elmhurst and Brooklyn "Saturdays 10:30 AM" and Flushing "Thursday 7:30 PM (6:30 PM Dinner)" (`PrintedBulletin.gs`); Queens' program has study 10:00–11:25 and worship 11:40–1:00 (`PrintedBulletin.gs`); Brooklyn's has Sabbath School 10:00–11:25 and worship 11:30–1:00 ([google-apps-script/PrintedBrooklynBulletin.gs](../../google-apps-script/PrintedBrooklynBulletin.gs)) | Service times | 5 places in 4 files | No |
 | Online giving link | `ExternalLinks.ts` (`openAdventistGiving`, with the church's AdventistGiving code); [scripts/bulletin-qr-codes.json](../../scripts/bulletin-qr-codes.json) (twice); [scripts/generate-qr.mjs](../../scripts/generate-qr.mjs); `external-dependencies.mjs`; [docs/operations/store-policy-audit.md](../operations/store-policy-audit.md) | Giving URL with the church's code | 5 | Partly |
 | Zelle | `ExternalLinks.ts` (`SHOW_ZELLE_GIVING = false`); [app/(tabs)/home/give.tsx](../../app/%28tabs%29/home/give.tsx) (the address in 4 languages); `PrintedBulletin.gs` (the Zelle label); [test/give-zelle.test.ts](../../test/give-zelle.test.ts); `screens.json` (`give` must not show Zelle) | A role address; an on/off flag | 3 + tests | Partly (the flag is a constant; the address is a literal 5 times) |
-| Donor-advised funds and the church's EIN | `ExternalLinks.ts` (`CHURCH_LEGAL_NAME`, `CHURCH_EIN`, `DAF_SPONSORS`: Fidelity Charitable first, as the church's preference, then DAFgiving360 and Vanguard Charitable; `FIDELITY_CHARITABLE_GRANT_URL`, built from the EIN); [components/DafSponsorsDialog.tsx](../../components/DafSponsorsDialog.tsx); `give.tsx` (the text, with the legal name and EIN typed again, in 4 languages); `external-dependencies.mjs` (the Fidelity link, with the EIN, and the sponsors' sites); `screens.json` (`give-daf-sponsors` must show the EIN); [test/give-daf-sponsors.test.ts](../../test/give-daf-sponsors.test.ts). No longer printed | Legal name, EIN, sponsor preference | 4 + tests | Partly: one constant each for the popup and the link, but `give.tsx` repeats both in every language |
+| Donor-advised funds and the church's EIN | `ExternalLinks.ts` (`CHURCH_LEGAL_NAME`, `CHURCH_EIN`, `DAF_SPONSORS`: Fidelity Charitable first, as the church's preference, then DAFgiving360 and Vanguard Charitable; `FIDELITY_CHARITABLE_GRANT_URL`, built from the EIN); [components/DafSponsorsDialog.tsx](../../components/DafSponsorsDialog.tsx); `give.tsx` (the text, with the legal name and EIN typed again, in 4 languages); `external-dependencies.mjs` (the Fidelity link, with the EIN, and the sponsors' sites); `screens.json` (`give-daf-sponsors` must show the EIN); [test/give-daf-sponsors.test.ts](../../test/give-daf-sponsors.test.ts). Not printed | Legal name, EIN, sponsor preference | 4 + tests | Partly: one constant each for the popup and the link, but `give.tsx` repeats both in every language |
 | Cash and envelope instructions | `give.tsx` (4 languages); `PrintedBulletin.gs` (`appendGivingText_`, in English and Chinese) | Local practice text | 2 | No |
 | Joining and membership text | [constants/DoctrineData.ts](../../constants/DoctrineData.ts) (`JOINING_CHURCH`, `MEMBERSHIP_REQUIREMENTS`, "our church") | Mostly denomination-wide practice, phrased as this church's | 1 | Data file |
 
@@ -337,95 +422,3 @@ row says otherwise.
   `CHURCH_LEGAL_NAME`, `CHURCH_EIN`, `APP_DOWNLOAD_URL`, `PRIVACY_POLICY_URL`,
   `LEGAL_DISCLAIMER_URL`, `CHURCH_LATITUDE` and `CHURCH_LONGITUDE`, `CHURCH_LOCATIONS`,
   and `TEAM_MEMBERS` are each defined once for the app, but see the repeats above.
-
-## Surprises
-
-What would break, or mislead, if another church started from this code as it is:
-
-1. **The app would read this church's live bulletin.** `BULLETIN_API_BASE_URL` in
-   [constants/ExternalLinks.ts](../../constants/ExternalLinks.ts) is a literal, so a copy
-   of the app shows this church's roster, with names shortened, until it's changed. The
-   same URL is a literal in five more places in the code: the integration workflow and
-   test, the dependency monitor, the changeovers script, and the Apps Script header. The
-   status page, in its own repository, checks it too.
-2. **The bulletin is two congregations wide, by type.** `Bulletin` in
-   [services/BulletinService.ts](../../services/BulletinService.ts) has exactly `queens`
-   and `brooklyn`.
-   [app/(tabs)/home/bulletin.tsx](../../app/%28tabs%29/home/bulletin.tsx) has `isQueens`
-   on 26 lines, Weekly Data takes only `Queens` and `Brooklyn` rows, and Apps Script
-   tells repeated Sabbath Calendar headers apart by their side of `Brooklyn Sermon`.
-   Announcements, added since, belong to those two locations; they aren't a third. A
-   one-site church, or a third site, needs changes in the app, the API, and the sheet,
-   not just config.
-3. **Bible audio still falls back to this church's media library.** This changed:
-   Mandarin, Cantonese, and Spanish now play from HelloAO first, so the church's library
-   is no longer the main source. It's the first fallback, though, and all 3,567 chapter
-   URLs in the three manifests still point at its `newyork2` path, with the source label
-   "NYCCSDA.org". WordProject's terms ask each user to host its own unmodified copies,
-   and the Audio Power permission was given to this church.
-4. **The app icon and launch animation use the NAD trademark.**
-   [docs/LEGAL_BRANDING.md](../LEGAL_BRANDING.md) limits it to official Seventh-day
-   Adventist organizations. A church outside the denomination must replace six icon
-   files and the symbol module.
-5. **`CHURCH_NAME` is still dead code.** The app's name is the `expo.name` in
-   [app.json](../../app.json), and the church's name is a literal in about a dozen code
-   files: screens, web pages, Apps Script, and graphics scripts. `CHURCH_LEGAL_NAME`,
-   added since, feeds only the Give page's sponsors popup. Editing the documented
-   constants file doesn't rename the app.
-6. **The three files the docs name aren't enough.** Service times live in
-   [app/(tabs)/home/worship.tsx](../../app/%28tabs%29/home/worship.tsx),
-   [app/(tabs)/home/fellowship.tsx](../../app/%28tabs%29/home/fellowship.tsx),
-   [google-apps-script/PrintedBulletin.gs](../../google-apps-script/PrintedBulletin.gs),
-   and
-   [google-apps-script/PrintedBrooklynBulletin.gs](../../google-apps-script/PrintedBrooklynBulletin.gs).
-   The church's history and affiliations are in
-   [app/(tabs)/home/about-my-church.tsx](../../app/%28tabs%29/home/about-my-church.tsx);
-   giving, Zelle, and EIN text in
-   [app/(tabs)/home/give.tsx](../../app/%28tabs%29/home/give.tsx), in four languages; the
-   "New York" labels in [app/(tabs)/index.tsx](../../app/%28tabs%29/index.tsx) and
-   [components/ThemeDialog.tsx](../../components/ThemeDialog.tsx); the Zoom meeting in
-   the printed Brooklyn bulletin; and the church photo URL in a store-graphics script.
-7. **The church's own copies still disagree, though less than before.** Brooklyn's
-   worship starts at 11:40 in the app and 11:30 on print. Elmhurst's Sabbath School is at
-   10:30 in the app and its study at 10:00 on print, and the printed cover gives
-   10:30 AM for both locations. Elmhurst's house number has three spellings (`76-06`,
-   `7606`, `760`), and the Chinese church name two (app and print). No longer true: the
-   Flushing "7:00–9:00 pm" time, the fourth Elmhurst spelling, and the third Chinese
-   wording went with the Brooklyn bulletin's old contact block. Copying one place still
-   copies a disagreement.
-8. **`about-my-church.tsx` indexes `CHURCH_LOCATIONS[0]` to `[2]` directly.** It assumes
-   exactly three locations in a fixed order: with fewer it fails, and extra ones are
-   dropped without a word.
-9. **Repository-name gates turn things off.**
-   [scripts/deploy-web-safety.cjs](../../scripts/deploy-web-safety.cjs),
-   [.github/workflows/release-validation.yml](../../.github/workflows/release-validation.yml),
-   and
-   [.github/workflows/ios-compile-cache.yml](../../.github/workflows/ios-compile-cache.yml)
-   compare against this repository's `owner/repo`, so a production web deploy from a
-   repository with another name refuses to run until the literal changes. Separately, 19
-   workflows skip themselves in a GitHub fork. The `/sda-church-app` base path is in four
-   places, three of them literals.
-10. **Drive and Sheet IDs are compiled-in fallbacks.** If a script property isn't set,
-    the printed bulletin uses this church's Drive folders and images. The QR workflow's
-    Drive folder ID is a workflow literal with no override, and the Sabbath Encouragement
-    source file ID in
-    [google-apps-script/SabbathEncouragement.gs](../../google-apps-script/SabbathEncouragement.gs)
-    has none either.
-11. **The New York time zone is in about 17 places,** up from about 13. That's nine
-    workflow schedules, a preview build's timestamp, three scripts, two integration
-    scripts, the Apps Script manifest, and the printed sunset config, plus tests that
-    assert it.
-12. **Download and store links point at this church's listings.**
-    [public/download.html](../../public/download.html), the README badges, and the Share
-    the App QR image send people to this church's App Store and Play listings, and the QR
-    is a pre-made image. The in-app Share link, the bulletin's app QR code, and the hosted
-    privacy and legal pages all use `app.nyccsda.org`.
-13. **The language set is fixed.** The bulletin model, the Name Dictionary, and the
-    printed text assume English plus Chinese, and `SupportedLanguage` is a closed union,
-    with label copies in about 38 files. Announcements show the other way: a language is
-    one more entry in one list. A church with a different language pair still touches
-    nearly every screen.
-14. **The native modules carry this church's name.** The offline audio and widget modules
-    use `org.nyccsda` package names, and three config plugins use `NYCCSDA_` markers. They
-    don't follow the app ID, so they keep this church's name under any other ID until
-    they're renamed.
