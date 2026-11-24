@@ -37,10 +37,10 @@ const mandarin = ([] as string[]).concat(Object.values(getAudioPowerCuvChapterLi
 const helloaoBase = repoFile('services/BibleAudioDownloads.ts').match(/const HELLOAO_AUDIO = '([^']+)'/)?.[1];
 
 describe('status page checks', () => {
-  it('lists twelve checks, each with its own name and address', () => {
-    expect(rows).toHaveLength(12);
-    expect(checks.size).toBe(12);
-    expect(new Set(rows.map(([, url]) => url)).size).toBe(12);
+  it('lists thirteen checks, each with its own name and address', () => {
+    expect(rows).toHaveLength(13);
+    expect(checks.size).toBe(13);
+    expect(new Set(rows.map(([, url]) => url)).size).toBe(13);
   });
 
   it("checks HelloAO's Bible text where the printed bulletins read it", () => {
@@ -63,12 +63,13 @@ describe('status page checks', () => {
     ]);
   });
 
-  it("checks John 3 at each of the app's Cantonese sources, and the church's Spanish copy", () => {
+  it("checks John 3 at each of the app's Cantonese and Spanish sources, in the app's order", () => {
     expect(getCantoneseCuvChapterUrls('JHN', 3)).toEqual([
       check('HelloAO, Cantonese audio'),
       check('Adventist Connect, Cantonese audio'),
     ]);
     expect(Object.values(getRv1909ChapterLinks('JHN', 3)).flat()).toEqual([
+      check('HelloAO, Spanish audio'),
       check('Adventist Connect, Spanish audio'),
     ]);
   });
@@ -87,7 +88,7 @@ describe('status page checks', () => {
 
   it('asks audio hosts for headers only, never the recording', () => {
     const audioRows = page.split('\n').filter((line) => /\| `https:\/\/[^`]+\.mp3` \|/.test(line));
-    expect(audioRows).toHaveLength(8);
+    expect(audioRows).toHaveLength(9);
     for (const row of audioRows) expect(row).toMatch(/\| `HEAD` \|$/);
   });
 });

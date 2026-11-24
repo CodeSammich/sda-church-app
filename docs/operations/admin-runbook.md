@@ -1287,6 +1287,8 @@ Bible chapters to check what only a real player shows:
 - **Primary host down:** a local DNS server on the runner makes
   `audio.bible.helloao.org` and `assets.adventistconnect.org` unreachable, and
   Genesis 1 must play from the Internet Archive, its third copy ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)).
+  The hosts stay blocked for the whole run, so every scenario plays Mandarin:
+  Cantonese and Spanish have no copy past those two ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)).
 - **Next chapter with the screen off:** Psalm 117 moves on to Psalm 118 by itself,
   the screen stays off, and the media foreground service stays up.
 - **Dead zone with the screen off:** Play offline, wait 90 seconds, then reconnect.

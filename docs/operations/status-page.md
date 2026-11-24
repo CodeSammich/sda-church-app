@@ -39,12 +39,16 @@ On 2026-11-10, all six audio hosts answered `HEAD` with 200 and a range request
 with 206 ([measured on #618](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/618#issuecomment-6784525193)).
 HelloAO's Mandarin and Cantonese copies, which the app has played first since
 [#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749),
-answered the same on 2026-11-22 ([measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)).
+answered the same on 2026-11-22 ([measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)),
+and its Spanish copy, played first since
+[#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770),
+on 2026-11-23 ([measured on #770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770#issuecomment-7121832434)).
 
 | Check | Address | Request |
 | --- | --- | --- |
 | HelloAO, Mandarin audio | `https://audio.bible.helloao.org/api/cmn_cuv/JHN/3/audio/mandarin.mp3` | `HEAD` |
 | HelloAO, Cantonese audio | `https://audio.bible.helloao.org/api/cmn_cuv/JHN/3/audio/wordproject_cantonese.mp3` | `HEAD` |
+| HelloAO, Spanish audio | `https://audio.bible.helloao.org/api/spa_r09/JHN/3/audio/wordproject.mp3` | `HEAD` |
 | Adventist Connect, Mandarin audio | `https://assets.adventistconnect.org/newyork2/2026/08/12224153/CUV_B43C003.mp3` | `HEAD` |
 | Adventist Connect, Cantonese audio | `https://assets.adventistconnect.org/newyork2/2026/09/30185746/CANTONESE_B43C003.mp3` | `HEAD` |
 | Adventist Connect, Spanish audio | `https://assets.adventistconnect.org/newyork2/2026/09/30215519/RV1909_B43C003.mp3` | `HEAD` |
@@ -111,8 +115,9 @@ an outage that lasts, open the address in a browser:
 - If Adventist Connect refuses the church's audio (403 or 429), or a file has
   gone, see [Adventist Connect media](adventist-connect-media.md) and
   [#616](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/616).
-  Mandarin and Cantonese play from HelloAO first, so members notice only if
-  HelloAO is down too. Spanish has no other copy.
+  Mandarin, Cantonese and Spanish play from HelloAO first, so members notice
+  only if HelloAO is down too. Then Mandarin still has two more copies, but
+  Cantonese and Spanish have none.
 - If the bulletin API is down, see
   [Bulletin automation](bulletin-automation.md). The app shows each week's
   stored copy with an error, so only a week a phone never loaded is blank.

@@ -239,10 +239,10 @@ await record('daily audio samples', 'Adventist Connect', (warn) =>
     label: ({ filename }) => filename,
   }));
 
-// The church's copies are the only host for the Spanish recording, and the
-// fallback for Cantonese after HelloAO's (#749); WordProject's own servers are
-// never used (see docs/LEGAL.md). A failure here means Spanish listeners have
-// no audio.
+// The church's copies are the fallback for the Cantonese and Spanish
+// recordings after HelloAO's (#749, #770), and their only other copy;
+// WordProject's own servers are never used (see docs/LEGAL.md). A failure here
+// and in HelloAO's samples means those listeners have no audio.
 for (const [label, prefix, manifestPath, salt] of [
   ['Cantonese', 'CANTONESE', 'constants/CantoneseAdventistAudioManifest.ts', 23],
   ['Spanish RV1909', 'RV1909', 'constants/Rv1909AdventistAudioManifest.ts', 29],
@@ -781,6 +781,22 @@ for (const { id, numberOfChapters } of JSON.parse(await readFile('assets/bible/b
 
 await record('daily Mandarin and Cantonese samples, played first', 'HelloAO', (warn) =>
   spotCheck(helloaoCuvLinks, 41, ({ url }) => probe(url, { binary: true }), warn, {
+    label: ({ label }) => label,
+  }));
+
+// And the Spanish recording of the Reina-Valera 1909 (#770).
+const helloaoRv1909Links = [];
+for (const { id, numberOfChapters } of JSON.parse(await readFile('assets/bible/bsb/books.biblejson', 'utf8'))) {
+  for (let chapter = 1; chapter <= numberOfChapters; chapter += 1) {
+    helloaoRv1909Links.push({
+      label: `${id} ${chapter}`,
+      url: `https://audio.bible.helloao.org/api/spa_r09/${id}/${chapter}/audio/wordproject.mp3`,
+    });
+  }
+}
+
+await record('daily Spanish RV1909 samples, played first', 'HelloAO', (warn) =>
+  spotCheck(helloaoRv1909Links, 43, ({ url }) => probe(url, { binary: true }), warn, {
     label: ({ label }) => label,
   }));
 

@@ -52,7 +52,7 @@ only open in the browser. It also shows the Bible audio's fallbacks and where th
 church's copies came from; the [Church media](#church-media) and
 [Third-party APIs and websites](#third-party-apis-and-websites) tables give the details.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin and Cantonese Bible audio played from HelloAO first and the church's copies next, Mandarin then falling back to the Internet Archive and then Audio Power, and Spanish Bible audio played only from the church's copies, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, with the Hebrew and Greek for the verse popup, and English Bible audio from HelloAO; the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin, Cantonese and Spanish Bible audio played from HelloAO first and the church's copies next, Mandarin then falling back to the Internet Archive and then Audio Power, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, with the Hebrew and Greek for the verse popup, and English Bible audio from HelloAO; the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
@@ -300,7 +300,7 @@ on them directly; see [Third-party APIs and websites](#third-party-apis-and-webs
 | --- | --- | --- |
 | Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one, then the Internet Archive's, then Audio Power's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)) |
 | Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and never WordProject's servers, which its terms don't allow without its approval |
-| Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, for the same reason, until it plays HelloAO's copy first ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)) |
+| Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), and never WordProject's servers, for the same reason |
 | Church photos and hymnal lookup charts | Adventist Connect | Google Drive backup |
 | Bulletin cover art, logo, QR codes | Google Drive | See [Files not in this repository](#files-not-in-this-repository) |
 
@@ -437,20 +437,19 @@ checks the audio hosts, HelloAO's Bible text and the bulletin API every hour.
 
 **HelloAO is a top-level dependency.** Most of the Bible comes from it: the English
 text and every book list the app ships with, the English narrators (their only
-source), the Mandarin and Cantonese recordings, played from HelloAO first
-([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and the verses the printed bulletins fetch, Sabbath Encouragement's
+source), the Mandarin, Cantonese and Spanish recordings, played from HelloAO first
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), and the verses the printed bulletins fetch, Sabbath Encouragement's
 included. Each new language starts from what HelloAO has ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). The church's
-copies on Adventist Connect are the Mandarin and Cantonese recordings' fallback, and
-the Spanish recording's only source until the app plays HelloAO's copy too
-([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). Hosting a new recording there instead is only a short-term step, if a
-launch is an emergency; see
+copies on Adventist Connect are the Mandarin, Cantonese and Spanish recordings'
+fallback. Hosting a new
+recording there instead is only a short-term step, if a launch is an emergency; see
 [Adventist Connect media hosting](operations/adventist-connect-media.md).
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
-| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio, Mandarin and Cantonese CUV audio (tried first), and Bible verses on the printed bulletin; the source of the English text (the BSB) and book lists the app ships with | In app and Apps Script |
+| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio, the Mandarin and Cantonese CUV audio and the Spanish RV1909 audio (each tried first), and Bible verses on the printed bulletin; the source of the English text (the BSB) and book lists the app ships with | In app and Apps Script |
 | Bible | fetch(bible) | `v1.fetch.bible` | The source of the Reina-Valera 1909 and original-language texts the app ships with | Build script only |
-| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin and Cantonese CUV, tried after HelloAO's, and Spanish RV1909, its only source | In app |
+| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin and Cantonese CUV and Spanish RV1909, each tried after HelloAO's | In app |
 | Bible audio | Internet Archive | `archive.org` | Mandarin CUV audio, third source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | Mandarin CUV audio, fourth source; also where the church's Mandarin copies came from, with its owner's permission | In app |
 | Bible audio | WordProject | `wordproject.org` | Source of the church's Cantonese and Spanish copies ([how they were uploaded](operations/adventist-connect-media.md#updating-the-audio-manifest)), credited under each chapter | Link |

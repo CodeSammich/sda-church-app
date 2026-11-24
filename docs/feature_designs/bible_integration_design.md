@@ -80,8 +80,9 @@ for both (`getAudioReaderPreferenceKey`): switching between CUV and CUVS keeps i
 
 The Reina-Valera 1909 uses WordProject's Spanish recording the same way, under the same
 terms ([WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909)):
-a single narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
-Adventist Connect, with no fallback host. `npm run extract:rv1909-adventist-manifest`
+a single narrator named WordProject, played from HelloAO's copy first and then the
+church's, files named `RV1909_B43C003.mp3` and so on on Adventist Connect, as for
+Cantonese ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). `npm run extract:rv1909-adventist-manifest`
 builds `constants/Rv1909AdventistAudioManifest.ts`; the same script
 (`scripts/extract-wordproject-audio-manifest.mjs`) builds the Cantonese manifest.
 `hasChurchHostedAudio` and `getChurchHostedAudioLinks` in `BibleAudioSources.ts` are

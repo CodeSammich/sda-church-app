@@ -36,10 +36,10 @@ the damage if the card or account is misused (see
 
 | Service | Used for | Cost | Published limit | At the limit | Load concern |
 | --- | --- | --- | --- | --- | --- |
-| [Adventist Connect](#adventist-connect-media-library) | Photos, Bible audio (Mandarin and Cantonese 2nd source; Spanish only source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | Low: Spanish audio and photos; the Chinese audio only when HelloAO fails |
+| [Adventist Connect](#adventist-connect-media-library) | Photos, Bible audio (Mandarin, Cantonese and Spanish 2nd source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | Low: photos; the Chinese and Spanish audio only when HelloAO fails |
 | [Internet Archive](#internet-archive) | Mandarin CUV audio, 3rd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | Mandarin CUV audio, 4th source | Free (permission) | None published | Unknown | Low: reached only if three sources fail |
-| [HelloAO](#helloao) | English BSB audio, Mandarin and Cantonese CUV audio first, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN, though most of the app's bytes |
+| [HelloAO](#helloao) | English BSB audio, Mandarin and Cantonese CUV and Spanish RV1909 audio first, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN, though most of the app's bytes |
 | [fetch(bible)](#fetchbible) | The build script's source for RV1909 and the original-language texts; the app makes no request | Free | "No limits from us" | n/a | None at run time |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons, the bulletin's lesson title | Free | None published | Unknown | Low: CDN |
@@ -79,9 +79,9 @@ Per-use costs, *measured*:
 | Adventech quarterly index | ~1 MB, about 235 KB compressed (English) | CDN-cached; on a phone, about once a week per quarterly lesson, when it's tapped: twice when the catalog's dates are off, and at each tap while a new quarter's lessons are late |
 
 The conclusion: **text APIs are negligible at every scenario, and audio is the only
-real load.** HelloAO carries the English and Chinese audio and Adventist Connect the
-Spanish, and the fallback chain decides who carries the Chinese audio when HelloAO
-can't ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). See [Internet Archive](#internet-archive).
+real load.** HelloAO carries the English, Chinese and Spanish audio, and the fallback
+chain decides who carries the Chinese and Spanish audio when HelloAO can't
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). See [Internet Archive](#internet-archive).
 
 ## Deliberate architecture choices
 
@@ -102,8 +102,8 @@ These choices exist to keep the app free and within every provider's limits:
   instead of the Google Sheets API.
 - **The church hosts its own copies of the Bible audio**, so no outside host is a
   recording's only copy except the English narrators', and chapters stream on demand.
-  The Chinese recordings play from HelloAO first, with the church's copy behind it
-  ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and Audio Power's server is the last resort
+  The Chinese and Spanish recordings play from HelloAO first, with the church's copy
+  behind it ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), and Audio Power's server is the last resort
   ([Audio Power](#audio-power)). Whole books
   download only when a member asks, to listen offline, one file a chapter, a few at once
   as the phone's downloader runs them (#556, #611)
@@ -127,17 +127,18 @@ These choices exist to keep the app free and within every provider's limits:
 
 ### Adventist Connect media library
 
-Hosts the church's photos, hymnal lookup charts, the church's copies of the Mandarin
-and Cantonese CUV Bible audio, which the app plays when HelloAO's fail ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)),
-and the only copy the app plays of the Spanish RV1909 audio, behind NAD's Cloudflare
-CDN with Wasabi storage. Free to the church as
+Hosts the church's photos, hymnal lookup charts, and the church's copies of the
+Mandarin and Cantonese CUV and Spanish RV1909 Bible audio, which the app plays when
+HelloAO's fail ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), behind NAD's Cloudflare CDN with Wasabi
+storage. Free to the church as
 part of NAD's church-website platform, with no agreement or published limits. The
 full hosting chain and scaling analysis are in
 [Adventist Connect media hosting](adventist-connect-media.md): at congregation scale
 it would carry about 22 GB of audio a month if all listening went through it, which is
 ordinary traffic for that platform; at wide adoption, terabytes a month could draw
-attention under Cloudflare's CDN terms. Since the Chinese recordings play from HelloAO
-first, it carries the Spanish listening, and the Chinese only while HelloAO fails.
+attention under Cloudflare's CDN terms. Since the Chinese and Spanish recordings play
+from HelloAO first, it carries their listening only while HelloAO fails, or for a
+listener who chose the church's copy in the audio settings.
 
 ### Internet Archive
 
@@ -168,8 +169,9 @@ so reaching Audio Power takes seconds rather than minutes.
 
 ### HelloAO
 
-`bible.helloao.org` (text) and `audio.bible.helloao.org` (English BSB audio, and the
-Mandarin and Cantonese CUV audio, played first since [#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). Static
+`bible.helloao.org` (text) and `audio.bible.helloao.org` (English BSB audio, the
+Mandarin and Cantonese CUV audio, played first since [#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), and the Spanish RV1909
+audio, played first since [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). Static
 files on AWS S3 behind CloudFront with a one-day cache (*measured*). Its
 [documentation](https://bible.helloao.org/docs/) says "No account, key or approval",
 "No published usage limit", and "Cache, store and download without expiry" (read on
@@ -180,15 +182,14 @@ Encouragement's included, caching each chapter.
 
 HelloAO is a top-level dependency: the main source for the Bible's text and audio,
 and the first place to look for each new language ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). The church's copies on
-Adventist Connect are the Chinese recordings' fallback, and the Spanish recording's
-only source until the app plays HelloAO's copy too ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)); they're not the plan
-for new languages.
+Adventist Connect are the Chinese and Spanish recordings' fallback; they're not the
+plan for new languages.
 
 Audio is the heavy HelloAO load. English is about 4.4 MB per chapter, streamed
 directly from HelloAO, with no church copy. That is fine at every scenario because it
 is served from CloudFront, but it is the largest dependency with no fallback other
-than choosing another narrator. The Chinese recordings are much smaller, and the
-church's copies on Adventist Connect take over if HelloAO fails.
+than choosing another narrator. The Chinese and Spanish recordings are much smaller,
+and the church's copies on Adventist Connect take over if HelloAO fails.
 
 ### Bulletin API (Apps Script)
 

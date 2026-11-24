@@ -160,6 +160,8 @@ E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
 - `primary-host-down` runs only with `E2E_PRIMARY_BLOCKED=1`, and needs HelloAO's and
   the church's audio hosts, `audio.bible.helloao.org` and `assets.adventistconnect.org`,
   to be unreachable. The workflow arranges both, with a local DNS server on the runner.
+  The block lasts the whole run, so every scenario opens the Mandarin CUV, the only
+  recording with a copy past those two hosts ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)).
 - Set `ADB` if `adb` isn't on your path, and `ADB_ARGS=-e` if a phone is also connected.
   On WSL, use `ADB=adb.exe ADB_ARGS=-e`.
 - It tests the debug build, `org.nyccsda.app.preview`, by default. To test a store

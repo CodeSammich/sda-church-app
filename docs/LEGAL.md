@@ -42,6 +42,9 @@ translation's text from either:
   also hosts both Chinese Union Version recordings, Mandarin
   ([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592)) and Cantonese (listed in [its API](https://bible.helloao.org/api/cmn_cuv/JHN/3.json)), with the
   church's verse times, and the app plays them from HelloAO first ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)).
+  HelloAO also hosts WordProject's Spanish recording of the Reina-Valera 1909 (listed
+  in [its API](https://bible.helloao.org/api/spa_r09/JHN/3.json)), which the app plays
+  from HelloAO first too ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). HelloAO has no verse times for it yet.
 - [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
   same way from its public-domain `spa_rv`, whose normalized resource keeps the
   edition's translation footnotes. It's also the source of the original-language
@@ -71,7 +74,8 @@ Cantonese audio for the same editions comes from WordProject, played from HelloA
 copies first and then the church's copies on Adventist Connect, never from
 WordProject's servers; see
 [WordProject Cantonese audio](#wordproject-cantonese-audio). The Reina-Valera 1909
-audio comes from WordProject too, played only from the church's copies; see
+audio comes from WordProject too, played the same way: HelloAO's copy first, then the
+church's; see
 [WordProject Spanish audio](#wordproject-spanish-audio-reina-valera-1909).
 
 ### Chinese Union Version text (1919)
@@ -214,7 +218,7 @@ Cantonese book pages, as read on September 30, 2026 (not legal advice):
 | Use in apps | "You are ONLY allowed to use the audio files for non-profit evangelization (without in APP ads or for-sale APPs)." | Allowed while the app stays free and without ads, which it must anyway (see the [App stores](architecture.md#app-stores) rule). |
 | Nonprofit only | "All available audio is copyrighted and its use is allowed for NON-PROFIT only - (evangelization/education)." | The church is a nonprofit, and the app sells nothing. |
 | Downloading | Each book page: "右鍵單擊本頁末尾的“Zip_”，然後“鏈接另存為”以下載整本書。" ("Right-click 'Zip_' at the end of this page, then 'Save link as', to download the whole book.") | The church downloaded each book once, from these zips. |
-| WordProject's servers | "If you wish to link to our audio, you are obliged to tell us and get our approval." and "DO NOT make a Bible web site or APP and link the whole audio Bible (or Bibles) to our servers." | The app plays HelloAO's copies of the Cantonese recording, then the church's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). It must never link to WordProject's servers, even as a fallback, without WordProject's written approval. |
+| WordProject's servers | "If you wish to link to our audio, you are obliged to tell us and get our approval." and "DO NOT make a Bible web site or APP and link the whole audio Bible (or Bibles) to our servers." | The app plays HelloAO's copies of the Cantonese and Spanish recordings, then the church's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). It must never link to WordProject's servers, even as a fallback, without WordProject's written approval. |
 | Changing the audio | "you are allowed to adapt the data (text format only!) for your purposes but NOT the audio files." | Host the files exactly as downloaded: no re-encoding, trimming, joining, volume changes, or tag edits. Only the file names change, so that each chapter's name is unique. |
 | Credit | Not specified. The Copyrights page asks sites to "place a link to our website and our audio APP". | The narrator is named 粵語 (WordProject). While it's selected, each chapter shows a credit that links to WordProject's Cantonese page, which offers its app. |
 
@@ -287,6 +291,21 @@ descargar el libro completo." ("Right-click 'zip' at the bottom of the page and 
 link as' to download the whole book.") So the church downloaded the book zips once,
 hosts unmodified copies on Adventist Connect, never links to WordProject's servers, and
 credits WordProject with a link to its Spanish page.
+
+**HelloAO's copy (November 2026).** HelloAO's Free Use Bible API added the Spanish
+recording too. On 2026-11-23 HelloAO wrote that WordProject still hadn't responded,
+and that it now hosts audio for many translations, `spa_r09` among them
+([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-7105481721)).
+It's on HelloAO's servers, not WordProject's, and it's the same files as the church's
+copies, WordProject's unchanged: the same day, all 1,189 chapters on HelloAO had the
+size the app expects, and five chapters from each Testament matched the church's copies
+byte for byte ([measured on #770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770#issuecomment-7121832434)).
+The app plays HelloAO's copy first, and the church's if HelloAO fails ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). The app
+uses its own bundled verse times, as for every recording; HelloAO has none for this one
+yet. HelloAO is already one of the
+app's services, so the privacy policy doesn't change. If WordProject objects to
+HelloAO's copy, or HelloAO removes it, take HelloAO out of `getRv1909ChapterLinks` in
+`services/BibleAudioSources.ts`.
 
 **No one claims the recording.** No file has a copyright, owner, or publisher tag,
 and WordProject's Spanish pages name no narrator or rights holder. 1,178 chapters are
@@ -367,7 +386,7 @@ share or export a file. What each source allows:
 | --- | --- | --- |
 | Mandarin (Chinese Union Version) | Audio Power, from HelloAO's and the church's copies | Its owner approved the church app's use, download, and self-hosting of the recordings ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)), and HelloAO's terms allow downloads. HelloAO's copy comes first, then the church's, then the Internet Archive's and Audio Power's, which are the same files. |
 | Cantonese (Chinese Union Version) | WordProject, from HelloAO's and the church's copies | Its book pages invite downloading a whole book (see [WordProject Cantonese audio](#wordproject-cantonese-audio)). HelloAO's copy comes first, then the church's, never WordProject's servers, and the files are kept exactly as hosted. |
-| Spanish (Reina-Valera 1909) | WordProject, from the church's copies | As for Cantonese, but downloaded only from the church's copies. |
+| Spanish (Reina-Valera 1909) | WordProject, from HelloAO's and the church's copies | As for Cantonese: HelloAO's copy comes first, then the church's ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). |
 | English (BSB): Souer, Hays, and David | HelloAO | HelloAO's [terms](https://bible.helloao.org/docs/): "Cache, store and download without expiry", and "AO Lab adds no restrictions". Gilbert's recordings, on openbible.com, aren't offered. |
 | Anything from Bible Brain later ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)) | Faith Comes By Hearing | Only content from its `/download` endpoint may be offered offline (see [Bible Brain API license](#bible-brain-api-license-faith-comes-by-hearing-planned-not-in-use)). |
 

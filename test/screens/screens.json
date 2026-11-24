@@ -975,10 +975,10 @@
       {
         "name": "bible-spanish-audio-settings",
         "group": "bible-reading",
-        "$comment": "The audio settings over that Bible, opened by popup=audio-settings: Reina-Valera 1909's Spanish narration, and Listen offline. Spanish's sets show it where English's show the CUV's Mandarin and Cantonese (Google Play) or the Bible with the Chinese interface (the App Store): Spanish and English, no Chinese (user, 2026-11-09).",
+        "$comment": "The audio settings over that Bible, opened by popup=audio-settings: Reina-Valera 1909's Spanish narration, Listen offline, and the preferred source, HelloAO first, then the church's copy (#770). Spanish's sets show it where English's show the CUV's Mandarin and Cantonese (Google Play) or the Bible with the Chinese interface (the App Store): Spanish and English, no Chinese (user, 2026-11-09). The sets taken before #770 show only NYCCSDA.org under Fuente preferida, with room below it on the iPhone and the Android phone.",
         "path": "bible?bookId=PSA&chapter=23&translationId=spa_r09&popup=audio-settings",
         "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
-        "mustShowLines": [{ "line": "^Ajustes de audio$", "maxTop": 0.4 }, "Reina-Valera", "^Escuchar sin conexi.n$"],
+        "mustShowLines": [{ "line": "^Ajustes de audio$", "maxTop": 0.4 }, "Reina-Valera", "^Escuchar sin conexi.n$", "^HelloAO$"],
         "mustNotShowLines": ["^Cerrar$", "Mandar.n", "Canton.s"]
       }
     ],
