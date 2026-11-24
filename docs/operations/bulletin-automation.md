@@ -171,10 +171,10 @@ Important structural columns:
   Printed Brooklyn uses `Encouragement`, not the older `Testimonies` wording.
 - `Announcements` and `Sunset Time` remain recognized legacy/API response aliases
   in the source, but they aren't expected columns, so nothing reports them
-  missing. The app shows neither. An `Announcements` column would still reach
-  the printed bulletin, which uses it when no printed announcements were saved
-  for that date; the printed sunset time is calculated, not read from the
-  sheet.
+  missing. Neither the app nor the printed bulletin uses them: announcements
+  come from `Weekly Data`'s own `Announcements` column (#562), and the printed
+  sunset time is calculated,
+  not read from the sheet.
 - The roster conflict highlights, the unknown-name checks, and the
   English-only guard find their columns by name too, wherever they are
   (`getSchedulePersonColumns_`, `getSabbathCalendarColumnNumbers_`). A column
@@ -193,13 +193,14 @@ This is the reviewed, final-owner intake sheet, filled in week by week. Keep
 one row per Sabbath and location. Its columns:
 
 ```text
-Date | Location | Bible Verses | English Sermon Title | Chinese Sermon Title |
+Date | Location | Announcements | Bible Verses |
+English Sermon Title | Chinese Sermon Title |
 Sabbath School Hymn 1 | Sabbath School Hymn 2 | Sabbath School Hymn 3 |
 Hymn of Praise | Special Music Title | Hymn of Response
 ```
 
-Any order works. This one puts the speaker's columns first, then the hymns in
-the order they're sung.
+Any order works. This one puts the announcements first, then the speaker's
+columns, then the hymns in the order they're sung.
 
 Until #558 the weekly content was in a tab named `Sabbath Sermon Data`, with an
 English and a Chinese column for each hymn of praise and response, and no
@@ -225,6 +226,11 @@ notice naming it (`ensureWeeklyDataTab_`). Nothing is renamed, moved, or
 removed. A renamed tab or column isn't gone: it's still read by its tag, so
 nothing is added back for it. Only one renamed before its first tag, or
 deleted, comes back empty: move any data across and delete the renamed column.
+Row 1 is protected for the technology group, so only an open by one of its
+accounts can add a column; anyone else's open carries on without it. That's how
+a tab from before #562 gets `Announcements`; drag it next to `Location`. One added
+by hand is found by its name wherever it is, so it isn't doubled
+([details](../feature_designs/announcements.md#deploying)).
 
 Rules:
 
@@ -239,8 +245,23 @@ Rules:
   the dropdown again.
 - `English Sermon Title` and `Chinese Sermon Title` are separate on purpose:
   people write both, and neither is machine-translated from the other.
-- Chinese in the title and hymn columns here, and in the print dialog's
-  announcements, prints exactly as typed. A character the bulletin's Chinese
+- `Announcements` holds the location's announcement for that Sabbath (#562):
+  one, kept short, in any language, as written, except that blank lines are
+  dropped. For a new line in the cell,
+  press Ctrl+Enter, or ⌘+Enter on a Mac
+  ([Edit & format a spreadsheet](https://support.google.com/docs/answer/46973?hl=en&co=GENIE.Platform%3DDesktop)).
+  One for both locations goes in both rows. The app shows it after the program;
+  the bulletin prints it Chinese beside English, unnumbered. A selected cell
+  shows this as help text, which **Create Word Doc…** puts on the column
+  (`WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT`).
+- It's machine-translated into the app's languages
+  ([how and why](../feature_designs/announcements.md#its-machine-translated-into-every-language)),
+  and a line typed in Chinese prints as typed. Check names in the Google Doc
+  before printing, since "Wong" can come out as 黃 or 王; the app keeps the
+  machine's version. Anyone can read it in the app, so leave out private
+  details, such as health news, addresses or phone numbers, as the help says.
+- Chinese in the title, hymn, and announcement columns here prints exactly as
+  typed. A character the bulletin's Chinese
   font lacks, such as most Simplified-only characters, prints in the fallback
   font (see [Type](#type)). The Chinese Bible reference isn't typed: it's built
   from the English one.
@@ -281,6 +302,12 @@ Rules:
   blank, `TBD`, or has a passage it can't read, such as a misspelled book, a
   chapter the book doesn't have, or a bare `18` after a comma (#622). Write
   `John 3:16; John 3:18` instead.
+  - **The book may be in English or Chinese,** written in full or short, with
+    or without a space before the chapter, and with a Chinese keyboard's
+    full-width `：` and digits: `创50：19-20`, `創世記 50:19-20`, `Gen 50:19-20`
+    and `1 Cor 13:4` all work. The printed bulletin reads the same names and
+    short forms as the app's Bible reader (`PRINTED_BIBLE_BOOK_NAMES`, from the
+    app's `BIBLE_BOOK_NAMES` and `BIBLE_BOOK_ABBREVIATIONS`; #751).
 - `Sabbath School Hymn 1` to `3` each hold one opening hymn, typed in either
   language as a number, a title, or both, such as `第12首 讚美上帝大君王`,
   `AH 73 Holy, Holy, Holy`, or `還要等多久`. Chinese text or a bare number is
@@ -294,7 +321,10 @@ Rules:
   ready to copy into any of the hymn cells.
 - `Special Music Title` is the piece performed. Who performs it stays in the
   `Sabbath Calendar`'s `Special Music`, which is a Queens column, so Brooklyn's
-  piece shows with `TBD` for its performer.
+  piece shows with `TBD` for its performer. A piece typed in both languages,
+  `中文 (English)` or `English (中文)`, prints Chinese over English, split as
+  the hymn cells are (#751); the app shows it as typed. The same rule applies:
+  use parentheses only for the other language's title.
 - The week's Sabbath School lesson needs no column. Both bulletins read its
   title from the Adventech lesson catalog: the adult lesson whose week (Sabbath
   to Friday) ends the day before that Sabbath, since the class discusses the
@@ -717,6 +747,8 @@ be treated as public.
   pinyin alias resolves to the dictionary's canonical English/Chinese row; it
   does not create a new person or alter the digital API.
 
+### Machine translation
+
 The API machine-translates three schedule metadata fields (`Special Remark`,
 `Tithe Purpose`, and `Pastor Travel`) from English into Traditional Chinese
 (`zh-TW`), Simplified Chinese (`zh-CN`), and Spanish (`es`), returned in
@@ -727,6 +759,11 @@ Special Remark banner shows the translation only. This path must not be used
 for Bible text, Bible references, names, hymns, or sermon titles. How it works
 in detail is in
 [Offline bulletin translation](../feature_designs/offline_bulletin_translation.md#current-behavior).
+
+The `Weekly Data` announcements are machine-translated into the languages each
+line wasn't typed in (`translateBulletinAnnouncements_`), names and all; how and
+why is in
+[Announcements](../feature_designs/announcements.md#its-machine-translated-into-every-language).
 
 The printed Brooklyn bulletin's English Sabbath Encouragement is a labeled
 machine translation from the Chinese original (no original English exists), with
@@ -745,7 +782,8 @@ Chinese scripts on purpose (#565):
   Sabbath Encouragement. The bulletin is formal, and most of the people who read
   it on paper are older members. Younger readers mostly use the app, which shows
   either script. What staff type (names, titles, announcements) prints as
-  typed, in either script.
+  typed, in either script. An announcement typed in another language is
+  machine-translated into Traditional.
 - **Staff-facing text is in English and Simplified Chinese.** That covers the
   Create bulletin dialog, alerts, error messages, cell notes, and column help.
   The people who run the bulletin read Simplified. The text uses the terms in
@@ -780,6 +818,12 @@ preview surface, not the canonical release channel.
   gets a **Search YouTube** button instead (see
   [Bulletin hymn resolution](../feature_designs/bulletin_hymn_resolution.md)).
 - Brooklyn uses the label `Sabbath Encouragement`, not `Sabbath Message`.
+- After the worship program, an **Announcements** section shows the location's
+  `Weekly Data` announcement in the reader's language
+  (`getBulletinAnnouncements`), with another language where a translation is
+  missing (#562). A location with none has no section. Announcements don't
+  count as a location's content, so alone they don't hide Brooklyn's
+  joint-service note.
 - The bulletin doesn't link to the master spreadsheet, which only church
   accounts can open (#553).
 - Every blank content field displays `TBD`, except the Hymn of Praise and Hymn
@@ -859,7 +903,13 @@ needed. It opens a staff dialog that:
    verse is blank or can't be read, a red note above **Preview** says why (and,
    for one it can't read, how to write it), and **Preview** stays off. To change
    it, close the dialog, edit `Weekly Data`, and open the dialog again;
-6. optionally accepts printed announcements; and
+6. fills in that Sabbath and location's `Weekly Data` announcement, as the app
+   shows it, under **+ Add announcement**, with an English and a Chinese box
+   (#562). The operator can change or remove it, or add another (two or more
+   print numbered), for this print only: nothing is saved, and the app keeps
+   showing `Weekly Data`'s. A side left
+   blank, or one whose other side was changed, is machine-translated when the
+   Doc is made; and
 7. in step 3, below where **Preview ready** appears, makes the print version of
    the week's Doc. See [Printing the final version](#printing-the-final-version).
 
@@ -872,7 +922,7 @@ character in the fallback font), and that step 3's .docx fixes it, so nobody
 shortens a bulletin that only runs long in the preview. Step 3 opens with the one tip that changes the printout, in a large
 highlighted note: "Mac preferred: font looks better", over a smaller "Open in
 Microsoft Word or free LibreOffice." **⬇ Download .docx** shows on the right,
-under **Make .docx**. Announcements start with just **+ Add announcement**.
+under **Make .docx**.
 There's no Cancel or Close button: Google's X closes the dialog, as in the
 app's popups.
 
@@ -904,12 +954,13 @@ Before #558 the generator also made a PDF. If one was made for the same date and
 location, making the Doc again moves that PDF to Drive Trash, so it can't be
 mistaken for the edited Doc.
 
-The Doc IDs, and each week's printed announcements, are Script Properties by
-Sabbath. The project settings page can manage only 50 properties by hand, so
-after each Doc is made the generator deletes these, and the PDF IDs from before
-#558, for Sabbaths more than four weeks past (#622). A reprint of an older week
-makes a new Doc. The Docs and PDFs themselves stay in Drive, and no other Script
-Property is touched.
+The Doc IDs are Script Properties by Sabbath. The project settings page can
+manage only 50 properties by hand, so after each Doc is made the generator
+deletes these, and the PDF IDs from before #558, for Sabbaths more than four
+weeks past (#622). Until #562 the dialog saved each week's announcements there
+too (`PRINTED_ANNOUNCEMENTS_<date>`); the next Doc deletes any left, whatever
+their week. A reprint of an older week makes a new Doc. The Docs and PDFs
+themselves stay in Drive, and no other Script Property is touched.
 
 ### Page and fold order
 
@@ -1142,7 +1193,10 @@ about 14 points of the worship column.
 Printed worship tables have separate Chinese and English reference lines. A value
 such as `John 3:14-17` becomes a Chinese book reference such as
 `約翰福音 3:14–17` and a separate English `John 3:14–17`; the English reference
-must not be duplicated in the Chinese slot.
+must not be duplicated in the Chinese slot. The worship program's Bible Reading row
+only points to the passage, so it has no translation names. The Queens Today's
+Verse box quotes the text, so it adds them: `John 3:14–17 (BSB)` and
+`約翰福音 3:14–17（和合本）` (#751).
 
 The printed renderer uses the deterministic book map for references and the
 configured HelloAO Bible API for Bible text. Bible text and references must never
@@ -1281,7 +1335,8 @@ changes the URL and requires a coordinated mobile-app update.
 | Symptom | Likely cause | Corrective action |
 | --- | --- | --- |
 | App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
-| **Create Word Doc…** says Weekly Data has no Bible Verses, or can't read them | The Sabbath's `Weekly Data → Bible Verses` cell for that location is blank, `TBD`, or has a passage the parser can't read | Close the dialog, write each passage as `Book chapter:verse` with `;` between them, then open the dialog again. The app shows the same verse |
+| **Create Word Doc…** says Weekly Data has no Bible Verses, or can't read them | The Sabbath's `Weekly Data → Bible Verses` cell for that location is blank, `TBD`, or has a passage the parser can't read | Close the dialog, write each passage as `Book chapter:verse`, in English or Chinese, with `;` between them, then open the dialog again. The app shows the same verse |
+| A dialog says **PERMISSION DENIED** (or `PERMISSION_DENIED`), often on a phone | The browser is signed in to more than one Google account, and Google ran the dialog's request as its first account, not the one with the sheet open. The dialog puts this explanation above the error (#751) | Open the sheet in an incognito (private) window signed in only to the church account. Or sign out of every account and sign in to the church account first |
 | API returns `No schedule found for …`, or the app says the schedule isn't set | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag, unless it was renamed before the spreadsheet was opened after the deploy). Apps from 1.6.0 get the bulletin without its schedule instead of the error | Restore the tab and a matching Date row |
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |

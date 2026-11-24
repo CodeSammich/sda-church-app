@@ -3,6 +3,8 @@
 The app's web/PWA preview and native clients depend on public APIs, media hosts, hymn
 directories, and user-facing external destinations. `.github/workflows/external-dependency-monitor.yml`
 checks them daily at 5:17 PM America/New_York time and can also be run manually.
+The [status page](status-page.md) checks the audio hosts, the bulletin API and a
+few other services every hour, but only that each one answers.
 
 ## Traffic policy
 
@@ -17,7 +19,13 @@ layers instead:
 
 This means the 1,189-file audio collections (Mandarin and Cantonese CUV, and Spanish
 RV1909) each receive three sampled media requests per host per daily run, not 1,189
-requests. Project Gutenberg receives three sampled
+requests. HelloAO's copies of the two Chinese recordings, which the app plays first
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)),
+share three samples a day between them, its copy of the Spanish one, played first
+too ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), gets three, and the English narrators' recordings get three
+more. The printed bulletins fetch their verses from HelloAO's text API, so the
+monitor reads one chapter there each day, in English (BSB) and Chinese (CUV), as the
+bulletin's Apps Script does. Project Gutenberg receives three sampled
 public-domain book requests, and EGW Writings receives three sampled book requests
 for each supported edition language. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly
@@ -25,6 +33,11 @@ downloadable and dated before 1928 (see [Internet Archive sources](../LEGAL.md#i
 HathiTrust receives one catalog request per Chinese library edition, which checks
 that the volume is still public domain and in full view; its page viewer turns
 away scripts, so the monitor reads the catalog record instead.
+The free originals of the Chinese Union Mission books that English and Spanish
+readers open (#703), on Amazing Facts in both languages and on the Christian
+Classics Ethereal Library, receive three sampled page requests a day between
+them. Each must still be at its own address, since a page that moves may
+redirect elsewhere on the site.
 Fixed app destinations and small API
 contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media

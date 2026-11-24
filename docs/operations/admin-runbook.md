@@ -26,6 +26,7 @@ does and what still needs a person.
 - [iOS key screens builds](#ios-key-screens-builds)
 - [Dependabot pull requests](#dependabot-pull-requests)
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
+- [Status page alerts](#status-page-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
 - [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
@@ -64,6 +65,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain, Expo doctor) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. The three monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| A status page outage | The issue opens in the `sda-church-app-status` repository, never this one. Watch that repository with **Watch → Custom → Issues**; see [Status page alerts](#status-page-alerts). |
 | A yearly checkup, Workspace backup, or bulletin changeover issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
@@ -404,7 +406,8 @@ are copied as they are.
 **How the address works:** a Cloudflare redirect rule sends `app.nyccsda.org` to that
 GitHub Pages address with a permanent (301) redirect, keeping the path and any query.
 So `app.nyccsda.org/download?stay` becomes `…/sda-church-app/download?stay`. Both stores
-accept a redirect. Two similar addresses are not the app website:
+accept a redirect. One rule comes before it: `app.nyccsda.org/status` goes to the
+[status page](status-page.md#the-short-address). Two similar addresses are not the app website:
 
 - `nyccsda.org` is the church's main website, which forwards to adventistchurch.org, so
   `nyccsda.org/sda-church-app/…` and `nyccsda.org/privacy-policy.html` don't work.
@@ -428,21 +431,31 @@ Links, needs `app.nyccsda.org` to serve the site itself instead of redirecting, 
 Apple doesn't follow redirects for the file that enables it. That means setting
 `app.nyccsda.org` as the GitHub Pages custom domain, pointing a Cloudflare CNAME at
 `new-york-chinese-seventh-day-adventist.github.io` in place of the redirect rule, and
-changing the web build's base path from `/sda-church-app` to `/`.
+changing the web build's base path from `/sda-church-app` to `/`. The
+[status page's short address](status-page.md#the-short-address) then needs another home.
 
 ## The Cloudflare account and domain
 
 `nyccsda.org` is registered through Cloudflare Registrar, and Cloudflare also runs its
-DNS and the `app.nyccsda.org` redirect. The renewal, about $10 a year, is the app's only
+DNS and the `app.nyccsda.org` redirect. The renewal, about $11 a year as of 2026, is the app's only
 recurring cost, so the account keeps a card on file. If a renewal fails and the domain
 lapses, the privacy policy, support, and download pages above go down with it.
 
-**Make the card safe to leave on file:**
+**Make the card safe to leave on file.** It follows the rule for
+[every card on file](../architecture.md#payment-methods):
 
 - **Use a credit card, not a debit card,** so a wrong or unauthorized charge can be
   disputed with the bank before any church money leaves the account.
-- **Better still, use a virtual card number** locked to Cloudflare with a yearly limit a
-  little above the renewal, such as $15. Anything larger is declined.
+- **Give it a hard limit, about $200–300 for now.** Ask the bank to decline any charge
+  over the limit. Not opting in to over-limit charges isn't enough: it only waives
+  the fee, and the bank may still approve the charge
+  ([Regulation Z §1026.56](https://www.consumerfinance.gov/rules-policy/regulations/1026/56/)). Use a card kept only for
+  the church's paid services, such as an employee card or a virtual card number
+  with its own limit, so the limit is the card's own. The limit covers ten years of
+  the domain at its current price, about $110 today, plus a buffer for subscriptions
+  the church may add ([how it's set](../architecture.md#payment-methods)). Don't set
+  it just above one year's renewal: a price rise would be declined, and the domain
+  could lapse.
 - **Turn on the bank's alert for every charge,** so anything other than the yearly
   renewal is noticed right away.
 - **Keep the card current and auto-renew on.** Don't remove the card: the domain
@@ -460,7 +473,8 @@ lapses, the privacy policy, support, and download pages above go down with it.
 
 - **Every administrator is a super administrator,** as on every system, so losing one
   login doesn't lock the church out. The card limit above keeps that safe: even a
-  stolen login can't run up charges.
+  stolen login can't charge more than the limit, since the bank declines anything
+  over it.
 - **Every administrator uses two-factor login** with an authenticator app, passkey, or
   security key, not text messages, and keeps their own backup codes somewhere they'd
   still have if their phone died.
@@ -472,6 +486,10 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - Each administrator logs in, which proves the backups work. Remove anyone who has left.
 - The account's billing page lists only the domain registration.
 - The card on file hasn't expired, and auto-renew is on.
+- The card's hard limit still covers ten years of the domain at this year's price,
+  plus a year of every other subscription on the card, with a buffer. If the price
+  or the subscriptions changed, re-set it
+  ([how it's set](../architecture.md#payment-methods)).
 - The Free plan still covers everything in the next section.
 
 ### Why only the domain costs money
@@ -479,8 +497,10 @@ lapses, the privacy policy, support, and download pages above go down with it.
 The card pays for one thing: registering `nyccsda.org`. Cloudflare Registrar charges
 only what the registry and ICANN charge it, with no markup
 ([Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)). That's about
-$10 a year for a `.org`, or about $100 paid once for ten years. Everything else the church
-uses runs on Cloudflare's Free plan, which has no usage charges:
+$11 a year for a `.org` as of 2026: the registry raised its price to $11.00 on June 1,
+2026 ([Domain Name Wire](https://domainnamewire.com/2026/03/12/org-prices-to-increase-on-june-1/)). Ten years, the longest
+Cloudflare renews for ([Renew domains](https://developers.cloudflare.com/registrar/account-options/renew-domains/)), cost
+about $110 paid at once. Everything else the church uses runs on Cloudflare's Free plan, which has no usage charges:
 
 - **DNS** for `nyccsda.org`, including the records for the church's Google Workspace
   email and for Google Search Console;
@@ -518,6 +538,8 @@ check once a year, each item linked to the doc that explains it:
 - the Faith Comes By Hearing key, kept in the IT Admin shared drive;
 - the Apple dates and Google Play's contact details and declarations;
 - the Workspace nonprofit terms;
+- HelloAO, the app's main Bible source: its terms, and the recordings the app plays
+  from it;
 - the scheduled workflows.
 
 Work through it, note anything that changed in a comment, and close it. It's due
@@ -537,10 +559,11 @@ To add a yearly task, add it to
 ## Google Workspace backups
 
 Every three months, a super administrator exports all of the church's Google Workspace
-data (every account's email, Drive files, calendars, and the rest) and keeps a copy off
-Google. Google's own copies protect the data from failed hardware, but not from losing
-the account itself: suspended by mistake, taken over, or emptied by someone with access.
-This copy survives that.
+data (every account's email, Drive files, calendars, and the rest) and keeps two copies
+off Google, on two separate drives. Google's own copies protect the data from failed
+hardware, but not from losing the account itself: suspended by mistake, taken over, or
+emptied by someone with access. These copies survive that, and keeping them on two
+drives means one failed, lost, or damaged drive doesn't take the backup with it.
 
 On the first Monday of January, April, July, and October, **Workspace Backup Reminder**
 (`workspace-backup-reminder.yml`) opens an issue titled **Google Workspace backup,
@@ -597,12 +620,13 @@ screen offers a free trial or asks for billing, close it: the download needs nei
    **Actions → View Archive**. Note the bucket's name (the part after `gs://`) and the
    export's folder, named for when it started, such as `20270104T153000Z`.
    `Status Report.html` sits next to the folder.
-5. **Make a folder for it** on the backup drive, named for the export date, such as
-   `Backups/Church Google Workspace for Nonprofits/Jan 4 2027 export backup`. Use a
+5. **Make a folder for it** on the first backup drive, named for the export date, such
+   as `Backups/Church Google Workspace for Nonprofits/Jan 4 2027 export backup`. Use a
    drive other than the computer's system drive, so the backup outlives it, and not a
    folder that syncs to a cloud account. The October 2026 export was about 19 GB;
-   leave room for at least three. The export holds every account's email and files,
-   so guard the drive as you would the accounts themselves.
+   leave room for at least three on each backup drive. The export holds every
+   account's email and files, so guard both drives as you would the accounts
+   themselves.
 6. **Download** the export's folder and its status report into it, with the command
    below on one line. Replace `BUCKET` and `EXPORT_FOLDER`, and replace
    `BACKUP_FOLDER` with the full path of the folder from step 5, written with forward
@@ -616,18 +640,34 @@ screen offers a free trial or asks for billing, close it: the download needs nei
    `gcloud` checks each file against Google's copy as it saves it. If the download
    stops, run the same command again: `--no-clobber` skips the files already saved.
 
+### Copying it to the second drive
+
+Copy the whole dated folder from step 5 onto the second backup drive, into the same
+`Backups/Church Google Workspace for Nonprofits` folder, for example by dragging it
+there in File Explorer. Then each export is on two separate drives.
+
+- **The second drive is an external one,** a different physical drive from the first,
+  and not the computer's system drive.
+- **Keep it unplugged between backups, and stored in another room or building,** so
+  one fire, theft, power surge, or ransomware attack can't reach both copies. Plug it in
+  only to copy an export and check it.
+- **Guard it like the first:** it holds the same email and files.
+
 ### Checking the copy
+
+Check both copies, the one on each drive:
 
 - `gcloud storage du --summarize "gs://BUCKET/EXPORT_FOLDER"` prints the export's size
   in bytes. The `EXPORT_FOLDER` inside your backup folder (not the backup folder itself,
   which also holds `Status Report.html`) must be exactly that many bytes. In Windows,
   that's its **Properties → Size**, not **Size on disk**.
 - No file in the folder ends in `_.gstmp`. Those are downloads that didn't finish; run
-  the download again.
+  the download again. Then delete the folder on the second drive and copy it
+  again.
 
 Then comment on the issue with the export's date and size, and close it. Keep the older
-exports while the drive has room. When it runs low, delete the oldest, but keep the
-two newest.
+exports while the drives have room. When one runs low, delete its oldest export, but
+keep the two newest on each drive.
 
 ## Native app binaries
 
@@ -836,7 +876,7 @@ into `main`, and can be run manually on any branch.
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(96 screenshots of 40 screens in all), and checks their text with
+(142 screenshots of 63 screens in all, then their 90 iPad shots), and checks their text with
 `scripts/check-screens.cjs`. Two of them check that Bible audio plays and that a
 children's lesson opens in Quick Look (#551). If one fails, the group's step summary
 says whether the network was the cause. If it was, run the failed jobs again; if not,
@@ -940,6 +980,15 @@ It also opens **[changeover] Retire the bulletin API's … changeover**, once, w
 no app older than a changeover's version has asked the bulletin API for 14 days. It isn't an
 alert and doesn't close itself: do the cleanup it describes. See
 [Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers).
+
+## Status page alerts
+
+**Repository:** `sda-church-app-status`, where Upptime checks the audio hosts,
+the bulletin API and a few other services every hour.
+
+It opens an issue in that repository when a service is down and closes it when
+the service is back. Its issues never appear in this repository. See
+[Status page](status-page.md#alerts) for what to do when an outage lasts.
 
 ## Store toolchain monitor alerts
 
@@ -1236,8 +1285,10 @@ Bible chapters to check what only a real player shows:
   no crash in the log. The key screens open every screen by deep link and never
   press a tab, so they missed 1.7.0's first test builds crashing on every tab press.
 - **Primary host down:** a local DNS server on the runner makes
-  `assets.adventistconnect.org` unreachable, and Genesis 1 must play from the
-  Internet Archive.
+  `audio.bible.helloao.org` and `assets.adventistconnect.org` unreachable, and
+  Genesis 1 must play from the Internet Archive, its third copy ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)).
+  The hosts stay blocked for the whole run, so every scenario plays Mandarin:
+  Cantonese and Spanish have no copy past those two ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)).
 - **Next chapter with the screen off:** Psalm 117 moves on to Psalm 118 by itself,
   the screen stays off, and the media foreground service stays up.
 - **Dead zone with the screen off:** Play offline, wait 90 seconds, then reconnect.
@@ -1302,7 +1353,8 @@ exits.
 | Apple distribution certificate and provisioning profile | `production` Environment secrets | Both expire every year, and the Apple fee waiver is reconfirmed at each membership renewal. See [Yearly Apple renewals](app-store-setup.md#yearly-apple-renewals). |
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
 | App Store Connect API key (`APP_STORE_CONNECT_API_*`) | `store-upload` Environment secrets | It doesn't expire. If it leaks, revoke it under **Users and Access → Integrations** in App Store Connect, create a new one with the **Developer** role, and replace the three secrets. |
-| Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
+| Status page GitHub App key (`GH_APP_PRIVATE_KEY`) | Actions secret in the `sda-church-app-status` repository | It doesn't expire. If it may have leaked, generate a new key, replace the secret, and delete the old key; see [The GitHub App](status-page.md#the-github-app). |
+| Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. Its replacement keeps the same hard limit. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
 | Faith Comes By Hearing Bible Brain API key | The church's IT Admin shared drive, which only certain administrators can open | Not used yet ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). Never put it in the app, the repository, an issue, a pull request, or a chat. If it may have leaked, ask FCBH for a new one and replace the stored copy. |
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 

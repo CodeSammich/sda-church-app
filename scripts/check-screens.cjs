@@ -14,8 +14,9 @@
  * - a screen's own `mustShowLines` in test/screens/screens.json match the start
  *   of some line, which catches a verse number split across two lines (a rule
  *   with `minLeft` also needs the line to start that far across, for
- *   right-aligned text, and one with `maxTop` no farther down than that, such
- *   as a popup's title), and its
+ *   right-aligned text, one with `maxTop` no farther down than that, such
+ *   as a popup's title, and one with `above` higher up than the first line
+ *   another pattern matches, such as a verse's footnote above its Greek), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
  *   such as the Bible header's names, required on the Android phone at 100% only;
  * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
@@ -24,7 +25,8 @@
  * - on the iPad (#324), a page's text stays in the centred content column,
  *   no text touches the screen's left or right edge, and a popup is no wider
  *   than POPUP_MAX_WIDTH, measured from its surface's colour, since on iOS a
- *   popup could fill the screen with its text still in the middle. A screen
+ *   popup could fill the screen with its text still in the middle, except one
+ *   marked `fullScreenPopup`, which fills it on purpose (#750). A screen
  *   with `wideContent`, such as a web page the app shows, or the Library, whose
  *   shelves scroll sideways to the screen's edge, skips the first two;
  * - at the iPad's split window widths on Android, no Bible card control
@@ -263,11 +265,13 @@ const checkShot = (shot, lines) => {
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {
-    // A rule is a regular expression, or { line, minLeft, maxTop } for a line
-    // that must also start at least minLeft of the way across, such as
+    // A rule is a regular expression, or { line, minLeft, maxTop, above } for a
+    // line that must also start at least minLeft of the way across, such as
     // right-aligned text, or have its top no more than maxTop of the way down,
-    // such as a popup's title, which sits high when the popup is centred.
-    const { line: pattern, minLeft, maxTop } = typeof rule === 'string' ? { line: rule } : rule;
+    // such as a popup's title, which sits high when the popup is centred, or
+    // sit higher than the first line matching `above`, which must show too,
+    // such as a verse's footnote above its Greek (#745).
+    const { line: pattern, minLeft, maxTop, above } = typeof rule === 'string' ? { line: rule } : rule;
     const matches = lines.filter((line) => new RegExp(pattern, 'u').test(line.text.trim()));
     if (!matches.length) {
       problems.push(`no line matches /${pattern}/`);
@@ -281,6 +285,13 @@ const checkShot = (shot, lines) => {
       problems.push(
         `/${pattern}/ is ${Math.round(highest * 100)}% of the way down, not at most ${Math.round(maxTop * 100)}%`,
       );
+    } else if (above !== undefined) {
+      const lower = lines.filter((line) => new RegExp(above, 'u').test(line.text.trim()));
+      if (!lower.length) {
+        problems.push(`no line matches /${above}/`);
+      } else if (!matches.some((line) => line.box[1] < Math.min(...lower.map(({ box }) => box[1])))) {
+        problems.push(`/${pattern}/ is not above /${above}/`);
+      }
     }
   }
   for (const rule of forPlatform(shot.mustNotShowLines, shot.platform)) {
@@ -300,11 +311,18 @@ const secondsOf = (match) => Number(match[1]) * 60 + Number(match[2]);
  * `mustAdvance`, a regular expression whose first two groups are its minutes
  * and seconds: the audio player's elapsed time, left of its length.
  */
+// The status bar's clock reads as a time too, and on the iPad in landscape it's
+// the leftmost line, "9:41 AM Sun Nov 22" (#739). Its top is within the top 3%
+// of the screen on the iPhone (0.026) and the iPad (0.008), so a time must start
+// below this.
+const BELOW_STATUS_BAR_CLOCK = 0.05;
+
 const checkAdvance = (shot, lines, laterLines) => {
   if (!shot.mustAdvance || !shot.later) return [];
   const pattern = new RegExp(shot.mustAdvance, 'u');
   const timeIn = (read) =>
     [...(read || [])]
+      .filter((line) => line.box[1] >= BELOW_STATUS_BAR_CLOCK)
       .sort((a, b) => a.box[0] - b.box[0])
       .map((line) => pattern.exec(line.text.trim()))
       .find(Boolean);
@@ -455,7 +473,9 @@ const surfaceWidth = async (file, color = POPUP_SURFACE, { tolerance = 10, gap =
  * dimmed page is too close to the surface's colour.
  */
 const checkPopupWidth = async (shot, file) => {
-  if ((shot.platform !== 'ipad' && !androidWindow(shot)) || shot.wideContent || !showsPopup(shot) || shot.settings.theme === 'dark') {
+  // A popup marked fullScreenPopup fills the screen on purpose, as the saved
+  // verses do (#750); the column and edge checks still apply to it.
+  if ((shot.platform !== 'ipad' && !androidWindow(shot)) || shot.wideContent || shot.fullScreenPopup || !showsPopup(shot) || shot.settings.theme === 'dark') {
     return [];
   }
   const width = widthInPoints(shot);
@@ -543,6 +563,7 @@ const planChecks = (config, platform = 'ios') =>
       tabs: screen.tabs,
       ...(screen.wideContent ? { wideContent: true } : {}),
       ...(screen.popup ? { popup: true } : {}),
+      ...(screen.fullScreenPopup ? { fullScreenPopup: true } : {}),
       ...pointsFor(config, platform),
       mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
@@ -570,6 +591,7 @@ const planSplitChecks = (config, width) =>
       tabs: screen.tabs,
       ...(screen.wideContent ? { wideContent: true } : {}),
       ...(screen.popup ? { popup: true } : {}),
+      ...(screen.fullScreenPopup ? { fullScreenPopup: true } : {}),
       mustShowLines: forWindow.mustShowLines,
       mustNotShowLines: joinRules(screen.mustNotShowLines, forWindow.mustNotShowLines),
     };

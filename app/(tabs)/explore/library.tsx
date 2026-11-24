@@ -1,5 +1,6 @@
 import { LibraryFeaturedCarousel } from '@/components/LibraryFeaturedCarousel';
 import { LibraryShelfRow } from '@/components/LibraryShelfRow';
+import { LightStatusBar } from '@/components/LightStatusBar';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
@@ -17,7 +18,7 @@ import { useLibraryShelfBooks } from '@/features/library/useLibraryShelfBooks';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import { router, Stack, useIsFocused } from 'expo-router';
 import { useCallback, useContext, useMemo } from 'react';
-import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const copy = {
@@ -123,7 +124,7 @@ export default function LibraryHubScreen() {
           },
         } as any}
       />
-      {isFocused && isCarouselBehindStatusBar && <StatusBar barStyle="light-content" />}
+      {isFocused && isCarouselBehindStatusBar && <LightStatusBar />}
       <ScrollView
         style={navigationStyles.container}
         contentContainerStyle={styles.scrollContent}

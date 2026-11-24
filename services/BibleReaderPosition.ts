@@ -90,3 +90,26 @@ export function isSameChapter(a: BibleReaderLocation, b: BibleReaderLocation) {
 export function isNewReaderLink(signature: string | null, handledSignature: string | null) {
   return signature !== null && signature !== handledSignature;
 }
+
+const chapterLoadKeys = new WeakMap<object, number>();
+let lastChapterLoadKey = 0;
+
+/**
+ * A key for each chapter the reader loads: the same for the same load, and a
+ * new one for every load, even of the same text. The reader keys the
+ * chapter's verses with it, so each load lays out new verse rows and every
+ * row reports where it sits. Rows kept from the last load report only if
+ * they moved, so after the reader forgets the last chapter's positions a
+ * linked verse, such as the widget's verse of the day, might never report,
+ * and the reader would give up scrolling to it (#742).
+ */
+export function getChapterLoadKey(chapter: object | null | undefined): number {
+  if (!chapter) return 0;
+  let key = chapterLoadKeys.get(chapter);
+  if (key === undefined) {
+    lastChapterLoadKey += 1;
+    key = lastChapterLoadKey;
+    chapterLoadKeys.set(chapter, key);
+  }
+  return key;
+}

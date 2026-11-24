@@ -15,6 +15,8 @@ const {
   writeAppStoreCopy,
   manifestPath,
   statusBarClear,
+  statusBarIcons,
+  CHECKS,
   looksBlank,
   looksLikeSplash,
   takeFinalShot,
@@ -41,11 +43,36 @@ describe('key screen list (test/screens/screens.json)', () => {
     }
   });
 
-  it('leaves out screens that show members’ names or photos', () => {
-    // The repository and its pull requests are public.
+  it('shows members’ pages only with made-up data, or with no one’s name in them (#456)', () => {
+    // The repository and its pull requests are public, and so are the runs'
+    // screenshots, the text read from them, and their downloads. In a
+    // key-screens build the bulletin and the Team page show made-up data
+    // (test/key-screens-fixtures.test.ts), and Fellowships and Sabbath
+    // Worship are written into the app, with no one's name in them;
+    // Fellowships shows the church building in place of its photos of
+    // members. Any other page with members on it stays out.
+    const allowed: Record<string, string> = {
+      'home/bulletin': 'made up',
+      'home/team': 'made up',
+      'home/fellowship': 'app/(tabs)/home/fellowship.tsx',
+      'home/worship': 'app/(tabs)/home/worship.tsx',
+    };
     for (const screen of config.screens) {
-      expect(screen.path).not.toMatch(/bulletin|team|fellowship|worship/);
+      const route = screen.path.split('?')[0];
+      if (!/bulletin|team|fellowship|worship|roster|member|leader|elder/.test(route)) continue;
+      expect({ path: screen.path, allowed: Object.hasOwn(allowed, route) }).toEqual({ path: screen.path, allowed: true });
     }
+    for (const file of Object.values(allowed).filter((value) => value.endsWith('.tsx'))) {
+      // Nothing from the network, a service, or the team's list.
+      expect({ file, reads: /fetch\(|@\/services\/|TeamData/.test(repoFile(file)) }).toEqual({ file, reads: false });
+      // Its photos show members' faces, so a key-screens build shows the
+      // church building in their place.
+      const photos = repoFile(file).match(/\buri: [^}]+/g) || [];
+      for (const photo of photos) expect({ file, photo }).toEqual({ file, photo: expect.stringMatching(/^uri: photo\(/) });
+    }
+    expect(repoFile('app/(tabs)/home/fellowship.tsx')).toMatch(
+      /const photo = \(url: string\) =>\s+process\.env\.EXPO_PUBLIC_KEY_SCREENS === '1' \? CHURCH_BUILDING_IMAGE_URL : url;/,
+    );
   });
 
   it('reproduces the iPhone bugs fixed in 0.42.0', () => {
@@ -61,7 +88,26 @@ describe('key screen list (test/screens/screens.json)', () => {
   });
 
   it('only uses checks the script knows', () => {
-    for (const shot of shots) for (const check of shot.checks) expect(check).toBe('statusBarClear');
+    for (const shot of [...shots, ...planCaptures(config, 'ipad')]) {
+      for (const check of shot.checks) expect(Object.keys(CHECKS)).toContain(check);
+    }
+    // Android's script knows only this one.
+    for (const platform of ['android', 'android-tablet']) {
+      for (const shot of planCaptures(config, platform)) {
+        for (const check of shot.checks) expect(check).toBe('statusBarClear');
+      }
+    }
+  });
+
+  it("checks the iPhone's status bar icons over the heroes and on Home (#733)", () => {
+    const checksOf = (name: string, platform = 'ios') =>
+      planCaptures(config, platform).find((shot: { name: string }) => shot.name === name)?.checks;
+    for (const name of ['library-default', 'library-dark', 'hymnal-selection-default', 'hymnal-default']) {
+      expect(checksOf(name)).toContain('lightStatusBarIcons');
+    }
+    for (const name of ['home-default', 'home-dark']) expect(checksOf(name)).toContain('themeStatusBarIcons');
+    expect(checksOf('library-default', 'android')).toEqual([]);
+    expect(checksOf('home-default', 'android')).toEqual([]);
   });
 
   it('gives every shot a stable, unique file name', () => {
@@ -104,6 +150,19 @@ describe('key screen list (test/screens/screens.json)', () => {
     expect(shotCost(shot)).toBe(shot.wait + RECORDS[shot.record].typical + 10 + 5);
     const lesson = shots.find((each: { name: string }) => each.name === 'sabbath-school-lesson-viewer-default');
     expect(shotCost(lesson)).toBe(lesson.wait + RECORDS[lesson.record].typical + 5);
+  });
+
+  it('asks a screen only for a state or section it knows, from its path (#456)', () => {
+    const screenFiles: Record<string, string> = { 'home/bulletin': 'app/(tabs)/home/bulletin.tsx' };
+    const asking = config.screens.filter((screen: { path: string }) => /[?&](state|section)=/.test(screen.path));
+    expect(asking.map((screen: { name: string }) => screen.name).sort()).toEqual(['bulletin-announcements', 'bulletin-load-failed', 'bulletin-program']);
+    for (const screen of asking) {
+      const [route, query] = screen.path.split('?');
+      for (const [key, value] of new URLSearchParams(query)) {
+        const reads = new RegExp(`getScreenshotState\\(param${key[0].toUpperCase()}${key.slice(1)}, \\[[^\\]]*'${value}'`);
+        expect({ path: screen.path, reads: reads.test(repoFile(screenFiles[route])) }).toEqual({ path: screen.path, reads: true });
+      }
+    }
   });
 
   it('opens only popups the screen can open from its path (#372)', () => {
@@ -370,6 +429,7 @@ describe('saved settings', () => {
       'constants/AppPreferences.ts',
       'services/ScreenshotRoute.ts',
       'constants/WhatsNew.ts',
+      'services/SavedVersesService.ts',
     ]
       .map(repoFile)
       .join('\n');
@@ -638,7 +698,7 @@ describe('key-screen groups', () => {
     }
   });
 
-  it('flags a group over 8 minutes of capture, as a reminder to prune its screenshots', () => {
+  it('flags a group over 9 minutes of capture, as a reminder to prune its screenshots', () => {
     // The 6-minute limit is a reminder, not a rule. When a group passes it,
     // first prune: drop variants that repeat what another shot already shows
     // (say, a dark or Chinese copy of a screen whose layout doesn't change),
@@ -650,9 +710,13 @@ describe('key-screen groups', () => {
     // 1.7.0: its release run took 37 minutes on worship-and-you, with the
     // iPad's shots after the iPhone's, against 24 on library, so Sabbath
     // School moved to library, whose iPhone shots then came to 7.5 minutes.
+    // Raised to 9 in #456, when home took Sabbath Worship and the bulletin
+    // that couldn't load: on the first run with them, 42935088042 on the
+    // fork, home's iPhone and iPad shots took 13 minutes, the fastest group,
+    // against 22.7 on worship-and-you, which had held them.
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 480 }).toMatchObject({ group, over: false });
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 540 }).toMatchObject({ group, over: false });
     }
   });
 
@@ -743,6 +807,48 @@ describe('status bar check', () => {
 
   it('ignores text that starts below the status bar', async () => {
     expect(await statusBarClear(await screenshot('below', { island: true, textAt: 190 }))).toBe(true);
+  });
+});
+
+describe('status bar icon check', () => {
+  const sharp = require('sharp');
+  const { mkdtempSync } = require('node:fs');
+  const { tmpdir } = require('node:os');
+  const { join } = require('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'icons-'));
+
+  // A 1320 × 2868 screenshot whose clock is four strokes in `clock`, over `behind`.
+  const screenshot = async (name: string, behind: string, clock: string) => {
+    const file = join(dir, `${name}.png`);
+    const strokes = [200, 230, 260, 285].map((left) => ({
+      input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="60"><rect width="12" height="60" fill="${clock}"/></svg>`),
+      left,
+      top: 60,
+    }));
+    await sharp({ create: { width: 1320, height: 2868, channels: 3, background: behind } })
+      .composite(strokes)
+      .png()
+      .toFile(file);
+    return file;
+  };
+
+  it('tells light icons over a dark hero from dark icons on a light page', async () => {
+    expect(await statusBarIcons(await screenshot('light', '#1d2226', '#ffffff'))).toBe('light');
+    expect(await statusBarIcons(await screenshot('dark', '#f3e6df', '#000000'))).toBe('dark');
+  });
+
+  it("fails a hero whose dark clock can't be read", async () => {
+    const file = await screenshot('unreadable', '#1d2226', '#000000');
+    expect(await statusBarIcons(file)).toBeNull();
+    expect(await CHECKS.lightStatusBarIcons(file)).toBe(false);
+  });
+
+  it("expects the theme's icons on Home", async () => {
+    const light = await screenshot('theme-light', '#1d2226', '#ffffff');
+    const dark = await screenshot('theme-dark', '#f3e6df', '#000000');
+    expect(await CHECKS.themeStatusBarIcons(light, { settings: { theme: 'dark' } })).toBe(true);
+    expect(await CHECKS.themeStatusBarIcons(dark, { settings: { theme: 'light' } })).toBe(true);
+    expect(await CHECKS.themeStatusBarIcons(dark, { settings: { theme: 'dark' } })).toBe(false);
   });
 });
 
@@ -1074,13 +1180,17 @@ describe('iPad key screens (#324)', () => {
     expect(ipadNames).toEqual(expect.arrayContaining(['bible-cuv-landscape-zh', 'bible-cuvs-landscape-zh-cn', 'bible-spanish-landscape-es']));
   });
 
-  it("flags a group's iPad shots over 7 minutes of capture, the same reminder to prune", () => {
+  it("flags a group's iPad shots over 8 minutes of capture, the same reminder to prune", () => {
     // Measured 20 seconds a shot on the 13-inch iPad, against the iPhone's 14
     // (#324), which shotCost counts. Each runner takes them after its iPhone
-    // shots, so the slowest group's total sets the release PR's wait.
+    // shots, so the slowest group's total sets the release PR's wait. Raised
+    // from 7 minutes to 8, the iPhone's, in #456, when worship-and-you took
+    // the bulletin and Sabbath Worship: on 1.8.0's release run, 42843605635,
+    // its iPhone and iPad shots took 12.5 minutes, against 18.4 to 20.5 on the
+    // other groups.
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(ipad, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 420 }).toMatchObject({ group, over: false });
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 480 }).toMatchObject({ group, over: false });
     }
     expect(shotCost(ipad[0])).toBe(shotCost({ ...ipad[0], platform: 'ios' }) + 5);
   });
@@ -1517,10 +1627,11 @@ describe('Android key screens (#372)', () => {
   });
 
   it('keeps every Android group within the same reminder to prune', () => {
-    // 8 minutes, as on the iPhone, since Sabbath School moved to library (1.7.0).
+    // 9 minutes, as on the iPhone, since home took Sabbath Worship and the
+    // bulletin that couldn't load (#456).
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(android, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, over: seconds > 480 }).toEqual({ group, over: false });
+      expect({ group, over: seconds > 540 }).toEqual({ group, over: false });
     }
   });
 

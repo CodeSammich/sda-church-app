@@ -52,7 +52,7 @@ only open in the browser. It also shows the Bible audio's fallbacks and where th
 church's copies came from; the [Church media](#church-media) and
 [Third-party APIs and websites](#third-party-apis-and-websites) tables give the details.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese and Spanish Bible audio played only from the church's copies, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, with the Hebrew and Greek for the verse popup, and English Bible audio from HelloAO; the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin, Cantonese and Spanish Bible audio played from HelloAO first and the church's copies next, Mandarin then falling back to the Internet Archive and then Audio Power, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, with the Hebrew and Greek for the verse popup, and English Bible audio from HelloAO; the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
@@ -83,9 +83,9 @@ and may not be possible, so protect them above everything else.
 
 ### Cloudflare
 
-- **Registrar and DNS** for `nyccsda.org`. The domain costs about $10 per year and
-  can be registered up to 10 years at a time. Keep an active payment method on
-  file for renewal. Renewal notices go to the Super Administrators.
+- **Registrar and DNS** for `nyccsda.org`. The domain costs about $11 a year as of 2026 and
+  can be registered up to 10 years at a time. Keep a payment method on file for
+  renewal: a credit card with a hard limit ([Payment methods](#payment-methods)). Renewal notices go to the Super Administrators.
 - **DNS** points the domain's email at Google Workspace, and a Cloudflare redirect
   rule sends `app.nyccsda.org` to the [app website](#website-appnyccsdaorg) on
   GitHub Pages. It also holds the DNS TXT record that proves the church owns
@@ -115,8 +115,9 @@ and may not be possible, so protect them above everything else.
 - Where a service still signs in with an account outside the Workspace, move access
   to a `nyccsda.org` account or the `technology@nyccsda.org` group wherever the
   service allows it.
-- A super administrator regularly exports all of the Workspace's data and keeps a
-  copy off Google, in case the account itself is ever lost; see
+- A super administrator regularly exports all of the Workspace's data and keeps
+  two copies off Google, on two separate drives, in case the account itself is ever
+  lost; see
   [Google Workspace backups](operations/admin-runbook.md#google-workspace-backups).
 
 > [!IMPORTANT]
@@ -165,6 +166,9 @@ and may not be possible, so protect them above everything else.
   - bulletin [QR code](operations/admin-runbook.md#bulletin-qr-codes) generation into
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
+  - a [status page](operations/status-page.md) that checks the audio hosts, HelloAO's
+    Bible text, the bulletin API and a few other services every hour, from its own
+    repository, `sda-church-app-status`, where its outage issues stay;
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
   - a weekly [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts)
@@ -294,9 +298,9 @@ on them directly; see [Third-party APIs and websites](#third-party-apis-and-webs
 
 | Media | Primary | Other copies |
 | --- | --- | --- |
-| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app falls back to the Internet Archive, then Audio Power |
-| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, because WordProject's terms don't allow playing from its servers without its approval |
-| Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, for the same reason |
+| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one, then the Internet Archive's, then Audio Power's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)) |
+| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and never WordProject's servers, which its terms don't allow without its approval |
+| Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect, after HelloAO's copy | Google Drive backup; the app plays HelloAO's copy first, then this one ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), and never WordProject's servers, for the same reason |
 | Church photos and hymnal lookup charts | Adventist Connect | Google Drive backup |
 | Bulletin cover art, logo, QR codes | Google Drive | See [Files not in this repository](#files-not-in-this-repository) |
 
@@ -428,15 +432,26 @@ The apps use these outside services without an account. "In app" means the app
 downloads data from the service; "Link" means the app only opens the site in the
 browser; "Build script only" means the app ships files a build script downloaded from it,
 and never contacts it. The [external dependency monitor](operations/external-dependency-monitor.md)
-checks nearly all of them daily.
+checks nearly all of them daily, and the [status page](operations/status-page.md)
+checks the audio hosts, HelloAO's Bible text and the bulletin API every hour.
+
+**HelloAO is a top-level dependency.** Most of the Bible comes from it: the English
+text and every book list the app ships with, the English narrators (their only
+source), the Mandarin, Cantonese and Spanish recordings, played from HelloAO first
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), and the verses the printed bulletins fetch, Sabbath Encouragement's
+included. Each new language starts from what HelloAO has ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). The church's
+copies on Adventist Connect are the Mandarin, Cantonese and Spanish recordings'
+fallback. Hosting a new
+recording there instead is only a short-term step, if a launch is an emergency; see
+[Adventist Connect media hosting](operations/adventist-connect-media.md).
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
-| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio and Bible verses on the printed bulletin; the source of the English text (the BSB) and book lists the app ships with | In app and Apps Script |
+| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio, the Mandarin and Cantonese CUV audio and the Spanish RV1909 audio (each tried first), and Bible verses on the printed bulletin; the source of the English text (the BSB) and book lists the app ships with | In app and Apps Script |
 | Bible | fetch(bible) | `v1.fetch.bible` | The source of the Reina-Valera 1909 and original-language texts the app ships with | Build script only |
-| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin CUV, tried first, and Cantonese CUV and Spanish RV1909, their only source | In app |
-| Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
-| Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source; also where the church's Mandarin copies came from, with its owner's permission | In app |
+| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin and Cantonese CUV and Spanish RV1909, each tried after HelloAO's | In app |
+| Bible audio | Internet Archive | `archive.org` | Mandarin CUV audio, third source | In app |
+| Bible audio | Audio Power | `theaudiopower.com` | Mandarin CUV audio, fourth source; also where the church's Mandarin copies came from, with its owner's permission | In app |
 | Bible audio | WordProject | `wordproject.org` | Source of the church's Cantonese and Spanish copies ([how they were uploaded](operations/adventist-connect-media.md#updating-the-audio-manifest)), credited under each chapter | Link |
 | Bulletin | Church Apps Script | `script.google.com` | Digital bulletin JSON | In app |
 | Bulletin | Google Sheets | `docs.google.com` | The [scheduling roster](#printed-and-digital-bulletin) the bulletin is made from, which Google opens only for signed-in `nyccsda.org` accounts. The app doesn't open it (#553) | Apps Script |
@@ -483,18 +498,46 @@ in [Legal, Licensing & Privacy](LEGAL.md), and costs, limits, and load are in
 
 **Cloudflare is the only service with a card on file**, and only to renew the domain.
 Nothing else in this architecture has a payment method, so nothing else can charge
-the church. Keep it that way: when a new service asks for a card, choose another
-service. Nothing else in the Cloudflare account costs money, and anything added
-there must stay on a free plan that fails at its limits instead of billing.
+the church. Keep it that way where possible: when a new service asks for a card,
+choose a free one instead. A subscription the church decides it needs goes on the
+same capped card, below. Nothing else in the Cloudflare account costs money, and
+anything added there must stay on a free plan that fails at its limits instead of
+billing.
+
+**Every card on file is a credit card with a hard limit, about $200–300 for now.**
+That covers every service the church pays for, which today is only the domain, and
+any subscription the church adds later. The limit is set from what the card pays:
+
+- **Ten years of the domain at its current price,** the longest renewal, so no
+  renewal is ever declined and the domain can't lapse. That's about $110 today, at
+  about $11 a year as of 2026 ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)).
+  Don't set the limit just above one year's renewal: a price rise or a longer
+  renewal would be declined.
+- **Plus a year of every other subscription on the card, and a buffer** for the ones
+  the church may add. Today there are none, so the buffer is why the limit is
+  $200–300 for now.
+- **Re-set the limit when either changes:** when the domain's price changes, or a
+  subscription is added or dropped, work it out again from these two lines and ask
+  the bank to change it.
+- **The limit caps the damage** if the card number leaks or someone misuses an
+  account that holds it, as long as the bank declines any charge over the limit.
+  Ask the bank for that: without it, a bank may approve an over-limit charge and
+  only waive the fee ([Regulation Z §1026.56](https://www.consumerfinance.gov/rules-policy/regulations/1026/56/)). A credit card's charges can also
+  be disputed with the bank before any church money leaves the account.
+- **Use a card whose limit is its own,** kept only for the church's paid services,
+  not one with a larger limit that is also used for everyday spending.
+
+How to set it up and check it each year:
+[The Cloudflare account and domain](operations/admin-runbook.md#the-cloudflare-account-and-domain).
 
 | Service | Payment method | Why |
 | --- | --- | --- |
-| Cloudflare | **A card** | Renews `nyccsda.org`, about $10 a year. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
+| Cloudflare | **A credit card with a hard limit, about $200–300 for now** | Renews `nyccsda.org`, about $11 a year as of 2026. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
 | Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
 | Google Play | None | The one-time $25 registration is paid; nothing recurs. |
 | Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
 | Google Workspace | None | Workspace for Nonprofits: email, Drive, and Apps Script. |
-| GitHub | None | Free for public repositories, Actions included. |
+| GitHub | None | Free for public repositories, Actions included. That covers the [status page](operations/status-page.md)'s repository too. |
 | Every API and website in [Third-party APIs and websites](#third-party-apis-and-websites) | None | Free, with no account or with a free key. |
 
 ## Upkeep calendar
@@ -504,13 +547,16 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Developer membership and resubmit nonprofit status | App removed from the App Store |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Distribution certificate and provisioning profile, update GitHub secrets, and record the new dates; see the [renewal checklist](operations/app-store-setup.md#renewal-checklist) | iOS builds fail; app can't be updated |
 | First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, due February 28) | Work through the checklist, which covers the yearly rows below and more | A card expires, a bill starts, or an account can't be recovered, unnoticed |
-| Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
+| Yearly (in the checkup) | Check the Cloudflare card hasn't expired, and that its hard limit still covers ten years of the domain at this year's price plus every other subscription on it, with a buffer; check the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
+| Whenever the domain's price changes, or a subscription is added to or dropped from the card | Re-set the card's [hard limit](#payment-methods) to match | A renewal is declined, or the card risks more than it needs to |
 | Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
-| First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and keep a copy off Google | If the account is suspended or taken over, its email and files are gone |
+| First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and copy it onto two separate drives, off Google | If the account is suspended or taken over, its email and files are gone |
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
+| Yearly (in the checkup) | Check that [HelloAO](operations/service-limits-and-costs.md#helloao)'s terms still let the app keep what it downloads, that it still serves the recordings the app plays from it, and whether WordProject has answered about its recordings ([#769](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/769)) | A change at the app's main Bible source goes unnoticed |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
+| Hourly (automated) | [Status page](operations/status-page.md) | Opens an issue in the status repository while a service is down; see [Alerts](operations/status-page.md#alerts) |
 | Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
@@ -521,7 +567,13 @@ Priority; see [Maintenance issues](operations/admin-runbook.md#maintenance-issue
 
 - **Apply for nonprofit status** wherever a provider offers it, using the church's
   own EIN and D-U-N-S number rather than the conference's.
-- **Free services only**, apart from small necessities such as the domain. **Never
+- **HelloAO first for the Bible's text and audio**, wherever it has them. It's free,
+  needs no account, and [its terms](https://bible.helloao.org/docs/) let the app keep
+  what it downloads ("Cache, store and download without expiry"). The church hosts its
+  own copies as a fallback, or for a short time if a launch is an emergency (see
+  [Third-party APIs and websites](#third-party-apis-and-websites)).
+- **Free services only**, apart from small necessities such as the domain, which go
+  on a [card with a hard limit](#payment-methods), about $200–300 for now. **Never
   add a payment method to a service that bills by usage**, such as
   [Google Cloud](#google-cloud-free-only): a surprise bill is too great a risk.
 - **Two-factor authentication for every user, everywhere**, including on the

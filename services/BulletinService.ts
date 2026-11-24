@@ -1,7 +1,25 @@
 import Constants from 'expo-constants';
 
 import { getBulletinApiUrl } from '@/constants/ExternalLinks';
+import type { SupportedLanguage } from '@/constants/LanguageContext';
+import { traditionalToSimplified } from '@/services/BiblePinyinService';
 import { type CachedText, pruneCachedTexts, readCachedText, writeCachedText } from '@/services/CacheStore';
+
+/**
+ * A key-screens build's made-up bulletin (#456), in place of the Bulletin
+ * API's answer, so the key screens' shots, the text read from them, and the
+ * run's downloads hold no member's name. Expo writes EXPO_PUBLIC_KEY_SCREENS
+ * into the app when it's built, so in a store build the condition is false
+ * when Metro bundles it, and the made-up data is left out.
+ */
+const keyScreensFixtures: typeof import('./KeyScreensFixtures') | null =
+  process.env.EXPO_PUBLIC_KEY_SCREENS === '1' ? require('./KeyScreensFixtures') : null;
+
+/**
+ * A state a key-screen path can ask the bulletin for (#456): `load-failed`,
+ * the API out of service, which no tap can bring about.
+ */
+export type KeyScreensBulletinState = 'load-failed';
 
 export type BilingualBulletinText = {
   english: string;
@@ -13,6 +31,18 @@ export type BulletinMetadataTranslation = {
   zh: string;
   'zh-cn': string;
   es: string;
+};
+
+/**
+ * One of a location's announcements (#562), a line of Weekly Data's
+ * Announcements cell, typed in any language. The API machine-translates it
+ * into each of these, Chinese in Traditional; a translation that failed is
+ * blank. A language added later is one more field, which this version ignores.
+ */
+export type BulletinAnnouncement = {
+  english: string;
+  chinese: string;
+  spanish?: string;
 };
 
 export type BulletinLocation = {
@@ -28,6 +58,11 @@ export type BulletinLocation = {
   sabbathSchoolHymns?: string[];
   /** The special music piece; specialMusic is who performs it. */
   specialMusicTitle?: string;
+  /**
+   * The week's announcements (#562). Bulletins served before it have none, or
+   * a blank string, as a phone's stored copy may still.
+   */
+  announcements?: BulletinAnnouncement[] | string;
   sermon: string;
   chairPastoralPrayer: string;
   offeringPrayer: string;
@@ -146,6 +181,30 @@ export const hasBulletinValue = (value: string | undefined) => {
   return Boolean(normalized && normalized.toUpperCase() !== 'TBD');
 };
 
+const announcementText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+/**
+ * A location's announcements in the reader's language (#562): the Chinese for
+ * both scripts, converted for Simplified readers, the Spanish for Spanish
+ * readers, and the English otherwise. Where a language is missing, the other
+ * stands in, so no announcement is left out.
+ */
+export const getBulletinAnnouncements = (location: BulletinLocation, language: SupportedLanguage) =>
+  (Array.isArray(location.announcements) ? location.announcements : []).flatMap((announcement) => {
+    const english = announcementText(announcement?.english);
+    const chinese = announcementText(announcement?.chinese);
+    const spanish = announcementText(announcement?.spanish);
+    const shown =
+      language === 'zh'
+        ? chinese || english
+        : language === 'zh-cn'
+          ? (chinese && traditionalToSimplified(chinese)) || english
+          : language === 'es'
+            ? spanish || english || chinese
+            : english || chinese;
+    return shown ? [shown] : [];
+  });
+
 export const isBulletinLocationEmpty = (location: BulletinLocation) =>
   ![
     location.hymnOfPraise.english,
@@ -213,6 +272,9 @@ export const readCachedBulletin = async (
   date: string,
   now = Date.now(),
 ): Promise<{ bulletin: Bulletin; fresh: boolean } | undefined> => {
+  // A key-screens build keeps no copies, so each shot asks for the made-up
+  // bulletin, whichever shot came before it.
+  if (keyScreensFixtures) return undefined;
   try {
     const text = await readCachedText(stored('bulletin', date));
     if (!text) return undefined;
@@ -242,6 +304,7 @@ export const getCachedBulletin = async (
 };
 
 export const cacheBulletin = async (bulletin: Bulletin, fetchedAt = Date.now()) => {
+  if (keyScreensFixtures) return;
   await writeCachedText(
     stored('bulletin', bulletin.date),
     JSON.stringify({
@@ -265,15 +328,24 @@ export const getRefreshAvailableAt = async (date: string) => {
 export const setRefreshAvailableAt = (date: string, value: number) =>
   writeCachedText(stored('refresh', date), String(value));
 
+/**
+ * Downloads a date's bulletin from the Bulletin API and stores it. In a
+ * key-screens build, the made-up bulletin's answer, or the failure a path's
+ * `state=load-failed` asks for, stands in for the network, and goes through
+ * the same checks (#456).
+ */
 export const fetchBulletin = async (
   date: string,
   signal?: AbortSignal,
+  keyScreensState?: KeyScreensBulletinState | null,
 ) => {
-  const response = await fetch(getBulletinApiUrl(date, Constants.expoConfig?.version), {
-    cache: 'no-store',
-    headers: { Accept: 'application/json' },
-    signal,
-  });
+  const response = keyScreensFixtures
+    ? keyScreensFixtures.getKeyScreensBulletinResponse(date, keyScreensState)
+    : await fetch(getBulletinApiUrl(date, Constants.expoConfig?.version), {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+        signal,
+      });
 
   if (!response.ok) {
     throw new Error(`Bulletin request failed (${response.status})`);

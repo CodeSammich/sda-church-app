@@ -145,9 +145,13 @@ const activeHymnalIds = [
   ),
 ];
 
-// A title match in a hymnal other than the church's two must be close, since
-// thousands of titles make a loose match likely to be wrong.
-const PRIMARY_TITLE_MATCH = 0.55;
+// How close a typed title must be to a hymn's, by edit distance, to be taken
+// as that hymn misspelled. A title match in a hymnal other than the church's
+// two must be closer, since thousands of titles make a loose match likely to
+// be wrong. At 0.55, songs no hymnal has were shown as hymns that share a few
+// words, such as "Praise the Lord, O My Soul" as hymn 25, "Praise the Lord,
+// His Glories Show" (#751); a misspelling such as "Prais to the Lord" is 0.94.
+const PRIMARY_TITLE_MATCH = 0.7;
 const OTHER_TITLE_MATCH = 0.8;
 
 const isChineseHymnal = (hymnalId: HymnalId) => HYMNALS[hymnalId].language === 'zh';
@@ -224,8 +228,11 @@ const getTitleKey = (hymn: HymnCatalogEntry) => {
 
 /**
  * The same similarity as getNormalizedTitleSimilarity, or 0 once it can't
- * reach `minimum`. A title search compares thousands of hymns, so this skips
- * the edit distance whenever the length difference or the bigrams settle it.
+ * reach `minimum`. A typed title must be that close by edit distance, as a
+ * misspelling is, not just share letter pairs: "Praise the Lord, O My Soul"
+ * shares most of "Praise to the Lord"'s pairs but is another song, and was
+ * shown as AH 1 (#751). A title search compares thousands of hymns, so this
+ * skips the edit distance whenever the length difference settles it.
  */
 const getTitleKeySimilarity = (submitted: TitleKey, canonical: TitleKey, minimum: number) => {
   const left = submitted.title;
@@ -236,23 +243,18 @@ const getTitleKeySimilarity = (submitted: TitleKey, canonical: TitleKey, minimum
 
   const longestLength = Math.max(left.length, right.length);
   // An edit distance is at least the difference in length.
-  const levenshteinBound = 1 - Math.abs(left.length - right.length) / longestLength;
+  if (1 - Math.abs(left.length - right.length) / longestLength < minimum) return 0;
+
+  const levenshteinSimilarity = 1 - levenshteinDistance(left, right) / longestLength;
+  if (levenshteinSimilarity < minimum) return 0;
+
   const bigramTotal = submitted.bigramCount + canonical.bigramCount;
   let overlap = 0;
   for (const [bigram, count] of submitted.bigrams) {
     overlap += Math.min(count, canonical.bigrams.get(bigram) || 0);
   }
   const diceSimilarity = bigramTotal === 0 ? 0 : (2 * overlap) / bigramTotal;
-  if (levenshteinBound <= diceSimilarity) {
-    return diceSimilarity >= minimum ? diceSimilarity : 0;
-  }
-  if (levenshteinBound < minimum) return 0;
-
-  const similarity = Math.max(
-    1 - levenshteinDistance(left, right) / longestLength,
-    diceSimilarity,
-  );
-  return similarity >= minimum ? similarity : 0;
+  return Math.max(levenshteinSimilarity, diceSimilarity);
 };
 
 const getNormalizedTitleSimilarity = (

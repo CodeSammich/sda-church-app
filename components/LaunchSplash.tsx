@@ -4,6 +4,7 @@ import {
   getFillAmount,
   getPenAmount,
 } from '@/components/LaunchDrawing';
+import { LightStatusBar } from '@/components/LightStatusBar';
 import {
   CHURCH_SYMBOL_SHAPES,
   CHURCH_SYMBOL_VIEW_BOX,
@@ -11,7 +12,7 @@ import {
 } from '@/constants/ChurchSymbol';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
-import { StatusBar, StyleSheet, useWindowDimensions } from 'react-native';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   type SharedValue,
@@ -187,7 +188,7 @@ export function LaunchSplash({ appReady, onDone }: LaunchSplashProps) {
       importantForAccessibility="no-hide-descendants"
       testID="launch-splash"
     >
-      <StatusBar barStyle="light-content" />
+      <LightStatusBar />
       <Svg
         height={symbolWidth / LAUNCH_SYMBOL_ASPECT}
         testID="launch-symbol"

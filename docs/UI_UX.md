@@ -215,6 +215,14 @@ simple, blended colors.
     visual separation between the app and the device hardware, reinforcing the "Digital
     Sanctuary" metaphor by making the interface feel like an integrated environment rather
     than a window inside a frame.
+  - **Status bar icons:** The theme's: dark in the light theme, light in the dark. Over
+    a dark picture that sits under the status bar (the launch splash, and the Library's
+    and the hymnal page's carousels), they're light: show `LightStatusBar`
+    (`components/LightStatusBar.tsx`) while the page is focused. Don't use React
+    Native's `StatusBar` alone, or give a screen its own `statusBarStyle`. On iOS the
+    screens set the status bar (`UIViewControllerBasedStatusBarAppearance`, which apps
+    built with the iOS 27 SDK must use), and the root Stack gives every screen the style
+    (#733).
 - **Header Opacity:** The top header is completely opaque (using the base background
   color) to provide a solid anchor for the "Digital Sanctuary."
 - **One floating tab bar on every system (#589).** iPhone, iPad, Android and the web
@@ -298,8 +306,8 @@ simple, blended colors.
     - Asked at first-launch setup's last two steps ("Which is easier to read in light
       mode?", then dark mode), and once after the update that brought it, with only
       those two questions (`constants/WhatsNew.ts`, keyed by version, so a later release
-      can add its own or none; live announcements, #562, would be separate). Changed any
-      time under You → Contrast.
+      can add its own or none; the church's announcements, #562, are separate: they're
+      in the bulletin). Changed any time under You → Contrast.
     - The question after an update is setup's own full screen and contrast steps
       (`components/SetupScreen.tsx`, `ContrastStep`), not a popup, so the popups' 65%
       height limit doesn't apply (#708). In a popup, the buttons' row pushed Standard

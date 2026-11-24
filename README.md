@@ -52,6 +52,8 @@ one place. Church admins can start at [Operate](#operate).
 - [Accessibility guidelines](docs/accessibility/README.md): the WCAG 2.1 AA baseline,
   text size, and screen readers
 - Feature designs:
+  - [Announcements in the app, and notifications for them](docs/feature_designs/announcements.md):
+    why they're typed in `Weekly Data`, the translation, why they're public, and the plan for notifications
   - [Bible integration](docs/feature_designs/bible_integration_design.md): Bible text
     sources, translation choices, and the alternatives considered
   - [Bulletin hymn resolution and extension guide](docs/feature_designs/bulletin_hymn_resolution.md):
@@ -93,6 +95,8 @@ one place. Church admins can start at [Operate](#operate).
     the script's source directory
 - [External dependency monitor](docs/operations/external-dependency-monitor.md): the
   daily check of every outside service the app uses, and what to do when it fails
+- [Status page](docs/operations/status-page.md): the audio hosts, the bulletin API and
+  a few other services, checked every hour from a separate repository
 - [Bible audio verse times](docs/operations/bible-audio-verse-times.md): how the times
   that let the reader follow the audio were made and checked, and how to make them for a
   new narrator or language
@@ -102,10 +106,11 @@ one place. Church admins can start at [Operate](#operate).
 - [Upkeep calendar](docs/architecture.md#upkeep-calendar): what to renew or check each
   quarter or year, and what breaks if it's missed
 - [Google Workspace backups](docs/operations/admin-runbook.md#google-workspace-backups):
-  every three months, export all of the church's email and files and keep a copy off
-  Google
+  every three months, export all of the church's email and files and copy it onto two
+  separate drives, off Google
 - [Payment methods](docs/architecture.md#payment-methods): which service has a card
-  on file (only Cloudflare, for the domain), and why no other may
+  on file (only Cloudflare, for the domain), why no other may, and how the hard limit
+  on any card on file is set (about $200–300 for now)
 - [Credentials that need attention](docs/operations/admin-runbook.md#credentials-that-need-attention):
   each secret and key, where it's kept, and when to act
 - [Pastors and elders](docs/operations/admin-runbook.md#updating-pastors-and-elders):

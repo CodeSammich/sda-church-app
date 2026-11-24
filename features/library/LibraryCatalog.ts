@@ -38,11 +38,13 @@ export type LibraryItem = Readonly<{
   simplifiedChinese?: LibraryItemText;
   // A Chinese edition, which Chinese readers open instead, titled with the
   // text above. One edition serves both scripts, even if it is printed in
-  // traditional characters only. See "Library Sources and Licensing" in
-  // docs/LEGAL.md.
-  chineseEdition?: LibraryItemSource;
-  // A Chinese book with no English translation yet: only Chinese readers see
-  // it in the Library, on its shelf, in the featured books, and in search.
+  // traditional characters only. An edition in the Chinese Union Mission's
+  // reader brings the reader's cover thumbnail, which only Chinese readers
+  // see. See "Library Sources and Licensing" in docs/LEGAL.md.
+  chineseEdition?: LibraryItemSource & Readonly<{ coverUrl?: string }>;
+  // A Chinese book with no free English or Spanish edition to link: only
+  // Chinese readers see it in the Library, on its shelf, in the featured
+  // books, and in search. The app doesn't machine-translate books (#703).
   onlyForChineseReaders?: boolean;
   // A Spanish edition, which Spanish readers see and open instead. It has its
   // own source and rights basis; see "Library Sources and Licensing" in
@@ -51,6 +53,7 @@ export type LibraryItem = Readonly<{
   // The publisher's own cover thumbnail, shown only to identify the book, for
   // books with no bundled cover; see the Chinese Union Mission row in
   // docs/LEGAL.md. Without a connection the book shows the placeholder.
+  // A Chinese edition's thumbnail goes in `chineseEdition` instead.
   coverUrl?: string;
 }>;
 
@@ -373,26 +376,39 @@ const churchDocuments: readonly LibraryItem[] = [
   },
 ];
 
-// Chinese books the church's leaders chose from the Chinese Union Mission's
-// online reader (#554), nearly all by today's Adventist writers. They're
-// linked, not copied: each opens its page in the reader, in the app's script,
-// and shows the reader's cover thumbnail. Titles and authors are from the
+// Books the church's leaders chose from the Chinese Union Mission's online
+// reader (#554), nearly all by today's Adventist writers. They're linked, not
+// copied. Chinese readers open each one's page in the reader, in the app's
+// script, with the reader's cover thumbnail. Titles and authors are from the
 // covers; the reader lists no authors.
+//
+// Seven were written in English and are free in English on their publisher's
+// or a public-domain library's site, six of them in Spanish too, so English and
+// Spanish readers open those originals (#703). The other seven are sold in
+// English, so only Chinese readers see them.
 const sdaBibleBooks: readonly LibraryItem[] = [
   {
-    // Published anonymously in the 1920s: its author signed it "An Unknown
-    // Christian". Not an Adventist book, so it sits with the classics.
+    // Published anonymously: its author signed it "An Unknown Christian". Its
+    // first printing is undated, but its only date is August 1921, and its
+    // author began publishing that year, so it's almost certainly from the
+    // 1920s and public domain in the U.S. That isn't confirmed; see the CCEL
+    // row in docs/LEGAL.md (#703). Not an Adventist book, so it sits with the
+    // classics.
     id: 'kneeling-christian',
     title: 'The Kneeling Christian',
     author: 'An Unknown Christian',
     collection: 'christian-classics',
     description: 'A classic call to prayer: why it matters and how to pray.',
-    language: 'zh',
-    onlyForChineseReaders: true,
-    rights: 'official-external',
-    sourceName: 'SDA Bible',
-    sourceUrl: 'https://read.sdabible.org/library/work/m-162',
-    coverUrl: 'https://read.sdabible.org/api/library/assets/25/thumb',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Christian Classics Ethereal Library',
+    sourceUrl: 'https://www.ccel.org/ccel/unknown/kneeling.html',
+    chineseEdition: {
+      rights: 'official-external',
+      sourceName: 'SDA Bible',
+      sourceUrl: 'https://read.sdabible.org/library/work/m-162',
+      coverUrl: 'https://read.sdabible.org/api/library/assets/25/thumb',
+    },
     traditionalChinese: {
       title: '跪下的基督徒',
       author: '佚名',
@@ -434,12 +450,25 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     author: 'Joe Crews',
     collection: 'contemporary-adventist',
     description: 'Everyone will have a last night on earth: on being ready for it.',
-    language: 'zh',
-    onlyForChineseReaders: true,
+    language: 'en',
     rights: 'official-external',
-    sourceName: 'SDA Bible',
-    sourceUrl: 'https://read.sdabible.org/library/work/m-407',
-    coverUrl: 'https://read.sdabible.org/api/library/assets/819/thumb',
+    sourceName: 'Amazing Facts',
+    sourceUrl: 'https://www.amazingfacts.org/study/free-books/the-last-night-on-earth/',
+    spanish: {
+      title: 'La última noche en la Tierra',
+      author: 'Joe Crews',
+      description: 'Todos tendremos una última noche en la tierra: cómo estar preparados para ella.',
+      rights: 'official-external',
+      sourceName: 'Amazing Facts',
+      sourceUrl:
+        'https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/la-ultima-noche-en-la-tierra/',
+    },
+    chineseEdition: {
+      rights: 'official-external',
+      sourceName: 'SDA Bible',
+      sourceUrl: 'https://read.sdabible.org/library/work/m-407',
+      coverUrl: 'https://read.sdabible.org/api/library/assets/819/thumb',
+    },
     traditionalChinese: {
       title: '地上的最後一夜',
       author: '喬·克魯斯',
@@ -458,12 +487,27 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     collection: 'contemporary-adventist',
     description:
       'A story from Siberia, where nineteenth-century Russia exiled people for living by their conscience.',
-    language: 'zh',
-    onlyForChineseReaders: true,
+    language: 'en',
     rights: 'official-external',
-    sourceName: 'SDA Bible',
-    sourceUrl: 'https://read.sdabible.org/library/work/m-435',
-    coverUrl: 'https://read.sdabible.org/api/library/assets/847/thumb',
+    sourceName: 'Amazing Facts',
+    sourceUrl: 'https://www.amazingfacts.org/study/free-books/deathwatch-in-siberia/',
+    // Amazing Facts leaves the first word of its Spanish title in English.
+    spanish: {
+      title: 'Deathwatch en Siberia',
+      author: 'W. S. Jesske',
+      description:
+        'Una historia de Siberia, adonde la Rusia del siglo XIX desterraba a quienes vivían según su conciencia.',
+      rights: 'official-external',
+      sourceName: 'Amazing Facts',
+      sourceUrl:
+        'https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/deathwatch-en-siberia/',
+    },
+    chineseEdition: {
+      rights: 'official-external',
+      sourceName: 'SDA Bible',
+      sourceUrl: 'https://read.sdabible.org/library/work/m-435',
+      coverUrl: 'https://read.sdabible.org/api/library/assets/847/thumb',
+    },
     traditionalChinese: {
       title: '在西伯利亞的死神一瞥',
       author: '傑斯克',
@@ -476,40 +520,72 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     },
   },
   {
-    id: 'batchelor-recalling-lots-wife',
-    title: "Recalling Lot's Wife",
-    author: 'Doug Batchelor',
+    // The Chinese edition's cover credits Doug Batchelor, but its chapters
+    // are Joe Crews's Remember Lot's Wife, heading for heading, as Amazing
+    // Facts publishes it. Every language credits Joe Crews.
+    id: 'crews-remember-lots-wife',
+    title: "Remember Lot's Wife",
+    author: 'Joe Crews',
     collection: 'contemporary-adventist',
     description: "Lot's wife as a warning against drifting from the truth without noticing.",
-    language: 'zh',
-    onlyForChineseReaders: true,
+    language: 'en',
     rights: 'official-external',
-    sourceName: 'SDA Bible',
-    sourceUrl: 'https://read.sdabible.org/library/work/m-813',
-    coverUrl: 'https://read.sdabible.org/api/library/assets/975/thumb',
+    sourceName: 'Amazing Facts',
+    sourceUrl: 'https://www.amazingfacts.org/study/free-books/remember-lots-wife/',
+    spanish: {
+      title: 'Recuerda a la mujer de Lot',
+      author: 'Joe Crews',
+      description:
+        'La mujer de Lot como advertencia contra apartarse de la verdad sin darse cuenta.',
+      rights: 'official-external',
+      sourceName: 'Amazing Facts',
+      sourceUrl:
+        'https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/recuerda-a-la-mujer-de-lot/',
+    },
+    chineseEdition: {
+      rights: 'official-external',
+      sourceName: 'SDA Bible',
+      sourceUrl: 'https://read.sdabible.org/library/work/m-813',
+      coverUrl: 'https://read.sdabible.org/api/library/assets/975/thumb',
+    },
     traditionalChinese: {
       title: '回想羅得的妻子',
-      author: '道格·巴契勒',
+      author: '喬·克魯斯',
       description: '以羅得的妻子為鑑，提醒信徒不要在不知不覺中偏離真理。',
     },
     simplifiedChinese: {
       title: '回想罗得的妻子',
-      author: '道格·巴契勒',
+      author: '乔·克鲁斯',
       description: '以罗得的妻子为鉴，提醒信徒不要在不知不觉中偏离真理。',
     },
   },
   {
+    // An Inside Report article in English and Spanish; the Chinese edition
+    // adds a closing section of its own.
     id: 'batchelor-bible-and-evolution',
     title: 'The Bible and Evolution',
     author: 'Doug Batchelor',
     collection: 'contemporary-adventist',
     description: 'Why the evidence points to a Creator rather than to evolution.',
-    language: 'zh',
-    onlyForChineseReaders: true,
+    language: 'en',
     rights: 'official-external',
-    sourceName: 'SDA Bible',
-    sourceUrl: 'https://read.sdabible.org/library/work/m-815',
-    coverUrl: 'https://read.sdabible.org/api/library/assets/979/thumb',
+    sourceName: 'Amazing Facts',
+    sourceUrl: 'https://www.amazingfacts.org/news-events/inside-report/the-bible-and-evolution/',
+    spanish: {
+      title: 'La Biblia y la evolución',
+      author: 'Doug Batchelor',
+      description: 'Por qué la evidencia apunta a un Creador y no a la evolución.',
+      rights: 'official-external',
+      sourceName: 'Amazing Facts',
+      sourceUrl:
+        'https://www.amazingfacts.org/es/noticias-y-eventos/informe-interno/la-biblia-y-la-evolucion/',
+    },
+    chineseEdition: {
+      rights: 'official-external',
+      sourceName: 'SDA Bible',
+      sourceUrl: 'https://read.sdabible.org/library/work/m-815',
+      coverUrl: 'https://read.sdabible.org/api/library/assets/979/thumb',
+    },
     traditionalChinese: {
       title: '聖經與進化論',
       author: '道格·巴契勒',
@@ -545,18 +621,36 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     },
   },
   {
+    // An Inside Report article. Amazing Facts' page credits only "Amazing
+    // Facts", but it's in Doug Batchelor's own voice, and the Chinese
+    // edition's cover credits him. Amazing Facts spells its English title
+    // "Phariseee".
     id: 'batchelor-pharisee-or-tax-collector',
-    title: 'Am I a Pharisee or a Tax Collector?',
+    title: 'Am I a Pharisee … or a Publican?',
     author: 'Doug Batchelor',
     collection: 'contemporary-adventist',
     description:
-      "Jesus's parable of the Pharisee and the tax collector, and the two kinds of worshipper it describes.",
-    language: 'zh',
-    onlyForChineseReaders: true,
+      "Jesus's parable of the Pharisee and the publican, and the two kinds of worshipper it describes.",
+    language: 'en',
     rights: 'official-external',
-    sourceName: 'SDA Bible',
-    sourceUrl: 'https://read.sdabible.org/library/work/m-863',
-    coverUrl: 'https://read.sdabible.org/api/library/assets/1001/thumb',
+    sourceName: 'Amazing Facts',
+    sourceUrl: 'https://www.amazingfacts.org/news-events/inside-report/am-i-a-phariseee-or-a-publican/',
+    spanish: {
+      title: '¿Soy un fariseo… o un publicano?',
+      author: 'Doug Batchelor',
+      description:
+        'La parábola de Jesús sobre el fariseo y el publicano, y los dos tipos de adoradores que describe.',
+      rights: 'official-external',
+      sourceName: 'Amazing Facts',
+      sourceUrl:
+        'https://www.amazingfacts.org/es/noticias-y-eventos/informe-interno/soy-un-fariseo-o-un-publicano/',
+    },
+    chineseEdition: {
+      rights: 'official-external',
+      sourceName: 'SDA Bible',
+      sourceUrl: 'https://read.sdabible.org/library/work/m-863',
+      coverUrl: 'https://read.sdabible.org/api/library/assets/1001/thumb',
+    },
     traditionalChinese: {
       title: '我是法利賽人還是稅吏？',
       author: '道格·巴契勒',
@@ -569,20 +663,32 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     },
   },
   {
-    // Amazing Facts credits the English book to Joe Crews; the Chinese
-    // edition's cover reads 丹尼·克鲁斯, which the Chinese text follows so it
-    // matches the cover beside it.
+    // Amazing Facts credits it to Dennis Crews, as the Chinese edition's
+    // cover does (丹尼·克魯斯).
     id: 'crews-baptized-paganism',
     title: 'Baptized Paganism',
-    author: 'Joe Crews',
+    author: 'Dennis Crews',
     collection: 'contemporary-adventist',
     description: 'How pagan customs entered the Christian church.',
-    language: 'zh',
-    onlyForChineseReaders: true,
+    language: 'en',
     rights: 'official-external',
-    sourceName: 'SDA Bible',
-    sourceUrl: 'https://read.sdabible.org/library/work/m-811',
-    coverUrl: 'https://read.sdabible.org/api/library/assets/971/thumb',
+    sourceName: 'Amazing Facts',
+    sourceUrl: 'https://www.amazingfacts.org/study/free-books/baptized-paganism/',
+    spanish: {
+      title: 'Paganismo bautizado',
+      author: 'Dennis Crews',
+      description: 'Cómo las costumbres paganas entraron en la iglesia cristiana.',
+      rights: 'official-external',
+      sourceName: 'Amazing Facts',
+      sourceUrl:
+        'https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/paganismo-bautizado/',
+    },
+    chineseEdition: {
+      rights: 'official-external',
+      sourceName: 'SDA Bible',
+      sourceUrl: 'https://read.sdabible.org/library/work/m-811',
+      coverUrl: 'https://read.sdabible.org/api/library/assets/971/thumb',
+    },
     traditionalChinese: {
       title: '受了洗的異教',
       author: '丹尼·克魯斯',

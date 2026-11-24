@@ -94,14 +94,14 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   // this opens the spreadsheet when the tab can't be looked up.
   bulletinIntakeSheetUrl:
     'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit',
+  // The dialog saved each week's announcements under this prefix until they
+  // moved to Weekly Data (#562). prunePrintedBulletinProperties_ deletes any left.
   printedAnnouncementsPropertyPrefix: 'PRINTED_ANNOUNCEMENTS_',
   // The old verse picker saved a print-only verse under this prefix (#622).
   // prunePrintedBulletinProperties_ deletes any left.
   printedBibleVersePropertyPrefix: 'PRINTED_BIBLE_VERSE_',
   // Per-week Script Properties are kept this long after their Sabbath.
   weeklyPropertyRetentionDays: 28,
-  printedAnnouncementsMaxEntries: 12,
-  printedAnnouncementsMaxSerializedBytes: 8000,
   churchSketchImageFileId: '1ZmxAI0l-689nnz5l1pEtmpNTDquA8_No',
   lastSupperImageFileId: '1ZGPxK1cidxies9jAguiAIPVlk9Vqk-Kd',
   sdaLogoImageFileId: '19NBpTBQZyj2oSYY9qSQOvEkoPFd4M3E5',
@@ -148,75 +148,102 @@ var PRINTED_BIBLE_TRANSLATION_OPTIONS = Object.freeze({
   }),
 });
 
-var PRINTED_BIBLE_BOOK_IDS = Object.freeze({
-  genesis: 'GEN',
-  exodus: 'EXO',
-  leviticus: 'LEV',
-  numbers: 'NUM',
-  deuteronomy: 'DEU',
-  joshua: 'JOS',
-  judges: 'JDG',
-  ruth: 'RUT',
-  '1 samuel': '1SA',
-  '2 samuel': '2SA',
-  '1 kings': '1KI',
-  '2 kings': '2KI',
-  '1 chronicles': '1CH',
-  '2 chronicles': '2CH',
-  ezra: 'EZR',
-  nehemiah: 'NEH',
-  esther: 'EST',
-  job: 'JOB',
-  psalm: 'PSA',
-  psalms: 'PSA',
-  proverbs: 'PRO',
-  ecclesiastes: 'ECC',
-  'song of solomon': 'SNG',
-  isaiah: 'ISA',
-  jeremiah: 'JER',
-  lamentations: 'LAM',
-  ezekiel: 'EZK',
-  daniel: 'DAN',
-  hosea: 'HOS',
-  joel: 'JOL',
-  amos: 'AMO',
-  obadiah: 'OBA',
-  jonah: 'JON',
-  micah: 'MIC',
-  nahum: 'NAH',
-  habakkuk: 'HAB',
-  zephaniah: 'ZEP',
-  haggai: 'HAG',
-  zechariah: 'ZEC',
-  malachi: 'MAL',
-  matthew: 'MAT',
-  mark: 'MRK',
-  luke: 'LUK',
-  john: 'JHN',
-  acts: 'ACT',
-  romans: 'ROM',
-  '1 corinthians': '1CO',
-  '2 corinthians': '2CO',
-  galatians: 'GAL',
-  ephesians: 'EPH',
-  philippians: 'PHP',
-  colossians: 'COL',
-  '1 thessalonians': '1TH',
-  '2 thessalonians': '2TH',
-  '1 timothy': '1TI',
-  '2 timothy': '2TI',
-  titus: 'TIT',
-  philemon: 'PHM',
-  hebrews: 'HEB',
-  james: 'JAS',
-  '1 peter': '1PE',
-  '2 peter': '2PE',
-  '1 john': '1JN',
-  '2 john': '2JN',
-  '3 john': '3JN',
-  jude: 'JUD',
-  revelation: 'REV',
+// Each book's names and short forms, in English, Chinese (Traditional and
+// Simplified) and Spanish, as the app's Bible reader reads them: its
+// BIBLE_BOOK_NAMES (services/BibleService.ts) and BIBLE_BOOK_ABBREVIATIONS
+// (services/BibleBookAbbreviations.ts). So a Weekly Data reference the app can
+// open, such as 创50:19-20 or 1 Cor 13:4, prints too (#751). A book's USFM code,
+// such as GEN, counts as well. test/apps-script-physical-bulletin.test.ts checks
+// that every form the app reads is here, for the same book.
+var PRINTED_BIBLE_BOOK_NAMES = Object.freeze({
+  GEN: ['Genesis', '創世記', '创世记', 'Ge', 'Gn', '創', '创'],
+  EXO: ['Exodus', '出埃及記', '出埃及记', 'Éxodo', 'Exod', 'Ex', '出'],
+  LEV: ['Leviticus', '利未記', '利未记', 'Levítico', 'Lv', '利'],
+  NUM: ['Numbers', '民數記', '民数记', 'Números', 'Nu', 'Nm', '民'],
+  DEU: ['Deuteronomy', '申命記', '申命记', 'Deuteronomio', 'Deut', 'Dt', '申'],
+  JOS: ['Joshua', '約書亞記', '约书亚记', 'Josué', 'Josh', '書', '书'],
+  JDG: ['Judges', '士師記', '士师记', 'Jueces', 'Judg', 'Jue', '士'],
+  RUT: ['Ruth', '路得記', '路得记', 'Ru', 'Rt', '得'],
+  '1SA': ['1 Samuel', '撒母耳記上', '撒母耳记上', '1 Sam', '1 S', '撒上'],
+  '2SA': ['2 Samuel', '撒母耳記下', '撒母耳记下', '2 Sam', '2 S', '撒下'],
+  '1KI': ['1 Kings', '列王紀上', '列王纪上', '1 Reyes', '1 Kgs', '1 Kin', '1 R', '王上'],
+  '2KI': ['2 Kings', '列王紀下', '列王纪下', '2 Reyes', '2 Kgs', '2 Kin', '2 R', '王下'],
+  '1CH': ['1 Chronicles', '歷代志上', '历代志上', '1 Crónicas', '1 Chr', '1 Cr', '代上'],
+  '2CH': ['2 Chronicles', '歷代志下', '历代志下', '2 Crónicas', '2 Chr', '2 Cr', '代下'],
+  EZR: ['Ezra', '以斯拉記', '以斯拉记', 'Esdras', 'Esd', '拉'],
+  NEH: ['Nehemiah', '尼希米記', '尼希米记', 'Nehemías', 'Ne', '尼'],
+  EST: ['Esther', '以斯帖記', '以斯帖记', 'Ester', 'Esth', '斯'],
+  JOB: ['約伯記', '约伯记', 'Jo', '伯'],
+  PSA: ['Psalms', '詩篇', '诗篇', 'Salmos', 'Ps', 'Pss', 'Sal', '詩', '诗'],
+  PRO: ['Proverbs', '箴言', 'Proverbios', 'Prov', 'Pr', '箴'],
+  ECC: ['Ecclesiastes', '傳道書', '传道书', 'Eclesiastés', 'Eccl', 'Qoh', 'Ec', '傳', '传'],
+  SNG: ['Song of Solomon', '雅歌', 'Cantares', 'Song', 'Cant', 'SS', 'Cnt', '歌'],
+  ISA: ['Isaiah', '以賽亞書', '以赛亚书', 'Isaías', 'Is', '賽', '赛'],
+  JER: ['Jeremiah', '耶利米書', '耶利米书', 'Jeremías', 'Jere', '耶'],
+  LAM: ['Lamentations', '耶利米哀歌', 'Lamentaciones', 'La', 'Lm', '哀'],
+  EZK: ['Ezekiel', '以西結書', '以西结书', 'Ezequiel', 'Ezek', 'Ez', 'Eze', '結', '结'],
+  DAN: ['Daniel', '但以理書', '但以理书', 'Da', 'Dn', '但'],
+  HOS: ['Hosea', '何西阿書', '何西阿书', 'Oseas', 'Ho', 'Os', '何'],
+  JOL: ['Joel', '約珥書', '约珥书', 'Joe', 'Jl', '珥'],
+  AMO: ['Amos', '阿摩司書', '阿摩司书', 'Am', '摩'],
+  OBA: ['Obadiah', '俄巴底亞書', '俄巴底亚书', 'Abdías', 'Obad', 'Ob', 'Abd', '俄'],
+  JON: ['Jonah', '約拿書', '约拿书', 'Jonás', 'Jona', '拿'],
+  MIC: ['Micah', '彌迦書', '弥迦书', 'Miqueas', 'Mi', 'Mica', '彌', '弥'],
+  NAM: ['Nahum', '那鴻書', '那鸿书', 'Nah', 'Na', '鴻', '鸿'],
+  HAB: ['Habakkuk', '哈巴谷書', '哈巴谷书', 'Habacuc', '哈'],
+  ZEP: ['Zephaniah', '西番雅書', '西番雅书', 'Sofonías', 'Zeph', 'Zph', 'Sof', '番'],
+  HAG: ['Haggai', '哈該書', '哈该书', 'Hageo', '該', '该'],
+  ZEC: ['Zechariah', '撒迦利亞書', '撒迦利亚书', 'Zacarías', 'Zech', 'Zch', 'Zac', '亞', '亚'],
+  MAL: ['Malachi', '瑪拉基書', '玛拉基书', 'Malaquías', '瑪', '玛'],
+  MAT: ['Matthew', '馬太福音', '马太福音', 'Mateo', 'Matt', 'Mt', '太'],
+  MRK: ['Mark', '馬可福音', '马可福音', 'Marcos', 'Mar', 'Mr', '可'],
+  LUK: ['Luke', '路加福音', 'Lucas', 'Lu', 'Lc', '路'],
+  JHN: ['John', '約翰福音', '约翰福音', 'Juan', 'Jn', '約', '约'],
+  ACT: ['Acts', '使徒行傳', '使徒行传', 'Hechos', 'Ac', 'Hch', '徒'],
+  ROM: ['Romans', '羅馬書', '罗马书', 'Romanos', 'Ro', 'Roma', '羅', '罗'],
+  '1CO': ['1 Corinthians', '哥林多前書', '哥林多前书', '1 Corintios', '1 Cor', '林前'],
+  '2CO': ['2 Corinthians', '哥林多後書', '哥林多后书', '2 Corintios', '2 Cor', '林後', '林后'],
+  GAL: ['Galatians', '加拉太書', '加拉太书', 'Gálatas', 'Ga', '加'],
+  EPH: ['Ephesians', '以弗所書', '以弗所书', 'Efesios', 'Ep', 'Ef', '弗'],
+  PHP: ['Philippians', '腓立比書', '腓立比书', 'Filipenses', 'Phil', 'Phili', 'Fil', '腓'],
+  COL: ['Colossians', '歌羅西書', '歌罗西书', 'Colosenses', '西'],
+  '1TH': ['1 Thessalonians', '帖撒羅尼迦前書', '帖撒罗尼迦前书', '1 Tesalonicenses', '1 Thess', '1 The', '1 Ts', '帖前'],
+  '2TH': ['2 Thessalonians', '帖撒羅尼迦後書', '帖撒罗尼迦后书', '2 Tesalonicenses', '2 Thess', '2 The', '2 Ts', '帖後', '帖后'],
+  '1TI': ['1 Timothy', '提摩太前書', '提摩太前书', '1 Timoteo', '1 Tim', '提前'],
+  '2TI': ['2 Timothy', '提摩太後書', '提摩太后书', '2 Timoteo', '2 Tim', '提後', '提后'],
+  TIT: ['Titus', '提多書', '提多书', 'Tito', 'Ti', '多'],
+  PHM: ['Philemon', '腓利門書', '腓利门书', 'Filemón', 'Phlm', 'Phile', 'Flm', '門', '门'],
+  HEB: ['Hebrews', '希伯來書', '希伯来书', 'Hebreos', 'He', '來', '来'],
+  JAS: ['James', '雅各書', '雅各书', 'Santiago', 'Jam', 'Stg', '雅'],
+  '1PE': ['1 Peter', '彼得前書', '彼得前书', '1 Pedro', '1 Pet', '1 P', '彼前'],
+  '2PE': ['2 Peter', '彼得後書', '彼得后书', '2 Pedro', '2 Pet', '2 P', '彼後', '彼后'],
+  '1JN': ['1 John', '約翰一書', '约翰一书', '1 Juan', '1 Jo', '1 Joh', '約壹', '约壹', '約一', '约一'],
+  '2JN': ['2 John', '約翰二書', '约翰二书', '2 Juan', '2 Jo', '2 Joh', '約貳', '约贰', '約二', '约二'],
+  '3JN': ['3 John', '約翰三書', '约翰三书', '3 Juan', '3 Jo', '3 Joh', '約叄', '约叁', '約參', '约参', '約三', '约三'],
+  JUD: ['Jude', '猶大書', '犹大书', 'Judas', '猶', '犹'],
+  REV: ['Revelation', '啟示錄', '启示录', 'Apocalipsis', 'Re', 'Ap', '啟', '启'],
 });
+
+var printedBibleBookIds_ = null;
+
+// Each name above, as normalizePhysicalBibleBookName_ writes it, with its book.
+function getPrintedBibleBookIds_() {
+  if (printedBibleBookIds_) {
+    return printedBibleBookIds_;
+  }
+  var ids = {
+    psalm: 'PSA',
+    'song of songs': 'SNG',
+    canticles: 'SNG',
+  };
+  Object.keys(PRINTED_BIBLE_BOOK_NAMES).forEach(function (bookId) {
+    [bookId].concat(PRINTED_BIBLE_BOOK_NAMES[bookId]).forEach(function (name) {
+      ids[normalizePhysicalBibleBookName_(name)] = bookId;
+    });
+  });
+  printedBibleBookIds_ = ids;
+  return ids;
+}
 
 var PRINTED_BIBLE_BOOK_LABELS = Object.freeze({
   GEN: { english: 'Genesis', chinese: '創世記' },
@@ -252,7 +279,7 @@ var PRINTED_BIBLE_BOOK_LABELS = Object.freeze({
   OBA: { english: 'Obadiah', chinese: '俄巴底亞書' },
   JON: { english: 'Jonah', chinese: '約拿書' },
   MIC: { english: 'Micah', chinese: '彌迦書' },
-  NAH: { english: 'Nahum', chinese: '那鴻書' },
+  NAM: { english: 'Nahum', chinese: '那鴻書' },
   HAB: { english: 'Habakkuk', chinese: '哈巴谷書' },
   ZEP: { english: 'Zephaniah', chinese: '西番雅書' },
   HAG: { english: 'Haggai', chinese: '哈該書' },
@@ -321,7 +348,7 @@ var PRINTED_BIBLE_CHAPTER_COUNTS = Object.freeze({
   OBA: 1,
   JON: 4,
   MIC: 7,
-  NAH: 3,
+  NAM: 3,
   HAB: 3,
   ZEP: 3,
   HAG: 2,
@@ -481,8 +508,25 @@ function createPrintedBulletinFromPrompt() {
     output,
     'Create Word Doc / 制作 Word 文档',
   );
+  // While the dialog shows, as onOpen has no time for it (#639).
+  try {
+    ensureWeeklyDataAnnouncementsHelp_(SpreadsheetApp.getActiveSpreadsheet());
+  } catch (error) {
+    Logger.log('Could not add the Announcements help: ' + error);
+  }
   return null;
 }
+
+// Shown above a dialog's PERMISSION_DENIED error. A browser signed in to more
+// than one Google account runs the dialog's server calls as its first
+// account, which may not be the one with the sheet open; Google gives the
+// script no way around it (#751).
+var PRINTED_BULLETIN_ACCOUNT_HINT =
+  'This browser is signed in to more than one Google account, and Google ran this as a ' +
+  'different one. Open the sheet in an incognito (private) window signed in only to the ' +
+  'church account, then try again.\n' +
+  '此浏览器登录了多个 Google 账号，Google 用了另一个账号来运行。请打开无痕（隐私）窗口，' +
+  '只登录教会账号，打开表格后再试。';
 
 // Staff-facing text (dialogs, alerts, errors, notes) is in English and
 // Simplified Chinese, because the people who run the bulletin read Simplified.
@@ -504,6 +548,10 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     })
     .join('');
   var requestJson = JSON.stringify({ date: defaultDate })
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+  var accountHintJson = JSON.stringify(PRINTED_BULLETIN_ACCOUNT_HINT)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026');
@@ -534,14 +582,6 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.choice:disabled{cursor:not-allowed;opacity:.48;box-shadow:none;}' +
     '.verse-view{background:#f8f9fa;border:1px solid #dadce0;border-radius:4px;font-size:14px;line-height:1.45;padding:9px 10px;white-space:pre-wrap;}' +
     '.verse-view.problem{background:#fce8e6;border-color:#f4b4ae;color:#a50e0e;font-size:13px;}' +
-    '.announcement-entry{border:1px solid #dadce0;border-radius:8px;margin:10px 0;padding:12px;}' +
-    '.announcement-header{align-items:center;display:flex;justify-content:space-between;gap:8px;}' +
-    '.announcement-header strong{font-size:13px;}' +
-    '.announcement-entry textarea{box-sizing:border-box;width:100%;font:14px Arial,sans-serif;' +
-    'border:1px solid #bdc1c6;border-radius:4px;min-height:72px;padding:9px 10px;resize:vertical;}' +
-    '.announcement-entry select{margin-top:8px;}' +
-    '.announcement-remove{background:#fce8e6;color:#a50e0e;font-size:12px;padding:6px 9px;}' +
-    '.announcement-add{background:#e8f0fe;color:#174ea6;font-size:13px;margin-top:4px;}' +
     '.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;}' +
     '.status-slot{box-sizing:border-box;padding-top:8px;}' +
     '#statusView{min-height:164px;}' +
@@ -550,6 +590,13 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.submit{background:#1a73e8;color:#fff;}' +
     '.download-row{display:flex;justify-content:flex-end;margin-top:10px;}' +
     '.preview-note{color:#5f6368;font-size:13px;line-height:1.45;margin:-4px 0 0;}' +
+    '.announcement-entry{border:1px solid #dadce0;border-radius:8px;margin:10px 0;padding:12px;}' +
+    '.announcement-header{align-items:center;display:flex;justify-content:space-between;gap:8px;}' +
+    '.announcement-header strong{font-size:13px;}' +
+    '.announcement-entry textarea{box-sizing:border-box;width:100%;font:14px Arial,sans-serif;' +
+    'border:1px solid #bdc1c6;border-radius:4px;min-height:72px;padding:9px 10px;resize:vertical;}' +
+    '.announcement-remove{background:#fce8e6;color:#a50e0e;font-size:12px;padding:6px 9px;}' +
+    '.announcement-add{background:#e8f0fe;color:#174ea6;font-size:13px;margin-top:4px;}' +
     '.mac-note{background:#fef7e0;border:1px solid #f9ab00;border-radius:8px;color:#3c4043;font-size:13px;line-height:1.45;margin:0 0 4px;padding:12px 14px;}' +
     '.mac-note strong{color:#202124;display:block;font-size:18px;line-height:1.35;margin-bottom:4px;}' +
     '.submit:disabled{background:#9aa0a6;cursor:wait;}' +
@@ -596,7 +643,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<select id="englishTranslation">' +
     englishTranslationOptions +
     '</select>' +
-    '<label>Announcements (print only) / 通知（仅印刷）</label>' +
+    // Weekly Data's announcements for the Sabbath and location, as the app
+    // shows them, to change, remove or add to for this print only (#562).
+    // Nothing here is saved: the .docx is made from this print's Doc.
+    '<label>Announcements, from Weekly Data: changes are for this print only / ' +
+    '通知（来自 Weekly Data，此处修改只用于这次印刷）</label>' +
     '<div id="announcementList"></div>' +
     '<button type="button" class="announcement-add" id="addAnnouncement">+ Add announcement / 添加通知</button>' +
     // The verse is in Weekly Data, so it isn't shown here: only why Preview is
@@ -624,6 +675,12 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'var initialRequest=' +
     requestJson +
     ';' +
+    // A server call's error, with what to do when Google ran it as another
+    // signed-in account (#751).
+    'var accountHint=' +
+    accountHintJson +
+    ';' +
+    'function serverErrorText(error){var text=error&&error.message?error.message:String(error);return /PERMISSION[_ ]DENIED/i.test(text)?accountHint+"\\n\\n"+text:text;}' +
     'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var promptData=null;var promptRequest=0;' +
     'function selectChoice(group,value){' +
     'var buttons=document.querySelectorAll("#"+group+" .choice");' +
@@ -634,20 +691,22 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function escapeHtml(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\\x27/g,"&#39;");}' +
     'function updateSubmitState(){var date=document.getElementById("date").value.trim();var unsupported=locationValue==="brooklyn"&&formatValue==="communion";var verseReady=Boolean(promptData&&promptData.verse&&!promptData.verseProblem);document.getElementById("submit").disabled=Boolean(unsupported||!date||!verseReady);}' +
     'function showError(message){var error=document.getElementById("error");error.textContent=message;error.hidden=false;updateSubmitState();}' +
-    'function announcementMarkup(entry,index){entry=entry||{};var scope=entry.scope||"all";return "<div class=\\"announcement-entry\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 通知 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><select class=\\"announcement-scope\\"><option value=\\"all\\""+(scope==="all"?" selected":"")+">Both locations / 两个地点</option><option value=\\"queens\\""+(scope==="queens"?" selected":"")+">Queens / 皇后区</option><option value=\\"brooklyn\\""+(scope==="brooklyn"?" selected":"")+">Brooklyn / 布鲁克林</option></select><label>English announcement / 英文通知</label><textarea class=\\"announcement-english\\" placeholder=\\"Optional English announcement\\">"+escapeHtml(entry.english||"")+"</textarea><label>Traditional Chinese announcement / 繁体中文通知</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Optional Traditional Chinese announcement\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
-    'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 通知 "+(index+1);});}' +
-    'function addAnnouncementEntry(entry){var list=document.getElementById("announcementList");var index=list.children.length;list.insertAdjacentHTML("beforeend",announcementMarkup(entry,index));refreshAnnouncementLabels();}' +
-    'function renderAnnouncements(entries){var list=document.getElementById("announcementList");list.innerHTML="";(entries||[]).forEach(addAnnouncementEntry);refreshAnnouncementLabels();announcementsDirty=false;updateSubmitState();}' +
     'function renderVerse(data){var view=document.getElementById("verseView");var problem=data&&data.verseProblem;view.hidden=!problem;view.textContent=problem||"";}' +
+    // Each card keeps what Weekly Data had, so a side changed alone gets its
+    // other side translated again at print, rather than an old translation.
+    'function announcementMarkup(entry,index){entry=entry||{};return "<div class=\\"announcement-entry\\" data-english=\\""+escapeHtml(entry.english||"")+"\\" data-chinese=\\""+escapeHtml(entry.chinese||"")+"\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 通知 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><label>English / 英文</label><textarea class=\\"announcement-english\\" placeholder=\\"Blank: translated from the Chinese / 留空则从中文翻译\\">"+escapeHtml(entry.english||"")+"</textarea><label>Chinese / 中文</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Blank: translated from the English / 留空则从英文翻译\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
+    'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 通知 "+(index+1);});}' +
+    'function addAnnouncementEntry(entry){var list=document.getElementById("announcementList");list.insertAdjacentHTML("beforeend",announcementMarkup(entry,list.children.length));refreshAnnouncementLabels();}' +
+    'function renderAnnouncements(entries){document.getElementById("announcementList").innerHTML="";(entries||[]).forEach(addAnnouncementEntry);announcementsDirty=false;}' +
+    'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();var englishChanged=english!==card.getAttribute("data-english");var chineseChanged=chinese!==card.getAttribute("data-chinese");if(englishChanged&&!chineseChanged){chinese="";}if(chineseChanged&&!englishChanged){english="";}if(english||chinese){entries.push({english:english,chinese:chinese});}});return entries;}' +
     'function renderPromptData(data){promptData=data||null;renderAnnouncements((data&&data.announcements)||[]);renderVerse(data);updateSubmitState();}' +
     // A reply for an earlier date or location is dropped, so the verse shown is
     // always the one for the current choices.
-    'function loadPromptData(){var request=++promptRequest;promptData=null;renderVerse(null);updateSubmitState();google.script.run.withSuccessHandler(function(data){if(request===promptRequest){renderPromptData(data);}}).withFailureHandler(function(error){if(request===promptRequest){renderPromptData({announcements:[],verse:"",verseProblem:"Could not read Weekly Data. Close this dialog, then open it again.\\n无法读取 Weekly Data。请关闭此对话框后重新打开。\\n\\n"+(error&&error.message?error.message:String(error))});}}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
-    'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();if(english||chinese){entries.push({scope:card.querySelector(".announcement-scope").value,english:english,chinese:chinese});}});return entries;}' +
+    'function loadPromptData(){var request=++promptRequest;promptData=null;renderVerse(null);updateSubmitState();google.script.run.withSuccessHandler(function(data){if(request===promptRequest){renderPromptData(data);}}).withFailureHandler(function(error){if(request===promptRequest){renderPromptData({announcements:[],verse:"",verseProblem:"Could not read Weekly Data. Close this dialog, then open it again.\\n无法读取 Weekly Data。请关闭此对话框后重新打开。\\n\\n"+serverErrorText(error)});}}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
     'function showLoading(){document.getElementById("bulletinForm").hidden=true;document.getElementById("statusView").hidden=false;document.getElementById("statusView").innerHTML=' +
     '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Making the preview…<br>正在生成预览…</h2><p class=\'intro\'>This may take a minute while the Google Doc is prepared.<br>创建 Google 文档可能需要一点时间。</p></div>";focusStatusView_();}' +
     'function focusStatusView_(){setTimeout(function(){var status=document.getElementById("statusView");if(status&&status.scrollIntoView){status.scrollIntoView({behavior:"smooth",block:"nearest"});}},0);}' +
-    'function showGenerationError(error){document.getElementById("statusView").hidden=true;document.getElementById("bulletinForm").hidden=false;showError("Could not create bulletin / 无法创建周刊\\n\\n"+(error&&error.message?error.message:String(error)));setTimeout(function(){var message=document.getElementById("error");if(message&&message.scrollIntoView){message.scrollIntoView({behavior:"smooth",block:"center"});}},0);}' +
+    'function showGenerationError(error){document.getElementById("statusView").hidden=true;document.getElementById("bulletinForm").hidden=false;showError("Could not create bulletin / 无法创建周刊\\n\\n"+serverErrorText(error));setTimeout(function(){var message=document.getElementById("error");if(message&&message.scrollIntoView){message.scrollIntoView({behavior:"smooth",block:"center"});}},0);}' +
     'function showResult(result){document.getElementById("statusView").innerHTML=' +
     '"<h2>Preview ready / 预览已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的周刊已准备好。")+"</p>"+'+
     '(result.scheduleNotSet?"<p class=\'intro\'>The Sabbath Calendar has no schedule for this Sabbath yet, so its roster says TBD.<br>安息日日历还没有这个安息日的安排，所以名单显示为 TBD。</p>":"")+'+
@@ -655,19 +714,18 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function runRequest(request){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(function(result){' +
     'if(result&&result.requiresConfirmation){var message=result.warning+"\\n\\n"+result.warningChinese+"\\n\\nContinue anyway? / 仍要继续吗？";if(window.confirm(message)){request.confirmLongVerse=true;runRequest(request);}else{updateSubmitState();}return;}' +
     'showLoading();google.script.run.withSuccessHandler(showResult).withFailureHandler(function(error){showGenerationError(error);}).createPrintedBulletinFromRequest(request);' +
-    '}).withFailureHandler(function(error){showError(error&&error.message?error.message:String(error));}).getPrintedBulletinPromptWarning((promptData&&promptData.verse)||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
+    '}).withFailureHandler(function(error){showError(serverErrorText(error));}).getPrintedBulletinPromptWarning((promptData&&promptData.verse)||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
     'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);updateLocationFormatAvailability();loadPromptData();}});' +
     'document.getElementById("formatChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){formatValue=event.target.getAttribute("data-value");selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();updateSubmitState();}});' +
-    'document.getElementById("addAnnouncement").addEventListener("click",function(){addAnnouncementEntry({});announcementsDirty=true;});' +
-    'document.getElementById("announcementList").addEventListener("input",function(){announcementsDirty=true;});' +
-    'document.getElementById("announcementList").addEventListener("change",function(){announcementsDirty=true;});' +
-    'document.getElementById("announcementList").addEventListener("click",function(event){if(event.target.classList.contains("announcement-remove")){event.target.closest(".announcement-entry").remove();refreshAnnouncementLabels();announcementsDirty=true;}});' +
     'document.getElementById("date").addEventListener("change",function(){loadPromptData();updateSubmitState();});' +
     'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();if(!date){showError("Sabbath date is required. / 安息日日期为必填。");return;}if(!promptData||!promptData.verse||promptData.verseProblem){showError((promptData&&promptData.verseProblem)||"Reading Weekly Data… / 正在读取 Weekly Data…");return;}var request={date:date,format:formatValue,location:locationValue,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}runRequest(request);});' +
+    'document.getElementById("addAnnouncement").addEventListener("click",function(){addAnnouncementEntry({});announcementsDirty=true;});' +
+    'document.getElementById("announcementList").addEventListener("input",function(){announcementsDirty=true;});' +
+    'document.getElementById("announcementList").addEventListener("click",function(event){if(event.target.classList.contains("announcement-remove")){event.target.closest(".announcement-entry").remove();refreshAnnouncementLabels();announcementsDirty=true;}});' +
     'function makeWordCopy(){var date=document.getElementById("date").value.trim();var wordStatus=document.getElementById("wordCopyStatus");var button=document.getElementById("wordCopy");if(!date){wordStatus.className="error";wordStatus.textContent="Choose the Sabbath date first. / 请先选择安息日日期。";return;}' +
     'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the .docx… / 正在制作 .docx…";google.script.run.withSuccessHandler(function(result){button.disabled=false;' +
     'wordStatus.className="download-row";wordStatus.innerHTML="<a class=\'download\' href=\'"+escapeHtml(result.downloadUrl)+"\'>⬇ Download .docx / 下载 .docx</a>";})' +
-    '.withFailureHandler(function(error){button.disabled=false;wordStatus.className="error";wordStatus.textContent=(error&&error.message)||String(error);}).createPrintedBulletinWordCopy({date:date,location:locationValue});}' +
+    '.withFailureHandler(function(error){button.disabled=false;wordStatus.className="error";wordStatus.textContent=serverErrorText(error);}).createPrintedBulletinWordCopy({date:date,location:locationValue});}' +
     'document.getElementById("wordCopy").addEventListener("click",makeWordCopy);' +
     'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
     '</script></body></html>'
@@ -788,11 +846,10 @@ function getPhysicalBibleTextStats_(text) {
 function createPrintedBulletinFromRequest(request) {
   request = request || {};
   validatePrintedBulletinRequest_(request);
-  if (Object.prototype.hasOwnProperty.call(request, 'announcements')) {
-    savePrintedBulletinAnnouncements_(request.date, request.announcements);
-  }
   // The verse is always Weekly Data's, as in the app (#622), so a verse sent
-  // with the request is ignored.
+  // with the request is ignored. Announcements sent with it are the dialog's
+  // changes to Weekly Data's, for this print only (#562); without any, it
+  // prints Weekly Data's.
   var result = createPrintedBulletin_(
     request.date,
     request.format,
@@ -801,6 +858,7 @@ function createPrintedBulletinFromRequest(request) {
       englishTranslation: request.englishTranslation,
       chineseTranslation: request.chineseTranslation,
     },
+    Array.isArray(request.announcements) ? request.announcements : null,
   );
   prunePrintedBulletinProperties_();
   return result;
@@ -817,15 +875,6 @@ function validatePrintedBulletinRequest_(request) {
   }
 }
 
-/**
- * Reads the printed-only announcement list for the selected Sabbath. This is
- * deliberately separate from the public bulletin payload and the staff-managed
- * schedule data.
- */
-function getPrintedBulletinAnnouncements(requestedDate) {
-  return readPrintedBulletinAnnouncements_(requestedDate).entries;
-}
-
 function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var date = toIsoDate_(requestedDate);
   var location = normalizePrintedBulletinLocation_(requestedLocation);
@@ -840,21 +889,6 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
     }
   }
   var verse = bulletin && bulletin[location] ? String(bulletin[location].bibleVerses || '').trim() : '';
-  var storedAnnouncements = readPrintedBulletinAnnouncements_(date);
-  var announcements = storedAnnouncements.entries;
-  if (!storedAnnouncements.found && bulletin) {
-    announcements = [];
-    if (hasPrintValue_(bulletin.announcements)) {
-      announcements.push({ scope: 'all', english: bulletin.announcements, chinese: '' });
-    }
-    if (bulletin[location] && hasPrintValue_(bulletin[location].announcements)) {
-      announcements.push({
-        scope: location,
-        english: bulletin[location].announcements,
-        chinese: '',
-      });
-    }
-  }
   // The dialog shows Weekly Data's verse read-only, the same one the app
   // shows, and can't create the Doc while it's blank or unreadable (#622).
   var verseProblem = readError
@@ -863,7 +897,8 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
       readError
     : getPrintedBibleVerseProblem_(verse);
   return {
-    announcements: announcements,
+    // Weekly Data's, as the app shows them, for the dialog to fill in (#562).
+    announcements: bulletin ? getPhysicalPrintedAnnouncementEntries_(bulletin, location) : [],
     verse: verse,
     verseLabels: verseProblem ? null : formatPrintedBibleVerseLabels_(verse),
     verseProblem: verseProblem,
@@ -898,10 +933,11 @@ function getPrintedBibleVerseProblem_(reference) {
   }
   return (
     'Weekly Data\'s Bible Verses can\'t be read: ' + unreadable.join(', ') + '. Write each passage ' +
-    'as book chapter:verse, such as John 3:16 or John 3:16-18, with a semicolon between passages. ' +
-    'Close this dialog, fix it in Weekly Data, then open the dialog again.\n' +
+    'as book chapter:verse, in English or Chinese, such as John 3:16, John 3:16-18 or 约3:16, with a ' +
+    'semicolon between passages. Close this dialog, fix it in Weekly Data, then open the dialog again.\n' +
     '无法读取“Weekly Data”中的“Bible Verses”：' + unreadable.join('、') + '。每段经文请写成“书卷 章:节”，' +
-    '例如 John 3:16 或 John 3:16-18，多段经文之间用分号隔开。请关闭此对话框，在“Weekly Data”中修改后重新打开。'
+    '中英文都可以，例如 约3:16、约翰福音 3:16-18 或 John 3:16，多段经文之间用分号隔开。请关闭此对话框，' +
+    '在“Weekly Data”中修改后重新打开。'
   );
 }
 
@@ -919,68 +955,15 @@ function formatPrintedBibleVerseLabels_(reference) {
   };
 }
 
-function savePrintedBulletinAnnouncements_(requestedDate, entries) {
-  var date = toIsoDate_(requestedDate);
-  if (!date) {
-    throw new Error('A valid Sabbath date is required for printed announcements');
-  }
-
-  var normalized = normalizePrintedBulletinAnnouncements_(entries);
-  var serialized = JSON.stringify(normalized);
-  if (
-    getPhysicalUtf8ByteLength_(serialized) >
-    PRINTED_BULLETIN_CONFIG.printedAnnouncementsMaxSerializedBytes
-  ) {
-    throw new Error(
-      'The printed announcements are too long. Please shorten them or use fewer entries.',
-    );
-  }
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    PropertiesService.getScriptProperties().setProperty(
-      getPrintedBulletinAnnouncementsPropertyKey_(date),
-      serialized,
-    );
-  } finally {
-    lock.releaseLock();
-  }
-  return normalized;
-}
-
-function readPrintedBulletinAnnouncements_(requestedDate) {
-  var date = toIsoDate_(requestedDate);
-  if (!date || typeof PropertiesService === 'undefined') {
-    return { found: false, entries: [] };
-  }
-
-  var raw = PropertiesService.getScriptProperties().getProperty(
-    getPrintedBulletinAnnouncementsPropertyKey_(date),
-  );
-  if (raw === null || typeof raw === 'undefined') {
-    return { found: false, entries: [] };
-  }
-
-  try {
-    return {
-      found: true,
-      entries: normalizePrintedBulletinAnnouncements_(JSON.parse(raw)),
-    };
-  } catch (error) {
-    Logger.log('Could not read printed announcements for ' + date + ': ' + error);
-    return { found: true, entries: [] };
-  }
-}
-
 /**
- * Script Properties keep each bulletin's Doc ID, and each week's printed
- * announcements, by Sabbath. The project settings page can manage only 50
- * properties by hand, so after each Doc is made this deletes the per-week ones
- * for Sabbaths more than four weeks past, and every print-only verse the old
- * verse picker left (#622). Recent and future weeks stay, so a reprint still
- * updates its Doc. The Docs and PDFs stay in Drive, and no other property is
- * touched. Returns the number deleted.
+ * Script Properties keep each bulletin's Doc ID by Sabbath. The project
+ * settings page can manage only 50 properties by hand, so after each Doc is
+ * made this deletes the per-week ones for Sabbaths more than four weeks past,
+ * and every print-only verse the old verse picker left (#622) and every week's
+ * announcements the dialog saved before they moved to Weekly Data (#562).
+ * Recent and future weeks stay, so a reprint still updates its Doc. The Docs
+ * and PDFs stay in Drive, and no other property is touched. Returns the number
+ * deleted.
  */
 function prunePrintedBulletinProperties_(today) {
   var lock = LockService.getScriptLock();
@@ -1024,10 +1007,10 @@ function isExpiredPrintedBulletinProperty_(key, cutoff) {
   if (prefix === config.printedBibleVersePropertyPrefix) {
     return hasLocation;
   }
-  var weekly =
-    prefix === config.documentPropertyPrefix ||
-    prefix === config.pdfPropertyPrefix ||
-    (prefix === config.printedAnnouncementsPropertyPrefix && !hasLocation);
+  if (prefix === config.printedAnnouncementsPropertyPrefix) {
+    return !hasLocation;
+  }
+  var weekly = prefix === config.documentPropertyPrefix || prefix === config.pdfPropertyPrefix;
   return weekly && match[3] < cutoff;
 }
 
@@ -1035,48 +1018,6 @@ function addPrintedBulletinDays_(date, days) {
   var parts = date.split('-');
   var shifted = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + days));
   return [shifted.getUTCFullYear(), pad2_(shifted.getUTCMonth() + 1), pad2_(shifted.getUTCDate())].join('-');
-}
-
-function getPrintedBulletinAnnouncementsPropertyKey_(date) {
-  return PRINTED_BULLETIN_CONFIG.printedAnnouncementsPropertyPrefix + date;
-}
-
-function normalizePrintedBulletinAnnouncements_(entries) {
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-  if (entries.length > PRINTED_BULLETIN_CONFIG.printedAnnouncementsMaxEntries) {
-    throw new Error(
-      'A maximum of ' +
-        PRINTED_BULLETIN_CONFIG.printedAnnouncementsMaxEntries +
-        ' printed announcements is supported.',
-    );
-  }
-
-  return entries
-    .map(function (entry) {
-      entry = entry || {};
-      var scope = String(entry.scope || 'all').trim().toLowerCase();
-      if (['all', 'queens', 'brooklyn'].indexOf(scope) === -1) {
-        scope = 'all';
-      }
-      return {
-        scope: scope,
-        english: normalizePrintedAnnouncementText_(entry.english),
-        chinese: normalizePrintedAnnouncementText_(entry.chinese),
-      };
-    })
-    .filter(function (entry) {
-      return Boolean(entry.english || entry.chinese);
-    });
-}
-
-function normalizePrintedAnnouncementText_(value) {
-  return String(value === null || typeof value === 'undefined' ? '' : value)
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/[ \t]+\n/g, '\n')
-    .trim();
 }
 
 function getPhysicalUtf8ByteLength_(value) {
@@ -1190,6 +1131,7 @@ function createPrintedBulletin_(
   requestedFormat,
   requestedLocation,
   requestedBibleTranslations,
+  printAnnouncements,
 ) {
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -1199,6 +1141,7 @@ function createPrintedBulletin_(
       requestedFormat,
       requestedLocation,
       requestedBibleTranslations,
+      printAnnouncements,
     );
   } finally {
     lock.releaseLock();
@@ -1210,6 +1153,7 @@ function createPrintedBulletinUnlocked_(
   requestedFormat,
   requestedLocation,
   requestedBibleTranslations,
+  printAnnouncements,
 ) {
   var date = toIsoDate_(requestedDate);
   if (!date) {
@@ -1227,9 +1171,9 @@ function createPrintedBulletinUnlocked_(
   if (verseProblem) {
     throw new Error(verseProblem);
   }
-  var printedAnnouncements = readPrintedBulletinAnnouncements_(date);
-  bulletin.printedAnnouncements = printedAnnouncements.entries;
-  bulletin.hasPrintedAnnouncements = printedAnnouncements.found;
+  if (printAnnouncements && bulletin[location]) {
+    bulletin[location].announcements = completePrintedAnnouncements_(printAnnouncements, location);
+  }
   bulletin = preparePrintedBulletinForPrint_(bulletin, nameDictionary);
   bulletin.physicalBibleTranslations = bibleTranslations;
   hydratePhysicalBibleVerses_(bulletin, bibleTranslations);
@@ -2040,12 +1984,11 @@ function parsePhysicalBibleReferences_(value) {
 }
 
 // Each passage in a reference, such as "John 3:16; Psalm 23", with its parsed
-// reference, or null when it can't be read.
+// reference, or null when it can't be read. Its text is as typed, so a
+// message about it shows what's in the cell.
 function parsePhysicalBibleReferencePieces_(value) {
   var source = String(value || '')
-    .replace(/[：]/g, ':')
-    .replace(/[–—]/g, '-')
-    .replace(/\s*\([^)]*\)\s*$/g, '')
+    .replace(/\s*[(（][^()（）]*[)）]\s*$/g, '')
     .trim();
   if (!source) {
     return [];
@@ -2066,18 +2009,24 @@ function parsePhysicalBibleReferencePieces_(value) {
 }
 
 function parsePhysicalBibleReferencePiece_(piece) {
+  // Full-width digits and punctuation, as a Chinese keyboard types them in
+  // 创５０：１９－２０, become ASCII ones, as in the app's reader.
+  piece = String(piece || '')
+    .normalize('NFKC')
+    .replace(/[–—]/g, '-')
+    .trim();
   // Accept both "Jeremiah 29:11-15" and the common shorthand
-  // "Jeremiah:29:11-15".
+  // "Jeremiah:29:11-15". A space after the book is optional, as Chinese
+  // writes it: 创50:19-20.
   piece = piece.replace(/^(.+?):(\d+):/, '$1 $2:');
   var match = piece.match(
-    /^(.+?)\s+(\d+)(?:\s*:\s*(\d+)(?:\s*-\s*(\d+))?)?$/,
+    /^(.+?)\s*(\d+)(?:\s*:\s*(\d+)(?:\s*-\s*(\d+))?)?$/,
   );
   if (!match) {
     return null;
   }
 
-  var bookName = normalizePhysicalBibleBookName_(match[1]);
-  var bookId = PRINTED_BIBLE_BOOK_IDS[bookName];
+  var bookId = getPrintedBibleBookIds_()[normalizePhysicalBibleBookName_(match[1])];
   if (!bookId) {
     return null;
   }
@@ -2139,19 +2088,22 @@ function formatPhysicalBibleReference_(passage, language) {
   return reference;
 }
 
+// A book name as getPrintedBibleBookIds_ keys it, the way the app's reader
+// compares them: case, accents, dots and the space after a book's number
+// don't matter, and a Roman numeral counts as the number, so "1co", "1 Co."
+// and "I Co" are the same.
 function normalizePhysicalBibleBookName_(value) {
-  var name = String(value || '')
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[.]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .toLowerCase();
-  var aliases = {
-    ps: 'psalm',
-    psa: 'psalm',
-    'song of songs': 'song of solomon',
-    canticles: 'song of solomon',
-  };
-  return aliases[name] || name;
+    .toLowerCase()
+    .replace(/^(iii|ii|i) (?=\p{L})/u, function (all, numeral) {
+      return numeral.length + ' ';
+    })
+    .replace(/^([1-3]) ?(?=\p{L})/u, '$1 ');
 }
 
 function fetchPhysicalBibleChapter_(translation, passage) {
@@ -2809,7 +2761,10 @@ function appendPrintedAnnouncementsTable_(cell, entries) {
   entries.forEach(function (entry, rowIndex) {
     var row = table.getRow(rowIndex);
     [entry.chinese, entry.english].forEach(function (text, columnIndex) {
-      var numberedText = formatPrintedAnnouncementNumberedText_(text, rowIndex);
+      // Numbered only when there are two or more, as Sabbath School hymns
+      // are: Weekly Data has one, and the dialog can add a rare second (#562).
+      var numberedText =
+        entries.length > 1 ? formatPrintedAnnouncementNumberedText_(text, rowIndex) : String(text || '').trim();
       var tableCell = row.getCell(columnIndex);
       tableCell.clear();
       tableCell.setPaddingTop(2);
@@ -2866,37 +2821,72 @@ function protectPrintedChinesePunctuation_(text) {
   );
 }
 
+// The location's announcements from Weekly Data, each in English and Chinese,
+// the same ones the app shows (#562). buildBulletin_ has already translated
+// each line, if the translation worked; the dialog's changes for one print
+// replace them (completePrintedAnnouncements_).
 function getPhysicalPrintedAnnouncementEntries_(bulletin, location) {
-  if (bulletin && bulletin.hasPrintedAnnouncements) {
-    return (bulletin.printedAnnouncements || [])
-      .filter(function (entry) {
-        return entry.scope === 'all' || entry.scope === location;
-      })
-      .filter(function (entry) {
-        return Boolean(entry.english || entry.chinese);
-      });
+  var announcements = bulletin && bulletin[location] && bulletin[location].announcements;
+  if (!Array.isArray(announcements)) {
+    return [];
   }
-
-  var locationData = bulletin && bulletin[location];
-  return [
-    bulletin && bulletin.announcements,
-    locationData && locationData.announcements,
-  ]
-    .filter(function (value) {
-      return hasPrintValue_(value);
+  return announcements
+    .map(function (announcement) {
+      return {
+        english: String((announcement && announcement.english) || '').trim(),
+        chinese: String((announcement && announcement.chinese) || '').trim(),
+      };
     })
-    .map(function (value) {
-      return { english: String(value), chinese: '' };
+    .filter(function (entry) {
+      return Boolean(entry.english || entry.chinese);
     });
 }
 
-function getPhysicalPrintedAnnouncementText_(bulletin, location) {
-  return getPhysicalPrintedAnnouncementEntries_(bulletin, location)
-    .map(function (entry) {
-      return printedBilingualText_(entry.english, entry.chinese);
+// The most announcements, and the longest one, a print takes from the dialog.
+var PRINTED_ANNOUNCEMENTS_MAX_ENTRIES = 20;
+var PRINTED_ANNOUNCEMENT_MAX_LENGTH = 2000;
+
+// The dialog's announcements for this print (#562), each { english, chinese },
+// with a side left blank machine-translated from the other, as Weekly Data's
+// are. A prefilled one nobody changed comes back with both sides, so it prints
+// as the app shows it. One a dialog opened before #562 sent for the other
+// location is left out.
+function completePrintedAnnouncements_(entries, location) {
+  var announcements = (Array.isArray(entries) ? entries : [])
+    .filter(function (entry) {
+      var scope = String((entry && entry.scope) || 'all').trim().toLowerCase();
+      return scope === 'all' || scope === location;
     })
-    .filter(Boolean)
-    .join('\n\n');
+    .map(function (entry) {
+      entry = entry || {};
+      var text = function (value) {
+        return String(value === null || typeof value === 'undefined' ? '' : value)
+          .trim()
+          .slice(0, PRINTED_ANNOUNCEMENT_MAX_LENGTH);
+      };
+      return { english: text(entry.english), chinese: text(entry.chinese) };
+    })
+    .filter(function (announcement) {
+      return Boolean(announcement.english || announcement.chinese);
+    })
+    .slice(0, PRINTED_ANNOUNCEMENTS_MAX_ENTRIES);
+  // Line by line, as Weekly Data's are, so a line break stays one.
+  announcements.forEach(function (announcement) {
+    [
+      { field: 'chinese', from: 'english', code: 'zh-TW' },
+      { field: 'english', from: 'chinese', code: 'en' },
+    ].forEach(function (side) {
+      if (announcement[side.field]) {
+        return;
+      }
+      var lines = splitBulletinAnnouncementLines_(announcement[side.from]);
+      var parts = translateBulletinTexts_(lines, '', side.code);
+      if (lines.length && parts.every(Boolean)) {
+        announcement[side.field] = parts.join('\n');
+      }
+    });
+  });
+  return announcements;
 }
 
 function getFirstPrintedAnnouncementSentenceLength_(text) {
@@ -3902,7 +3892,10 @@ function formatHymnForPrint_(hymn) {
   return printedOneLanguageText_(english || chinese) || physicalTbdText_();
 }
 
-function formatBibleReferenceForPrint_(location, bibleTranslations) {
+// The worship program's Bible Reading row: the passage, Chinese over English,
+// without the translations' names. Only the Today's Verse box, which prints
+// the text, names them (#751).
+function formatBibleReferenceForPrint_(location) {
   var reference = String((location && location.bibleVerses) || '').trim();
   if (!reference || isPhysicalTbd_(reference)) {
     return physicalTbdText_();
@@ -3911,8 +3904,8 @@ function formatBibleReferenceForPrint_(location, bibleTranslations) {
   // The schedule has one scripture-reference field, but the printed table
   // has separate Chinese and English lines. Resolve the book name for each
   // line instead of copying the English reference into both language slots.
-  var labels = formatPhysicalBibleReferenceLabels_(location, bibleTranslations);
-  return printedBilingualText_(labels.english, labels.chinese);
+  var labels = formatPrintedBibleVerseLabels_(reference);
+  return labels.english ? printedBilingualText_(labels.english, labels.chinese) : physicalTbdText_();
 }
 
 function formatSermonForPrint_(location) {
@@ -3997,6 +3990,15 @@ function printedOneLanguageText_(value) {
     return physicalTbdText_();
   }
   return /[\u3400-\u9fff]/.test(text) ? text + '\n—' : '—\n' + text;
+}
+
+// The Special Music row's piece. One typed in both languages, "中文 (English)"
+// or "English (中文)", goes Chinese over English, as a two-language hymn cell
+// does (splitBilingualHymnTitle_); anything else as printedOneLanguageText_
+// places it (#751).
+function formatSpecialMusicTitleForPrint_(value) {
+  var sides = splitBilingualHymnTitle_(String(value === null || typeof value === 'undefined' ? '' : value));
+  return sides ? printedBilingualText_(sides.english, sides.chinese) : printedOneLanguageText_(value);
 }
 
 function printValue_(value) {

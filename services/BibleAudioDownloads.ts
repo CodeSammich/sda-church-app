@@ -7,7 +7,7 @@ import {
   BIBLE_AUDIO_BOOKS,
   getAudioPowerCuvChapterLinks,
   getBibleAudioNarrator,
-  getCantoneseCuvChapterUrl,
+  getCantoneseCuvChapterUrls,
   getRv1909ChapterLinks,
 } from '@/services/BibleAudioSources';
 import {
@@ -123,11 +123,11 @@ const covers = (request: BibleAudioDownloadScope, scope: BibleAudioDownloadScope
 };
 
 /**
- * Where a narrator's chapter downloads from, in the order tried: the church's
- * copy, then for Mandarin its two mirrors, which are the same file. The
- * WordProject recordings (Cantonese and Spanish) come only from the church's
- * copies, as for streaming (see docs/LEGAL.md). The English ones come from
- * HelloAO, whose terms say "Cache, store and download without expiry".
+ * Where a narrator's chapter downloads from, in the order tried, as for
+ * streaming. Mandarin, Cantonese and Spanish come from HelloAO first, then the
+ * church's copy, and for Mandarin its two other mirrors, all the same file
+ * (#749, #770). The English ones come from HelloAO. HelloAO's terms say
+ * "Cache, store and download without expiry".
  */
 export const getBibleAudioDownloadUrls = (narrator: string, bookId: string, chapter: number): string[] => {
   const chapters = CHAPTERS.get(bookId);
@@ -137,7 +137,7 @@ export const getBibleAudioDownloadUrls = (narrator: string, bookId: string, chap
     case 'cuv-mandarin':
       return list(Object.values(getAudioPowerCuvChapterLinks(bookId, chapter))[0]);
     case 'cuv-cantonese':
-      return list(getCantoneseCuvChapterUrl(bookId, chapter));
+      return getCantoneseCuvChapterUrls(bookId, chapter);
     case 'rv1909':
       return list(Object.values(getRv1909ChapterLinks(bookId, chapter))[0]);
     default:

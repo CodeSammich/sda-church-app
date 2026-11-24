@@ -9,7 +9,7 @@ import {
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { TEAM_MEMBERS } from '@/constants/TeamData';
+import { TEAM_MEMBERS, type TeamMember } from '@/constants/TeamData';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
@@ -24,6 +24,15 @@ import { ImageBackground } from '@/components/ImageBackground';
 import { Card, Divider, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
+
+// A key-screens build shows made-up staff, with a photo of the church building
+// in place of a face (#456), so no one's name or photo reaches the key
+// screens' shots and downloads. Expo writes EXPO_PUBLIC_KEY_SCREENS into the
+// app when it's built, so a store build leaves the made-up data out.
+const teamMembers: TeamMember[] =
+  process.env.EXPO_PUBLIC_KEY_SCREENS === '1'
+    ? require('@/services/KeyScreensFixtures').KEY_SCREENS_TEAM_MEMBERS
+    : TEAM_MEMBERS;
 
 export default function MeetOurTeamScreen() {
   const { language } = useContext(LanguageContext);
@@ -118,7 +127,7 @@ export default function MeetOurTeamScreen() {
         {/* Content Body */}
         <View style={[styles.body, contentColumnStyle(columnScale)]}>
           {/* Cards for each team member */}
-          {TEAM_MEMBERS.map((member, index) => (
+          {teamMembers.map((member, index) => (
             <Card
               key={index}
               style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}

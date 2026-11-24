@@ -38,7 +38,13 @@ translation's text from either:
   app ships those times so the reader can mark the verse being read
   (`scripts/build-bible-audio-timings.mjs`, #561). HelloAO's
   [terms](https://bible.helloao.org/docs/) allow it: "Cache, store and download
-  without expiry", and "AO Lab adds no restrictions".
+  without expiry", and "AO Lab adds no restrictions". Since November 2026 HelloAO
+  also hosts both Chinese Union Version recordings, Mandarin
+  ([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592)) and Cantonese (listed in [its API](https://bible.helloao.org/api/cmn_cuv/JHN/3.json)), with the
+  church's verse times, and the app plays them from HelloAO first ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)).
+  HelloAO also hosts WordProject's Spanish recording of the Reina-Valera 1909 (listed
+  in [its API](https://bible.helloao.org/api/spa_r09/JHN/3.json)), which the app plays
+  from HelloAO first too ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). HelloAO has no verse times for it yet.
 - [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
   same way from its public-domain `spa_rv`, whose normalized resource keeps the
   edition's translation footnotes. It's also the source of the original-language
@@ -56,16 +62,20 @@ bulletin's menu still offers the KJV for its verses, since it's printed in New Y
 
 Chinese Union Version audio is streamed chapter by chapter from
 [Audio Power](https://theaudiopower.org/translations/cuv/#nar1), which credits the
-recordings to 基督徒团契 (Christian Fellowship). The app links directly to the
-church's copies on Adventist Connect, with Internet Archive and Audio Power copies as
-playback fallbacks; the repository does not bundle the recordings. Audio Power's owner
+recordings to 基督徒团契 (Christian Fellowship). The app plays HelloAO's copies
+first, then the church's copies on Adventist Connect, with Internet Archive and Audio
+Power copies as the last fallbacks ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)); the repository does not bundle
+the recordings. All four serve the same recording, in files of the same size
+([measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)). Audio Power's owner
 explicitly approved the church app's use, download, and self-hosting of these recordings in
 [issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
 
-Cantonese audio for the same editions comes from WordProject, played only from the
-church's copies on Adventist Connect; see
-[WordProject Cantonese audio](#wordproject-cantonese-audio). So does the Reina-Valera
-1909 audio; see
+Cantonese audio for the same editions comes from WordProject, played from HelloAO's
+copies first and then the church's copies on Adventist Connect, never from
+WordProject's servers; see
+[WordProject Cantonese audio](#wordproject-cantonese-audio). The Reina-Valera 1909
+audio comes from WordProject too, played the same way: HelloAO's copy first, then the
+church's; see
 [WordProject Spanish audio](#wordproject-spanish-audio-reina-valera-1909).
 
 ### Chinese Union Version text (1919)
@@ -208,7 +218,7 @@ Cantonese book pages, as read on September 30, 2026 (not legal advice):
 | Use in apps | "You are ONLY allowed to use the audio files for non-profit evangelization (without in APP ads or for-sale APPs)." | Allowed while the app stays free and without ads, which it must anyway (see the [App stores](architecture.md#app-stores) rule). |
 | Nonprofit only | "All available audio is copyrighted and its use is allowed for NON-PROFIT only - (evangelization/education)." | The church is a nonprofit, and the app sells nothing. |
 | Downloading | Each book page: "右鍵單擊本頁末尾的“Zip_”，然後“鏈接另存為”以下載整本書。" ("Right-click 'Zip_' at the end of this page, then 'Save link as', to download the whole book.") | The church downloaded each book once, from these zips. |
-| WordProject's servers | "If you wish to link to our audio, you are obliged to tell us and get our approval." and "DO NOT make a Bible web site or APP and link the whole audio Bible (or Bibles) to our servers." | The app plays only the church's copies. It must never link to WordProject's servers, even as a fallback, without WordProject's written approval. |
+| WordProject's servers | "If you wish to link to our audio, you are obliged to tell us and get our approval." and "DO NOT make a Bible web site or APP and link the whole audio Bible (or Bibles) to our servers." | The app plays HelloAO's copies of the Cantonese and Spanish recordings, then the church's ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). It must never link to WordProject's servers, even as a fallback, without WordProject's written approval. |
 | Changing the audio | "you are allowed to adapt the data (text format only!) for your purposes but NOT the audio files." | Host the files exactly as downloaded: no re-encoding, trimming, joining, volume changes, or tag edits. Only the file names change, so that each chapter's name is unique. |
 | Credit | Not specified. The Copyrights page asks sites to "place a link to our website and our audio APP". | The narrator is named 粵語 (WordProject). While it's selected, each chapter shows a credit that links to WordProject's Cantonese page, which offers its app. |
 
@@ -257,6 +267,18 @@ library, like the Mandarin CUV recordings (see
 repository doesn't bundle them. The app contacts no new service, so the privacy
 policy doesn't change.
 
+**HelloAO's copies (November 2026).** HelloAO's Free Use Bible API added both CUV
+recordings, with the church's verse times, after the church asked: the Mandarin on
+2026-11-13 ([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592)), and the Cantonese soon after
+(listed in [its API](https://bible.helloao.org/api/cmn_cuv/JHN/3.json)). In the same comment HelloAO wrote that it had asked
+WordProject about its audio and hadn't heard back. HelloAO's copies are on HelloAO's
+servers, not WordProject's, and they appear to be the church's files: on 2026-11-22,
+all 1,189 chapters of both recordings on HelloAO had the size the app expects, and the
+five chapters of each compared matched byte for byte ([measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)). The app plays HelloAO's copies first, and the church's
+if HelloAO fails ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). If WordProject objects to HelloAO's copy, or
+HelloAO removes it, take HelloAO out of `getCantoneseCuvChapterUrls` in
+`services/BibleAudioSources.ts`.
+
 ### WordProject Spanish audio (Reina-Valera 1909)
 
 [WordProject's Spanish audio Bible](https://www.wordproject.org/bibles/audio/06_spanish/index.htm)
@@ -269,6 +291,21 @@ descargar el libro completo." ("Right-click 'zip' at the bottom of the page and 
 link as' to download the whole book.") So the church downloaded the book zips once,
 hosts unmodified copies on Adventist Connect, never links to WordProject's servers, and
 credits WordProject with a link to its Spanish page.
+
+**HelloAO's copy (November 2026).** HelloAO's Free Use Bible API added the Spanish
+recording too. On 2026-11-23 HelloAO wrote that WordProject still hadn't responded,
+and that it now hosts audio for many translations, `spa_r09` among them
+([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-7105481721)).
+It's on HelloAO's servers, not WordProject's, and it's the same files as the church's
+copies, WordProject's unchanged: the same day, all 1,189 chapters on HelloAO had the
+size the app expects, and five chapters from each Testament matched the church's copies
+byte for byte ([measured on #770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770#issuecomment-7121832434)).
+The app plays HelloAO's copy first, and the church's if HelloAO fails ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). The app
+uses its own bundled verse times, as for every recording; HelloAO has none for this one
+yet. HelloAO is already one of the
+app's services, so the privacy policy doesn't change. If WordProject objects to
+HelloAO's copy, or HelloAO removes it, take HelloAO out of `getRv1909ChapterLinks` in
+`services/BibleAudioSources.ts`.
 
 **No one claims the recording.** No file has a copyright, owner, or publisher tag,
 and WordProject's Spanish pages name no narrator or rights holder. 1,178 chapters are
@@ -318,6 +355,15 @@ which the church relies on, as for the Cantonese and Spanish recordings. If an o
 comes forward, follow their terms. WordProject has no Haitian Creole
 ([#345](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/345)) or Tibetan ([#150](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/150)) audio.
 
+**HelloAO first.** A new language starts from what HelloAO has, and the church's
+own copies are only a short-term fallback, if a launch is an emergency ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). On
+2026-11-23 HelloAO's [chapter API](https://bible.helloao.org/docs/) served
+WordProject's recordings for Russian, Japanese, Arabic and English (KJV) among these,
+and for Korean and German, none with verse times ([#769](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/769)). HelloAO hosting a recording
+doesn't change its rights. The table above still applies, so the Arabic needs another
+source or its owners' permission, the KJV needs Intellectual Reserve's, and
+WordProject hasn't yet answered HelloAO about its recordings ([#769](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/769)).
+
 Dated copies of WordProject's pages for these languages and for Spanish are in
 [rights-records/audio-sources-2026-10-01](rights-records/audio-sources-2026-10-01/README.md),
 with [a summary of every file's tags](rights-records/audio-sources-2026-10-01/tag-summaries.md)
@@ -338,8 +384,9 @@ share or export a file. What each source allows:
 
 | Recording | Source | Offline downloads |
 | --- | --- | --- |
-| Mandarin (Chinese Union Version) | Audio Power, from the church's copies | Its owner approved the church app's use, download, and self-hosting of the recordings ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)). The church's copy comes first, then the Internet Archive's and Audio Power's, which are the same files. |
-| Cantonese, and Spanish (Reina-Valera 1909) | WordProject, from the church's copies | Its book pages invite downloading a whole book (see [WordProject Cantonese audio](#wordproject-cantonese-audio)). Downloaded only from the church's copies, never WordProject's servers, and kept exactly as hosted. |
+| Mandarin (Chinese Union Version) | Audio Power, from HelloAO's and the church's copies | Its owner approved the church app's use, download, and self-hosting of the recordings ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)), and HelloAO's terms allow downloads. HelloAO's copy comes first, then the church's, then the Internet Archive's and Audio Power's, which are the same files. |
+| Cantonese (Chinese Union Version) | WordProject, from HelloAO's and the church's copies | Its book pages invite downloading a whole book (see [WordProject Cantonese audio](#wordproject-cantonese-audio)). HelloAO's copy comes first, then the church's, never WordProject's servers, and the files are kept exactly as hosted. |
+| Spanish (Reina-Valera 1909) | WordProject, from HelloAO's and the church's copies | As for Cantonese: HelloAO's copy comes first, then the church's ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). |
 | English (BSB): Souer, Hays, and David | HelloAO | HelloAO's [terms](https://bible.helloao.org/docs/): "Cache, store and download without expiry", and "AO Lab adds no restrictions". Gilbert's recordings, on openbible.com, aren't offered. |
 | Anything from Bible Brain later ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)) | Faith Comes By Hearing | Only content from its `/download` endpoint may be offered offline (see [Bible Brain API license](#bible-brain-api-license-faith-comes-by-hearing-planned-not-in-use)). |
 
@@ -417,12 +464,14 @@ is linked, not copied.
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
 | **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book directly in the app language's official edition, English or Spanish (Chinese readers open her books in the Chinese Union Mission's reader, in the next row), and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
-| **Chinese Union Mission** (`read.sdabible.org`, `api.sdabible.org`, `cms.sdabible.site`) | For Chinese readers only: links that open Ellen G. White's Chinese editions, one for both scripts, and 14 other Chinese books the church's leaders chose (#554) in the online reader of the Mission's SDA Bible app, in the app's script; the Explore tab's link to that app (its App Store page on iPhone and iPad, the online reader elsewhere); and cover thumbnails for those books, from `read.sdabible.org` and, for hers, from the Mission's public catalog. | The app only links to the Mission's reader and never copies its text or covers into the app; the Mission's editions keep their own rights. The thumbnails get the same limited navigational use as the EGW covers: they identify books that lead to the Mission's own copies. Image URLs are checked against the Mission's hosts. A courtesy request to the Mission about these links and covers is tracked in #563. |
+| **Chinese Union Mission** (`read.sdabible.org`, `api.sdabible.org`, `cms.sdabible.site`) | For Chinese readers only: links that open Ellen G. White's Chinese editions, one for both scripts, and 14 other Chinese books the church's leaders chose (#554) in the online reader of the Mission's SDA Bible app, in the app's script (English and Spanish readers open seven of those in their free originals instead; see the Amazing Facts and Christian Classics Ethereal Library rows); the Explore tab's link to that app (its App Store page on iPhone and iPad, the online reader elsewhere); and cover thumbnails for those books, from `read.sdabible.org` and, for hers, from the Mission's public catalog. | The app only links to the Mission's reader and never copies its text or covers into the app; the Mission's editions keep their own rights. The thumbnails get the same limited navigational use as the EGW covers: they identify books that lead to the Mission's own copies. Image URLs are checked against the Mission's hosts. A courtesy request to the Mission about these links and covers is tracked in #563. |
+| **Amazing Facts** (`amazingfacts.org`) | For English and Spanish readers, six of the Chinese Union Mission books above in the original English and in Amazing Facts' Spanish: Joe Crews, *The Last Night on Earth* and *Remember Lot's Wife*; W. S. Jesske, *Deathwatch in Siberia*; Dennis Crews, *Baptized Paganism*, all from its Free Book Library (`amazingfacts.org/study/free-books/…`, `amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/…`); and two *Inside Report* articles by Doug Batchelor, *The Bible and Evolution* and *Am I a Pharisee … or a Publican?* (`amazingfacts.org/news-events/inside-report/…`, `amazingfacts.org/es/noticias-y-eventos/informe-interno/…`). The second's page credits only Amazing Facts; it's in his own voice, and its Chinese cover credits him | Amazing Facts publishes them free to read on its own website, in both languages, and they keep their rights. The app only links to its pages and never copies the text. Checked 2026-11-10 (#703). |
 | **Adventist pioneer books on EGW Writings** | A link to Uriah Smith, *Daniel and the Revelation*, 1897 edition (`text.egwwritings.org/read/12861.1`) | Published in 1897, so public domain in the U.S. The app only links to it. Later revisions, such as the 1944 *The Prophecies of Daniel and the Revelation*, are still copyrighted and must not be substituted. |
 | **Adventist Pioneer Library translation on EGW Writings** | For Spanish readers, J. N. Andrews, *Historia del Sábado* (`text.egwwritings.org/read/14404.2`), in place of the English *History of the Sabbath* | A 2020 Spanish translation of the 1873 edition by Rolando Itin, © Adventist Pioneer Library, published on EGW Writings; its credits page names the 1873 original. The translation is copyrighted, so the app only links to it. |
 | **Project Gutenberg** (`gutenberg.org`) | Links to seven works: Joseph Bates, *The Seventh Day Sabbath, a Perpetual Sign* (1847); J. N. Andrews, *History of the Sabbath and First Day of the Week* (1873); Uriah Smith, *The State of the Dead and the Destiny of the Wicked* (1873); John Bunyan, *The Pilgrim's Progress* (1678); Andrew Murray, *Humility* (1895); John Foxe, *Fox's Book of Martyrs* (an abridged 19th-century American edition); Jesse Lyman Hurlbut, *Hurlbut's Life of Christ for Young and Old* (1915, ebook 40460) | Each record is explicitly marked public domain in the U.S. |
 | **Chapel Library** (`chapellibrary.org`) | For Spanish readers, *El progreso del peregrino para todos (condensado)*, Chapel Library's abridged Spanish edition of John Bunyan's *The Pilgrim's Progress*, as its own free PDF (`chapellibrary.org/pdf/books/ppfes.pdf`) | © 2015 Chapel Library. Its notice grants express permission to reproduce it by any means, as long as no more than a nominal cost is charged and the notice and the rest of its page are kept. The app only links to Chapel Library's own copy, which carries the notice. The PDF calls itself "cuidadosamente abreviada" (carefully abridged), so its title says *condensado*. Checked 2026-09-30. |
 | **Internet Archive** (`archive.org`) | Links to five scans: Richard Sibbes, *The Bruised Reed* (1630), in the 1838 London edition by Pickering, which also contains *A Fountain Sealed* and *A Description of Christ* (`archive.org/details/bwb_C0-AVW-616`); Andrew Murray, *Abide in Christ* (1882), in the 1895 Revell edition (Chicago, New York, Toronto), microfilmed from the National Library of Canada's copy (`archive.org/details/cihm_11323`); Jesse Lyman Hurlbut, *Story of the Bible Told for Young and Old* (1904), in the 1905 Philadelphia edition by H. W. B. Conrad, a Library of Congress copyright-deposit copy (`archive.org/details/mothersstoryofbi00hurl`); Mrs. Howard Taylor, *Pastor Hsi: One of China's Christians*, the 1903 first edition (London, Morgan & Scott and the China Inland Mission), from Cornell (`archive.org/details/cu31924023085875`); and Dr. and Mrs. Howard Taylor, *Hudson Taylor in Early Years: The Growth of a Soul*, the 1911 London edition by Morgan & Scott, from Princeton (`archive.org/details/hudsontaylorinea00unse_0`) | Sibbes and Murray checked 2026-09-27, the other three 2026-10-01, under [Internet Archive sources](#internet-archive-sources). The scanned title pages read 1838, 1895, 1905 (with the 1904 copyright), 1903, and 1911. The only later material is the 1838 editor's preface and the publishers' own lists of books from the same years. All five scans are openly downloadable rather than lend-only. The Library of Congress states it is unaware of any copyright restrictions on the Hurlbut copy, and Cornell states there are no known U.S. restrictions on its *Pastor Hsi*. Don't substitute these records: `abideinchristtho0000murr` (a 2013 reprint catalogued as 1880), Hurlbut's 1932 and later revisions (lend-only and still copyrighted), the later abridged *Pastor Hsi* editions, and `hudsontaylorin00tayl` (a 1912 New York printing catalogued as 1911 London). |
+| **Christian Classics Ethereal Library** (`ccel.org`) | For English and Spanish readers, *The Kneeling Christian* by "An Unknown Christian" (`www.ccel.org/ccel/unknown/kneeling.html`), one of the Chinese Union Mission books above, in English | Its first printing is undated, and no library record of it was found (searched 2026-11-10). The only date in its text is August 1921, when it quotes Thomas Edison, and its author began publishing in 1921; it was his second book, written "sometime between the 1920s and the early 1930s" ([Wikipedia](https://en.wikipedia.org/wiki/The_Kneeling_Christian)). So it's almost certainly from the 1920s, and works published before 1931 are [public domain in the U.S.](https://guides.library.cornell.edu/copyright/publicdomain) as of 2026, but that isn't confirmed. The maintainer chose to link it anyway (#703): the app only links to CCEL's copy and never copies the text, and CCEL's record names no edition. A dated record of a printing before 1931 would confirm it; if the first printing turns out to be 1931 or later, take the link out. |
 | **HathiTrust** (`babel.hathitrust.org`) | For Chinese readers (Traditional and Simplified), 天路歷程 in place of the English *The Pilgrim's Progress*: the 1869 Mandarin (官話) edition of William C. Burns's translation of Part 1, Shanghai, American Presbyterian Mission Press (美華書館), printed in traditional characters, from the University of California's copy (`babel.hathitrust.org/cgi/pt?id=uc1.b3399258`) | Checked 2026-10-01. The scanned title page reads 同治八年 / 耶穌降世一千八百六十九年 (1869), so both the original and the translation are public domain in the U.S. HathiTrust's record (catalog 006287510) shows the volume as public domain (`pd`) and in full view, and the [external dependency monitor](operations/external-dependency-monitor.md) rechecks that daily. The app only links to HathiTrust's page viewer. Burns's 1853 classical (文理) version and later Chinese translations, such as the 1936 聖遊記, were not used. |
 | **The church's own copy** (`app.nyccsda.org/library/`) | *Sabbath Encouragement* (安息日勉言), the Chinese PDF the Brooklyn bulletin also uses, from `public/library/` | A compilation of Bible verses and Ellen G. White quotations, edited and shared freely by churches in China, who treat it as free of copyright. That comes secondhand, through the pastor ([#248](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/248#issuecomment-5852167793)); see [Sabbath Encouragement](operations/sabbath-encouragement-copyright.md). |
 

@@ -1,10 +1,10 @@
 name: Workspace Backup Reminder
 
 # Every three months, opens an issue asking a super administrator to export all
-# of the church's Google Workspace data and keep a copy off Google (#461). The
-# checklist is in scripts/workspace-backup-reminder.cjs, and the steps are in the
-# admin runbook. The export and download are done by hand; this workflow uses no
-# credentials beyond opening an issue.
+# of the church's Google Workspace data and keep two copies off Google, on two
+# separate drives (#461). The checklist is in scripts/workspace-backup-reminder.cjs,
+# and the steps are in the admin runbook. The export, download, and copy are done
+# by hand; this workflow uses no credentials beyond opening an issue.
 
 on:
   schedule:

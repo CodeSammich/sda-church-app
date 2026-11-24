@@ -66,11 +66,19 @@ describe('Google Workspace backup issue', () => {
       'not a folder that syncs to a cloud account',
       'Errors',
       '_.gstmp',
+      'two copies off Google, on two separate drives',
+      'second backup drive',
+      'kept unplugged between backups and stored in another room or building',
+      'Check both copies',
+      'keep the two newest on each drive',
     ]) {
       expect(body).toContain(text);
     }
-    // The folder comes before the download into it.
+    // The folder comes before the download into it, and the download before
+    // the copy onto the second drive, which comes before checking both.
     expect(body.indexOf('Make a folder')).toBeLessThan(body.indexOf('Download the export'));
+    expect(body.indexOf('Download the export')).toBeLessThan(body.indexOf('Copy the whole folder'));
+    expect(body.indexOf('Copy the whole folder')).toBeLessThan(body.indexOf('Check both copies'));
     // Every step is a box to tick.
     expect(body.match(/^- \[ \] /gm)!.length).toBe(STEPS.length);
   });

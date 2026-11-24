@@ -21,7 +21,7 @@ const CHECKLIST = [
     'Money',
     [
       [
-        'Cloudflare: the card on file hasn\'t expired, auto-renew is on for `nyccsda.org`, and the domain\'s paid-through date is at least a year away.',
+        'Cloudflare: the card on file hasn\'t expired, it\'s still a credit card whose hard limit covers ten years of the domain at this year\'s price plus every other subscription on it, with a buffer (about $200–300 for now; re-set it if the price or the subscriptions changed), auto-renew is on for `nyccsda.org`, and the domain\'s paid-through date is at least a year away.',
         'docs/operations/admin-runbook.md',
         'the-cloudflare-account-and-domain',
       ],
@@ -41,7 +41,7 @@ const CHECKLIST = [
         'google-cloud-play-upload-service-account',
       ],
       [
-        'No other service has gained a payment method: Cloudflare is still the only one with a card.',
+        'No other service has gained a payment method: Cloudflare is still the only one with a card, unless the church decided to add a subscription. Any such subscription is on that same capped card, and the limit was re-set to cover it.',
         'docs/architecture.md',
         'payment-methods',
       ],
@@ -101,6 +101,11 @@ const CHECKLIST = [
         'why-this-architecture',
       ],
       [
+        'HelloAO, the app\'s main Bible source: its terms still say "Cache, store and download without expiry", it still serves the English narrators and the Mandarin, Cantonese and Spanish recordings the app plays from it, and any answer from WordProject about its recordings is recorded (#769).',
+        'docs/LEGAL.md',
+        'bible-sources-and-licensing',
+      ],
+      [
         'Re-read the service limits and costs, and update anything that changed.',
         'docs/operations/service-limits-and-costs.md',
         'summary',
@@ -114,6 +119,11 @@ const CHECKLIST = [
         'On the Sabbath School screen, This Week\'s Mission Video opens Adventist Mission\'s weekly stories for this quarter, in English and, with the app in Spanish, in Spanish. The monitor can\'t tell. With the app in Chinese, it opens CHTV\'s Mandarin 聖工剪影 on YouTube once the phone has found one.',
         'docs/operations/external-dependency-monitor.md',
         'what-the-monitor-cant-check',
+      ],
+      [
+        'Status page: its dashboard shows a check from the last few hours, its checks still match the app\'s audio hosts and bulletin API, and its GitHub App is installed only on `sda-church-app-status`.',
+        'docs/operations/status-page.md',
+        'upkeep',
       ],
       [
         'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Triage Label, iOS compile cache, and Maintenance Release Reminder. GitHub turns schedules off after 60 days without a commit to main; the reminder opens a tracking issue and a version pull request for a maintenance release at 45 days, and an issue if it finds one turned off.',

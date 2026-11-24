@@ -52,14 +52,14 @@ jobs:
       - name: Free disk space for the emulator
         run: scripts/free-runner-disk.sh
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
 
       - name: Install dependencies
         run: npm ci
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6
         with:
           distribution: temurin
           java-version: 17
@@ -95,10 +95,13 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # A local DNS server answers "no such domain" for the church's audio
-      # host, so the primary source fails as it would in an outage, without
-      # changing the app. Every other name resolves normally.
-      - name: Make the church's audio host unreachable
+      # A local DNS server answers "no such domain" for HelloAO's audio host
+      # and the church's, the first two copies of the Mandarin recording
+      # (#749), so both fail as they would in an outage, without changing the
+      # app. Every other name resolves normally. They're the only copies of
+      # the Cantonese and Spanish recordings (#770), so the scenarios play
+      # Mandarin only.
+      - name: Make HelloAO's and the church's audio hosts unreachable
         # Ubuntu's package servers can hang without a word: on 2026-11-05 this
         # step sat for 88 minutes, until the job's own limit. Each try at the
         # install gets 4 minutes, with one more try after a pause.
@@ -119,6 +122,7 @@ jobs:
           dns_ip="$(hostname -I | awk '{print $1}')"
           sudo dnsmasq --listen-address="$dns_ip" --bind-interfaces --no-hosts \
             --resolv-file=/run/systemd/resolve/resolv.conf \
+            --local=/audio.bible.helloao.org/ \
             --local=/adventistconnect.org/ \
             --log-queries --log-facility="$RUNNER_TEMP/dnsmasq.log" \
             --pid-file="$RUNNER_TEMP/dnsmasq.pid"
@@ -169,17 +173,19 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get install -y --no-install-recommends ffmpeg >/dev/null
 
-      - name: Check that only the church's host is blocked
+      - name: Check that only HelloAO's and the church's hosts are blocked
         run: |
           set -euo pipefail
-          blocked="$(adb shell ping -c 1 -W 2 assets.adventistconnect.org 2>&1 | tr -d '\r' || true)"
+          for host in audio.bible.helloao.org assets.adventistconnect.org; do
+            blocked="$(adb shell ping -c 1 -W 2 "$host" 2>&1 | tr -d '\r' || true)"
+            echo "$host: $blocked"
+            grep -i 'unknown host' <<< "$blocked" >/dev/null || {
+              echo "$host still resolves; the host block is not working." >&2
+              exit 1
+            }
+          done
           allowed="$(adb shell ping -c 1 -W 2 archive.org 2>&1 | tr -d '\r' || true)"
-          echo "assets.adventistconnect.org: $blocked"
           echo "archive.org: $allowed"
-          grep -i 'unknown host' <<< "$blocked" >/dev/null || {
-            echo 'The church audio host still resolves; the host block is not working.' >&2
-            exit 1
-          }
           grep -i 'unknown host' <<< "$allowed" >/dev/null && {
             echo 'archive.org does not resolve; the emulator has no working DNS.' >&2
             exit 1
@@ -207,7 +213,7 @@ jobs:
       # run, for the reader's screenshots and filmstrip.
       - name: Upload screenshots and logs
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-audio-e2e-${{ github.run_id }}
           path: ${{ runner.temp }}/e2e-output

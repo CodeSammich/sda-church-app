@@ -254,12 +254,12 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [
       printedBilingualText_('Bible Readings', '讀經'),
-      formatBibleReferenceForPrint_(location, bulletin.physicalBibleTranslations),
+      formatBibleReferenceForPrint_(location),
       printedBilingualText_('Congregation', '會眾'),
     ],
     [printedBilingualText_('Pastoral Prayer', '牧養禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一與奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
-    [printedBilingualText_('Special Music', '特別音樂'), printedOneLanguageText_(location.specialMusicTitle), printValue_(location.specialMusic)],
+    [printedBilingualText_('Special Music', '特別音樂'), formatSpecialMusicTitleForPrint_(location.specialMusicTitle), printValue_(location.specialMusic)],
   ];
   var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],

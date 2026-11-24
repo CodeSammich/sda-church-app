@@ -1,4 +1,5 @@
 import { AppIcon } from '@/components/AppIcon';
+import { LightStatusBar } from '@/components/LightStatusBar';
 import {
   type FeaturedCarouselItem,
   LibraryFeaturedCarousel,
@@ -28,7 +29,6 @@ import {
   type LayoutChangeEvent,
   Platform,
   Pressable,
-  StatusBar,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -584,7 +584,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   return (
     <>
       <Stack.Screen options={screenOptions as any} />
-      {isFocused && heroUnderStatusBar && <StatusBar barStyle="light-content" />}
+      {isFocused && heroUnderStatusBar && <LightStatusBar />}
       <FlatList
         ref={listRef}
         style={NavigationStyles.container}

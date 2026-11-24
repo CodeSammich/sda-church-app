@@ -69,10 +69,8 @@ function appendCoverPanel_(cell, bulletin, format) {
 }
 
 function appendAnnouncementsPanel_(cell, bulletin, nextBulletin) {
-  // Printed bulletins may contain the full, human-approved announcement block.
-  // Keep this separate from the mobile bulletin: announcements are intentionally
-  // not rendered digitally because their content and formatting are fluid and
-  // they are already delivered in person and on the livestream.
+  // The same announcements the app shows, from Weekly Data (#562). Until then
+  // they were typed in the print dialog and printed only.
   appendCenteredText_(cell, 'Announcements | 報告事項', PRINTED_BULLETIN_TYPE.subheadingSize, true);
   appendPrintedAnnouncementsTable_(
     cell,
@@ -152,12 +150,12 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [
       printedBilingualText_('Bible Reading', '讀經'),
-      formatBibleReferenceForPrint_(location, bulletin.physicalBibleTranslations),
+      formatBibleReferenceForPrint_(location),
       printedBilingualText_('Congregation', '會眾'),
     ],
     [printedBilingualText_('Pastoral Prayer', '牧者禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
-    [printedBilingualText_('Special Music', '特別音樂'), printedOneLanguageText_(location.specialMusicTitle), printValue_(location.specialMusic)],
+    [printedBilingualText_('Special Music', '特別音樂'), formatSpecialMusicTitleForPrint_(location.specialMusicTitle), printValue_(location.specialMusic)],
   ];
   var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],

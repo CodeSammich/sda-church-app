@@ -595,21 +595,96 @@ function populateUpcomingBulletinQuarters_(sheet, now) {
 }
 
 // A new Weekly Data tab's rows after the headers: a worked example for each
-// location, between them showing each way to fill a hymn cell, in the order of
-// BULLETIN_SHEET_COLUMNS. Nothing reads a row whose Date isn't a date, so they
-// never reach a bulletin.
+// location, between them showing each way to fill a hymn cell, and
+// an announcement typed in English and one in Chinese, each machine-translated
+// into the other languages, in the order of BULLETIN_SHEET_COLUMNS. Nothing reads a row whose Date isn't
+// a date, so they never reach a bulletin.
 var WEEKLY_DATA_EXAMPLE_ROWS = Object.freeze([
   Object.freeze([
-    'Example', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人',
+    'Example', 'Queens',
+    'Fellowship lunch after the service. Everyone is welcome.',
+    'John 10:11-16', 'The Good Shepherd', '好牧人',
     '第12首 讚美上帝大君王', 'AH 73 Holy, Holy, Holy', '還要等多久',
     'AH 1 Praise to the Lord', 'It Is Well with My Soul', '第452首 遵命有福',
   ]),
   Object.freeze([
-    'Example', 'Brooklyn', 'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
+    'Example', 'Brooklyn', '崇拜後有愛筵，歡迎大家參加。',
+    'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
     '205', 'Amazing Grace', '',
     '第5首 讚美上主', '奇異恩典', 'AH 86 How Great Thou Art',
   ]),
 ]);
+
+// What to type in Announcements (#562), in English and Simplified Chinese like
+// the sheet's other staff instructions. It names no languages, so it stays
+// true as the app adds them. It's the header's note, set when the script
+// writes that header, and the help text on the column's cells
+// (ensureWeeklyDataAnnouncementsHelp_).
+var WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT =
+  "Type the announcement in any language; it's translated automatically for the app and the printed " +
+  'bulletin. Keep it short. For a new line in the cell, press Ctrl+Enter (⌘+Enter on a Mac). Anyone can ' +
+  'read it in the app, so leave out private details, such as health news, addresses and phone numbers. ' +
+  'Translation can get names wrong: check them in the Google Doc before printing.\n' +
+  '通知可以用任何语言填写，会自动翻译，显示在应用中并印在周刊上。请尽量简短。单元格内换行请按 Ctrl+Enter' +
+  '（Mac 按 ⌘+Enter）。任何人都能在应用中看到，请勿填写个人隐私，例如健康状况、地址和电话。' +
+  '机器翻译可能译错人名，打印前请在 Google 文档中核对。';
+
+var WEEKLY_DATA_HEADER_NOTES = Object.freeze({
+  Announcements: WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT,
+});
+
+// Puts the help on Weekly Data's Announcements column, wherever it is (#562):
+// help text on its cells below the header, which shows when one is selected,
+// as on Date, and the header's note if it has none, as on a column added by
+// hand. Setting the rule again replaces it, so nothing doubles, and a rule
+// that pasted cells replaced comes back. Run from Create Word Doc…, not onOpen,
+// which has no time to spare (#639). Row 1 is protected for the technology
+// group, so only one of its accounts writes the note. Returns whether it found
+// the column.
+function ensureWeeklyDataAnnouncementsHelp_(spreadsheet) {
+  var name = CONFIG.intakeSheetName;
+  var sheet = getBulletinSheet_(spreadsheet, name);
+  var lastColumn = sheet ? sheet.getLastColumn() : 0;
+  if (!lastColumn) {
+    return false;
+  }
+  var headers = getBulletinHeaders_(sheet, name, sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0]);
+  var column = findFirstHeaderIndex_(headers, ['Announcements']) + 1;
+  if (!column) {
+    return false;
+  }
+  // Any text is allowed: the rule is only there for its help text.
+  sheet.getRange(2, column, Math.max(1, sheet.getMaxRows() - 1), 1).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireFormulaSatisfied('=TRUE')
+      .setAllowInvalid(true)
+      .setHelpText(WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT)
+      .build(),
+  );
+  try {
+    var header = sheet.getRange(1, column);
+    if (!String(header.getNote() || '').trim()) {
+      header.setNote(WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT);
+    }
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Could not note the Announcements header: ' + error);
+    }
+  }
+  return true;
+}
+
+// Notes these headers, written from this column on, where WEEKLY_DATA_HEADER_NOTES
+// has one.
+function setWeeklyDataHeaderNotes_(sheet, firstColumn, headers) {
+  headers.forEach(function (header, index) {
+    var note = WEEKLY_DATA_HEADER_NOTES[header];
+    var cell = note && sheet.getRange(1, firstColumn + index);
+    if (cell && typeof cell.setNote === 'function') {
+      cell.setNote(note);
+    }
+  });
+}
 
 // Keeps Weekly Data in shape however it's edited (#558), so nobody has to
 // guard its headers. A deleted or emptied tab comes back with its headers and
@@ -629,6 +704,7 @@ function ensureWeeklyDataTab_(spreadsheet) {
     );
     sheet.getRange(1, 1, rows.length, expected.length).setValues(rows);
     sheet.getRange(1, 1, 1, expected.length).setFontWeight('bold');
+    setWeeklyDataHeaderNotes_(sheet, 1, expected);
     sheet.setFrozenRows(1);
     showWeeklyDataNotice_(
       spreadsheet,
@@ -653,13 +729,26 @@ function ensureWeeklyDataTab_(spreadsheet) {
     );
   });
   if (missing.length) {
-    var gridColumns = lastColumn + missing.length - sheet.getMaxColumns();
-    if (gridColumns > 0) {
-      sheet.insertColumnsAfter(sheet.getMaxColumns(), gridColumns);
+    // Row 1 is protected for the technology group, so an ordinary editor's
+    // open can't add a header. Then the columns wait for the next technology
+    // group open, and the rest of the upkeep, such as the next Sabbaths' rows,
+    // goes on (#562 added a column, which the first open after the deploy may
+    // not be able to add).
+    try {
+      var gridColumns = lastColumn + missing.length - sheet.getMaxColumns();
+      if (gridColumns > 0) {
+        sheet.insertColumnsAfter(sheet.getMaxColumns(), gridColumns);
+      }
+      var added = sheet.getRange(1, lastColumn + 1, 1, missing.length);
+      added.setValues([missing]);
+      added.setFontWeight('bold');
+      setWeeklyDataHeaderNotes_(sheet, lastColumn + 1, missing);
+    } catch (error) {
+      if (typeof Logger !== 'undefined') {
+        Logger.log('Could not add the missing Weekly Data columns ' + missing.join(', ') + ': ' + error);
+      }
+      return sheet;
     }
-    var added = sheet.getRange(1, lastColumn + 1, 1, missing.length);
-    added.setValues([missing]);
-    added.setFontWeight('bold');
     showWeeklyDataNotice_(
       spreadsheet,
       'Weekly Data: added these missing columns at the far right: ' + missing.join(', ') +

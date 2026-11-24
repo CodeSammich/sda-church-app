@@ -27,14 +27,19 @@ provider changes its terms.
 "At the limit" says what happens if the app exceeds the provider's limit. **No
 service in this table can bill the church for usage.** The only recurring cost in the
 whole system is the domain, and Cloudflare, which renews it, is the only service with
-a card on file (see [Payment methods](../architecture.md#payment-methods)).
+a card on file. Like any card on file, it's a credit card with a hard limit, about
+$200–300 for now. The limit covers ten years of the domain at its current price (about
+$110 today), so no renewal fails, plus a buffer for subscriptions the church may add.
+It's re-set when the price or the subscriptions change, and stays low enough to cap
+the damage if the card or account is misused (see
+[Payment methods](../architecture.md#payment-methods)).
 
 | Service | Used for | Cost | Published limit | At the limit | Load concern |
 | --- | --- | --- | --- | --- | --- |
-| [Adventist Connect](#adventist-connect-media-library) | Photos, Bible audio (Mandarin primary; Cantonese and Spanish only source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | **Medium**: most of the app's bytes |
-| [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
-| [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
-| [HelloAO](#helloao) | English BSB audio, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN |
+| [Adventist Connect](#adventist-connect-media-library) | Photos, Bible audio (Mandarin, Cantonese and Spanish 2nd source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | Low: photos; the Chinese and Spanish audio only when HelloAO fails |
+| [Internet Archive](#internet-archive) | Mandarin CUV audio, 3rd source | Free | None published | Throttling possible | Low: built for bulk downloads |
+| [Audio Power](#audio-power) | Mandarin CUV audio, 4th source | Free (permission) | None published | Unknown | Low: reached only if three sources fail |
+| [HelloAO](#helloao) | English BSB audio, Mandarin and Cantonese CUV and Spanish RV1909 audio first, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN, though most of the app's bytes |
 | [fetch(bible)](#fetchbible) | The build script's source for RV1909 and the original-language texts; the app makes no request | Free | "No limits from us" | n/a | None at run time |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons, the bulletin's lesson title | Free | None published | Unknown | Low: CDN |
@@ -45,7 +50,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [GitHub Pages](#github-pages) | `app.nyccsda.org` | Free | 1 GB site, 100 GB/month soft | `429` or a GitHub email | None |
 | [Google Workspace](#google-workspace-and-drive) | Roster, Drive, Apps Script | Free (nonprofit) | 100 TB pooled storage | Quota errors | None |
 | [Google Cloud](#google-cloud-play-upload-service-account) | Service account for automatic Google Play uploads | Free; **never link a billing account** | Play Developer API: 3,000 queries per minute | Uploads fail with an error | None: under ten requests per release |
-| [Cloudflare](#cloudflare) | Domain, DNS, and the `app.nyccsda.org` redirect | **~$10/year** (domain only) | n/a | n/a | None |
+| [Cloudflare](#cloudflare) | Domain, DNS, and the `app.nyccsda.org` redirect | **~$11/year** as of 2026 (domain only) | n/a | n/a | None |
 | [App stores](#app-stores) | Distribution | Free (Apple nonprofit waiver; Play $25 paid once) | n/a | n/a | None |
 
 ## Load model
@@ -74,8 +79,9 @@ Per-use costs, *measured*:
 | Adventech quarterly index | ~1 MB, about 235 KB compressed (English) | CDN-cached; on a phone, about once a week per quarterly lesson, when it's tapped: twice when the catalog's dates are off, and at each tap while a new quarter's lessons are late |
 
 The conclusion: **text APIs are negligible at every scenario, and audio is the only
-real load.** Adventist Connect carries it, and the fallback chain decides who carries
-it when Adventist Connect can't. See [Internet Archive](#internet-archive).
+real load.** HelloAO carries the English, Chinese and Spanish audio, and the fallback
+chain decides who carries the Chinese and Spanish audio when HelloAO can't
+([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). See [Internet Archive](#internet-archive).
 
 ## Deliberate architecture choices
 
@@ -94,8 +100,11 @@ These choices exist to keep the app free and within every provider's limits:
   exhaust a quota or bill an account. Every runtime service the app calls works
   without a key, and the bulletin data goes through the church's own Apps Script
   instead of the Google Sheets API.
-- **The church hosts its own copies of the Bible audio**, so outside hosts are only
-  fallbacks ([Audio Power](#audio-power)), and chapters stream on demand. Whole books
+- **The church hosts its own copies of the Bible audio**, so no outside host is a
+  recording's only copy except the English narrators', and chapters stream on demand.
+  The Chinese and Spanish recordings play from HelloAO first, with the church's copy
+  behind it ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), and Audio Power's server is the last resort
+  ([Audio Power](#audio-power)). Whole books
   download only when a member asks, to listen offline, one file a chapter, a few at once
   as the phone's downloader runs them (#556, #611)
   ([how the app fetches audio](adventist-connect-media.md#how-the-app-fetches-audio)).
@@ -118,28 +127,32 @@ These choices exist to keep the app free and within every provider's limits:
 
 ### Adventist Connect media library
 
-Hosts the church's photos, hymnal lookup charts, the primary copy of the Mandarin
-CUV Bible audio, and the only copies the app plays of the Cantonese CUV and Spanish
-RV1909 audio, behind NAD's Cloudflare CDN with Wasabi storage. Free to the church as
+Hosts the church's photos, hymnal lookup charts, and the church's copies of the
+Mandarin and Cantonese CUV and Spanish RV1909 Bible audio, which the app plays when
+HelloAO's fail ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)), behind NAD's Cloudflare CDN with Wasabi
+storage. Free to the church as
 part of NAD's church-website platform, with no agreement or published limits. The
 full hosting chain and scaling analysis are in
 [Adventist Connect media hosting](adventist-connect-media.md): at congregation scale
-it carries about 22 GB of audio a month, which is ordinary traffic for that platform;
-at wide adoption, terabytes a month could draw attention under Cloudflare's CDN
-terms.
+it would carry about 22 GB of audio a month if all listening went through it, which is
+ordinary traffic for that platform; at wide adoption, terabytes a month could draw
+attention under Cloudflare's CDN terms. Since the Chinese and Spanish recordings play
+from HelloAO first, it carries their listening only while HelloAO fails, or for a
+listener who chose the church's copy in the audio settings.
 
 ### Internet Archive
 
-`archive.org`, the second source for CUV audio, redirecting to its storage servers
-(*measured*). Free, nonprofit, and built for large public downloads, though it
-publishes no guaranteed rate and can slow heavy users. It is second so that an
-Adventist Connect failure moves listeners here rather than onto Audio Power's server;
+`archive.org`, the third source for Mandarin CUV audio, redirecting to its storage
+servers (*measured*). Free, nonprofit, and built for large public downloads, though it
+publishes no guaranteed rate and can slow heavy users. It comes before Audio Power so
+that a failure of HelloAO and Adventist Connect moves listeners here rather than onto
+Audio Power's server;
 the daily [dependency monitor](external-dependency-monitor.md) checks that its
 collection still holds every chapter.
 
 ### Audio Power
 
-`theaudiopower.com`, the third and last source for CUV audio. A single nginx server
+`theaudiopower.com`, the fourth and last source for Mandarin CUV audio. A single nginx server
 with no CDN (*measured*), run by a small ministry that gave the church permission to
 use and self-host its Chinese recordings (see
 [Audio Power permission scope](../LEGAL.md#audio-power-permission-scope); its Spanish
@@ -147,27 +160,36 @@ and English recordings are not covered). It publishes no limits and nothing is c
 in front of it.
 
 **Load:** until 0.39 it was the second source, so an Adventist Connect failure would
-have moved every listener onto it at once. It is now tried only when both Adventist
-Connect and the Internet Archive fail for a chapter, which keeps that load off the
-ministry's server. The app moves past a source that fails outright as soon as the
+have moved every listener onto it at once. It is now tried only when HelloAO,
+Adventist Connect and the Internet Archive all fail for a chapter, which keeps that
+load off the ministry's server. The app moves past a source that fails outright as soon as the
 player reports it, and past a slow one after 15 seconds
 ([#262](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/262)),
 so reaching Audio Power takes seconds rather than minutes.
 
 ### HelloAO
 
-`bible.helloao.org` (text) and `audio.bible.helloao.org` (English BSB audio). Static
+`bible.helloao.org` (text) and `audio.bible.helloao.org` (English BSB audio, the
+Mandarin and Cantonese CUV audio, played first since [#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749), and the Spanish RV1909
+audio, played first since [#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). Static
 files on AWS S3 behind CloudFront with a one-day cache (*measured*). Its
-documentation says: "No usage limits, no API Keys required, and no copyright
-restrictions whatsoever." The English text and every book list ship with the app, built
+[documentation](https://bible.helloao.org/docs/) says "No account, key or approval",
+"No published usage limit", and "Cache, store and download without expiry" (read on
+2026-11-23). The English text and every book list ship with the app, built
 from HelloAO's complete translations, so the app requests no text here.
-The printed bulletin's Apps Script also fetches its Bible verses here, caching each
-chapter.
+The printed bulletins' Apps Script also fetches their Bible verses here, Sabbath
+Encouragement's included, caching each chapter.
 
-English audio is the one heavy HelloAO load: about 4.4 MB per chapter, streamed
+HelloAO is a top-level dependency: the main source for the Bible's text and audio,
+and the first place to look for each new language ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). The church's copies on
+Adventist Connect are the Chinese and Spanish recordings' fallback; they're not the
+plan for new languages.
+
+Audio is the heavy HelloAO load. English is about 4.4 MB per chapter, streamed
 directly from HelloAO, with no church copy. That is fine at every scenario because it
 is served from CloudFront, but it is the largest dependency with no fallback other
-than choosing another narrator.
+than choosing another narrator. The Chinese and Spanish recordings are much smaller,
+and the church's copies on Adventist Connect take over if HelloAO fails.
 
 ### Bulletin API (Apps Script)
 
@@ -256,6 +278,14 @@ that Sabbath see a failed load until traffic drops. The daily
 response.
 
 Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a concern.
+The `Weekly Data` announcements' translations are also cached, apart from the
+response, for up to six hours
+([Cache](https://developers.google.com/apps-script/reference/cache/cache)), so a
+line is translated a few times a day, not every two minutes (#562). Apps Script
+allows 20,000 translate calls a day on a Google Workspace account
+([quotas](https://developers.google.com/apps-script/guides/services/quotas)), and
+one call, or two when some lines are in Chinese, carries a location's announcement
+into one language.
 
 ### Adventech Sabbath School
 
@@ -405,8 +435,12 @@ Checked 2026-09-28.
 
 ### Cloudflare
 
-The domain, about $10 a year, is the **only recurring cost**; DNS and the redirect are
+The domain, about $11 a year as of 2026, is the **only recurring cost**. The `.org`
+registry raised its price to $11.00 a year on June 1, 2026
+([Domain Name Wire](https://domainnamewire.com/2026/03/12/org-prices-to-increase-on-june-1/)), and Cloudflare Registrar adds no markup
+([Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)). DNS and the redirect are
 free, and no usage-billed product may be added to the account, which keeps a card on file
+with a hard limit, about $200–300 for now
 ([The Cloudflare account and domain](admin-runbook.md#the-cloudflare-account-and-domain)).
 
 ### App stores
@@ -437,7 +471,8 @@ Found while writing this page and resolved in
 - **Chinese library catalog caching.** Fixed: the cover list is cached on the device
   and refreshed at most daily, keeping the cached copy if a refresh fails.
 - **Audio Power absorbing every listener if Adventist Connect fails.** Fixed: the
-  Internet Archive is now the second source and Audio Power the last. The slow
+  Internet Archive comes before Audio Power, which is the last source, and HelloAO
+  now comes before both ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). The slow
   native fallback is fixed too
   ([#262](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/262)).
 - **The bulletin API's execution ceiling.** Accepted: caching keeps real traffic well

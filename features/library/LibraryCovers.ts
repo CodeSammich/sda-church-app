@@ -18,6 +18,16 @@ export const BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
   'hurlbut-life-of-christ': require('../../assets/images/library/hurlbut-life-of-christ.png'),
   'taylor-pastor-hsi': require('../../assets/images/library/taylor-pastor-hsi.png'),
   'taylor-hudson-taylor-early-years': require('../../assets/images/library/taylor-hudson-taylor-early-years.png'),
+  // Books from the Chinese Union Mission's reader (#703), for English readers,
+  // Spanish readers of a book with no Spanish edition, and Chinese readers
+  // offline.
+  'kneeling-christian': require('../../assets/images/library/kneeling-christian.png'),
+  'crews-last-night-on-earth': require('../../assets/images/library/crews-last-night-on-earth.png'),
+  'jesske-deathwatch-in-siberia': require('../../assets/images/library/jesske-deathwatch-in-siberia.png'),
+  'crews-remember-lots-wife': require('../../assets/images/library/crews-remember-lots-wife.png'),
+  'batchelor-bible-and-evolution': require('../../assets/images/library/batchelor-bible-and-evolution.png'),
+  'batchelor-pharisee-or-tax-collector': require('../../assets/images/library/batchelor-pharisee-or-tax-collector.png'),
+  'crews-baptized-paganism': require('../../assets/images/library/crews-baptized-paganism.png'),
 };
 
 // Covers for Spanish editions, keyed by the book's catalog id, shown when the
@@ -26,6 +36,12 @@ export const SPANISH_BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> 
   'andrews-history-sabbath': require('../../assets/images/library/andrews-history-sabbath-es.png'),
   'bunyan-pilgrims-progress': require('../../assets/images/library/bunyan-pilgrims-progress-es.png'),
   'story-of-jesus': require('../../assets/images/library/story-of-jesus-es.png'),
+  'crews-last-night-on-earth': require('../../assets/images/library/crews-last-night-on-earth-es.png'),
+  'jesske-deathwatch-in-siberia': require('../../assets/images/library/jesske-deathwatch-in-siberia-es.png'),
+  'crews-remember-lots-wife': require('../../assets/images/library/crews-remember-lots-wife-es.png'),
+  'batchelor-bible-and-evolution': require('../../assets/images/library/batchelor-bible-and-evolution-es.png'),
+  'batchelor-pharisee-or-tax-collector': require('../../assets/images/library/batchelor-pharisee-or-tax-collector-es.png'),
+  'crews-baptized-paganism': require('../../assets/images/library/crews-baptized-paganism-es.png'),
 };
 
 // Covers for Chinese editions, keyed by the book's catalog id, shown to

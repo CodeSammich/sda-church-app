@@ -49,7 +49,7 @@ Souer first, then Hays, then David, then any others (`getOrderedBibleAudioReader
 Traditional and simplified CUV chapters use the chapter-level Mandarin recordings
 published by [Audio Power](https://theaudiopower.org/translations/cuv/#nar1). The
 recordings are not bundled in the Git repository, but the church downloads and self-hosts
-an authorized copy as the primary playback tier. Audio Power's owner explicitly approved
+an authorized copy. Audio Power's owner explicitly approved
 the church app's use, download, and self-hosting of the recordings; the permanent project
 record is maintained in
 [issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
@@ -60,9 +60,10 @@ Both CUV variants also offer a Cantonese narrator, `粵語 (WordProject)`, liste
 the Mandarin one so that Mandarin stays the default. The recording comes from
 [WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), and the
 church hosts it on Adventist Connect under canonical names such as
-`CANTONESE_B43C003.mp3`. Unlike the Mandarin narrator, this one has a single source,
-with no fallback host; WordProject's terms, and why they rule out playing from its
-servers, are in [WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio).
+`CANTONESE_B43C003.mp3`. It plays from HelloAO's copy first and the church's copy
+second ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)), and never from WordProject's servers; WordProject's terms, and
+why they rule that out, are in
+[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio).
 The generated `constants/CantoneseAdventistAudioManifest.ts` maps each canonical name to
 the church's URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the
 church site's public media list. While the Cantonese narrator is selected, the chapter
@@ -79,8 +80,9 @@ for both (`getAudioReaderPreferenceKey`): switching between CUV and CUVS keeps i
 
 The Reina-Valera 1909 uses WordProject's Spanish recording the same way, under the same
 terms ([WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909)):
-a single narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
-Adventist Connect, with no fallback host. `npm run extract:rv1909-adventist-manifest`
+a single narrator named WordProject, played from HelloAO's copy first and then the
+church's, files named `RV1909_B43C003.mp3` and so on on Adventist Connect, as for
+Cantonese ([#770](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/770)). `npm run extract:rv1909-adventist-manifest`
 builds `constants/Rv1909AdventistAudioManifest.ts`; the same script
 (`scripts/extract-wordproject-audio-manifest.mjs`) builds the Cantonese manifest.
 `hasChurchHostedAudio` and `getChurchHostedAudioLinks` in `BibleAudioSources.ts` are
@@ -88,18 +90,21 @@ the one place that decides which translations play the church's copies. While th
 Spanish narrator is selected, the chapter shows a credit linking to WordProject's
 Spanish page.
 
-The Mandarin CUV recording is represented as one narrator with three ordered hosting
-sources rather than three narrator choices: the generated Adventist Connect manifest
-supplies the primary church-controlled copy, the complete
-[Internet Archive collection](https://archive.org/download/CUV_201911) is the second
-tier, and Audio Power's host is the third, so that an outage of the church copy doesn't
-move every listener onto the ministry's small server. A
+The Mandarin CUV recording is represented as one narrator with four ordered hosting
+sources rather than four narrator choices. HelloAO's Free Use Bible API, which hosts the
+same recording with the church's verse times
+([HelloAO's Bible API issue #112](https://github.com/HelloAOLab/bible-api/issues/112#issuecomment-6858082592), [measured on #749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749#issuecomment-7075320847)),
+is first, as it is for the English narrators ([#749](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/749)). The generated Adventist
+Connect manifest supplies the church-controlled copy second, the complete
+[Internet Archive collection](https://archive.org/download/CUV_201911) is the third
+tier, and Audio Power's host is the fourth, so that an outage of the first two copies
+doesn't move every listener onto the ministry's small server. A
 source that cannot load within the player timeout is skipped without asking the listener
 to select a different host. The manifest generator extracts only public asset URLs from
 the WordPress upload HAR; authentication data and other HAR contents must not be checked
 into the repository.
 
-The primary tier is storage-provider agnostic at runtime. The checked-in manifest maps
+The church's tier is storage-provider agnostic at runtime. The checked-in manifest maps
 canonical chapter filenames to stable public HTTPS URLs; it currently points to the
 church's files on `assets.adventistconnect.org`, the managed asset host used by Adventist
 Connect. A future deployment may use an S3-compatible bucket, CDN, or another
@@ -563,8 +568,8 @@ and keeps following.
   recording is the one the app plays and the verse numbers match the bundled text. That
   leaves out Leviticus 19 for all three, and one psalm each for two of them. Gilbert has no
   times.
-- **Mandarin, Cantonese, and Spanish:** the church's copies of these recordings have no
-  published times, so they were made by forced alignment
+- **Mandarin, Cantonese, and Spanish:** these recordings had no published times, so they
+  were made by forced alignment
   ([Bible audio verse times](../operations/bible-audio-verse-times.md) has the steps, for
   a new narrator or language too): a speech model lines up the
   bundled text with each recording, and the start of each verse's first word is its time,

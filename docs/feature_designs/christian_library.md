@@ -23,7 +23,7 @@ The EGW collection retains original, text-free thematic illustrations generated 
 
 The cards request small, remotely hosted cover thumbnails from the official provider for the current app language. English and Spanish covers use the book IDs already published by EGW Writings; Chinese covers use the Chinese Union Mission's live catalog and validate image URLs against the Mission's storage host. Spanish falls back to English, Chinese falls back to English, and all languages finally fall back to the bundled original artwork. No provider cover or linked book text is copied into the repository. The provider thumbnails are used only for identifying books that lead to their official reader editions. The White Estate copyright notice reserves rights in its website and app content, so this limited navigational thumbnail use is a fair-use assessment rather than an express license.
 
-The Library page shows each shelf as a row of covers that scrolls sideways, in this order: Christian Classics, Children, Youth / Young Adults, Adventist Writers Today, Ellen G. White, and Adventist Pioneers (`LIBRARY_SHELVES` in `features/library/LibraryShelves.ts`). General Christian books come first so a visitor meets the wider Christian shelf before the denomination's own writers. Adventist Writers Today (當代復臨著作) shows only in Chinese for now, since all its books are Chinese; see [Books in the Chinese Union Mission's reader](#books-in-the-chinese-union-missions-reader). A new book lengthens its row rather than the page, and a new kind of book becomes a new row. Within a shelf, a few chosen books lead (`LIBRARY_SHELF_LEADERS`): *The Bruised Reed* in Christian Classics, *Pastor Hsi* in Youth / Young Adults, and in the Ellen G. White shelf, *Sabbath Encouragement* followed by her most-read books. The rest follow in catalog order.
+The Library page shows each shelf as a row of covers that scrolls sideways, in this order: Christian Classics, Children, Youth / Young Adults, Adventist Writers Today, Ellen G. White, and Adventist Pioneers (`LIBRARY_SHELVES` in `features/library/LibraryShelves.ts`). General Christian books come first so a visitor meets the wider Christian shelf before the denomination's own writers. Adventist Writers Today (當代復臨著作) holds books the church's leaders chose from the Chinese Union Mission's reader: Chinese readers see all of them, and English and Spanish readers the six that are free in their language; see [Books in the Chinese Union Mission's reader](#books-in-the-chinese-union-missions-reader). A new book lengthens its row rather than the page, and a new kind of book becomes a new row. Within a shelf, a few chosen books lead (`LIBRARY_SHELF_LEADERS`): *The Bruised Reed* and then *The Kneeling Christian* in Christian Classics, *Pastor Hsi* in Youth / Young Adults, and in the Ellen G. White shelf, *Sabbath Encouragement* followed by her most-read books. The rest follow in catalog order.
 
 The Library is a Christian library with an Adventist section, not an Ellen G. White library (#391). On every shelf but her own, other writers' books come before hers, even ahead of a shelf's leading books (`orderShelfBooks`). Her books sit on one other shelf at most (`EGW_BOOK_IDS_BY_SHELF`): *Education* and *Messages to Young People* on Youth / Young Adults. *Child Guidance* and *Christ's Object Lessons* are written for adults, so they stay on her shelf. The Children and Youth shelves each hold more books by other writers than by her, and the featured books at the top of the page include one of hers at most: *Steps to Christ*, her most widely read. `test/library-balance.test.ts` checks all of this in every app language. Each row's "See all" opens that shelf's own page, and the page's search finds any book. Selecting a cover opens the book in the app language's edition when it has one, Ellen G. White's books included. Covers grow with the text size, so titles stay readable beneath them.
 
@@ -43,7 +43,7 @@ The Library is a Christian library with an Adventist section, not an Ellen G. Wh
 | *Sabbath Encouragement* (安息日勉言) | The church's own PDF, from `public/library/` | Bible verses and Ellen G. White quotations compiled by churches in China; shown only to Chinese readers, first on the Ellen G. White shelf |
 | Ellen G. White writings | Official EGW Writings website | Copyright and edition rights remain with the official service |
 
-Three books have a Spanish edition, which Spanish readers see and open instead, with a Spanish version of its cover (`spanish` in `features/library/LibraryCatalog.ts`):
+Three of these books have a Spanish edition, which Spanish readers see and open instead, with a Spanish version of its cover (`spanish` in `features/library/LibraryCatalog.ts`). Six books from the Chinese Union Mission's reader have one too; see [Free originals for English and Spanish readers](#free-originals-for-english-and-spanish-readers).
 
 | Book | Spanish edition | Source |
 | --- | --- | --- |
@@ -51,11 +51,13 @@ Three books have a Spanish edition, which Spanish readers see and open instead, 
 | J. N. Andrews, *History of the Sabbath* | *Historia del Sábado* | EGW Writings, the Adventist Pioneer Library's 2020 translation of the 1873 edition |
 | *The Pilgrim's Progress* | *El progreso del peregrino para todos (condensado)* | Chapel Library's free PDF, an abridged edition it allows anyone to copy |
 
-One book has a Chinese edition, which Chinese readers see and open instead, titled in Traditional or Simplified characters to match the app language and with a Chinese cover (`chineseEdition` in `features/library/LibraryCatalog.ts`). One edition serves both scripts, even when it is printed in traditional characters only:
+One of these books has a Chinese edition, which Chinese readers see and open instead, titled in Traditional or Simplified characters to match the app language and with a Chinese cover (`chineseEdition` in `features/library/LibraryCatalog.ts`). One edition serves both scripts, even when it is printed in traditional characters only:
 
 | Book | Chinese edition | Source |
 | --- | --- | --- |
 | *The Pilgrim's Progress* | 天路歷程 (天路历程), the 1869 Mandarin (官話) edition of William C. Burns's translation of Part 1 | HathiTrust's public-domain scan |
+
+Seven books from the Chinese Union Mission's reader use `chineseEdition` too: each is an English book whose Chinese edition is the reader's copy; see [Free originals for English and Spanish readers](#free-originals-for-english-and-spanish-readers).
 
 No other non–Ellen White book had a Chinese or Spanish edition that is public domain or offered free when checked on 2026-10-01, so those books show in English to Chinese and Spanish readers.
 
@@ -67,26 +69,53 @@ The EGW collection is organized by work, not by the website's current catalog la
 
 ### Books in the Chinese Union Mission's reader
 
-The Chinese Union Mission's SDA Bible app has an online reader, `read.sdabible.org`, with about 1,100 Chinese books. The Library links a handful the church's leaders chose (#554), rather than mirroring the catalog: Chinese readers see them in the Library and its search, and other languages don't. Each opens its page in the reader (`/library/work/<slug>`) in the app's script, through the reader's `ui` parameter (`tc` or `cn`), and shows the reader's own cover thumbnail. They have no bundled cover, so without a connection they show the placeholder book icon, and the books can't be read offline anyway. They're `sdaBibleBooks` in `features/library/LibraryCatalog.ts`; titles and authors come from the covers, since the reader lists no authors.
+The Chinese Union Mission's SDA Bible app has an online reader, `read.sdabible.org`, with about 1,100 Chinese books. The Library links a handful the church's leaders chose (#554), rather than mirroring the catalog. Chinese readers see all of them in the Library and its search. Each opens its page in the reader (`/library/work/<slug>`) in the app's script, through the reader's `ui` parameter (`tc` or `cn`), and shows the reader's own cover thumbnail. They're `sdaBibleBooks` in `features/library/LibraryCatalog.ts`; titles and authors come from the covers, since the reader lists no authors, except where the cover is wrong (below).
 
-| Book | English title | Shelf |
+All 14 were written in English. Seven are free in English from their publisher or a public-domain library, so English and Spanish readers see those and open them there instead (#703); see [Free originals for English and Spanish readers](#free-originals-for-english-and-spanish-readers). The other seven are sold in English, so only Chinese readers see them. They have no bundled cover, so without a connection they show the placeholder book icon, and the books can't be read offline anyway.
+
+| Book | English title | Shelf | English and Spanish readers |
+| --- | --- | --- | --- |
+| 跪下的基督徒 | *The Kneeling Christian* | Christian Classics, second; not an Adventist book | English, on CCEL |
+| 最富有的穴居人 | Doug Batchelor, *The Richest Caveman* | Adventist Writers Today | Chinese only |
+| 地上的最後一夜 | Joe Crews, *The Last Night on Earth* | Adventist Writers Today | Amazing Facts |
+| 在西伯利亞的死神一瞥 | W. S. Jesske, *Deathwatch in Siberia* | Adventist Writers Today | Amazing Facts |
+| 回想羅得的妻子 | Joe Crews, *Remember Lot's Wife* | Adventist Writers Today | Amazing Facts |
+| 聖經與進化論 | Doug Batchelor, *The Bible and Evolution* | Adventist Writers Today | Amazing Facts |
+| 得見我的王 | Doug Batchelor, *To See the King* | Adventist Writers Today | Chinese only |
+| 我是法利賽人還是稅吏？ | Doug Batchelor, *Am I a Pharisee … or a Publican?* | Adventist Writers Today | Amazing Facts |
+| 受了洗的異教 | Dennis Crews, *Baptized Paganism* | Adventist Writers Today | Amazing Facts |
+| 認識創造 | Humberto Rasi and James Gibson (eds.), *Understanding Creation* | Adventist Writers Today | Chinese only |
+| 愛的神義論 | John C. Peckham, *Theodicy of Love* | Adventist Writers Today | Chinese only |
+| 浴火信使 | Jud Lake, *Ellen White Under Fire* | Ellen G. White, since it's about her | Chinese only |
+| 擎光者 | Richard W. Schwarz and Floyd Greenleaf, *Light Bearers* | Adventist Writers Today | Chinese only |
+| 靈界之旅 | Roger J. Morneau, *A Trip into the Supernatural* | Adventist Writers Today | Chinese only |
+
+回想羅得的妻子's cover credits Doug Batchelor, but its chapters are Joe Crews's *Remember Lot's Wife*, heading for heading, so every language credits Joe Crews. Amazing Facts credits *Baptized Paganism* to Dennis Crews, as its Chinese cover does.
+
+To add or swap a book, check in the reader that it has its full text, then copy its slug and cover from the reader's API (`/api/trpc/library.work`, which returns `coverThumbUrl`). The daily dependency monitor checks every book's link, text, and cover, and expects 14; change its count with the list. It also opens the seven free originals and the six Spanish editions. The Explore tab's In-depth Bible Study card links the whole app (see [UI/UX](../UI_UX.md)).
+
+### Free originals for English and Spanish readers
+
+#703 asked whether English and Spanish readers could read the reader's Chinese books through the browser's own translation. Checked on 2026-11-10, that doesn't work well enough:
+
+- Google's translated-page links (`*.translate.goog`) show the reader as a blank page. The reader loads its scripts from `read.sdabible.org`, which doesn't allow them to load on Google's domain.
+- With its interface in English (`ui=en`), the reader shows only a book's cover, description, and PDF, not its chapters, so a browser could only translate a book opened with the Chinese interface, menus and all.
+- An app can't make the browser translate. Chrome reserves automatic translation in its in-app tabs for [certain trusted Android apps](https://chromium.googlesource.com/chromium/src.git/+/fafff21/components/language/core/common/language_experiments.h), and Safari on iPhone translates a page only when the reader chooses Translate from its page menu ([MacRumors](https://www.macrumors.com/how-to/safari-webpage-translation-ios/)).
+- It would be a machine translation of a translation: all these books were written in English. For the books still sold in English, it would also stand in for the publisher's own edition.
+
+So the app links the original instead, where the publisher or a public-domain library offers it free, and leaves the rest Chinese only:
+
+| Book | English | Spanish |
 | --- | --- | --- |
-| 跪下的基督徒 | *The Kneeling Christian* | Christian Classics, second; not an Adventist book |
-| 最富有的穴居人 | Doug Batchelor, *The Richest Caveman* | Adventist Writers Today |
-| 地上的最後一夜 | Joe Crews, *The Last Night on Earth* | Adventist Writers Today |
-| 在西伯利亞的死神一瞥 | W. S. Jesske, *Deathwatch in Siberia* | Adventist Writers Today |
-| 回想羅得的妻子 | Doug Batchelor, *Recalling Lot's Wife* | Adventist Writers Today |
-| 聖經與進化論 | Doug Batchelor, *The Bible and Evolution* | Adventist Writers Today |
-| 得見我的王 | Doug Batchelor, *To See the King* | Adventist Writers Today |
-| 我是法利賽人還是稅吏？ | Doug Batchelor, *Am I a Pharisee or a Tax Collector?* | Adventist Writers Today |
-| 受了洗的異教 | Joe Crews, *Baptized Paganism* | Adventist Writers Today |
-| 認識創造 | Humberto Rasi and James Gibson (eds.), *Understanding Creation* | Adventist Writers Today |
-| 愛的神義論 | John C. Peckham, *Theodicy of Love* | Adventist Writers Today |
-| 浴火信使 | Jud Lake, *Ellen White Under Fire* | Ellen G. White, since it's about her |
-| 擎光者 | Richard W. Schwarz and Floyd Greenleaf, *Light Bearers* | Adventist Writers Today |
-| 靈界之旅 | Roger J. Morneau, *A Trip into the Supernatural* | Adventist Writers Today |
+| *The Kneeling Christian* | [CCEL](https://www.ccel.org/ccel/unknown/kneeling.html). Almost certainly public domain in the U.S., but its first printing is undated; see [Library Sources and Licensing](../LEGAL.md#library-sources-and-licensing) | None free; Spanish readers open the English |
+| *The Last Night on Earth* | [Amazing Facts](https://www.amazingfacts.org/study/free-books/the-last-night-on-earth/) | [*La última noche en la Tierra*](https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/la-ultima-noche-en-la-tierra/) |
+| *Deathwatch in Siberia* | [Amazing Facts](https://www.amazingfacts.org/study/free-books/deathwatch-in-siberia/) | [*Deathwatch en Siberia*](https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/deathwatch-en-siberia/), Amazing Facts' own half-English title |
+| *Remember Lot's Wife* | [Amazing Facts](https://www.amazingfacts.org/study/free-books/remember-lots-wife/) | [*Recuerda a la mujer de Lot*](https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/recuerda-a-la-mujer-de-lot/) |
+| *The Bible and Evolution* | [Amazing Facts](https://www.amazingfacts.org/news-events/inside-report/the-bible-and-evolution/), an *Inside Report* article | [*La Biblia y la evolución*](https://www.amazingfacts.org/es/noticias-y-eventos/informe-interno/la-biblia-y-la-evolucion/) |
+| *Am I a Pharisee … or a Publican?* | [Amazing Facts](https://www.amazingfacts.org/news-events/inside-report/am-i-a-phariseee-or-a-publican/), an *Inside Report* article | [*¿Soy un fariseo… o un publicano?*](https://www.amazingfacts.org/es/noticias-y-eventos/informe-interno/soy-un-fariseo-o-un-publicano/) |
+| *Baptized Paganism* | [Amazing Facts](https://www.amazingfacts.org/study/free-books/baptized-paganism/) | [*Paganismo bautizado*](https://www.amazingfacts.org/es/estudiar/biblioteca-de-libros-gratuitos/paganismo-bautizado/) |
 
-To add or swap a book, check in the reader that it has its full text, then copy its slug and cover from the reader's API (`/api/trpc/library.work`, which returns `coverThumbUrl`). The daily dependency monitor checks every book's link, text, and cover, and expects 14; change its count with the list. The Explore tab's In-depth Bible Study card links the whole app (see [UI/UX](../UI_UX.md)).
+Each book is the catalog's English book, with its Spanish edition and with the reader's copy as its Chinese edition (`chineseEdition`, which also holds the reader's cover). English and Spanish readers see typographic covers drawn for the app, like the other books outside the EGW collection: in Spanish for the six with a Spanish edition, and in English otherwise; Chinese readers see the reader's cover, and the typographic one only offline. The Spanish pages credit no translator, but they read naturally. *The Bible and Evolution* in Chinese adds a closing section the English doesn't have.
 
 ## Chinese Adventist research queue
 

@@ -121,15 +121,18 @@ describe('Bible audio downloads', () => {
     expect(getDownloadableBibleAudioNarrator('BSB')).toBeNull();
   });
 
-  it("download Mandarin from the church's copy first, then its mirrors", () => {
+  it("download Mandarin from HelloAO first, then the church's copy and its mirrors (#749)", () => {
     expect(getBibleAudioDownloadUrls('cuv-mandarin', 'JHN', 3).map((url) => new URL(url).hostname)).toEqual([
+      'audio.bible.helloao.org',
       'assets.adventistconnect.org',
       'archive.org',
       'theaudiopower.com',
     ]);
   });
 
-  it("download the WordProject recordings only from the church's copies, never WordProject's servers", () => {
+  it("download the WordProject recordings from HelloAO's copy and the church's, never WordProject's servers", () => {
+    // HelloAO hosts the Cantonese recording (#749) and the Spanish one (#770).
+    const expected = ['audio.bible.helloao.org', 'assets.adventistconnect.org'];
     for (const narrator of ['cuv-cantonese', 'rv1909']) {
       for (const [bookId, chapters] of BIBLE_AUDIO_BOOKS) {
         for (let chapter = 1; chapter <= chapters; chapter += 1) {
@@ -138,7 +141,7 @@ describe('Bible audio downloads', () => {
             narrator,
             bookId,
             chapter,
-            ['assets.adventistconnect.org'],
+            expected,
           ]);
         }
       }
@@ -230,16 +233,35 @@ describe('Bible audio downloads', () => {
     expect(snapshotDownloadedChapters(null)('JUD', 1)).toBeNull();
   });
 
-  it("move to the next mirror when the church's copy fails", async () => {
+  it('move to the next mirror when HelloAO and the church\'s copy fail', async () => {
     const download = mockDownloads(async (url, destination) => {
-      if (url.includes('adventistconnect')) throw new Error('HTTP 503');
+      if (url.includes('helloao') || url.includes('adventistconnect')) throw new Error('HTTP 503');
       mockChapterFile(destination.uri, url);
       return destination;
     });
     downloadBibleAudio('cuv-mandarin', JUDE);
     await until(isDone(JUDE));
-    expect(download.mock.calls.map(([url]) => new URL(url).hostname)).toEqual(['assets.adventistconnect.org', 'archive.org']);
+    expect(download.mock.calls.map(([url]) => new URL(url).hostname)).toEqual([
+      'audio.bible.helloao.org',
+      'assets.adventistconnect.org',
+      'archive.org',
+    ]);
     expect(mockFiles.get('document/bible-audio/cuv-mandarin/JUD/1.mp3')).toContain('archive.org');
+  });
+
+  it("download Spanish from HelloAO, or from the church's copy when HelloAO's fails (#770)", async () => {
+    const download = mockDownloads(async (url, destination) => {
+      if (url.includes('helloao')) throw new Error('HTTP 503');
+      mockChapterFile(destination.uri, url);
+      return destination;
+    });
+    downloadBibleAudio('rv1909', JUDE);
+    await until(isDone(JUDE, 'rv1909'));
+    expect(download.mock.calls.map(([url]) => url)).toEqual([
+      'https://audio.bible.helloao.org/api/spa_r09/JUD/1/audio/wordproject.mp3',
+      expect.stringMatching(/^https:\/\/assets\.adventistconnect\.org\/.+\/RV1909_B65C001\.mp3$/),
+    ]);
+    expect(mockFiles.get('document/bible-audio/rv1909/JUD/1.mp3')).toContain('adventistconnect');
   });
 
   it('hold the books of a book, a section, a Testament, and the whole Bible', () => {
@@ -384,14 +406,23 @@ describe('Bible audio downloads', () => {
     expect(getBibleAudioScopeStatus('cuv-mandarin', PHILEMON).downloadedChapters).toBe(1);
   });
 
-  it("stop asking once chapters keep failing, as when the church's host is down", async () => {
+  it('stop asking once chapters keep failing, as when both hosts are down', async () => {
     const download = mockDownloads(async () => {
       throw new Error('HTTP 503');
     });
     downloadBibleAudio('rv1909', JOHN);
     await until(isDone(JOHN, 'rv1909'));
-    // Six in a row, and the two already downloading beside the sixth: not John's 21.
-    expect(download.mock.calls.length).toBeLessThanOrEqual(8);
+    // Each chapter from HelloAO, then the church's copy (#770).
+    const asked = new Map<number, string[]>();
+    for (const [url] of download.mock.calls) {
+      const chapter = Number(/\/JHN\/(\d+)\/audio\/|_B43C(\d{3})\.mp3$/.exec(url)!.slice(1).find(Boolean));
+      asked.set(chapter, [...(asked.get(chapter) ?? []), new URL(url).hostname]);
+    }
+    for (const hosts of asked.values()) {
+      expect(hosts).toEqual(['audio.bible.helloao.org', 'assets.adventistconnect.org']);
+    }
+    // Six chapters in a row, and the two already downloading beside the sixth: not John's 21.
+    expect(asked.size).toBeLessThanOrEqual(8);
     expect(getBibleAudioScopeStatus('rv1909', JOHN).downloadedChapters).toBe(0);
   });
 

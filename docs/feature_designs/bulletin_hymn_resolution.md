@@ -41,7 +41,7 @@ UI language currently supported by the bulletin.
 | Only the other-language field has no mapped equivalent | Keep its canonical source number and title and open the source hymnal. |
 | Content was placed in the wrong language field | Use title and writing-system evidence to detect its actual catalog, then apply the same mapping rules. |
 | A correct number has a mistyped title | Treat the number as primary and repair the title from the catalog. |
-| Only a title was entered | Fuzzy-match every hymnal's titles; reject weak matches. |
+| Only a title was entered | Match every hymnal's titles, allowing a misspelling; a song no hymnal has keeps its typed title. |
 | The hymn is only in another hymnal, such as the 506 or a 707 | Show its number and title with that hymnal's short name, such as `61. 奇异恩典（中文 506）`, and open that hymnal. |
 | Text cannot be recognized | Display the submitted text unchanged, with no hymn-number link, and offer a **Search YouTube** button for the text as typed. |
 | Both fields are blank | Display the localized empty state and provide no action. |
@@ -61,9 +61,12 @@ The resolver looks in every hymnal on the hymnal page (`HYMNALS` in
   stays in the church's hymnal. A typed title still counts, so `第1首 聖哉真神` opens the
   506's hymn 1, because the 505's hymn 1 has another title.
 - **Titles.** A title-only answer is compared with every hymnal's titles, Traditional and
-  Simplified alike. A match outside the church's two hymnals must be close (0.8, against
-  0.55 for the church's own), since thousands of titles make a loose match likely to be
-  wrong.
+  Simplified alike. It matches a hymn whose title contains it, or that it contains, or one
+  close enough by edit distance to be that title misspelled: 0.7 in the church's two
+  hymnals, and 0.8 in the others, since thousands of titles make a loose match likely to
+  be wrong. Sharing letter pairs isn't enough. At 0.55 with letter pairs, songs no hymnal
+  has were shown as hymns that share a few words, such as `Praise the Lord, O My Soul` as
+  AH 1, `Praise to the Lord` (#751).
 - **Speed.** A title search compares about 3,800 hymns, so each hymn's normalized title
   and bigrams are worked out once, and each answer is looked up once: the bulletin
   redraws every second while its refresh countdown runs.

@@ -10,8 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { addNetworkStateListener } from 'expo-network';
 import {
+  Fragment,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -140,6 +142,7 @@ import {
 } from '@/services/BiblePinyinService';
 import {
   getCenteredVerseScrollY,
+  getChapterLoadKey,
   getTopVisibleVerse,
   getTranslationSwitchPosition,
   isNewReaderLink,
@@ -756,8 +759,8 @@ export default function BibleScreen() {
   const lastScrollY = useRef(0);
   const readerScrollY = useRef(0);
   // Each verse's last layout, for following the verse being read (#561).
-  // Never cleared: onLayout only fires when a verse's layout changes, and a
-  // new chapter can reuse a verse's view, so a cleared entry might not return.
+  // Never cleared: each chapter load draws new verse rows (getChapterLoadKey),
+  // and each overwrites its verse's entry once it's laid out.
   const verseLayouts = useRef<Record<number, { y: number; height: number }>>({});
   // Whether the reader follows the verse being read aloud (#561), and the
   // timer that starts following again after a scroll by hand.
@@ -857,6 +860,8 @@ export default function BibleScreen() {
 
   // To prevent the "content flash" during modal dismissal
   const [lastActiveType, setLastActiveType] = useState<typeof modalType>(null);
+  // Saved verses fill the screen (#750); see the Selection Modals.
+  const savedVersesFullScreen = lastActiveType === 'saved';
 
   // Multi-selection state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
@@ -2684,6 +2689,19 @@ export default function BibleScreen() {
     );
   };
 
+  // Forgets the last chapter's verse positions as soon as a new chapter is
+  // drawn, before its verses report theirs. Each load draws new verse rows
+  // (getChapterLoadKey), and every row reports once it's laid out. Only a new
+  // chapter does this. The reset used to sit in the effect below, which also
+  // runs whenever the tabs hand down a new setMenuVisible, as every link
+  // makes them do. A link to the chapter on screen then wiped positions that
+  // no row reported again, and the reader gave up at the chapter's top. A
+  // passive effect could also run after some verses had reported and lose
+  // them. Either way the widget's verse of the day wasn't found (#742).
+  useLayoutEffect(() => {
+    if (chapterData) versePositions.current = {};
+  }, [chapterData]);
+
   // Scroll to top when chapter content changes
   useEffect(() => {
     // Restore the surrounding app chrome on mount or chapter change.
@@ -2691,7 +2709,6 @@ export default function BibleScreen() {
 
     if (chapterData) {
       clearSelection();
-      versePositions.current = {}; // Clear previous chapter positions
       clearTimeout(followResumeTimeout.current);
       followsReadingVerse.current = true;
 
@@ -3134,7 +3151,9 @@ export default function BibleScreen() {
   // verseStart's details, or popup=audio-settings once the chapter has audio.
   // popup=audio-download-tip opens it as the marked button would, with the
   // line that playback keeps stopping to load (#595). popup=book opens the
-  // book list, as the book pill would (#723).
+  // book list, as the book pill would (#723), popup=chapter the chapter
+  // list, as the chapter pill would (#456), and popup=saved the saved
+  // verses, as the header's bookmark would (#750).
   // A chapter change clears chapterData first, so a loaded chapter that
   // matches the link is the linked one.
   const screenshotPopupOpened = useRef(false);
@@ -3145,12 +3164,18 @@ export default function BibleScreen() {
       'audio-settings',
       'audio-download-tip',
       'book',
+      'chapter',
+      'saved',
     ]);
     if (!screenshotPopup) return;
     if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
-    if (screenshotPopup === 'book') {
+    if (
+      screenshotPopup === 'book' ||
+      screenshotPopup === 'chapter' ||
+      screenshotPopup === 'saved'
+    ) {
       screenshotPopupOpened.current = true;
-      setModalType('book');
+      setModalType(screenshotPopup);
       return;
     }
     if (screenshotPopup !== 'verse') {
@@ -4090,7 +4115,9 @@ export default function BibleScreen() {
           <ActivityIndicator style={ReaderStyles.loader} color={theme.colors.primary} />
         ) : (
           <>
-            {chapterData?.chapter.content.map((c, i) => renderContent(c, i))}
+            <Fragment key={getChapterLoadKey(chapterData)}>
+              {chapterData?.chapter.content.map((c, i) => renderContent(c, i))}
+            </Fragment>
             {chapterData?.translation.attribution && !loading && (
               <Text
                 variant="labelSmall"
@@ -4864,14 +4891,36 @@ export default function BibleScreen() {
         <Modal
           visible={!!modalType}
           onDismiss={closeModal}
-          contentContainerStyle={[
-            ReaderStyles.modalContent,
-            popupWidthStyle,
-            { maxHeight: popupMaxHeight },
-            getPopupSurfaceStyle(theme),
-          ]}
+          // Saved verses fill the screen, so more of them, each in full, show
+          // at once (#750): the one popup past the 65% height limit, on
+          // purpose. Its X stays in the title row, and Back closes it.
+          style={savedVersesFullScreen ? styles.fullScreenPopupWrapper : undefined}
+          contentContainerStyle={
+            savedVersesFullScreen
+              ? [
+                  styles.fullScreenPopup,
+                  {
+                    width: viewportWidth,
+                    height: viewportHeight,
+                    paddingTop: insets.top,
+                    paddingBottom: insets.bottom,
+                    backgroundColor: theme.colors.background,
+                  },
+                ]
+              : [
+                  ReaderStyles.modalContent,
+                  popupWidthStyle,
+                  { maxHeight: popupMaxHeight },
+                  getPopupSurfaceStyle(theme),
+                ]
+          }
         >
-          <View style={ReaderStyles.modalInner}>
+          <View
+            style={[
+              ReaderStyles.modalInner,
+              savedVersesFullScreen && [styles.fullScreenPopupInner, readingColumnStyle],
+            ]}
+          >
             {lastActiveType === 'verse-hymns' ? (
               <>
                 {renderPopupHeader(labels.verseHymnsTitle, closeModal)}
@@ -5038,9 +5087,8 @@ export default function BibleScreen() {
                               {item.reference}
                             </Text>
                             {(item.text || savedVersesLoading) && (
+                              // The whole passage: the list has the screen (#750).
                               <Text
-                                ellipsizeMode="tail"
-                                numberOfLines={3}
                                 style={[
                                   styles.savedVerseDescription,
                                   { color: theme.colors.onSurfaceVariant },
@@ -5141,6 +5189,90 @@ export default function BibleScreen() {
                     )}
                   </View>
                   <Divider style={{ marginBottom: 16 }} />
+                  {/*
+                      The verse's notes come before its original-language text
+                      (#745): the Hebrew title, then the footnotes. The title is
+                      worked out first, to drop footnotes that only repeat it.
+                  */}
+                  {(() => {
+                    const subtitle = getAssociatedSubtitle(selectedVerseNum || 0);
+                    const subtitleText = subtitle
+                      ? subtitle.content
+                          .map((item) =>
+                            typeof item === 'string' ? item : (item as any).text || '',
+                          )
+                          .join('')
+                          .trim()
+                      : '';
+
+                    // Hardcode exception: Subtitles for Psalms Verse 1 are already visible in-line.
+                    const isPsalmVerseOne = book?.id === 'PSA' && selectedVerseNum === 1;
+                    const showSubtitle = !!subtitle && !isPsalmVerseOne;
+
+                    /*
+                      Both translations' footnotes, so a note marked in the
+                      supporting text (such as the 1919 CUV's) opens here too,
+                      as the main translation's do. With two, each names its
+                      translation, since both number theirs from 1.
+                    */
+                    const footnotes = [
+                      { translation: supportedTranslation, data: chapterData },
+                      ...(supportingTranslation && selectedVerseTexts?.supportingText
+                        ? [{ translation: supportingTranslation, data: supportingChapterData }]
+                        : []),
+                    ].flatMap(({ translation, data }, source, sources) =>
+                      (data?.chapter.footnotes ?? [])
+                        .filter((f) => {
+                          if (f.reference?.verse !== selectedVerseNum) return false;
+                          // Filter duplicates
+                          if (subtitleText && f.text.trim() === subtitleText)
+                            return false;
+                          return true;
+                        })
+                        .map((f, i) => (
+                          <View key={`fn-${source}-${i}`} style={ReaderStyles.detailSection}>
+                            <Text
+                              variant="labelSmall"
+                              style={{ color: theme.colors.primary, marginBottom: 4 }}
+                            >
+                              {labels.footnote}{' '}
+                              {BibleService.toSuperscript(
+                                BibleService.getChapterFootnoteNumber(
+                                  data?.chapter.footnotes ?? [],
+                                  f.noteId,
+                                ),
+                              )}
+                              {sources.length > 1 ? ` · ${getTranslationLabel(translation)}` : ''}
+                            </Text>
+                            <Text style={ReaderStyles.detailText}>{f.text}</Text>
+                          </View>
+                        )),
+                    );
+
+                    if (!showSubtitle && footnotes.length === 0) return null;
+                    return (
+                      <>
+                        {showSubtitle && (
+                          <View style={ReaderStyles.detailSection}>
+                            <Text
+                              variant="labelSmall"
+                              style={{ color: theme.colors.tertiary, marginBottom: 4 }}
+                            >
+                              {labels.hebrewSubtitle}
+                            </Text>
+                            <Text
+                              style={[ReaderStyles.detailText, { fontStyle: 'italic' }]}
+                            >
+                              {subtitleText}
+                            </Text>
+                          </View>
+                        )}
+
+                        {footnotes}
+                        <Divider style={{ marginBottom: 16 }} />
+                      </>
+                    );
+                  })()}
                   {originalVerseLoading ? (
                     <View style={styles.originalVerseStatus}>
                       <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -5218,86 +5350,6 @@ export default function BibleScreen() {
                       </Text>
                     </View>
                   ) : null}
-                  <Divider style={{ marginBottom: 16 }} />
-                  {/* 
-                      Aggregated Verse Content:
-                      We calculate the subtitle text first to identify and filter
-                      redundant footnotes that repeat the same information.
-                  */}
-                  {(() => {
-                    const subtitle = getAssociatedSubtitle(selectedVerseNum || 0);
-                    const subtitleText = subtitle
-                      ? subtitle.content
-                          .map((item) =>
-                            typeof item === 'string' ? item : (item as any).text || '',
-                          )
-                          .join('')
-                          .trim()
-                      : '';
-
-                    // Hardcode exception: Subtitles for Psalms Verse 1 are already visible in-line.
-                    const isPsalmVerseOne = book?.id === 'PSA' && selectedVerseNum === 1;
-
-                    return (
-                      <>
-                        {subtitle && !isPsalmVerseOne && (
-                          <View style={ReaderStyles.detailSection}>
-                            <Text
-                              variant="labelSmall"
-                              style={{ color: theme.colors.tertiary, marginBottom: 4 }}
-                            >
-                              {labels.hebrewSubtitle}
-                            </Text>
-                            <Text
-                              style={[ReaderStyles.detailText, { fontStyle: 'italic' }]}
-                            >
-                              {subtitleText}
-                            </Text>
-                          </View>
-                        )}
-
-                        {/*
-                          Both translations' footnotes, so a note marked in the
-                          supporting text (such as the 1919 CUV's) opens here too,
-                          as the main translation's do. With two, each names its
-                          translation, since both number theirs from 1.
-                        */}
-                        {[
-                          { translation: supportedTranslation, data: chapterData },
-                          ...(supportingTranslation && selectedVerseTexts?.supportingText
-                            ? [{ translation: supportingTranslation, data: supportingChapterData }]
-                            : []),
-                        ].flatMap(({ translation, data }, source, sources) =>
-                          (data?.chapter.footnotes ?? [])
-                            .filter((f) => {
-                              if (f.reference?.verse !== selectedVerseNum) return false;
-                              // Filter duplicates
-                              if (subtitleText && f.text.trim() === subtitleText)
-                                return false;
-                              return true;
-                            })
-                            .map((f, i) => (
-                              <View key={`fn-${source}-${i}`} style={ReaderStyles.detailSection}>
-                                <Text
-                                  variant="labelSmall"
-                                  style={{ color: theme.colors.primary, marginBottom: 4 }}
-                                >
-                                  {labels.footnote}{' '}
-                                  {BibleService.toSuperscript(
-                                    BibleService.getChapterFootnoteNumber(
-                                      data?.chapter.footnotes ?? [],
-                                      f.noteId,
-                                    ),
-                                  )}
-                                  {sources.length > 1 ? ` · ${getTranslationLabel(translation)}` : ''}
-                                </Text>
-                                <Text style={ReaderStyles.detailText}>{f.text}</Text>
-                              </View>
-                            )),
-                        )}
-                      </>
-                    );
-                  })()}
                 </PopupScrollView>
                 <View
                   style={[
@@ -6017,10 +6069,12 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     backgroundAudioGuidanceAction: {
       flexGrow: 1,
     },
+    // Each saved passage shows in full (#750), so a row can be many lines tall:
+    // its remove button stays beside the reference, at the top.
     savedVerseRow: {
       width: '100%',
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
     },
     savedSortRow: {
       flexDirection: 'row',
@@ -6085,6 +6139,22 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     },
     originalVerseLink: {
       textDecorationLine: 'underline',
+    },
+    // Saved verses' full-screen popup (#750): no margins, corners, or height
+    // limit, with the safe areas as padding and the reading column inside. It
+    // gets the window's height, not flex: on iOS, Paper's Modal draws its
+    // Surface as a container, which passes flex only to its outer view, and the
+    // list in the inner one shrank to nothing. A height reaches both.
+    fullScreenPopupWrapper: {
+      marginTop: 0,
+      marginBottom: 0,
+    },
+    fullScreenPopup: {
+      alignSelf: 'center',
+      borderRadius: 0,
+    },
+    fullScreenPopupInner: {
+      flex: 1,
     },
     savedEmptyState: {
       minHeight: 180,

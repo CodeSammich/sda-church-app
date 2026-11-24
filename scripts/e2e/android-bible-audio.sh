@@ -23,8 +23,9 @@
 #   ADB                   adb binary (default: adb)
 #   ADB_ARGS              extra adb arguments, such as -e for the emulator
 #   E2E_OUTPUT            directory for screenshots and logs (default: e2e-output)
-#   E2E_PRIMARY_BLOCKED   1 when the church's audio host (assets.adventistconnect.org)
-#                         can't be resolved, which the CI workflow arranges; adds the
+#   E2E_PRIMARY_BLOCKED   1 when HelloAO's and the church's audio hosts
+#                         (audio.bible.helloao.org, assets.adventistconnect.org) can't
+#                         be resolved, which the CI workflow arranges; adds the
 #                         "primary host down" scenario
 #   E2E_ONLY              space-separated scenario names to run (default: all)
 #   E2E_PACKAGE           the app ID to test (default: org.nyccsda.app.preview, the
@@ -69,7 +70,10 @@ network() { # on|off
 
 # Opens a CUV chapter in a freshly started app, so each scenario starts clean.
 # A deep link with the same parameters as the last one is ignored, and a cold
-# start avoids that.
+# start avoids that. Every scenario plays the Mandarin recording: with
+# E2E_PRIMARY_BLOCKED, HelloAO's and the church's hosts are down, and Mandarin
+# is the one recording with a copy elsewhere. Cantonese and Spanish have no
+# third copy (#770), so they'd play from nowhere.
 open_chapter() { # book chapter
   sh_ am force-stop "$PKG" >/dev/null
   adb_ logcat -c
@@ -234,8 +238,9 @@ run() { # name function
   sh_ am force-stop "$PKG" >/dev/null
 }
 
-# The church's host can't be resolved, so Genesis 1 plays from the Internet
-# Archive as soon as the player reports the failure.
+# Neither HelloAO's host nor the church's can be resolved, so Genesis 1 plays
+# from the Internet Archive, its third copy (#749), as soon as the player
+# reports both failures.
 scenario_primary_host_down() {
   open_chapter GEN 1
   locate_controls || { echo 'no play button'; return 1; }
@@ -248,7 +253,7 @@ scenario_primary_host_down() {
 
 # With the screen off, the playlist moves from Psalm 117 (about 30 seconds) to
 # Psalm 118 by itself. Playback continues, and the lock-screen foreground
-# service stays up. When the primary host is blocked, Psalm 118 also fails
+# service stays up. When the first two hosts are blocked, Psalm 118 also fails
 # over with the screen off.
 scenario_next_chapter_screen_off() {
   open_chapter PSA 117
