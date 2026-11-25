@@ -8,7 +8,7 @@
  * Publishing keeps the time, per Sabbath and location, in a Script Property
  * (ANNOUNCEMENTS_PUBLISHED_PROPERTY), so the sheet doesn't change. The bulletin
  * API sends it as each location's `announcementsPublishedAt`
- * (getAnnouncementsPublishedAt_ in BulletinApi.gs). Phones check every few
+ * (getAnnouncementPublishedAt_ in BulletinApi.gs). Phones check every few
  * hours, and each notifies once a Sabbath at most, in the daytime, and not
  * after sunset on Friday: see "Notifications" in
  * docs/feature_designs/announcements.md.
@@ -16,6 +16,9 @@
 
 // Old Sabbaths' entries are dropped after this, so the property stays small.
 var ANNOUNCEMENTS_PUBLISHED_KEEP_DAYS = 35;
+// Under the 9 KB a Script Property's value can hold
+// (https://developers.google.com/apps-script/guides/services/quotas).
+var ANNOUNCEMENTS_PUBLISHED_MAX_LENGTH = 8000;
 
 // Who may publish: a short list of its own, kept apart from the print and
 // admin lists so it stays short. The Google accounts in this Script Property,
@@ -90,11 +93,15 @@ function getPublishAnnouncementsData_(spreadsheet, today) {
   return {
     date: date,
     locations: BULLETIN_ANNOUNCEMENT_LOCATIONS.map(function (location) {
+      var text = getWeeklyDataAnnouncementText_(spreadsheet, date, location.key);
+      var entry = published[location.key];
       return {
         key: location.key,
         label: location.label,
-        text: getWeeklyDataAnnouncementText_(spreadsheet, date, location.key),
-        publishedAt: typeof published[location.key] === 'string' ? published[location.key] : '',
+        text: text,
+        publishedAt: getAnnouncementPublishedAt_(entry, text),
+        // Published before, with other text: it can be published again.
+        changed: Boolean(entry && typeof entry.at === 'string' && text && entry.text !== text),
       };
     }),
   };
@@ -169,8 +176,8 @@ function publishAnnouncements_(spreadsheet, request, today, now) {
     var published = readAnnouncementsPublished_();
     var entry = published[date] || {};
     chosen.forEach(function (location) {
-      if (!entry[location.key]) {
-        entry[location.key] = at;
+      if (!getAnnouncementPublishedAt_(entry[location.key], texts[location.key])) {
+        entry[location.key] = { at: at, text: texts[location.key] };
         done.push(location.key);
       }
     });
@@ -181,6 +188,14 @@ function publishAnnouncements_(spreadsheet, request, today, now) {
         delete published[key];
       }
     });
+    // A Script Property holds about 9 KB: far more than a few weeks of short
+    // announcements, but said plainly if one is ever that long.
+    if (JSON.stringify(published).length > ANNOUNCEMENTS_PUBLISHED_MAX_LENGTH) {
+      throw new Error(
+        'This announcement is too long to publish. Shorten it in Weekly Data, and open this again.\n' +
+          '此报告事项太长，无法发布。请在 Weekly Data 中缩短后，重新打开此窗口。',
+      );
+    }
     writeAnnouncementsPublished_(published);
   } finally {
     lock.releaseLock();
@@ -225,7 +240,11 @@ function buildPublishAnnouncementsHtml_(data) {
           '</p>'
         : !location.text
           ? '<p class="state">No announcement in Weekly Data / Weekly Data 中没有报告事项</p>'
-          : '';
+          : location.changed
+            ? '<p class="state">Changed since it was published. Phones that haven’t notified yet wait for this ' +
+              'to be published; those that have won’t notify again. / 发布后已修改。尚未通知的手机会等待再次发布；' +
+              '已通知的手机不会再次通知。</p>'
+            : '';
       var open = !location.publishedAt && location.text;
       return (
         '<label class="location' +
@@ -280,11 +299,12 @@ function buildPublishAnnouncementsHtml_(data) {
     escapePrintedBulletinHtml_(data.date) +
     '</p>' +
     cards +
-    '<p class="note">A change in Weekly Data after this shows in the app’s bulletin, but sends no new ' +
-    'notification: each phone notifies once a Sabbath at most. Clearing the cell stops it on phones that ' +
-    'haven’t checked yet.<br>' +
-    '发布后在 Weekly Data 中的修改会显示在应用的周刊中，但不会再次发送通知：每部手机每个安息日最多通知一次。' +
-    '清空单元格可阻止尚未检查的手机发送通知。</p>' +
+    '<p class="note">Phones are notified of exactly this text. A change in Weekly Data after this shows in ' +
+    'the app’s bulletin, but phones that haven’t notified yet wait until it’s published again here, and ' +
+    'each phone notifies once a Sabbath at most. Clearing the cell stops it on phones that haven’t ' +
+    'notified yet.<br>' +
+    '手机只会通知此处显示的内容。发布后在 Weekly Data 中的修改会显示在应用的周刊中，但尚未通知的手机会等到在此' +
+    '再次发布后才通知，每部手机每个安息日最多通知一次。清空单元格可阻止尚未通知的手机发送通知。</p>' +
     '<div id="error" class="error"></div>' +
     '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
     '<button type="button" class="submit" id="publish"' +

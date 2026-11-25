@@ -53,7 +53,7 @@ one place. Church admins can start at [Operate](#operate).
   text size, and screen readers
 - Feature designs:
   - [Announcements in the app, and notifications for them](docs/feature_designs/announcements.md):
-    why they're typed in `Weekly Data`, the translation, why they're public, and the plan for notifications
+    why they're typed in `Weekly Data`, the translation, why they're public, and how members are notified once staff publish them
   - [Bible integration](docs/feature_designs/bible_integration_design.md): Bible text
     sources, translation choices, and the alternatives considered
   - [Bulletin hymn resolution and extension guide](docs/feature_designs/bulletin_hymn_resolution.md):

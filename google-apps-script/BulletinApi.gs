@@ -853,15 +853,17 @@ function buildBulletin_(requestedDate, options) {
   );
   // The app and the printed bulletin both get each announcement in English
   // and Chinese, whatever it was typed in, and the app gets Spanish (#562).
-  bulletin.queens.announcements = translateBulletinAnnouncements_(bulletin.queens.announcements);
-  bulletin.brooklyn.announcements = translateBulletinAnnouncements_(bulletin.brooklyn.announcements);
   // When staff pressed Publish & Notify Phones for each (#709): phones notify
-  // only of a published announcement. Blank until then, and with none.
+  // only of a published announcement. Blank until then, with none, and once
+  // the cell no longer holds the text that was published.
   var published = readAnnouncementsPublished_()[requestedDate] || {};
   BULLETIN_ANNOUNCEMENT_LOCATIONS.forEach(function (location) {
-    var at = published[location.key];
-    bulletin[location.key].announcementsPublishedAt =
-      bulletin[location.key].announcements.length && typeof at === 'string' ? at : '';
+    var place = bulletin[location.key];
+    place.announcementsPublishedAt = getAnnouncementPublishedAt_(
+      published[location.key],
+      place.announcements.join('\n'),
+    );
+    place.announcements = translateBulletinAnnouncements_(place.announcements);
   });
 
   // The public app may localize these three English-only schedule metadata
@@ -960,10 +962,20 @@ var BULLETIN_ANNOUNCEMENT_LOCATIONS = Object.freeze([
   Object.freeze({ key: 'brooklyn', label: 'Brooklyn / 布鲁克林' }),
 ]);
 
-// When each Sabbath's announcement was published to phones, by location, as
-// { "2026-11-28": { "queens": "2026-11-25T19:02:11.000Z" } }: written by
-// Publish & Notify Phones… (AnnouncementPublishing.gs), never by the sheet.
+// When each Sabbath's announcement was published to phones, by location, with
+// the text that was published, as
+// { "2026-11-28": { "queens": { "at": "2026-11-25T19:02:11.000Z", "text": "…" } } }:
+// written by Publish & Notify Phones… (AnnouncementPublishing.gs), never by
+// the sheet.
 var ANNOUNCEMENTS_PUBLISHED_PROPERTY = 'announcements.published';
+
+// When a location's entry was published, if the cell still holds the text
+// that was: a person saw and confirmed exactly what phones are notified of.
+// Changed text, even cleared and typed again, isn't published until someone
+// publishes it.
+function getAnnouncementPublishedAt_(entry, text) {
+  return entry && typeof entry.at === 'string' && text && entry.text === text ? entry.at : '';
+}
 
 // The spreadsheet the bulletin is made from: today the one this script is
 // bound to. Code that may move out of the sheet's own project goes through

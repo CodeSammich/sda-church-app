@@ -267,11 +267,13 @@ Rules:
   coming Sabbath's announcement for each location, and says, in English and
   Simplified Chinese, that it notifies everyone who has the app and turned them
   on: within a few hours, in the daytime, not after sunset on Friday, and it
-  can't be taken back. Each location is published once a Sabbath. Its text can
-  still change after: the app's bulletin shows the change, but no second notice
-  goes out, and clearing the cell stops the notice on phones that haven't
-  checked yet. Only the Google accounts in the `ANNOUNCEMENT_PUBLISHER_EMAILS`
-  Script Property can publish; to be added, ask the technology team. See
+  can't be taken back. Phones are notified of exactly the text published. If
+  the cell changes after, the app's bulletin shows the change, but phones that
+  haven't notified yet wait until someone publishes the new text, and a phone
+  that has notified doesn't notify again that Sabbath. Clearing the cell stops
+  the notice on phones that haven't notified yet. Only the Google accounts in the
+  `ANNOUNCEMENT_PUBLISHER_EMAILS` Script Property can publish; anyone else gets a
+  message saying to ask the technology team. See
   [Notifications](../feature_designs/announcements.md#notifications-709).
 - Chinese in the title, hymn, and announcement columns here prints exactly as
   typed. A character the bulletin's Chinese
@@ -455,9 +457,9 @@ every cell as its own hymn, with the other cell in the row as its twin.
 
 The bound spreadsheet's simple `onOpen` maintenance path runs for every user who
 can open the workbook. It is intentionally quiet and does not require an email
-allowlist. The visible custom menu exposes only the Google Doc creation action
-and **Fonts…**; maintenance and setup operations stay hidden. `onOpen` builds the
-menu before anything else, because a simple trigger stops at 30 seconds: an
+allowlist. The visible custom menus expose only **Announcements → Publish & Notify
+Phones…** (#709), the Google Doc creation action and **Fonts…**; maintenance and
+setup operations stay hidden. `onOpen` builds the menus before anything else, because a simple trigger stops at 30 seconds: an
 open that runs out of time in the upkeep still has the menu. Each upkeep step
 logs how long it took, such as `Upkeep: conflict scan took 8123 ms`, so
 **Extensions → Apps Script → Executions** shows which step is slow (#642).
@@ -722,8 +724,10 @@ Then:
 The response is shaped by the explicit `COLUMN_SCHEMA` and the reviewed intake
 mapping. The app may receive schedule metadata, bilingual worship content,
 redacted roster roles, `metadataTranslations`, and the Brooklyn-specific fields
-`technician`, `encouragement`, and `sabbathSchool`. It does not receive arbitrary
-columns, full names, pinyin, email addresses, or timestamps.
+`technician`, `encouragement`, and `sabbathSchool`, and each location's
+`announcements` (#562) with `announcementsPublishedAt`, the time staff published
+them to phones (#709). It does not receive arbitrary columns, full names, pinyin,
+email addresses, or any other timestamp.
 
 The production web app is configured to execute as the deploying account and be
 accessible anonymously. This is required for an installed app that cannot stop
@@ -750,8 +754,8 @@ be treated as public.
 
 - Person fields are reduced to a first name and last initial where possible.
 - `Choir` is preserved as a role value.
-- Email addresses, timestamps, pinyin aliases, and full last names
-  are never returned.
+- Email addresses, form and row timestamps, pinyin aliases, and full last names
+  are never returned. The only time sent is `announcementsPublishedAt`.
 - The digital bulletin always uses English/redacted names. It must never use a
   Chinese dictionary name or a pinyin alias.
 - Physical generation runs with full names and may print a Chinese line followed
@@ -1333,7 +1337,8 @@ After deployment:
 3. verify the Google Doc link;
 4. confirm the Doc is in the correct folder;
 5. verify the public `/exec?date=YYYY-MM-DD&client=check` response does not
-   contain email, timestamps, Chinese names, pinyin, or full last names; and
+   contain email, timestamps other than `announcementsPublishedAt`, Chinese names,
+   pinyin, or full last names; and
 6. run the opt-in integration test when production verification is appropriate:
 
 ```bash

@@ -33,14 +33,14 @@ const mockPhone = {
   posted: [] as string[],
   setChannel: jest.fn(async () => undefined),
   getPermission: jest.fn(async () => ({ ...mockPermission })),
-  requestPermission: jest.fn(async () => {
+  requestPermission: jest.fn(async (): Promise<typeof mockPermission> => {
     Object.assign(mockPermission, { status: 'granted', granted: true, canAskAgain: false });
     return { ...mockPermission };
   }),
-  isChannelOn: jest.fn(async () => mockPhone.channelOn),
+  isChannelOn: jest.fn(async (): Promise<boolean> => mockPhone.channelOn),
   schedule: jest.fn(async () => 'scheduled'),
   cancel: jest.fn(async () => undefined),
-  getPosted: jest.fn(async () => mockPhone.posted),
+  getPosted: jest.fn(async (): Promise<string[]> => mockPhone.posted),
   openSettings: jest.fn(async () => undefined),
 };
 jest.mock('@/modules/announcement-notifications', () => ({ getAnnouncementNotifications: () => mockPhone }));

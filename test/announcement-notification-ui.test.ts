@@ -32,7 +32,7 @@ const mockPhone = {
   available: true,
   granted: false,
   setChannel: jest.fn(async () => undefined),
-  getPermission: jest.fn(async () => ({ status: mockPhone.granted ? 'granted' : 'undetermined', granted: mockPhone.granted, canAskAgain: !mockPhone.granted })),
+  getPermission: jest.fn(async (): Promise<{ status: string; granted: boolean; canAskAgain: boolean }> => ({ status: mockPhone.granted ? 'granted' : 'undetermined', granted: mockPhone.granted, canAskAgain: !mockPhone.granted })),
   requestPermission: jest.fn(async () => {
     mockPhone.granted = true;
     return { status: 'granted', granted: true, canAskAgain: false };

@@ -56,8 +56,9 @@ the dialog's own verse went, and the app and the printout both read `Weekly Data
 
 The column's cells show what to type when one is selected, as `Date`'s do, in
 English and Simplified Chinese (`WEEKLY_DATA_ANNOUNCEMENTS_HELP_TEXT`): any
-language, keep it short, the key for a new line in a cell, that it's public, and to
-check names in the Doc. It names no languages, so it stays true as the app adds
+language, keep it short, the key for a new line in a cell, that it's public, to
+check names in the Doc, and that phones are notified only after **Publish & Notify
+Phones…** (#709). It names no languages, so it stays true as the app adds
 them. **Create Word Doc…** sets it, and the header's note where the header has
 none, as on a column added by hand. That's a menu click, not `onOpen`, which has no
 time to spare (#639). Setting the rule again replaces it, so it never doubles, and
@@ -239,22 +240,32 @@ location's announcement as typed in `Weekly Data`, with a box to tick, and says 
 in English and Simplified Chinese, that everyone who has the app and turned these on for
 that location gets it, within a few hours, in the daytime, and not after sunset on Friday,
 and that it can't be taken back. **Publish & notify** confirms. A location already
-published says when, and can't be published again; one with no announcement can't be
-ticked. If Weekly Data's text changed after the dialog opened, nothing is published, and
-the dialog asks to open it again.
+published says when, and can't be published again while its text stays the same; one
+with no announcement can't be ticked. If Weekly Data's text changed after the dialog
+opened, nothing is published, and the dialog asks to open it again.
+
+Phones are notified of exactly the text a person saw and confirmed. The publish time is
+kept with that text, and the API sends the time only while the cell still holds it. So a
+change after publishing, even a cell cleared and typed again, isn't published: the app's
+bulletin shows it, phones that haven't notified yet wait, and the dialog offers it again,
+saying it changed. Phones that already notified don't notify again that Sabbath.
 
 Only the accounts in the `ANNOUNCEMENT_PUBLISHER_EMAILS` Script Property can publish: the
 technology team and one or two more. It's its own list, apart from
 `PHYSICAL_BULLETIN_ADMIN_EMAILS`, so it stays short. Unset or blank, nobody can publish,
-and the dialog says to ask the technology team. The check runs in the one function that
-writes the publish times (`writeAnnouncementsPublished_`), as its first step, as well as
-when the dialog opens. It compares the account using the sheet
-(`Session.getActiveUser()`), and a blank one, which Google sometimes gives, is refused.
+and a message says to ask the technology team, in place of the dialog. The check runs in
+the one function that writes the publish times (`writeAnnouncementsPublished_`), as its
+first step, as well as when the dialog opens and when **Publish & notify** is pressed. It
+compares the account using the sheet (`Session.getActiveUser()`), and a blank one, which
+Google gives where its policies hide the user
+([Session](https://developers.google.com/apps-script/reference/base/session#getActiveUser())),
+is refused.
 
 ### What the API sends
 
 When each location's announcement was published, as `announcementsPublishedAt`, an ISO
-time, or blank until it's published and for a location with no announcement:
+time, or blank: until it's published, for a location with no announcement, and once the
+cell no longer holds the text that was published:
 
 ```json
 "queens": {
@@ -264,11 +275,12 @@ time, or blank until it's published and for a location with no announcement:
 ```
 
 The times are kept in one Script Property, `announcements.published`, by Sabbath and
-location, as `{ "2026-11-28": { "queens": "2026-11-25T14:02:11.000Z" } }`: not in the
-sheet, so nothing in it changes, and older Sabbaths go after five weeks. The API and the
-dialog reach it through one helper (`getAnnouncementsPublishedStore_`), and the spreadsheet
-through another (`getBulletinSpreadsheet_`), so the code can move into a project of its
-own later (#784). Publishing clears the API's two-minute copy of that Sabbath, so a phone
+location, with the text published, as
+`{ "2026-11-28": { "queens": { "at": "2026-11-25T14:02:11.000Z", "text": "…" } } }`: not
+in the sheet, so nothing in it changes, and older Sabbaths go after five weeks. The API and
+the dialog reach it through one helper (`getAnnouncementsPublishedStore_`), and the
+publishing code reaches the spreadsheet through another (`getBulletinSpreadsheet_`), so
+the code can move into a project of its own later (#784). Publishing clears the API's two-minute copy of that Sabbath, so a phone
 that checks at once gets it. Older app versions ignore the field. It names no language
 ([no one-way doors](#languages-no-one-way-doors)).
 
@@ -285,28 +297,35 @@ somewhere, a Firebase or Expo push account with Apple and Google keys, and store
 privacy-policy changes, against [tenets](../project-tenets.md) 1 to 3.
 
 - **Off until the member turns it on.** Below the bulletin's announcements, the app offers
-  it once, with **Not now** and **Turn on**, and You → **Announcement notifications**
-  turns it on or off. It's never asked at launch.
+  it, with **Not now** and **Turn on**, until the member answers, and You →
+  **Announcement notifications** turns it on or off. It's never asked at launch.
 - **Only a published announcement,** for the member's location, the bulletin tab they last
   chose, in the app's language, as "Announcements · Queens" with the announcement. A tap
-  opens the bulletin through the app's own link, `sdachurchapp://home/bulletin`
-  (`app/+native-intent.tsx`).
-- **At most one a Sabbath.** The phone keeps the ids it posted, so a change after
-  publishing shows in the bulletin but sends no second notice. Clearing the cell before a
-  phone checks stops that phone's notice.
+  opens the bulletin through the app's own link, `sdachurchapp://home/bulletin`, which
+  `app/+native-intent.tsx` hands to the router on Android.
+- **At most one a Sabbath.** The phone keeps the ids it posted, so text published again
+  after a change sends no second notice to a phone that already notified. Clearing or
+  changing the cell before a phone notifies takes away that phone's waiting notice.
 - **In the daytime, and not during the Sabbath.** At once between 9 am and 8 pm, or else
   at the next 9 am, and only from sunset as one Sabbath ends to sunset on the Friday before
   the next, at the church's location (`getAnnouncementNoticeWindow`). One whose time
   passes that sunset isn't sent.
 - **Quiet:** no sound or vibration. On Android it's its own channel, **Announcements**,
-  which the member can turn off or change in Android's settings. iOS has no switch for one
-  kind of an app's notifications, so the app's switch is that.
+  which the member can turn off or change in Android's settings
+  ([channels](https://developer.android.com/develop/ui/views/notifications/channels)).
+  iOS's Settings have one set of notification switches for an app, not one for each kind
+  ([Apple](https://support.apple.com/guide/iphone/change-notification-settings-iph7c3d96bab/ios)),
+  so the app's switch is that.
 
 The phone posts it through the app's own module, `modules/announcement-notifications`,
 as the downloads' notifications are: no notification library. On Android, an inexact
-alarm, which needs no leave for exact alarms, posts it at its time; a restart loses the
-alarm, and the next check sets it again. On the iPhone, iOS keeps it through a restart.
-The module also opens the bulletin on a tap, through the iPhone's notification delegate.
+alarm, which needs no leave for exact alarms, posts it near its time: Android may hold
+one for up to an hour ([alarms](https://developer.android.com/develop/background-work/services/alarms/schedule)), so a notice set for just before 8 pm can come a
+little after. A restart clears the alarm
+([AlarmManager](https://developer.android.com/reference/android/app/AlarmManager)), and
+the next check sets it again. On the iPhone, iOS posts the notice it was handed. The
+module also opens the bulletin on a tap, through the iPhone's notification delegate. The
+iPhone side isn't tested on a device yet.
 
 **The background check** is `expo-background-task`, Expo's own, with `expo-task-manager`,
 every three hours (`services/AnnouncementNotificationTask.ts`). Android runs it some time

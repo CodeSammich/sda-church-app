@@ -341,8 +341,8 @@ After a release merges into `main`:
    `ANNOUNCEMENT_PUBLISHER_EMAILS` with the Google accounts that may publish
    announcements to phones, separated by commas: the technology team and the one or
    two people the church chooses. Keep it short, since each publish notifies every
-   member who turned notifications on. Until it's set, nobody can publish, and the
-   dialog says to ask the technology team. Change the list there when people change.
+   member who turned notifications on. Until it's set, nobody can publish, and a
+   message says to ask the technology team. Change the list there when people change.
 
 To redeploy between releases, select **Run workflow**, choose **`main`** under *Use
 workflow from*, optionally enter a description, and approve it. The description is
@@ -798,6 +798,16 @@ app's own code, while Android uses a native queue.
   lower still use it. iOS paces a
   background session's downloads as it sees fit, so a slow hour there is worth an
   issue, not a failed release.
+- [ ] **Announcement notifications (#709).** On a fresh install, open the Weekly
+  Bulletin in a week with an announcement: the offer shows below it, and the phone hasn't
+  asked about notifications. Tap **Turn on** and allow the phone's question: You →
+  **Announcement notifications** is on. After someone publishes an announcement
+  (**Announcements → Publish & Notify Phones…**), a silent "Announcements · Queens" notice
+  comes in the daytime, within a few hours on Android, and by the next time the app is
+  opened on the iPhone. With the app swiped away, tap it: the Weekly Bulletin opens. Turn
+  the switch off: no notice comes the next week. The iPhone side had no device test when
+  it shipped, so note what it does: whether the notice comes with the app closed, and
+  after a restart.
 - [ ] **Download notifications (#610).** On a fresh install, open You → Offline Bible
   Audio: the app hasn't asked about notifications, and **Download notifications**, below the
   narrator, is off. Start a section of several books, such as the Gospels: the app's own

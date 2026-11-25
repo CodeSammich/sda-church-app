@@ -1154,7 +1154,7 @@ describe('announcements (#562)', () => {
           },
         },
       });
-      (context as { SpreadsheetApp: Record<string, unknown> }).SpreadsheetApp.getUi = () => ({
+      (context as unknown as { SpreadsheetApp: Record<string, unknown> }).SpreadsheetApp.getUi = () => ({
         ButtonSet: { OK: 'OK' },
         alert: (_title: string, message: string) => ui.alerts.push(message),
         showModalDialog: (output: { html: string }) => ui.dialogs.push(output.html),
@@ -1183,7 +1183,7 @@ describe('announcements (#562)', () => {
 
       const result = publish(context, { queens: QUEENS });
       expect(result.published).toEqual(['queens']);
-      expect(stored(scriptProperties)).toEqual({ [SABBATH]: { queens: result.at } });
+      expect(stored(scriptProperties)).toEqual({ [SABBATH]: { queens: { at: result.at, text: QUEENS } } });
       // The API's two-minute copy from before is cleared, so a phone gets it at once.
       expect(api(context).queens.announcementsPublishedAt).toBe(result.at);
       expect(api(context).brooklyn.announcementsPublishedAt).toBe('');
@@ -1195,7 +1195,36 @@ describe('announcements (#562)', () => {
       const { context, scriptProperties } = publishing();
       const first = publish(context, { queens: QUEENS });
       expect(publish(context, { queens: QUEENS, brooklyn: '查經班改到週三。' }).published).toEqual(['brooklyn']);
-      expect(stored(scriptProperties)[SABBATH].queens).toBe(first.at);
+      expect(stored(scriptProperties)[SABBATH].queens.at).toBe(first.at);
+    });
+
+    it('counts changed text as not published, even cleared and typed again, until someone publishes it', () => {
+      const { context, scriptProperties } = publishing();
+      const first = publish(context, { queens: QUEENS });
+      expect(api(context).queens.announcementsPublishedAt).toBe(first.at);
+
+      // Someone types a new announcement over the published one.
+      const sheet = (context as unknown as { workbook: FakeWorkbook }).workbook.sheet('Weekly Data');
+      sheet.grid[1][2] = 'Choir practice moved to 3 pm.';
+      runInContext(`CacheService.getScriptCache().removeAll(['bulletin:' + CONFIG.cacheVersion + ':schedule-optional:${SABBATH}'])`, context);
+      expect(api(context).queens.announcements).toHaveLength(1);
+      expect(api(context).queens.announcementsPublishedAt).toBe('');
+      // The dialog offers it again, saying why, and publishing it makes it so.
+      const data = run<{ locations: { key: string; publishedAt: string; changed: boolean }[] }>(
+        context,
+        `getPublishAnnouncementsData_(workbook, '${TODAY}')`,
+      );
+      expect(data.locations[0]).toMatchObject({ key: 'queens', publishedAt: '', changed: true });
+      const again = publish(context, { queens: 'Choir practice moved to 3 pm.' });
+      expect(again.published).toEqual(['queens']);
+      expect(api(context).queens.announcementsPublishedAt).toBe(again.at);
+      expect(stored(scriptProperties)[SABBATH].queens.text).toBe('Choir practice moved to 3 pm.');
+    });
+
+    it('says so when the publish times would outgrow their property', () => {
+      const { context } = publishing();
+      runInContext('ANNOUNCEMENTS_PUBLISHED_MAX_LENGTH = 50', context);
+      expect(() => publish(context, { queens: QUEENS })).toThrow(/too long to publish/);
     });
 
     it('lets only the accounts on its own list publish, checked where the time is written', () => {
@@ -1231,7 +1260,7 @@ describe('announcements (#562)', () => {
     });
 
     it('sends no time for a location without an announcement, and reads a broken property as nothing published', () => {
-      const scriptProperties = new Map([['announcements.published', JSON.stringify({ [SABBATH]: { brooklyn: '2026-11-04T15:00:00.000Z' } })]]);
+      const scriptProperties = new Map([['announcements.published', JSON.stringify({ [SABBATH]: { brooklyn: { at: '2026-11-04T15:00:00.000Z', text: '' } } })]]);
       expect(api(publishing({ brooklyn: '' }, scriptProperties).context).brooklyn.announcementsPublishedAt).toBe('');
 
       const broken = publishing({}, new Map([['announcements.published', 'not json']]));
@@ -1241,7 +1270,7 @@ describe('announcements (#562)', () => {
 
     it('drops Sabbaths more than five weeks old', () => {
       const scriptProperties = new Map([
-        ['announcements.published', JSON.stringify({ '2026-09-26': { queens: 'x' }, '2026-10-31': { queens: 'y' }, junk: {} })],
+        ['announcements.published', JSON.stringify({ '2026-09-26': { queens: { at: 'x', text: 'x' } }, '2026-10-31': { queens: { at: 'y', text: 'y' } }, junk: {} })],
       ]);
       const { context } = publishing({}, scriptProperties);
       publish(context, { queens: QUEENS });
@@ -1250,7 +1279,7 @@ describe('announcements (#562)', () => {
 
     it('shows the text and asks first, saying plainly in both languages that it notifies everyone', () => {
       const { context, ui } = publishing({ brooklyn: '<b>Bring a dish</b> & a friend' }, new Map([
-        ['announcements.published', JSON.stringify({ [SABBATH]: { queens: '2026-11-04T15:00:00.000Z' } })],
+        ['announcements.published', JSON.stringify({ [SABBATH]: { queens: { at: '2026-11-04T15:00:00.000Z', text: QUEENS } } })],
       ]));
       // The dialog translates nothing, so Apps Script's date formatter is all it needs here.
       Object.assign(context, {

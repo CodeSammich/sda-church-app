@@ -64,7 +64,7 @@ describe('notifications', () => {
         !file.startsWith(DOWNLOADS) &&
         !file.startsWith(ANNOUNCEMENTS) &&
         !ASKERS.includes(file) &&
-        /requestNotificationPermission|requestPermissionsAsync|POST_NOTIFICATIONS|requestAuthorization/.test(readFileSync(file, 'utf8')),
+        /requestNotificationPermission|requestPermissionsAsync|\.requestPermission\(|POST_NOTIFICATIONS|requestAuthorization/.test(readFileSync(file, 'utf8')),
     );
     expect(asking).toEqual([]);
   });

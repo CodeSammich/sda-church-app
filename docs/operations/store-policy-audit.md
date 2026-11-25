@@ -42,7 +42,7 @@ below, only the donation recipient is still open.
 | [2. Privacy URL and declarations](#2-privacy-url-and-declarations--release-blocker) | Done. The privacy policy is live, and every answer is recorded in [App Store Connect answers](app-store-connect-answers.md) and [Google Play Console answers](play-console-answers.md). |
 | [3. Rights](#3-content-image-audio-and-trademark-rights--release-blocker) | Done for this release: photo consents and the Bible audio approval are on file. Follow-up: written confirmation for the Adventist name and logo. |
 | [4. Children and age](#4-children-and-age-declarations) | Done. A general church app for 13 and over, not a kids app; rated Everyone and 4+. |
-| [5. Permissions](#5-permissions-and-native-behavior) | Declared: no advertising ID; media playback for Bible audio; user-initiated jobs and notifications for its downloads (#611, #610). After the first production upload, check Play Console's permission list for the bundle shows no storage, overlay, or Wi-Fi state permissions. |
+| [5. Permissions](#5-permissions-and-native-behavior) | Declared: no advertising ID; media playback for Bible audio; user-initiated jobs and notifications for its downloads (#611, #610); the same notification permission for the announcements' notice, with a background check that needs no declaration (#709). After the first production upload, check Play Console's permission list for the bundle shows no storage, overlay, or Wi-Fi state permissions. |
 
 The final gate's last step, testing the signed builds on physical devices, is under way.
 
@@ -268,6 +268,13 @@ with the phone locked, with no foreground service of the app's:
   phone, about that download only; no push service, token, or server is involved, so
   Data safety and App Privacy don't change. The iPhone asks iOS the same way, for a word
   when a download is done. See [Notifications](../UI_UX.md) in the UI rules.
+- **Announcement notifications (#709):** the same `POST_NOTIFICATIONS`, asked for only when
+  the member turns on Announcement notifications, never at launch. The notice is made on
+  the phone, when the church publishes its announcements, once a week at most. Its
+  background check is WorkManager work on Android, with an inexact alarm, and the
+  `processing` background mode on iOS, from `expo-background-task`; none adds a
+  permission or a declaration
+  ([Play Console answers](play-console-answers.md#when-to-revisit)).
 
 None of this collects anything. The app does not request camera, microphone, location,
 contacts, or photos. The Android generated project previously

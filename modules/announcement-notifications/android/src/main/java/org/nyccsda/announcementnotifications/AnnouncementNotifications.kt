@@ -89,8 +89,9 @@ internal object AnnouncementNotifications {
     }
     prefs(context).edit().putString(PENDING, toJson(notice).toString()).commit()
     val alarms = context.getSystemService(AlarmManager::class.java)
-    // Inexact, so it needs no leave for exact alarms: Android may hold it a
-    // few minutes while the phone sleeps.
+    // Inexact, so it needs no leave for exact alarms: Android may hold it for
+    // a while, up to an hour
+    // (https://developer.android.com/develop/background-work/services/alarms/schedule).
     alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, notice.at, alarmIntent(context))
     return "scheduled"
   }

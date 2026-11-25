@@ -339,7 +339,7 @@ access):
 ```text
 No sign-in is required, and every feature works without an account.
 
-This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services; members can also download it to listen offline (You tab, Offline Bible Audio). A download keeps going in the background. The app's notifications are only ones the member turns on, and are made on the device. One kind is about a download the member started: the app asks for them, with its own explanation first, when a long download starts, never at launch, and the download goes on either way. The other is a notice of the church's weekly announcements, at most once a week, when the church publishes them; it's off until the member turns it on, below the bulletin's announcements (Home → Weekly Bulletin) or under You → Announcement notifications. While it's on, the app checks the bulletin in the background every few hours.
+This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services; members can also download it to listen offline (You tab, Offline Bible Audio). A download keeps going in the background. The app's notifications are only about what the member started or turned on, and are made on the device. One kind is about a download the member started: the app asks for them, with its own explanation first, when a long download starts, never at launch, and the download goes on either way. The other is a notice of the church's weekly announcements, at most once a week, when the church publishes them; it's off until the member turns it on, below the bulletin's announcements (Home → Weekly Bulletin) or under You → Announcement notifications. While it's on, the app checks the bulletin in the background every few hours, which is why it uses background processing on iOS and scheduled background work on Android.
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
@@ -447,7 +447,7 @@ Manage translations**. A listing with no set of its own shows the default langua
 - **Languages beyond Spanish:** the descriptions' "other languages" means Spanish for now.
 - **Hymn lyrics, sheet music, books, or lessons in the app:** they open on their
   publishers' websites.
-- **Notifications:** only ones the member turns on: a Bible audio download's own (#610),
+- **Notifications:** only about what the member started or turned on: a Bible audio download's own (#610),
   and the church's announcements once it publishes them, once a week at most (#709). Not
   reminders, news, or anything pushed from a server.
 - **Widgets:** on Android only, the verse of the day (#235); the iPhone's comes later (#614).

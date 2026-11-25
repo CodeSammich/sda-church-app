@@ -393,31 +393,37 @@ simple, blended colors.
     announcement for the member's location (the bulletin tab they last chose), in the app's
     language. A tap opens the bulletin. It comes only after someone on the church's short
     list presses **Publish & Notify Phones** in the bulletin sheet; a cell that changes
-    notifies no one. At most one a Sabbath, in the daytime (9 am to 8 pm), and from sunset at
+    notifies no one, and neither does text changed after it was published, until it's
+    published again. At most one a Sabbath, in the daytime (9 am to 8 pm; Android may hold
+    its alarm [up to an hour](https://developer.android.com/develop/background-work/services/alarms/schedule)), and from sunset at
     the end of one Sabbath to sunset on the Friday before the next, so none comes during the
     Sabbath. It makes no sound and doesn't vibrate. The phone checks the bulletin when the app
     opens and every few hours in the background, so it comes within a few hours of
     publishing; some iPhones, which decide when an app may check, only once the app is next
     opened. See [Notifications](feature_designs/announcements.md#notifications-709).
   - **Announcements: off until turned on, never asked at launch.** Below the bulletin's
-    announcements, once, the app offers it in a line of its own, with **Not now** and **Turn
-    on**, rather than a popup during the service. **Turn on** brings the phone's question.
-    After either, the offer is gone, and the switch stays.
+    announcements, the app offers it in a line of its own, with **Not now** and **Turn
+    on**, rather than a popup during the service, until the member answers. **Turn on**
+    brings the phone's question. After either, the offer is gone, and the switch stays.
   - **Announcements: one switch.** **Announcement notifications**, in the You tab's
     settings, with "Once a week at most, when the church publishes them". It shows on only
     when the member wants them and the phone allows them. On Android it's also its own
     channel, **Announcements**, which the member can turn off in Android's settings, and the
-    switch then shows off; turning the switch on there opens that channel's settings. iOS has
-    no switch for one kind of an app's notifications, so the app's switch is that.
+    switch then shows off; turning the switch on there opens that channel's settings. iOS's
+    Settings have no switch for one kind of an app's notifications
+    ([Apple](https://support.apple.com/guide/iphone/change-notification-settings-iph7c3d96bab/ios)),
+    so the app's switch is that.
   - **Never:** badges, reminders to come back, sounds, marketing, or anything sent from a
     server. They're made on the phone, so nothing about them leaves it, and Data safety and
     App Privacy don't change.
   - **Why the permission isn't dropped after each one:** iOS can't take back leave once
     given, and on Android asking each time would nag, and Android stops showing its
-    question after two refusals. So the app limits what it does instead:
+    question after two refusals
+    ([Android](https://developer.android.com/training/permissions/requesting#handle-denial)).
+    So the app limits what it does instead:
     `test/notification-guard.test.ts` fails if anything but `modules/bible-audio-downloads`
-    and `modules/announcement-notifications` posts a notification, or anything but their
-    services asks for the permission.
+    and `modules/announcement-notifications` posts a notification, or anything but those
+    modules and their services asks for the permission.
   - **Anything new,** such as event reminders (#49), needs its own decision, and an update
     to this policy, first.
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital

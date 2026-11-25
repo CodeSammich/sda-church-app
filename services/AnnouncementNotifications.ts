@@ -238,8 +238,8 @@ export const refreshAnnouncementNotificationPermission = async () => {
   notify();
 };
 
-// The background check, loaded only on a phone, so the web and tests needn't
-// have Expo's task packages.
+// The background check, loaded when first needed, so tests of this file
+// needn't have Expo's task packages.
 const task = () =>
   require('@/services/AnnouncementNotificationTask') as typeof import('@/services/AnnouncementNotificationTask');
 
