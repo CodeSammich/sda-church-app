@@ -33,6 +33,13 @@ one place. Church admins can start at [Operate](#operate).
 
 - [Project tenets](docs/project-tenets.md): the seven principles, in priority order,
   behind every design decision
+- [Vision](docs/VISION.md): who the app is for, what it is and isn't, why it's open
+  source, and the open question of one copy for each church or one app for many
+  - [What another church would have to do](docs/vision/another-church-starter-kit.md):
+    the money, time, people and steps under each way, and the follow-up work proposed
+  - [What ties the app to one church](docs/vision/church-specific-inventory.md): a
+    reference for maintainers, listing every place the code, scripts, and docs name
+    this church
 - [Architecture and external dependencies](docs/architecture.md): diagrams of every
   service the app and the printed bulletin use, account ownership, and the upkeep
   calendar
