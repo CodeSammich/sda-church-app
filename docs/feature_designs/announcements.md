@@ -244,11 +244,14 @@ published says when, and can't be published again while its text stays the same;
 with no announcement can't be ticked. If Weekly Data's text changed after the dialog
 opened, nothing is published, and the dialog asks to open it again.
 
-Phones are notified of exactly the text a person saw and confirmed. The publish time is
-kept with that text, and the API sends the time only while the cell still holds it. So a
-change after publishing, even a cell cleared and typed again, isn't published: the app's
-bulletin shows it, phones that haven't notified yet wait, and the dialog offers it again,
-saying it changed. Phones that already notified don't notify again that Sabbath.
+Phones are notified of the announcement a person saw and confirmed, translated into
+each phone's language. The publish time is kept with that text, and the API sends the
+time only while the cell still holds it. So changed text isn't published until someone
+publishes it: the app's bulletin shows it, and the dialog offers it again, saying it
+changed. Putting the published text back counts as published again. A phone learns of a
+change the next time it checks: one that already holds a waiting notice, and doesn't
+check again before that notice's time, still posts the text first published. Phones that
+already notified don't notify again that Sabbath.
 
 Only the accounts in the `ANNOUNCEMENT_PUBLISHER_EMAILS` Script Property can publish: the
 technology team and one or two more. It's its own list, apart from
@@ -305,7 +308,7 @@ privacy-policy changes, against [tenets](../project-tenets.md) 1 to 3.
   `app/+native-intent.tsx` hands to the router on Android.
 - **At most one a Sabbath.** The phone keeps the ids it posted, so text published again
   after a change sends no second notice to a phone that already notified. Clearing or
-  changing the cell before a phone notifies takes away that phone's waiting notice.
+  changing the cell takes away a phone's waiting notice the next time that phone checks.
 - **In the daytime, and not during the Sabbath.** At once between 9 am and 8 pm, or else
   at the next 9 am, and only from sunset as one Sabbath ends to sunset on the Friday before
   the next, at the church's location (`getAnnouncementNoticeWindow`). One whose time
@@ -313,15 +316,15 @@ privacy-policy changes, against [tenets](../project-tenets.md) 1 to 3.
 - **Quiet:** no sound or vibration. On Android it's its own channel, **Announcements**,
   which the member can turn off or change in Android's settings
   ([channels](https://developer.android.com/develop/ui/views/notifications/channels)).
-  iOS's Settings have one set of notification switches for an app, not one for each kind
+  iOS's Settings give this app one set of notification switches
   ([Apple](https://support.apple.com/guide/iphone/change-notification-settings-iph7c3d96bab/ios)),
-  so the app's switch is that.
+  with none for each kind as Android's channels are, so the app's switch is that.
 
 The phone posts it through the app's own module, `modules/announcement-notifications`,
 as the downloads' notifications are: no notification library. On Android, an inexact
-alarm, which needs no leave for exact alarms, posts it near its time: Android may hold
-one for up to an hour ([alarms](https://developer.android.com/develop/background-work/services/alarms/schedule)), so a notice set for just before 8 pm can come a
-little after. A restart clears the alarm
+alarm, which needs no leave for exact alarms, posts it near its time: Android 12 and
+later normally deliver one within an hour, and later under battery saver or Doze
+([alarms](https://developer.android.com/develop/background-work/services/alarms/schedule)), so a notice set for just before 8 pm can come after it. A restart clears the alarm
 ([AlarmManager](https://developer.android.com/reference/android/app/AlarmManager)), and
 the next check sets it again. On the iPhone, iOS posts the notice it was handed. The
 module also opens the bulletin on a tap, through the iPhone's notification delegate. The

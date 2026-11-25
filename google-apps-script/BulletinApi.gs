@@ -970,9 +970,9 @@ var BULLETIN_ANNOUNCEMENT_LOCATIONS = Object.freeze([
 var ANNOUNCEMENTS_PUBLISHED_PROPERTY = 'announcements.published';
 
 // When a location's entry was published, if the cell still holds the text
-// that was: a person saw and confirmed exactly what phones are notified of.
-// Changed text, even cleared and typed again, isn't published until someone
-// publishes it.
+// that was: a person saw and confirmed what phones are notified of. Changed
+// text isn't published until someone publishes it; putting the published text
+// back counts as published again.
 function getAnnouncementPublishedAt_(entry, text) {
   return entry && typeof entry.at === 'string' && text && entry.text === text ? entry.at : '';
 }

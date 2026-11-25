@@ -70,6 +70,14 @@ function writeAnnouncementsPublished_(published) {
   getAnnouncementsPublishedStore_().setProperty(ANNOUNCEMENTS_PUBLISHED_PROPERTY, JSON.stringify(published));
 }
 
+// Its size in bytes, as Chinese takes three a character, or in characters
+// where Apps Script's Utilities isn't there, as in the tests.
+function getAnnouncementsPublishedSize_(json) {
+  return typeof Utilities !== 'undefined' && Utilities.newBlob
+    ? Utilities.newBlob(json).getBytes().length
+    : json.length;
+}
+
 // The Sabbath a publish is for: the coming one, or next week's on a Sabbath,
 // when phones no longer notify for that day's.
 function getAnnouncementsPublishDate_(today) {
@@ -190,7 +198,7 @@ function publishAnnouncements_(spreadsheet, request, today, now) {
     });
     // A Script Property holds about 9 KB: far more than a few weeks of short
     // announcements, but said plainly if one is ever that long.
-    if (JSON.stringify(published).length > ANNOUNCEMENTS_PUBLISHED_MAX_LENGTH) {
+    if (getAnnouncementsPublishedSize_(JSON.stringify(published)) > ANNOUNCEMENTS_PUBLISHED_MAX_LENGTH) {
       throw new Error(
         'This announcement is too long to publish. Shorten it in Weekly Data, and open this again.\n' +
           '此报告事项太长，无法发布。请在 Weekly Data 中缩短后，重新打开此窗口。',
@@ -241,8 +249,8 @@ function buildPublishAnnouncementsHtml_(data) {
         : !location.text
           ? '<p class="state">No announcement in Weekly Data / Weekly Data 中没有报告事项</p>'
           : location.changed
-            ? '<p class="state">Changed since it was published. Phones that haven’t notified yet wait for this ' +
-              'to be published; those that have won’t notify again. / 发布后已修改。尚未通知的手机会等待再次发布；' +
+            ? '<p class="state">Changed since it was published. The new text isn’t sent to phones until it’s ' +
+              'published; phones that already notified won’t notify again. / 发布后已修改。新内容要再次发布后才会发送到手机；' +
               '已通知的手机不会再次通知。</p>'
             : '';
       var open = !location.publishedAt && location.text;
@@ -299,12 +307,12 @@ function buildPublishAnnouncementsHtml_(data) {
     escapePrintedBulletinHtml_(data.date) +
     '</p>' +
     cards +
-    '<p class="note">Phones are notified of exactly this text. A change in Weekly Data after this shows in ' +
-    'the app’s bulletin, but phones that haven’t notified yet wait until it’s published again here, and ' +
-    'each phone notifies once a Sabbath at most. Clearing the cell stops it on phones that haven’t ' +
-    'notified yet.<br>' +
-    '手机只会通知此处显示的内容。发布后在 Weekly Data 中的修改会显示在应用的周刊中，但尚未通知的手机会等到在此' +
-    '再次发布后才通知，每部手机每个安息日最多通知一次。清空单元格可阻止尚未通知的手机发送通知。</p>' +
+    '<p class="note">Phones are notified of this text, in each phone’s language. A change in Weekly Data ' +
+    'after this shows in the app’s bulletin, but isn’t sent to phones until it’s published again here, and ' +
+    'each phone notifies once a Sabbath at most. Clearing the cell stops the notice on a phone the next ' +
+    'time it checks.<br>' +
+    '手机会以各自的语言通知此处显示的内容。发布后在 Weekly Data 中的修改会显示在应用的周刊中，但要在此再次发布后' +
+    '才会发送到手机，每部手机每个安息日最多通知一次。清空单元格后，手机在下次检查时会取消通知。</p>' +
     '<div id="error" class="error"></div>' +
     '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
     '<button type="button" class="submit" id="publish"' +

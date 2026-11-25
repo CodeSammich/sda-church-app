@@ -267,11 +267,12 @@ Rules:
   coming Sabbath's announcement for each location, and says, in English and
   Simplified Chinese, that it notifies everyone who has the app and turned them
   on: within a few hours, in the daytime, not after sunset on Friday, and it
-  can't be taken back. Phones are notified of exactly the text published. If
-  the cell changes after, the app's bulletin shows the change, but phones that
-  haven't notified yet wait until someone publishes the new text, and a phone
-  that has notified doesn't notify again that Sabbath. Clearing the cell stops
-  the notice on phones that haven't notified yet. Only the Google accounts in the
+  can't be taken back. Phones are notified of the text published, in each
+  phone's language. If the cell changes after, the app's bulletin shows the
+  change, but it isn't sent to phones until someone publishes the new text, and
+  a phone that has notified doesn't notify again that Sabbath. Clearing or
+  changing the cell stops the notice on a phone the next time it checks; one
+  that doesn't check again in time still shows the text first published. Only the Google accounts in the
   `ANNOUNCEMENT_PUBLISHER_EMAILS` Script Property can publish; anyone else gets a
   message saying to ask the technology team. See
   [Notifications](../feature_designs/announcements.md#notifications-709).

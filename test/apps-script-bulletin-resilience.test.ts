@@ -1191,14 +1191,14 @@ describe('announcements (#562)', () => {
       expect(JSON.stringify(api(context))).not.toContain(PUBLISHER);
     });
 
-    it('publishes each location once', () => {
+    it('publishes a location once while its text stays the same', () => {
       const { context, scriptProperties } = publishing();
       const first = publish(context, { queens: QUEENS });
       expect(publish(context, { queens: QUEENS, brooklyn: '查經班改到週三。' }).published).toEqual(['brooklyn']);
       expect(stored(scriptProperties)[SABBATH].queens.at).toBe(first.at);
     });
 
-    it('counts changed text as not published, even cleared and typed again, until someone publishes it', () => {
+    it('counts changed text as not published until someone publishes it', () => {
       const { context, scriptProperties } = publishing();
       const first = publish(context, { queens: QUEENS });
       expect(api(context).queens.announcementsPublishedAt).toBe(first.at);
@@ -1219,6 +1219,17 @@ describe('announcements (#562)', () => {
       expect(again.published).toEqual(['queens']);
       expect(api(context).queens.announcementsPublishedAt).toBe(again.at);
       expect(stored(scriptProperties)[SABBATH].queens.text).toBe('Choir practice moved to 3 pm.');
+    });
+
+    it('counts the published text put back as published again, and an entry of another shape as not published', () => {
+      const { context } = publishing();
+      const at = (entry: unknown, text: string) =>
+        run<string>(context, `getAnnouncementPublishedAt_(${JSON.stringify(entry)}, ${JSON.stringify(text)})`);
+      expect(at({ at: '2026-11-04T15:00:00.000Z', text: 'A' }, 'A')).toBe('2026-11-04T15:00:00.000Z');
+      expect(at({ at: '2026-11-04T15:00:00.000Z', text: 'A' }, 'B')).toBe('');
+      expect(at({ at: '2026-11-04T15:00:00.000Z', text: '' }, '')).toBe('');
+      expect(at('2026-11-04T15:00:00.000Z', 'A')).toBe('');
+      expect(at(null, 'A')).toBe('');
     });
 
     it('says so when the publish times would outgrow their property', () => {

@@ -394,8 +394,8 @@ simple, blended colors.
     language. A tap opens the bulletin. It comes only after someone on the church's short
     list presses **Publish & Notify Phones** in the bulletin sheet; a cell that changes
     notifies no one, and neither does text changed after it was published, until it's
-    published again. At most one a Sabbath, in the daytime (9 am to 8 pm; Android may hold
-    its alarm [up to an hour](https://developer.android.com/develop/background-work/services/alarms/schedule)), and from sunset at
+    published again. At most one a Sabbath, in the daytime (9 am to 8 pm; Android may deliver
+    its alarm [up to an hour late, or later under battery saver](https://developer.android.com/develop/background-work/services/alarms/schedule)), and from sunset at
     the end of one Sabbath to sunset on the Friday before the next, so none comes during the
     Sabbath. It makes no sound and doesn't vibrate. The phone checks the bulletin when the app
     opens and every few hours in the background, so it comes within a few hours of
@@ -410,9 +410,9 @@ simple, blended colors.
     when the member wants them and the phone allows them. On Android it's also its own
     channel, **Announcements**, which the member can turn off in Android's settings, and the
     switch then shows off; turning the switch on there opens that channel's settings. iOS's
-    Settings have no switch for one kind of an app's notifications
+    Settings give this app one set of notification switches
     ([Apple](https://support.apple.com/guide/iphone/change-notification-settings-iph7c3d96bab/ios)),
-    so the app's switch is that.
+    with none for each kind, so the app's switch is that.
   - **Never:** badges, reminders to come back, sounds, marketing, or anything sent from a
     server. They're made on the phone, so nothing about them leaves it, and Data safety and
     App Privacy don't change.
