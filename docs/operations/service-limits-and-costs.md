@@ -386,8 +386,8 @@ the repository ever becomes private is noted in
 ### GitHub Pages
 
 Serves the app website that `app.nyccsda.org` redirects to: the privacy policy,
-support, and download pages, the Sabbath Encouragement PDF, and the unsupported PWA
-preview. [Limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits):
+support, and download pages, the Sabbath Encouragement PDF, and the PWA (a maintained
+preview, not a release channel). [Limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits):
 1 GB per site, a soft 100 GB of bandwidth a month, and `429` responses when rate
 limited. Going over the soft limit gets an email from GitHub, not a bill. The pages
 that matter are tiny.

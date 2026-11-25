@@ -176,11 +176,10 @@ The script's header lists every setting.
 ## Web & PWA Testing and Preview
 
 Native iOS and Android builds are the primary distribution path. The Progressive Web App
-(PWA) remains a maintained browser testing and preview surface: fast regression checks of
-layout, accessibility, links, caching, and web-only behavior; previews for contributors,
+(PWA) is a maintained preview, not a release channel. It's used for fast regression checks
+of layout, accessibility, links, caching, and web-only behavior; previews for contributors,
 maintainers, and church stakeholders before a native binary is built, including fast fork
-previews; and demos that need no store install. It is not the canonical release channel
-for the church's installed-app users.
+previews; and demos that need no store install. Members install the native apps.
 
 The web and native targets continue to share one Expo source tree. A web preview is useful
 for testing browser-specific behavior, but passing the web build is not evidence that a

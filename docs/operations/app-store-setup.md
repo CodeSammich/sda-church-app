@@ -423,8 +423,12 @@ dates, and give no access to anything.
 
 Apple Business Manager is **not required** to enroll in or use the Apple
 Developer Program for App Store distribution. They are separate Apple
-services. The required service for this project is an Apple Developer Program
-organization membership, not an individual one. Apple's
+services. The church didn't use it: it applied for the Developer Program's
+[nonprofit fee waiver](https://developer.apple.com/help/account/membership/fee-waivers/)
+with its own D-U-N-S number from Dun & Bradstreet
+([Apple App Store](../architecture.md#apple-app-store)). The required service for
+this project is an Apple Developer Program organization membership, not an
+individual one. Apple's
 [enrollment requirements](https://developer.apple.com/help/account/membership/program-enrollment/)
 for an organization are a legal entity, a D-U-N-S number, someone with legal
 authority to bind the organization, a work email on the organization's domain, and
