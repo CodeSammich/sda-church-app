@@ -58,6 +58,8 @@ one place. Church admins can start at [Operate](#operate).
 - [UI/UX design](docs/UI_UX.md): the four-tab app structure and its design language
 - [Accessibility guidelines](docs/accessibility/README.md): the WCAG 2.1 AA baseline,
   text size, and screen readers
+- [Persona walk-throughs](docs/research/personas/README.md): what happened when the app
+  was used the way an older member, a listener, a visitor, and a deacon would use it
 - Feature designs:
   - [Announcements in the app, and notifications for them](docs/feature_designs/announcements.md):
     why they're typed in `Weekly Data`, the translation, why they're public, and the plan for notifications
