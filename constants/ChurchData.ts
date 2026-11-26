@@ -44,3 +44,46 @@ export type SupportedDataLang = keyof typeof CHURCH_LOCATION_LABELS;
 export const getLocationNames = (lang: string): string[] => {
   return CHURCH_LOCATION_LABELS[lang as SupportedDataLang] || CHURCH_LOCATION_LABELS.en;
 };
+
+export interface ChurchServiceTime {
+  /** What gathers there, such as Sabbath worship. */
+  service: string;
+  /** Its day and hours, as the app writes times. */
+  time: string;
+}
+
+/**
+ * Each location's regular gathering, in CHURCH_LOCATIONS' order, for New
+ * Member & Visitor's Address & Service Times (#793). Fellowships shows
+ * Elmhurst's from here. Brooklyn's spans Sabbath Worship's schedule
+ * (app/(tabs)/home/worship.tsx), and Flushing's the Thursday program on
+ * Fellowships. The Saturday service is 安息日崇拜 (Sabbath worship), never
+ * the Lord's day's (主日) worship, which many Chinese Christians read as
+ * Sunday's.
+ */
+export const CHURCH_SERVICE_TIMES: Record<SupportedDataLang, ChurchServiceTime[]> = {
+  en: [
+    { service: 'Sabbath Worship', time: 'Saturday, 10:00 AM - 1:00 PM' },
+    { service: 'Sabbath Worship', time: 'Saturday, 10:00 AM - 1:00 PM' },
+    { service: 'Weekly Gathering', time: 'Thursday, 6:30 - 9:00 PM' },
+  ],
+  zh: [
+    { service: '安息日崇拜', time: '星期六上午 10:00 - 下午 1:00' },
+    { service: '安息日崇拜', time: '星期六上午 10:00 - 下午 1:00' },
+    { service: '每週聚會', time: '星期四晚上 6:30 - 9:00' },
+  ],
+  'zh-cn': [
+    { service: '安息日崇拜', time: '星期六上午 10:00 - 下午 1:00' },
+    { service: '安息日崇拜', time: '星期六上午 10:00 - 下午 1:00' },
+    { service: '每周聚会', time: '星期四晚上 6:30 - 9:00' },
+  ],
+  es: [
+    { service: 'Adoración Sabática', time: 'Sábado, 10:00 AM - 1:00 PM' },
+    { service: 'Adoración Sabática', time: 'Sábado, 10:00 AM - 1:00 PM' },
+    { service: 'Reunión Semanal', time: 'Jueves, 6:30 - 9:00 PM' },
+  ],
+};
+
+/** Each location's regular gathering in the app's language, English if it has none. */
+export const getServiceTimes = (lang: string): ChurchServiceTime[] =>
+  CHURCH_SERVICE_TIMES[lang as SupportedDataLang] || CHURCH_SERVICE_TIMES.en;

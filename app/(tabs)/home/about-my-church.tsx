@@ -46,7 +46,7 @@ export default function AboutChurchHistoryScreen() {
 
   const allLabels = {
     en: {
-      title: 'History',
+      title: 'Locations & History',
       churchName: 'New York Chinese\nSeventh-day Adventist\nChurch',
       history: 'History',
       historySubtext:
@@ -78,7 +78,7 @@ export default function AboutChurchHistoryScreen() {
       getDirections: 'Get Directions',
     },
     zh: {
-      title: '歷史',
+      title: '地點與歷史',
       churchName: '紐約華人基督復臨安息日會',
       history: '歷史',
       historySubtext:
@@ -108,7 +108,7 @@ export default function AboutChurchHistoryScreen() {
       getDirections: '獲取路線',
     },
     'zh-cn': {
-      title: '历史',
+      title: '地点与历史',
       churchName: '纽约华人基督复临安息日会',
       history: '历史',
       historySubtext:
@@ -138,7 +138,7 @@ export default function AboutChurchHistoryScreen() {
       getDirections: '获取路线',
     },
     es: {
-      title: 'Historia',
+      title: 'Ubicaciones e Historia',
       churchName: 'Iglesia Adventista\ndel Séptimo Día\nChina de Nueva York',
       history: 'Historia',
       historySubtext:

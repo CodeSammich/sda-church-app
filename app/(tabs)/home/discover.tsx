@@ -1,3 +1,4 @@
+import { AddressAndServiceTimes } from '@/components/AddressAndServiceTimes';
 import { GridMenuCard } from '@/components/GridMenuCard';
 import { contentColumnStyle } from '@/constants/Layout';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
@@ -8,9 +9,10 @@ import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
+import { getScreenshotState } from '@/services/ScreenshotRoute';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
-import { useContext, useMemo } from 'react';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { type ComponentRef, useContext, useMemo, useRef } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -28,6 +30,29 @@ export default function DiscoverScreen() {
   const NavigationStyles = useNavigationStyles();
   const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
+  // Address & Service Times comes first (#793), which puts the cards below
+  // the fold. A key-screens build reads section=cards to scroll them into
+  // view, for the checks on their titles.
+  const { section: paramSection } = useLocalSearchParams();
+  const screenshotSection = getScreenshotState(paramSection, ['cards'] as const);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const cardsRef = useRef<ComponentRef<typeof View>>(null);
+  // Android ignores a scroll while the page slides in, so it's tried again
+  // once the page has settled, as the bulletin does.
+  const scrollToScreenshotSection = () => {
+    const content = scrollRef.current?.getInnerViewRef();
+    if (!screenshotSection || !content || !cardsRef.current) return;
+    cardsRef.current.measureLayout(
+      content,
+      (_left, top) => {
+        const scroll = () =>
+          scrollRef.current?.scrollTo({ y: Math.max(0, top - headerHeight - 12), animated: false });
+        scroll();
+        setTimeout(scroll, 500);
+      },
+      () => undefined,
+    );
+  };
 
   const allLabels = {
     en: {
@@ -79,6 +104,7 @@ export default function DiscoverScreen() {
     <>
       <Stack.Screen options={{ title: labels.title, showTitleChip: showHeaderTitle } as any} />
       <ScrollView
+        ref={scrollRef}
         style={DocumentStyles.container}
         onScroll={handleHeroScroll}
         scrollEventThrottle={16}
@@ -105,8 +131,17 @@ export default function DiscoverScreen() {
           </Text>
         </ImageBackground>
 
+        {/* Where and when the church meets, first (#793) */}
+        <View style={[styles.visit, contentColumnStyle(columnScale)]}>
+          <AddressAndServiceTimes />
+        </View>
+
         {/* Body */}
-        <View style={[styles.grid, contentColumnStyle(columnScale)]}>
+        <View
+          ref={cardsRef}
+          onLayout={scrollToScreenshotSection}
+          style={[styles.grid, contentColumnStyle(columnScale)]}
+        >
           <GridMenuCard
             fitTitles={gridTitles}
             title={labels.aboutSDA}
@@ -181,6 +216,10 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
+  visit: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -696,10 +696,23 @@
     {
       "name": "discover",
       "group": "home",
-      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\". xl-android-font-max is the same case on Android, at its largest font. es-default-text is Spanish at the app's default 125%: on the Android phone's 384 points, \"Compañerismo\" was wider than its card's title, so each card shrinks its grid's text just enough to keep the widest word whole (#324). Its ñ may read as another letter.",
+      "$comment": "New Member & Visitor opens with Address & Service Times (#793), under its photo: each location's name, its gathering and hours, and its English street address, with Get Directions. Its heading must show whole, and Elmhurst's Saturday service must be named Sabbath worship, 安息日崇拜 in Chinese, never 主日崇拜, which many Chinese Christians read as Sunday worship. The service line may wrap after its name. The cards come below it; discover-cards checks them.",
       "path": "home/discover",
-      "variants": ["default", "zh", "es-default-text", "xl-ios-large-text", "xl-android-font-max"],
+      "variants": ["default", "zh"],
       "ipadVariants": ["default", "landscape"],
+      "mustNotShowLines": ["主日崇拜"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Address & Service Times$", "^Sabbath Worship\\b"] },
+        "zh": { "mustShowLines": ["^教會地址與聚會時間$", "^安息日崇拜"] }
+      }
+    },
+    {
+      "name": "discover-cards",
+      "group": "home",
+      "$comment": "New Member & Visitor's cards, below Address & Service Times (#793), scrolled into view by section=cards, in a key-screens build only. xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\". xl-android-font-max is the same case on Android, at its largest font. es-default-text is Spanish at the app's default 125%: on the Android phone's 384 points, \"Compañerismo\" was wider than its card's title, so each card shrinks its grid's text just enough to keep the widest word whole (#324). Its ñ may read as another letter.",
+      "path": "home/discover?section=cards",
+      "variants": ["es-default-text", "xl-ios-large-text", "xl-android-font-max"],
+      "ipadVariants": ["landscape"],
       "variantRules": {
         "es-default-text": { "mustShowLines": ["^Compa.erismo$"] },
         "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] },

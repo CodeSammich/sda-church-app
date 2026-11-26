@@ -3,6 +3,7 @@ import { VerseHero } from '@/components/VerseHero';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { contentColumnStyle } from '@/constants/Layout';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
+import { CHURCH_SERVICE_TIMES } from '@/constants/ChurchData';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   CHURCH_EMAIL,
@@ -41,7 +42,7 @@ const allLabels = {
     elmhurstRef: 'Deuteronomy 6:6-7 (NIV)',
     elmhurstDesc: 'In Elmhurst, we offer vibrant in-person ministries for young adults, providing opportunities for spiritual growth, fellowship, and community engagement. Our young adult’s ministry focuses on nurturing faith through interactive learning and activities, deepening our relationship with God. All services at this location are offered in Chinese and English.',
     elmhurstWorshipTitle: 'Sabbath Worship',
-    elmhurstWorshipDesc: 'Saturday: 10:00 AM - 1:00 PM • Join us for song service, Sabbath school, and our weekly main worship service.',
+    elmhurstWorshipDesc: `${CHURCH_SERVICE_TIMES.en[0].time} • Join us for song service, Sabbath school, and our weekly main worship service.`,
     viewSchedule: 'Schedule',
     elmhurstEventsTitle: 'Seasonal Events & Activities',
     elmhurstEventsDesc: 'In addition to Bible study and spiritual growth, we host seasonal events for young adults, such as summer & winter camps, skiing trips, camping outings, barbecues, and various other fun activities that foster bonding and personal development.',
@@ -79,7 +80,7 @@ const allLabels = {
     elmhurstRef: '申命記 6:6-7 (CUV)',
     elmhurstDesc: '在艾姆赫斯特，我們為年輕人提供充滿活力的實體事工，提供屬靈成長、團契和社區參與的機會。我們的青年事工專注於透過互動學習和活動來培育信仰，深化我們與上帝的關係。該地點的所有服務均提供中文和英文。',
     elmhurstWorshipTitle: '安息日崇拜',
-    elmhurstWorshipDesc: '星期六上午 10:00 - 下午 1:00 • 歡迎參加我們的讚美詩歌、安息日學與每週的主日崇拜服務。',
+    elmhurstWorshipDesc: `${CHURCH_SERVICE_TIMES.zh[0].time} • 歡迎參加我們的讚美詩歌、安息日學與每週的安息日崇拜服務。`,
     viewSchedule: '時間表',
     elmhurstEventsTitle: '季節性活動與項目',
     elmhurstEventsDesc: '除了查經和屬靈成長外，我們還為年輕人舉辦季節性活動，例如夏令營和冬令營、滑雪之旅、野營活動、燒烤以及其他各種有助於促進情感聯繫和個人發展的趣味活動。',
@@ -115,9 +116,9 @@ const allLabels = {
     elmhurstHeader: '艾姆赫斯特 (Queens)',
     elmhurstVerse: '“我今日所吩咐你的话都要记在心上，也要殷勤教训你的儿女。无论你坐在家里，行在路上，躺下，起来，都要谈论。”',
     elmhurstRef: '申命记 6:6-7 (CUVS)',
-    elmhurstDesc: '在艾姆赫斯特，我们为年轻人提供充满活力的实体事工，提供属灵成长、团契 and 社区参与的机会。我们的青年事工专注于通过互动学习和活动来培育信仰，深化我们与上帝的关系。该地点的所有服务均提供中文和英文。',
+    elmhurstDesc: '在艾姆赫斯特，我们为年轻人提供充满活力的实体事工，提供属灵成长、团契和社区参与的机会。我们的青年事工专注于通过互动学习和活动来培育信仰，深化我们与上帝的关系。该地点的所有服务均提供中文和英文。',
     elmhurstWorshipTitle: '安息日崇拜',
-    elmhurstWorshipDesc: '星期六上午 10:00 - 下午 1:00 • 欢迎参加我们的赞美诗歌、安息日学与每周的主日崇拜服务。',
+    elmhurstWorshipDesc: `${CHURCH_SERVICE_TIMES['zh-cn'][0].time} • 欢迎参加我们的赞美诗歌、安息日学与每周的安息日崇拜服务。`,
     viewSchedule: '时间表',
     elmhurstEventsTitle: '季节性活动与项目',
     elmhurstEventsDesc: '除了查经和属灵成长外，我们还为年轻人举办季节性活动，例如夏令营和冬令营、滑雪之旅、野营活动、烧烤以及其他各种有助于促进情感联系和个人发展的趣味活动。',
@@ -155,7 +156,7 @@ const allLabels = {
     elmhurstRef: 'Deuteronomio 6:6-7 (RVR1960)',
     elmhurstDesc: 'En Elmhurst, ofrecemos ministerios presenciales vibrantes para jóvenes adultos, brindando oportunidades para el crecimiento espiritual, el compañerismo y el compromiso comunitario. Nuestro ministerio de jóvenes adultos se enfoca en nutrir la fe a través del aprendizaje interactivo y actividades, profundizando nuestra relación con Dios. Todos los servicios en esta ubicación se ofrecen en chino e inglés.',
     elmhurstWorshipTitle: 'Adoración Sabática',
-    elmhurstWorshipDesc: 'Sábado: 10:00 AM - 1:00 PM • Únase a nosotros para el servicio de canto, escuela sabática y nuestro servicio principal de adoración semanal.',
+    elmhurstWorshipDesc: `${CHURCH_SERVICE_TIMES.es[0].time} • Únase a nosotros para el servicio de canto, escuela sabática y nuestro servicio principal de adoración semanal.`,
     viewSchedule: 'Horario',
     elmhurstEventsTitle: 'Eventos y Actividades Estacionales',
     elmhurstEventsDesc: 'Además del estudio bíblico y el crecimiento espiritual, organizamos eventos estacionales para jóvenes adultos, como campamentos de verano e invierno, viajes de esquí, salidas de campamento, barbacoas y otras actividades divertidas que fomentan la unión y el desarrollo personal.',
