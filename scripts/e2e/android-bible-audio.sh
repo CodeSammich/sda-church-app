@@ -304,7 +304,8 @@ scenario_mid_chapter_offline() {
     { echo "resumed at ${position}ms instead of where it stopped"; return 1; }
 }
 
-# Pausing and resuming a playing chapter continues from the same place.
+# Pausing and resuming a playing chapter continues from the same place, and
+# so does Play after the app is closed and opened again.
 scenario_pause_and_resume() {
   open_chapter JHN 1
   locate_controls || { echo 'no play button'; return 1; }
@@ -321,6 +322,18 @@ scenario_pause_and_resume() {
   resumed_at=$(session_field position)
   [ "${resumed_at:-0}" -ge "${paused_at:-0}" ] && [ "${resumed_at:-0}" -gt 0 ] ||
     { echo "resumed at ${resumed_at}ms after pausing at ${paused_at}ms"; return 1; }
+  # Closed and opened again, John 1 picks up where it was paused, not at 0:00
+  # (#803). The session's position can trail the player's by a moment.
+  tap_play_pause
+  wait_until 20 'John 1 paused again' is_paused || return 1
+  paused_at=$(session_field position)
+  open_chapter JHN 1
+  locate_controls || { echo 'no play button after the restart'; return 1; }
+  tap_play_pause
+  wait_until 60 'John 1 playing after the restart' is_playing || return 1
+  resumed_at=$(session_field position)
+  [ "${paused_at:-0}" -gt 3000 ] && [ "${resumed_at:-0}" -ge $(( ${paused_at:-0} - 1500 )) ] ||
+    { echo "after the restart, started at ${resumed_at}ms; it was paused at ${paused_at}ms"; return 1; }
 }
 
 # Earbuds' previous and next (#543). Started in Leviticus 2: previous more
