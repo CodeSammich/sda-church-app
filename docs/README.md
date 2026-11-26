@@ -115,12 +115,13 @@ iPhone and 90 on a simulated iPad, and the Android key screens 140 on an Android
 emulator, in light and dark, at larger text sizes, and in
 Chinese and Spanish. `scripts/capture-ios-screens.cjs` and
 `scripts/capture-android-screens.cjs` take them, and `scripts/check-screens.cjs` reads
-their text with Apple's Vision framework and checks what each screen must show. The release then waits on the
+their text, the iPhone's and iPad's with Apple's Vision framework and Android's with
+RapidOCR, and checks what each screen must show. The release then waits on the
 **Screenshots reviewed** check until a release approver has looked at them.
 `npm test` includes `test/screens.test.ts`, which checks the screen list itself.
 
-Feature pull requests don't run it. To try a screen change earlier, start **iOS PR
-preview** by hand on your branch from the Actions tab. When a change affects what a
+Feature pull requests don't run them. To try a screen change earlier, start **iOS key
+screens** or **Android key screens** by hand on your branch from the Actions tab. When a change affects what a
 screen shows, update its key screens and text checks; see
 [Contributing](CONTRIBUTING.md#pull-request-format-and-issue-closing) and
 [Key screens](operations/native-builds.md#key-screens).
@@ -175,11 +176,10 @@ The script's header lists every setting.
 ## Web & PWA Testing and Preview
 
 Native iOS and Android builds are the primary distribution path. The Progressive Web App
-(PWA) remains a maintained browser testing and preview surface: fast regression checks of
-layout, accessibility, links, caching, and web-only behavior; previews for contributors,
+(PWA) is a maintained preview, not a release channel. It's used for fast regression checks
+of layout, accessibility, links, caching, and web-only behavior; previews for contributors,
 maintainers, and church stakeholders before a native binary is built, including fast fork
-previews; and demos that need no store install. It is not the canonical release channel
-for the church's installed-app users.
+previews; and demos that need no store install. Members install the native apps.
 
 The web and native targets continue to share one Expo source tree. A web preview is useful
 for testing browser-specific behavior, but passing the web build is not evidence that a

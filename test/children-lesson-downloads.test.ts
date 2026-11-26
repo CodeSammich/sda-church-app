@@ -1,4 +1,7 @@
+import { showAppAlert } from '@/components/AppAlert';
 import { ChildrenLessonDialog, getChildrenLessonStatus } from '@/components/ChildrenLessonDialog';
+import { openURL } from '@/constants/ExternalLinks';
+import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { findChildrenLesson } from '@/features/sabbath-school/ChildrenLessons';
 import {
   getChildrenLesson,
@@ -7,7 +10,8 @@ import {
   previewChildrenLesson,
   pruneChildrenLessons,
 } from '@/features/sabbath-school/LessonDownloads';
-import { fireEvent } from '@testing-library/react-native';
+import { useChildrenLessonOpener } from '@/hooks/useChildrenLessonOpener';
+import { act, fireEvent, renderHook } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
 import { getNetworkStateAsync } from 'expo-network';
 import { createElement } from 'react';
@@ -22,6 +26,14 @@ jest.mock('@/features/sabbath-school/ChildrenLessons', () => ({
 }));
 jest.mock('expo-network', () => ({
   getNetworkStateAsync: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })),
+}));
+jest.mock('@/constants/ExternalLinks', () => ({
+  ...jest.requireActual('@/constants/ExternalLinks'),
+  openURL: jest.fn(async () => undefined),
+}));
+jest.mock('@/components/AppAlert', () => ({
+  ...jest.requireActual('@/components/AppAlert'),
+  showAppAlert: jest.fn(),
 }));
 
 const find = findChildrenLesson as jest.MockedFunction<typeof findChildrenLesson>;
@@ -280,19 +292,26 @@ describe("the children's lesson popup", () => {
     });
   });
 
-  it('say when there is no connection, with only the X', async () => {
+  it.each<[SupportedLanguage, string, string]>([
+    ['en', 'No connection. Connect to the internet to download this week’s lesson.', 'Close'],
+    ['zh', '沒有網路連線。請連上網路以下載本週課程。', '關閉'],
+    ['zh-cn', '没有网络连接。请连接网络以下载本周课程。', '关闭'],
+    ['es', 'Sin conexión. Conéctate a internet para descargar la lección de esta semana.', 'Cerrar'],
+  ])('say when there is no connection, with only the X, in %s (#533)', async (language, offline, close) => {
     const screen = await renderWithPreferences(
       createElement(ChildrenLessonDialog, {
         offline: true,
         onCancel: jest.fn(),
         progress: null,
-        title: '少年級（10–12 歲）',
+        title: 'Junior (ages 10–12)',
         visible: true,
       }),
-      { language: 'zh' },
+      { language },
     );
-    expect(screen.getByText('沒有網路連線。請連上網路以下載本週課程。')).toBeTruthy();
-    expect(screen.queryByText('正在尋找本週課程…')).toBeNull();
+    expect(screen.getByText(offline)).toBeTruthy();
+    expect(screen.queryByText(getChildrenLessonStatus(null, language).text)).toBeNull();
+    expect(screen.getByRole('button', { name: close })).toBeTruthy();
+    expect(screen.queryByText(close)).toBeNull();
   });
 
   it('close with an X, which stops the download', async () => {
@@ -309,5 +328,45 @@ describe("the children's lesson popup", () => {
     expect(screen.queryByText('Close')).toBeNull();
     await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The tap on an age group, from the popup to what opens (#533).
+describe("a tap on a children's lesson", () => {
+  const TITLE = 'Junior (ages 10–12)';
+
+  it('keep the popup open offline with no copy, saying so, and open nothing; then, back online, a tap again opens the website', async () => {
+    // Offline, the lookup finds nothing and gives the website, which couldn't load.
+    jest.mocked(getNetworkStateAsync).mockResolvedValueOnce({ isConnected: false, isInternetReachable: false } as never);
+    find.mockResolvedValue({ url: WEBSITE });
+    const download = mockDownloads();
+    const { result } = await renderHook(() => useChildrenLessonOpener('en'));
+
+    await act(() => result.current.open('junior', TITLE));
+    expect(result.current.dialog).toEqual({ title: TITLE, progress: null, offline: true });
+    expect(openURL).not.toHaveBeenCalled();
+    expect(showAppAlert).not.toHaveBeenCalled();
+    expect(download).not.toHaveBeenCalled();
+
+    // The X, then the same tap online: the website opens, as before.
+    await act(async () => result.current.cancel());
+    expect(result.current.dialog).toBeNull();
+    await act(() => result.current.open('junior', TITLE));
+    expect(openURL).toHaveBeenCalledTimes(1);
+    expect(openURL).toHaveBeenCalledWith(WEBSITE, expect.anything(), expect.anything());
+    expect(result.current.dialog).toBeNull();
+  });
+
+  it("keep the popup open offline when a lesson found earlier wasn't downloaded", async () => {
+    find.mockResolvedValue({ url: PDF });
+    mockDownloads(async () => {
+      throw new Error('The Internet connection appears to be offline.');
+    });
+    jest.mocked(getNetworkStateAsync).mockResolvedValueOnce({ isConnected: false, isInternetReachable: false } as never);
+    const { result } = await renderHook(() => useChildrenLessonOpener('en'));
+
+    await act(() => result.current.open('junior', TITLE));
+    expect(result.current.dialog).toEqual({ title: TITLE, progress: null, offline: true });
+    expect(openURL).not.toHaveBeenCalled();
   });
 });

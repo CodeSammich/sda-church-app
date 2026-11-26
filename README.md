@@ -8,7 +8,7 @@
 
 A React Native mobile application built with Expo for Seventh-day Adventist church
 community features. Native iOS and Android are the primary release targets; the web/PWA
-build remains a useful preview and fallback surface.
+build is a maintained preview, not a release channel.
 
 ## Quick start
 
@@ -33,6 +33,13 @@ one place. Church admins can start at [Operate](#operate).
 
 - [Project tenets](docs/project-tenets.md): the seven principles, in priority order,
   behind every design decision
+- [Vision](docs/VISION.md): who the app is for, what it is and isn't, why it's open
+  source, and the open question of one copy for each church or one app for many
+  - [What another church would have to do](docs/vision/another-church-starter-kit.md):
+    the money, time, people and steps under each way, and the follow-up work proposed
+  - [What ties the app to one church](docs/vision/church-specific-inventory.md): a
+    reference for maintainers, listing every place the code, scripts, and docs name
+    this church
 - [Architecture and external dependencies](docs/architecture.md): diagrams of every
   service the app and the printed bulletin use, account ownership, and the upkeep
   calendar
@@ -51,6 +58,8 @@ one place. Church admins can start at [Operate](#operate).
 - [UI/UX design](docs/UI_UX.md): the four-tab app structure and its design language
 - [Accessibility guidelines](docs/accessibility/README.md): the WCAG 2.1 AA baseline,
   text size, and screen readers
+- [Persona walk-throughs](docs/research/personas/README.md): what happened when the app
+  was used the way an older member, a listener, a visitor, and a deacon would use it
 - Feature designs:
   - [Announcements in the app, and notifications for them](docs/feature_designs/announcements.md):
     why they're typed in `Weekly Data`, the translation, why they're public, and the plan for notifications
@@ -96,7 +105,7 @@ one place. Church admins can start at [Operate](#operate).
 - [External dependency monitor](docs/operations/external-dependency-monitor.md): the
   daily check of every outside service the app uses, and what to do when it fails
 - [Status page](docs/operations/status-page.md): the audio hosts, the bulletin API and
-  a few other services, checked every hour from a separate repository
+  a few other services, checked a few times a day from a separate repository
 - [Bible audio verse times](docs/operations/bible-audio-verse-times.md): how the times
   that let the reader follow the audio were made and checked, and how to make them for a
   new narrator or language
@@ -168,4 +177,4 @@ Google Play internal testing and TestFlight. Nothing reaches the public until a
 maintainer submits it in each store.
 
 The app uses one Expo source for the native apps and the web/PWA build: Expo SDK 58
-(`expo ~58.0.22`) with React Native 0.88.1.
+with React Native 0.88.1 (the exact versions are in `package.json`).

@@ -150,8 +150,8 @@ would need a pinned, reproducible WASM build compatible with the chosen model re
 integrity hashes, progress/cancellation UI, storage-quota handling, and an explicit model
 cache in IndexedDB or OPFS.
 
-The existing service worker must not own the model cache. It caches the response to every GET
-request in a release-versioned cache and deletes old release caches during activation. A model
+The existing service worker must not own the model cache. It caches the website's own files
+in a release-versioned cache and deletes old release caches during activation. A model
 stored there could be downloaded again after every app release and could evict ordinary
 offline app resources. Model storage must have an independent lifecycle and a user-facing
 delete control.

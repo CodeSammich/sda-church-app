@@ -157,8 +157,8 @@ orchestration visible in this repository and avoid another credential boundary.
 
 ## Expo 58 Android prebuild
 
-The app uses Expo SDK 58 (`expo ~58.0.22`) with React Native 0.88.1, and the matching
-template package. Use Node 22, the version the native workflows use. Generate the
+The app uses Expo SDK 58 with React Native 0.88.1 (the exact `expo` version is in
+`package.json`), and the matching template package. Use Node 22, the version the native workflows use. Generate the
 Android project with the exact template version used by the build script:
 
 ```sh
@@ -247,10 +247,11 @@ and `APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy). A third environment,
 [Screenshots reviewed](#key-screens) check for approval.
 
 To set up `production`, open **Settings → Environments** in the upstream repository and
-create or select `production`. Require at least one reviewer, and restrict deployment
-branches to `main` and `release-candidate`, so a manual QR code run from
-`release-candidate` can reach its approval step (the Apps Script deploy skips on any
-branch but `main`). The signing jobs themselves run only on `main`. Then:
+create or select `production`. Its current setting: the required reviewers are the
+`release-approvers` team, so only church IT admins approve its jobs, and its deployment
+branches are `main` and `release-candidate`. Every job that uses it runs only on `main`:
+the signed builds, the Apps Script deploy and the QR code upload skip on any other branch,
+and the test APK upload to Drive runs in `main`'s context. Then:
 
 - **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile
   are binary, so their secrets hold base64 text. Base64 is only an encoding; the GitHub
@@ -280,7 +281,17 @@ ignored iOS project. It checks that the profile belongs to `IOS_TEAM_ID` and to
 `expo.ios.buildNumber`, and then signs, archives, and exports an App Store IPA as in
 [How the signed builds work](#how-the-signed-builds-work). Only the IPA is uploaded as an
 artifact. The build job has no App Store Connect API key; the separate **Upload to
-TestFlight** job, in `store-upload`, uploads the IPA.
+TestFlight** job, in `store-upload`, uploads the IPA. Two more jobs take the IPA
+artifact, on Linux and with no secrets:
+
+- **Check the recorded Apple signing dates** compares the provisioning profile inside
+  the IPA with `.github/apple-signing-expiry.json`, which the Apple Signing Monitor
+  reads, and warns if they differ, such as after a renewal that forgot the file
+  (`scripts/check-apple-signing-expiry.cjs --profile`; see
+  [Apple signing reminders](admin-runbook.md#apple-signing-reminders)).
+- **Attach the IPA to the GitHub Release**, after a push to `main`, adds it to the
+  version's release beside the AAB and APK. It's its own job so the signing job keeps
+  read-only repository permissions.
 
 ## Android setup: GitHub-hosted direct builds
 
@@ -566,9 +577,9 @@ Drive through `production`; a download link reaches more testers, and needs neit
 
 **On Google Drive, optionally.** A phone's Drive app installs an APK without a GitHub
 sign-in, so `.github/workflows/android-preview-apk-drive.yml` can put the release PR's
-APK in Drive too. It needs `production`, whose branch rule accepts only `main`'s context,
-so it uses `pull_request_target`, and it never checks out or runs the pull request's
-code:
+APK in Drive too. It needs `production`, whose branch rule accepts `main`'s context but
+not a pull request's own ref, so it uses `pull_request_target`, and it never checks out or
+runs the pull request's code:
 
 - **Find the preview APK** waits for this workflow's run of the PR's head commit and
   finds its APK through GitHub's API, with the same checks as the comment: the name with
@@ -621,13 +632,18 @@ failed batch's log says which group it took:
   against GitHub's degraded availability, when its Mac runners are in short supply,
   they wait as long as the compiling runner is compiling, and up to 45 minutes while
   it's still queued for a Mac. Their job limit is 130 minutes, against the compiling
-  runner's 70: 45 minutes queued, 50 compiling, and the rest to install the app and
-  take the iPhone's and the iPad's shots, plus a margin
-  ([iPad key screens](#ipad-key-screens)). A fixed 25-minute wait used to fail runs whose compiling runner merely
+  runner's 70: up to 45 minutes while it's queued, its 70, and about 15 to install the
+  app and take their shots (`ios-key-screens.yml`;
+  [iPad key screens](#ipad-key-screens)). A fixed 25-minute wait used to fail runs whose compiling runner merely
   got its Mac late.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
   running 45 seconds after launch, and takes its group's key screens.
+- Batch 5 (`worship-and-you`) also presses each tab, after its iPhone shots and again
+  after its iPad shots, and fails if the app stops (**Press each tab**,
+  `--press-tabs` in `scripts/capture-ios-screens.cjs`). The shots open every screen by
+  deep link and never press a tab, so they missed 1.7.0's first builds crashing on
+  every tab press. A screenshot of each press goes in `ios-tabs/` and `ipad-tabs/`.
 
 **iOS key screens join** then joins the batches, on Linux, and uploads these downloads
 (14-day retention). Each screenshot download stays under the 50 MB Chrome looks inside
@@ -651,19 +667,21 @@ workflow, `scripts/build-ios-simulator.mjs`, or the key screens before the relea
 start it by hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
 **How long it takes, and why it varies.** A run finishes when its slowest runner does.
-Each release's review comment gives its own times. Measured in October 2026:
+Each release's review comment gives its own times. Measured in October and November
+2026, to the end of the join:
 
 | Setup | Whole run |
 | --- | --- |
 | One runner took every key screen (average of 13 runs) | 47 min |
 | Five runners, each compiling the app | 40 min |
-| Five runners, one compile shared, no compile cache ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541) and [run 38114551220](https://github.com/CodeSammich/sda-church-app/actions/runs/38114551220)) | 25.2 min average (22.4 and 28.0) |
-| The current setup, with a matching compile cache ([run 38151475093](https://github.com/CodeSammich/sda-church-app/actions/runs/38151475093) and [run 38154712058](https://github.com/CodeSammich/sda-church-app/actions/runs/38154712058)) | 19.0 min average (14.8 and 23.2) |
+| Five runners, one compile shared, no compile cache (two trial runs, October 11, 2026) | 25.2 min average (22.4 and 28.0) |
+| Five runners, one compile shared, with a matching compile cache, before the iPad's shots (two trial runs, October 11, 2026) | 19.0 min average (14.8 and 23.2) |
+| The current setup, with the iPad's shots too ([1.8.0's release run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635), November 10, and [1.9.0's](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/45462956251), November 24) | 47.6 min average (45.7 and 49.6) |
 
 With no compile cache to restore, the current setup boots the compiling runner's iPhone
 during the compile, as in the 25.2-minute runs.
 
-In the faster of the runs with a matching compile cache:
+In the faster of the October runs with a matching compile cache:
 
 | Step | Time |
 | --- | --- |
@@ -681,9 +699,10 @@ simulated iPhones, then 3.7 to compile and 6.0 to boot, install, and launch, so 
 last. After a library update, the compile reuses less of the cache: 3.7 to 6.1 minutes in
 the compile-only runs under **Compile cache**, so expect a run a few minutes longer. A
 dependency update can miss most of the cache: the first build after Expo SDK 58's November
-2026 patch releases (#604) took 28.6 minutes to compile. So the compiling job times out
-after 50 minutes, and the others, whose time includes waiting for it, after 110. Before
-that update, the longest job took 27.2.
+2026 patch releases (#604) took 28.6 minutes to compile. So the compiling job's limit
+went to 50 minutes, and to 70 once it took the iPad's shots too; the others, whose time
+includes waiting for it, time out after 130 ([iPad key screens](#ipad-key-screens)).
+Before that update, the longest job took 27.2.
 
 From the logs of earlier runs:
 
@@ -696,13 +715,12 @@ From the logs of earlier runs:
   whatever runs alongside it. Started with the package installs, it slowed them from
   about half a minute to as much as 7.7. Started with the compile, it held up Xcode's
   start by about 3 minutes, and a build from a matching compile cache took 10.8 minutes
-  instead of 2.3 ([run 38149745424](https://github.com/CodeSammich/sda-church-app/actions/runs/38149745424)).
+  instead of 2.3 (a trial run, October 11, 2026).
   So the four runners that wait for the app boot their iPhones after installing
   packages, while they wait, and the compiling runner boots its own after the compile.
   With no cache to restore, though, booting after an 11.4-minute compile left that
-  runner finishing last, at 28.6 minutes
-  ([run 38152553765](https://github.com/CodeSammich/sda-church-app/actions/runs/38152553765)),
-  so then it boots during the compile.
+  runner finishing last, at 28.6 minutes (a trial run, October 11, 2026), so then it
+  boots during the compile.
 - Installing the app on a booted iPhone usually takes about a minute, but once took 11.4
   minutes. The log shows only when `simctl install` returned, so the cause is unknown; if
   it recurs, look there first.
@@ -1040,8 +1058,9 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the screenshots take 30 to 40 minutes, most of it the
-[Android key screens](#android-key-screens)' build) and removes the comment with the
+opens or gets a push (on the 1.8.0 and 1.9.0 release pull requests, the screenshots
+took 46 and 50 minutes, the iOS run being the slower; see
+[How long it takes](#ios-key-screens-unsigned-simulator-builds)) and removes the comment with the
 earlier, now out-of-date screenshots. When the iOS run (iPhone and iPad) and the Android run for that
 commit have both finished, it replaces the notice with a comment linking both
 platforms' screenshots, so one review covers both. Its last job, **Screenshots reviewed**, waits
@@ -1133,8 +1152,9 @@ Store release, are how iPad layouts get tested.
   2026, they passed all 52 of the earlier trial's 13-inch shots. A trial run then broke the
   column and a popup's width on purpose in its build, and both checks failed them.
 - **App Store copies.** The shots under `appStoreIpad` are copied, without transparency,
-  to `screens/app-store-ipad/en-US/`, the uploaded listing's, at the 13-inch iPad's 2064 × 2752, portrait or
-  landscape, which App Store Connect's **iPad 13-inch display** slot takes.
+  to `screens/app-store-ipad/en-US/`, `zh-Hant/`, and `zh-Hans/`, one set per App Store
+  language, at the 13-inch iPad's 2064 × 2752, portrait or landscape, which App Store
+  Connect's **iPad 13-inch display** slot takes.
 - **Time.** About 20 seconds a shot, against the iPhone's 14 (`shotCost` adds 5), and 5
   to 7 more to read each shot's text. A test flags a group whose iPad shots would take
   more than 8 minutes, against the iPhone's 9: a reminder to prune, then to rebalance
@@ -1287,7 +1307,7 @@ and navigation is by gestures, as on current Pixels.
 `android-font-max` is Android's largest font (200%); `xl-android-font-max` and
 `es-xl-android-font-max` add the app's 200%, where the tab labels once wrapped (#380),
 with the same rules as their iPhone counterparts; and `android-display-large` is
-Android's largest display size on this screen, 125% (a larger one would leave the
+Android's largest display size on this screen, 120% (a larger one would leave the
 screen under the 320 dp Android keeps it to). A screen with `"platforms": ["ios"]` or
 `["android"]` is taken only there.
 
@@ -1432,9 +1452,10 @@ testers need it.
 
 Why a separate environment instead of `production`:
 
-- **`production` is shared.** The signed builds, the Apps Script deploy, and the QR code
-  upload all use it, and a QR code run can start from `release-candidate`. Any job that
-  names an environment can read every secret in it.
+- **`production` is shared.** The signed builds, the Apps Script deploy, the QR code
+  upload, and the test APK upload to Drive all use it, and it accepts runs from
+  `release-candidate` as well as `main`. Any job that names an environment can read every
+  secret in it.
   In `store-upload`, only the two upload jobs can reach the store credentials.
 - **One approval instead of two.** `production` requires a reviewer for every job.
   The upload jobs start after the builds finish, so in `production` each release would

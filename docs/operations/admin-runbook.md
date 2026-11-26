@@ -49,8 +49,8 @@ does and what still needs a person.
 The `production` Environment holds the Google login (`CLASPRC_JSON`) and the Apple and
 Android signing credentials; the store upload settings are in the separate `store-upload`
 environment (see [Approving a production deployment](#approving-a-production-deployment)).
-It only accepts runs from `main` and `release-candidate` (and the retired
-`release/**`), and each run waits for a `release-approvers` member to approve it.
+It accepts runs from `main` and `release-candidate`. Each run waits for a
+`release-approvers` member to approve it, and only church IT admins approve.
 Admins can also bypass that approval. To require approval even from admins, turn off
 **Allow administrators to bypass configured protection rules** under **Settings →
 Environments → production**.
@@ -66,7 +66,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain, Expo doctor) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. The three monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
 | A status page outage | The issue opens in the `sda-church-app-status` repository, never this one. Watch that repository with **Watch → Custom → Issues**; see [Status page alerts](#status-page-alerts). |
-| A yearly checkup, Workspace backup, or bulletin changeover issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
+| A yearly checkup, Workspace backup, or bulletin changeover issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run). A yearly checkup or Workspace backup issue's `Due:` line brings the due-date reminders below; a changeover issue has no `Due:` line, so it gets none. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
@@ -166,7 +166,8 @@ you approved finish. Why it's separate is in
 The release pull request's **Screenshots reviewed** check waits the same way, in the
 `screenshot-review` environment. When the iOS preview's comment shows the screenshots:
 
-1. Download them from the comment and look through `screens/ios/` for what the
+1. Download them from the comment and look through `screens/ios/` (iPhone),
+   `screens/ipad/`, `screens/android/`, and `screens/android-tablet/` for what the
    comment lists.
 2. Open the run from the comment, select **Review deployments**, tick
    **screenshot-review**, and approve. Reject it if something looks wrong, and say what
@@ -207,8 +208,9 @@ The admin-only steps are:
    title. Write the part after the colon for testers: it becomes the "What's new" text in Google Play
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
-5. **Merge it** once its checks and review pass. **iOS key screens** takes 15 to 25
-   minutes, and **Screenshots reviewed** waits until a
+5. **Merge it** once its checks and review pass. **iOS key screens** takes about 45
+   to 50 minutes (46 and 50 on the [1.8.0](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635) and
+   [1.9.0](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/45462956251) release pull requests), and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate`, moves any open feature pull requests
    into it to `main`, and closes those from forks. **Release - After Merge** creates it
@@ -222,10 +224,12 @@ What runs after the merge to `main`:
 | Workflow | Automatic? | What you do |
 | --- | --- | --- |
 | Deploy Website and Tag | Yes | Nothing. It tags `vx.y.z` and publishes [the app website](#the-app-website-appnyccsdaorg). |
-| Release - After Merge | Yes | Nothing, unless its comment on the release pull request says `release-candidate` couldn't be created or a pull request couldn't be moved back to it or reopened. It reopens the pull requests from forks that GitHub closed when it deleted `release-candidate`, and tells their authors how to rebase. Its links open the three runs below. |
+| Release - After Merge | Yes | Nothing, unless its comment on the release pull request says `release-candidate` couldn't be created or a pull request couldn't be moved back to it or reopened. It reopens the pull requests from forks that GitHub closed when it deleted `release-candidate`, and tells their authors how to rebase. Its links open the two native builds and the Apps Script deploy below. |
 | Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 | Deploy Bulletin Apps Script | Waits for `production` approval | Approve it when nobody is making a bulletin, then check the live bulletin. Reject it to skip this deploy. See [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). |
+| Generate physical bulletin QR codes | Only when the release changes `scripts/bulletin-qr-codes.json`, `scripts/generate-qr.mjs`, or the workflow; its upload waits for `production` approval | Approve the upload, then check its log. See [Bulletin QR codes](#bulletin-qr-codes). |
+| iOS compile cache | Yes | Nothing. It saves the compiled native code that **iOS key screens** reuses; see [Compile cache](native-builds.md#ios-key-screens-unsigned-simulator-builds). |
 
 Workflows that run from `main`'s copy (the release source gate, the pending-release
 label, and the upload step of the QR workflow) keep their old behavior until the
@@ -243,8 +247,8 @@ The QR codes and where they point are listed in
 
 | File | Destination |
 | --- | --- |
-| `queens_adventist_giving_qr_code_368x368.jpg` | Queens AdventistGiving page |
-| `brooklyn_adventist_giving_qr_code_368x368.jpg` | Brooklyn AdventistGiving page |
+| `queens_adventist_giving_qr_code_368x368.jpg` | The church's AdventistGiving page, which the app's **Tithe & Offering** page opens too |
+| `brooklyn_adventist_giving_qr_code_368x368.jpg` | The same address as the Queens code: both giving codes encode one address |
 | `mobile_app_qr_code_368x368.jpg` | `https://app.nyccsda.org/download`, which sends phones to their app store |
 
 The app code uses the church's own `app.nyccsda.org` address, never the GitHub Pages
@@ -411,7 +415,7 @@ accept a redirect. One rule comes before it: `app.nyccsda.org/status` goes to th
 
 - `nyccsda.org` is the church's main website, which forwards to adventistchurch.org, so
   `nyccsda.org/sda-church-app/…` and `nyccsda.org/privacy-policy.html` don't work.
-- `www.nyccsda.org` currently returns 403. It should forward like `nyccsda.org` does.
+- `www.nyccsda.org` forwards there too (checked 2026-11-24).
 
 **Rules:**
 
@@ -422,8 +426,9 @@ accept a redirect. One rule comes before it: `app.nyccsda.org/status` goes to th
   them. Add new pages beside them instead.
 - **Keep them independent of the browser build of the app,** so changing or retiring it
   can't break them.
-- **Watch the daily External Dependency Monitor.** It checks the privacy, support, and
-  download pages through `app.nyccsda.org` and opens an alert issue if one fails; see
+- **Watch the daily External Dependency Monitor.** It checks the privacy, legal,
+  support, and download pages through `app.nyccsda.org` and opens an alert issue if
+  one fails; see
   [External dependency monitor alerts](#external-dependency-monitor-alerts).
 
 **Later:** opening the app straight from a link, with Android App Links and iOS Universal
@@ -531,22 +536,29 @@ issue titled **Yearly checkup, *year***, assigned to the usernames in
 `MONITOR_ALERT_ASSIGNEES`. It holds one checklist of everything these docs say to
 check once a year, each item linked to the doc that explains it:
 
-- the Cloudflare card, domain renewal, and billing;
-- the Google Cloud project's lack of a billing account;
-- administrator access and two-factor login on every system;
+- the Cloudflare card, domain renewal, billing, and Free plan;
+- the Google Cloud project's lack of a billing account, and that no other service has
+  a payment method;
+- administrator access and two-factor login on every system, `technology@nyccsda.org`,
+  and the alert assignee variables;
 - who can edit the bulletin spreadsheet, and so its Apps Script;
 - the Faith Comes By Hearing key, kept in the IT Admin shared drive;
-- the Apple dates and Google Play's contact details and declarations;
-- the Workspace nonprofit terms;
+- the Apple dates, and Google Play's contact details, D-U-N-S record, and declarations;
+- the Workspace nonprofit terms and the Apps Script quotas;
 - HelloAO, the app's main Bible source: its terms, and the recordings the app plays
   from it;
+- a re-read of the service limits and costs, and of the architecture page;
+- the mission video button, which the monitor can't check;
+- the status page;
 - the scheduled workflows.
 
 Work through it, note anything that changed in a comment, and close it. It's due
 February 28: while it's still open, the [due-date reminders](#due-date-reminders)
 comment on it around January 29, around February 21, and on March 1. It runs every
 Monday in January, but only the first opens an issue; the others find it and stop.
-Start it by hand from the Actions tab to open one early.
+Running it by hand opens this year's issue, due February 28 of this year, only if
+there isn't one yet, such as when January's run failed. It can't open next year's
+early.
 
 The Apple renewals have their own reminder, 60 days before each date; see
 [Apple signing reminders](#apple-signing-reminders). The Workspace backup has its own
@@ -738,8 +750,8 @@ upload by hand are in
 
 The automatic checks don't use a real phone. **Android audio e2e** runs on an emulator
 (host failover, one chapter change with the screen off, recovery after the connection
-drops), and **iOS key screens** checks the key screens on a simulated iPhone and an
-Android emulator. So before
+drops), **iOS key screens** checks the key screens on a simulated iPhone and iPad,
+and **Android key screens** on Android emulators. So before
 releasing a build to the public, check it by hand on one iPhone and one Android phone,
 installed from TestFlight and from the Play Store's internal testing link. Copy this
 list into a comment on the release pull request, tick it for each phone, and add the
@@ -885,8 +897,9 @@ the app is at fault
 screens** workflow takes and checks the same screens on an Android emulator, on Linux
 runners ([Android key screens](native-builds.md#android-key-screens)). The review
 comment waits for it and links both platforms' screenshots, before
-**Screenshots reviewed**, which covers both. Both take 30 to 40 minutes, most of it the
-Android build. On a release pull request, the comment
+**Screenshots reviewed**, which covers both. On the 1.8.0 release pull request, iOS took
+46 minutes up to its review comment, and Android 31
+([iOS run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605635), [Android run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605383)). On a release pull request, the comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. To test the
@@ -984,7 +997,9 @@ alert and doesn't close itself: do the cleanup it describes. See
 ## Status page alerts
 
 **Repository:** `sda-church-app-status`, where Upptime checks the audio hosts,
-the bulletin API and a few other services every hour.
+the bulletin API and a few other services. It's set to check every hour, but GitHub
+often starts it hours late
+([how often it checks](status-page.md#how-often-it-checks)).
 
 It opens an issue in that repository when a service is down and closes it when
 the service is back. Its issues never appear in this repository. See
@@ -1159,8 +1174,8 @@ To finish the release:
    branch** starts them too.
 2. Merge or close the open Dependabot pull requests
    ([Dependabot pull requests](#dependabot-pull-requests)).
-3. Run `npm audit`, and take Expo's SDK patch updates with `npx expo install --check`,
-   each in its own pull request. A change to `package-lock.json` gets an Android and an
+3. Run `npm audit`, list Expo's SDK patch updates with `npx expo install --check`, and
+   take them with `npx expo install --fix`, each in its own pull request. A change to `package-lock.json` gets an Android and an
    iPhone launch on a device or emulator before it's called ready.
 4. Merge the version pull request, then open the release pull request into `main` and
    merge it ([Shipping a release to `main`](#shipping-a-release-to-main)).
@@ -1230,7 +1245,10 @@ update gets Dependabot's default `dependencies` and `javascript` labels instead,
 | Google Workspace backup | Urgent |
 | Store toolchain requirements | Urgent; none when only a page couldn't be read (see [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)) |
 | Expo doctor found problems | High, as routine dependency updates |
+| Maintenance release due | High |
+| Scheduled workflows turned off for inactivity | High |
 | External dependency health check | Medium, because most failures recover by the next run |
+| Retire a bulletin API changeover | Low |
 
 A Priority someone already set is kept. Pull requests can't have a Priority, so
 Dependabot's have only the label. Add the label by hand to other upkeep, such as a
@@ -1261,7 +1279,7 @@ officer election, and update it whenever a pastor or elder starts or leaves.
 3. Keep `Head` on the row of the pastor who leads Communion. It is never
    printed.
 4. When you next make the coming Sabbath's bulletin (**Printed Bulletin → Create
-   Google Doc…**), check the titles of the people scheduled that day. Only
+   Word Doc…**), check the titles of the people scheduled that day. Only
    a Queens Holy Communion bulletin shows the `Head` pastor.
 
 No code change or deploy is needed; the next print reads the tab. The layout
@@ -1275,8 +1293,9 @@ so a release can't merge until it passes. Feature pull requests into `release-ca
 don't run it; to test an audio change before the release, run it manually on your
 branch.
 
-It takes about 20 minutes, and runs alongside **iOS key screens**, which takes 15 to 25
-minutes.
+It took 30 and 34 minutes on the 1.8.0 and 1.9.0 release pull requests
+([1.8.0's run](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/42843605237), [1.9.0's](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/45462955824)), and runs alongside
+**iOS key screens**, which took 46 and 50.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:
@@ -1372,7 +1391,7 @@ the policy, no release can merge into `main`**:
 | --- | --- | --- |
 | `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
 | `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
-| `.github/workflows/android-preview-apk-drive.yml` | The optional Google Drive upload of the release PR's test APK needs the `production` environment, whose branch rule accepts only `main`'s context. It checks out no pull request code: it takes the APK workflow's APK through GitHub's API, checks its SHA-256, and uploads it with `main`'s helper. | No |
+| `.github/workflows/android-preview-apk-drive.yml` | The optional Google Drive upload of the release PR's test APK needs the `production` environment, whose branch rule accepts `main`'s context but not a pull request's own ref. It checks out no pull request code: it takes the APK workflow's APK through GitHub's API, checks its SHA-256, and uploads it with `main`'s helper. | No |
 
 None runs code from a fork with secrets or a write token, which is what makes
 `pull_request_target` dangerous (a "pwn request"). `android-preview-apk.yml` used it
@@ -1407,8 +1426,8 @@ themselves, and tests enforce that:
 
 GitHub adds its own limits: a `pull_request_target` run can read `main`'s cache but
 not write to it, so it can't poison the cache the signing builds use. The iOS compile
-cache follows the same rule: only `ios-compile-cache.yml`, on `main`, saves it; the iOS
-PR preview only reads it; and the signed builds never use it (see
+cache follows the same rule: only `ios-compile-cache.yml`, on `main`, saves it; **iOS
+key screens** only reads it; and the signed builds never use it (see
 [Compile cache](native-builds.md#ios-key-screens-unsigned-simulator-builds)).
 Elsewhere:
 
@@ -1439,6 +1458,7 @@ To set up the policy:
 New workflows need no change to the policy. Only if GitHub adds a new kind of event,
 and a workflow uses it, does that event need ticking here.
 
-If `ensure_pr_to_main_from_release_branch` or `Build Android debug APK (ARM)` ever stops
-reporting on a release PR, check this policy first.
+If `ensure_pr_to_main_from_release_branch` ever stops reporting on a release PR,
+**Android preview APK on Drive** stops starting, or merged fixes stop getting the
+`pending release` label, check this policy first.
 

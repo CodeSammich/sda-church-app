@@ -102,7 +102,7 @@ export function LibraryBookCard({
 
       <View
         pointerEvents="none"
-        style={[styles.details, listLayout ? styles.listDetails : null]}
+        style={[styles.details, listLayout ? styles.listDetails : styles.gridDetails]}
       >
         <Text style={[styles.title, { color: theme.colors.onSurface }]}>
           {title}
@@ -157,6 +157,12 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
     },
     details: {
       padding: 12,
+    },
+    // The grid stretches a card to its row's tallest (#777): the details fill
+    // the space under the cover, and the author and arrow sit along the bottom.
+    gridDetails: {
+      flexGrow: 1,
+      justifyContent: 'space-between',
     },
     listDetails: {
       flex: 1,

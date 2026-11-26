@@ -6,8 +6,8 @@ _Guiding our design philosophy in decreasing order of priority._
 
 The app must be cost-effective, preferably free to maintain, and support both iOS and
 Android. Native iOS and Android are the primary distribution targets; the **Progressive
-Web App (PWA)** remains a low-cost testing, preview, demo, and fallback surface. The web
-path should stay useful without becoming the canonical release channel.
+Web App (PWA)** is a maintained preview, not a release channel: a low-cost way to test,
+preview, and demo the app. The web path should stay useful without becoming one.
 
 > _"For which of you, wanting to build a tower, does not first sit down and calculate the
 > cost to see if he has enough to complete it?"_ — **Luke 14:28**

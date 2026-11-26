@@ -12,7 +12,8 @@ flowchart TB
     subgraph UploadSecrets["GitHub Secrets · store-upload environment"]
       storeKeys["🔑 Store upload settings<br/>App Store Connect API key,<br/>Google Play keyless sign-in"]
     end
-    pages@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "GitHub Pages · app.nyccsda.org<br/>privacy policy, support, and download pages<br/>PWA build: unsupported dev preview", pos: "b", w: 40, h: 40, constraint: "on" }
+    pages@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "GitHub Pages · app.nyccsda.org<br/>privacy policy, legal, support, and download pages<br/>PWA build: maintained preview,<br/>not a release channel", pos: "b", w: 40, h: 40, constraint: "on" }
+    status@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "sda-church-app-status repo<br/>Upptime status page: its own<br/>Actions, outage issues, and Pages", pos: "b", w: 40, h: 40, constraint: "on" }
   end
 
   gcloud@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-cloud.svg", label: "Google Cloud · sda-church-app-play<br/>keyless sign-in for Play uploads<br/>free: no billing account, never add one", pos: "b", w: 48, h: 39, constraint: "on" }
@@ -20,7 +21,7 @@ flowchart TB
   subgraph Stores["App stores"]
     play@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-play-icon.svg", label: "Google Play<br/>managed in Play Console", pos: "b", w: 40, h: 44, constraint: "on" }
     appstore@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple-app-store.svg", label: "Apple App Store<br/>managed in App Store Connect", pos: "b", w: 44, h: 44, constraint: "on" }
-    abm@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple.svg", label: "Apple Business Manager<br/>nonprofit organization", pos: "b", w: 34, h: 40, constraint: "on" }
+    adp@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple.svg", label: "Apple Developer Program<br/>nonprofit fee waiver", pos: "b", w: 34, h: 40, constraint: "on" }
   end
 
   subgraph Google["Google Workspace for Nonprofits"]
@@ -47,11 +48,12 @@ flowchart TB
   actions -- uploads bulletin code --> script
   actions -- QR codes, test APKs --> drive
   actions -- web build --> pages
-  abm -.-> appstore
+  adp -.-> appstore
   dns -. "redirects app.nyccsda.org" .-> pages
+  dns -. "redirects app.nyccsda.org/status" .-> status
   dns -.-> Google
   dns -. DNS TXT record proves ownership .-> gsc
   gsc -. website verification for the organization account .-> play
 
   classDef logo fill:#ffffff,stroke:#d0d7de
-  class repo,actions,pages,gcloud,play,appstore,abm,group,script,drive,dns,gsc logo
+  class repo,actions,pages,status,gcloud,play,appstore,adp,group,script,drive,dns,gsc logo

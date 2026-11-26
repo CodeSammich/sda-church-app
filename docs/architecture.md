@@ -36,14 +36,14 @@ printed bulletins, and IT administrators develop, release, and maintain it. What
 keep on each phone, and what's backed up, is in
 [What the app keeps on the phone](feature_designs/on_device_storage.md).
 
-![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins; IT administrators own the GitHub organization, develop on forks, merge feature PRs into the release-candidate branch and release PRs into main; GitHub Actions uploads the signed AAB to Google Play internal testing through a keyless sign-in in the church's Google Cloud project, which the administrators own and which has no billing account and must never get one, and uploads the IPA to TestFlight; an administrator releases each one after testing; the QR code workflow regenerates the bulletin QR codes in Drive when a change to them merges into main, or when an administrator runs it, and an administrator approves each upload; the apps keep the Bible text they ship with, members' settings and saved verses, which the phone's own backup includes, and copies of the bulletin and today's verse, which it leaves out, on each phone; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
+![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins, each made as a weekly Google Doc and then its Word copy for printing; IT administrators own the GitHub organization, develop on forks, merge feature PRs into the release-candidate branch and release PRs into main; GitHub Actions uploads the signed AAB to Google Play internal testing through a keyless sign-in in the church's Google Cloud project, which the administrators own and which has no billing account and must never get one, and uploads the IPA to TestFlight; an administrator releases each one after testing; the QR code workflow regenerates the bulletin QR codes in Drive when a change to them merges into main, or when an administrator runs it, and an administrator approves each upload; the apps keep the Bible text they ship with, members' settings and saved verses, which the phone's own backup includes, and copies of the bulletin and today's verse, which it leaves out, on each phone; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
 
 ### Build, deploy, and accounts
 
 How code reaches the stores, the bulletin backend, and the website, which secrets
 each step uses, and how the domain ties the accounts together.
 
-![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment and the store upload settings from the store-upload environment to upload builds to Google Play internal testing and TestFlight, signing in to Google Play without a key through a Google Cloud project that has no billing account, deploy the bulletin Apps Script, upload QR codes to Google Drive, and build the GitHub Pages site; Cloudflare, which runs DNS for nyccsda.org, redirects app.nyccsda.org to GitHub Pages, points the domain's email at Google Workspace, and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
+![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment and the store upload settings from the store-upload environment to upload builds to Google Play internal testing and TestFlight, signing in to Google Play without a key through a Google Cloud project that has no billing account, deploy the bulletin Apps Script, upload QR codes to Google Drive, and build the GitHub Pages site with the privacy policy, legal, support, and download pages; Cloudflare, which runs DNS for nyccsda.org, redirects app.nyccsda.org to GitHub Pages and app.nyccsda.org/status to the status page, which runs in its own repository, sda-church-app-status, with its own Actions, outage issues, and Pages, points the domain's email at Google Workspace, and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
 
 ### App dependencies
 
@@ -52,7 +52,7 @@ only open in the browser. It also shows the Bible audio's fallbacks and where th
 church's copies came from; the [Church media](#church-media) and
 [Third-party APIs and websites](#third-party-apis-and-websites) tables give the details.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin, Cantonese and Spanish Bible audio played from HelloAO first and the church's copies next, Mandarin then falling back to the Internet Archive and then Audio Power, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, with the Hebrew and Greek for the verse popup, and English Bible audio from HelloAO; the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin, Cantonese and Spanish Bible audio played from HelloAO first and the church's copies next, Mandarin then falling back to the Internet Archive and then Audio Power, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, with the Hebrew and Greek for the verse popup, and English Bible audio from HelloAO; the church's bulletin API, the Adventech, Chinese Union Mission, and EGW Writings APIs, and CHTV's YouTube feed, which finds the Mandarin mission video; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving on AdventistGiving and three donor-advised fund sponsors, and other links, including the SDA Bible app's App Store page and WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
@@ -88,7 +88,8 @@ and may not be possible, so protect them above everything else.
   renewal: a credit card with a hard limit ([Payment methods](#payment-methods)). Renewal notices go to the Super Administrators.
 - **DNS** points the domain's email at Google Workspace, and a Cloudflare redirect
   rule sends `app.nyccsda.org` to the [app website](#website-appnyccsdaorg) on
-  GitHub Pages. It also holds the DNS TXT record that proves the church owns
+  GitHub Pages. A rule before it sends `app.nyccsda.org/status` to the
+  [status page](operations/status-page.md#the-short-address). It also holds the DNS TXT record that proves the church owns
   `nyccsda.org` in **Google Search Console**, where the domain is registered as a
   Domain property; Google only verifies those with a DNS record. Search Console is
   a Google tool, not an app store; the administrators have access to it through
@@ -148,12 +149,21 @@ and may not be possible, so protect them above everything else.
   - extra checks on each release pull request into `main`: that it comes from
     `release-candidate`, a bulletin API integration test, an
     [Android preview APK](operations/admin-runbook.md#android-preview-apks)
-    with a download link on the pull request,
+    with a download link on the pull request, and on Google Drive once an
+    approver allows its upload,
     [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-key-screens-builds)
     with screenshots of the key screens, on the iPhone and an Android emulator, that an
     approver reviews (**Screenshots reviewed**), and a
     [Bible audio test](operations/admin-runbook.md#bible-audio-emulator-test) on an
     Android emulator;
+  - an [iOS compile cache](operations/native-builds.md#ios-key-screens-unsigned-simulator-builds),
+    saved on each push to `main` and restored twice a week so GitHub keeps it,
+    which the iOS key screens reuse;
+  - release upkeep: **Issues - Pending Release Label** labels an issue
+    `pending release` when its fix merges into `release-candidate`, and
+    **Release - After Merge** creates `release-candidate` again after each release
+    and moves the open pull requests back to it
+    ([Automated checks](CONTRIBUTING.md#automated-checks));
   - native iOS and Android builds after each merge to `main`, uploaded automatically
     to TestFlight and Google Play internal testing for testers (Google Play through a
     keyless sign-in in the church's [Google Cloud project](#google-cloud-free-only)),
@@ -167,8 +177,10 @@ and may not be possible, so protect them above everything else.
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
   - a [status page](operations/status-page.md) that checks the audio hosts, HelloAO's
-    Bible text, the bulletin API and a few other services every hour, from its own
-    repository, `sda-church-app-status`, where its outage issues stay;
+    Bible text, the bulletin API and a few other services, from its own
+    repository, `sda-church-app-status`, where its outage issues stay. It's set to
+    check every hour, but GitHub often starts it hours late
+    ([how often it runs](operations/status-page.md#how-often-it-checks));
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
   - a weekly [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts)
@@ -180,7 +192,16 @@ and may not be possible, so protect them above everything else.
   - the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, opened
     on the first Monday of January;
   - the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups)
-    issue, opened every three months.
+    issue, opened every three months;
+  - a weekly [maintenance release reminder](operations/admin-runbook.md#maintenance-releases)
+    that opens an issue and a version pull request 45 days after `main`'s last
+    commit, before GitHub turns the scheduled workflows off after 60 days without
+    activity ([GitHub's docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows));
+  - daily [due-date reminders](operations/admin-runbook.md#due-date-reminders) on
+    issues with a `Due:` line; and
+  - **Needs Triage Label**, which labels an issue without a
+    [Priority](operations/admin-runbook.md#issue-priorities) when it's opened or
+    reopened, and checks every open issue once a day.
 - Releasing to the public stays manual: after testing, an administrator submits
   the iOS build for review in App Store Connect and promotes the Android release in
   Play Console. See
@@ -217,14 +238,18 @@ Nothing else is an intake point.
 - Members open **Weekly Bulletin** on the app's **Home** tab.
 - The app loads it from **`BulletinApi.gs`**, a public Apps Script endpoint that
   returns privacy-filtered JSON with names anonymized.
-- Roster edits reach the app within a few minutes (the API caches for two minutes);
-  nothing is generated by hand.
+- Roster edits reach the app with nothing generated by hand. The API caches for
+  two minutes, and a phone keeps its copy for up to 30 minutes, checking for a newer
+  one only when the bulletin opens, the app comes back to the front, or the week is
+  switched; **Refresh** gets the new copy sooner
+  ([Caching and refresh](operations/bulletin-automation.md#caching-and-refresh)).
 
 ### Printed bulletin (on paper)
 
-- Staff open the roster spreadsheet and choose **Printed Bulletin → Create Google
-  Doc…**. This is the only regular manual step. It makes only a Google Doc, which
-  staff can edit and download as a PDF when needed.
+- Staff open the roster spreadsheet and choose **Printed Bulletin → Create Word
+  Doc…**. This is the only regular manual step. It makes a Google Doc, which staff
+  can edit and download as a PDF when needed, then the Word copy that's printed
+  ([Printed bulletin generation](operations/bulletin-automation.md#printed-bulletin-generation)).
 - They pick the Sabbath, the congregation, and the layout. **Three layouts are
   supported today:**
   - **Queens**, regular worship;
@@ -233,7 +258,8 @@ Nothing else is an intake point.
     Brooklyn Communion is intentionally disabled.
 - **`Printed*.gs`** renders a Google Doc with full names, cover art, and QR codes,
   and saves it to that congregation's Drive folder. Staff edit it if needed, then
-  print it, or download it as a PDF first, and hand it out at church.
+  make the Word copy from it (step 3 of the dialog), which is printed and handed
+  out at church.
 - The printed layouts are separate from the app, so a layout can change, or a new
   congregation can be added, without an app release. Each layout lives in its own
   `Printed*.gs` file.
@@ -325,9 +351,13 @@ submitted for review before they appear on the App Store.
 
 ### Apple App Store
 
-- The church has an **Apple Business Manager** organization with nonprofit status,
-  registered with the church's own D-U-N-S number (not the conference's). That
-  waives the $99 annual developer fee.
+- The Apple Developer Program's $99 yearly fee is waived: the church applied for
+  Apple's [nonprofit fee waiver](https://developer.apple.com/help/account/membership/fee-waivers/)
+  with its own D-U-N-S number from Dun & Bradstreet (not the conference's). A church
+  that meets the 501(c)(3) requirements is tax exempt without applying to the IRS
+  ([IRS](https://www.irs.gov/charities-non-profits/churches-integrated-auxiliaries-and-conventions-or-associations-of-churches)).
+  Apple Business Manager played no part; it's a separate service
+  ([Apple Developer versus Apple Business Manager](operations/app-store-setup.md#apple-developer-versus-apple-business-manager)).
 - The **Apple Developer** account that publishes the app is registered to
   **`technology@nyccsda.org`**, the shared Google Group address, not to a person.
   The other active administrators are added to the team with their own individual
@@ -421,10 +451,11 @@ How it's published, and the rules that keep these pages working, are in
 [The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
 
 The same Expo source can also be built as a Progressive Web App (PWA), and that
-build is what GitHub Pages serves. It is a **developer preview only**. It isn't
-supported or tested as a way to use the app, because some mobile features conflict
-with running as a PWA, so it doesn't appear as a client in the diagrams. Members use
-the native iOS and Android apps.
+build is what GitHub Pages serves. It is a **maintained preview, not a release
+channel**: it's kept working for testing and previews
+([Web & PWA testing and preview](README.md#web--pwa-testing-and-preview)), but some
+mobile features conflict with running as a PWA, so members use the native iOS and
+Android apps, and it doesn't appear as a client in the diagrams.
 
 ## Third-party APIs and websites
 
@@ -433,7 +464,8 @@ downloads data from the service; "Link" means the app only opens the site in the
 browser; "Build script only" means the app ships files a build script downloaded from it,
 and never contacts it. The [external dependency monitor](operations/external-dependency-monitor.md)
 checks nearly all of them daily, and the [status page](operations/status-page.md)
-checks the audio hosts, HelloAO's Bible text and the bulletin API every hour.
+checks the audio hosts, HelloAO's Bible text and the bulletin API a few times a day
+([how often](operations/status-page.md#how-often-it-checks)).
 
 **HelloAO is a top-level dependency.** Most of the Bible comes from it: the English
 text and every book list the app ships with, the English narrators (their only
@@ -452,7 +484,7 @@ recording there instead is only a short-term step, if a launch is an emergency; 
 | Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin and Cantonese CUV and Spanish RV1909, each tried after HelloAO's | In app |
 | Bible audio | Internet Archive | `archive.org` | Mandarin CUV audio, third source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | Mandarin CUV audio, fourth source; also where the church's Mandarin copies came from, with its owner's permission | In app |
-| Bible audio | WordProject | `wordproject.org` | Source of the church's Cantonese and Spanish copies ([how they were uploaded](operations/adventist-connect-media.md#updating-the-audio-manifest)), credited under each chapter | Link |
+| Bible audio and text | WordProject | `wordproject.org` | Source of the church's Cantonese and Spanish copies ([how they were uploaded](operations/adventist-connect-media.md#updating-the-audio-manifest)), credited under each chapter; and of the 1919 Chinese Union Version text the app ships with, built from its download by `scripts/build-cuv-1919.mjs` | Link and build script only |
 | Bulletin | Church Apps Script | `script.google.com` | Digital bulletin JSON | In app |
 | Bulletin | Google Sheets | `docs.google.com` | The [scheduling roster](#printed-and-digital-bulletin) the bulletin is made from, which Google opens only for signed-in `nyccsda.org` accounts. The app doesn't open it (#553) | Apps Script |
 | Sabbath School | Adventech | `sabbath-school.adventech.io`, `sabbath-school-pdf.adventech.io`, `sabbath-school-resources-media.adventech.io` | Children's lesson catalogs (API), both Adventech quarterlies and Alive in Jesus books, and their lesson PDFs; adult lessons (reader); the week's adult lesson title for the bulletin, in the app and the printed bulletin (API) | In app and link |
@@ -533,12 +565,12 @@ How to set it up and check it each year:
 | Service | Payment method | Why |
 | --- | --- | --- |
 | Cloudflare | **A credit card with a hard limit, about $200–300 for now** | Renews `nyccsda.org`, about $11 a year as of 2026. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
-| Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
+| Apple Developer | None | The $99 yearly fee is waived for the church. |
 | Google Play | None | The one-time $25 registration is paid; nothing recurs. |
 | Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
 | Google Workspace | None | Workspace for Nonprofits: email, Drive, and Apps Script. |
 | GitHub | None | Free for public repositories, Actions included. That covers the [status page](operations/status-page.md)'s repository too. |
-| Every API and website in [Third-party APIs and websites](#third-party-apis-and-websites) | None | Free, with no account or with a free key. |
+| Every API and website in [Third-party APIs and websites](#third-party-apis-and-websites) | None | Free, and used without an account. |
 
 ## Upkeep calendar
 
@@ -546,17 +578,25 @@ How to set it up and check it each year:
 | --- | --- | --- |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Developer membership and resubmit nonprofit status | App removed from the App Store |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Distribution certificate and provisioning profile, update GitHub secrets, and record the new dates; see the [renewal checklist](operations/app-store-setup.md#renewal-checklist) | iOS builds fail; app can't be updated |
-| First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, due February 28) | Work through the checklist, which covers the yearly rows below and more | A card expires, a bill starts, or an account can't be recovered, unnoticed |
-| Yearly (in the checkup) | Check the Cloudflare card hasn't expired, and that its hard limit still covers ten years of the domain at this year's price plus every other subscription on it, with a buffer; check the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
+| First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, due February 28) | Work through the checklist: the rows below marked "in the checkup", and a re-read of this page and [Service limits and costs](operations/service-limits-and-costs.md) | A card expires, a bill starts, or an account can't be recovered, unnoticed |
+| Yearly (in the checkup) | Check the Cloudflare card hasn't expired, and that its hard limit still covers ten years of the domain at this year's price plus every other subscription on it, with a buffer; check the domain's paid-through date, that billing lists only the domain, and that the Free plan still covers the rest | Domain renewal fails, or a charge appears |
 | Whenever the domain's price changes, or a subscription is added to or dropped from the card | Re-set the card's [hard limit](#payment-methods) to match | A renewal is declined, or the card risks more than it needs to |
-| Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
+| Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account, and that no other service has gained a [payment method](#payment-methods) | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
+| Yearly (in the checkup), and when someone leaves a role | Check who can edit the bulletin spreadsheet, and so its Apps Script ([why](operations/admin-runbook.md#apps-script-edited-outside-git)) | Someone who no longer needs it can still change the bulletin's code |
+| Yearly (in the checkup) | Check the Faith Comes By Hearing key is still in the IT Admin shared drive, and still needed ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)) | The key is lost before the app needs it |
+| Yearly (in the checkup) | Check [Google Play's](operations/app-store-setup.md#yearly-google-play-upkeep) contact email and phone still work, the D-U-N-S record, payments profile and website agree, and no policy or declaration prompt is waiting | Releases can be blocked |
+| Yearly (in the checkup) | Check Google Workspace for Nonprofits still includes Apps Script at no charge, and its quotas still fit the bulletin ([why](operations/bulletin-automation.md#why-this-architecture)) | The bulletin starts to cost money, or its requests fail |
 | First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and copy it onto two separate drives, off Google | If the account is suspended or taken over, its email and files are gone |
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Yearly (in the checkup) | Check that [HelloAO](operations/service-limits-and-costs.md#helloao)'s terms still let the app keep what it downloads, that it still serves the recordings the app plays from it, and whether WordProject has answered about its recordings ([#769](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/769)) | A change at the app's main Bible source goes unnoticed |
+| Yearly (in the checkup) | Open **This Week's Mission Video** in English and in Spanish, and in Chinese once the phone has found CHTV's video ([why](operations/external-dependency-monitor.md#what-the-monitor-cant-check)) | The button opens a moved or wrong page, and the monitor can't tell |
+| Yearly (in the checkup) | Check the [status page](operations/status-page.md#upkeep) still updates, its checks still match the app, and its GitHub App is installed only on its own repository | The status page stops checking, unnoticed |
+| Yearly (in the checkup) | Check the scheduled workflows are still enabled under **Actions** ([Maintenance releases](operations/admin-runbook.md#maintenance-releases)) | The monitors and reminders stop, and nothing says so |
+| Weekly (automated; GitHub opens an issue and a version pull request 45 days after `main`'s last commit) | Ship a [maintenance release](operations/admin-runbook.md#maintenance-releases) | GitHub turns the scheduled workflows off after 60 days without activity ([GitHub's docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)) |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
-| Hourly (automated) | [Status page](operations/status-page.md) | Opens an issue in the status repository while a service is down; see [Alerts](operations/status-page.md#alerts) |
+| A few times a day (automated; [set to hourly](operations/status-page.md#how-often-it-checks)) | [Status page](operations/status-page.md) | Opens an issue in the status repository while a service is down; see [Alerts](operations/status-page.md#alerts) |
 | Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 

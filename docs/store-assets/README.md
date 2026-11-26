@@ -97,11 +97,16 @@ screenshots are captured, their sizes, and what they may show are in
   Spanish one from Spanish's one-off `app-store/es/`, so run it again when those
   screenshots change. Run it into another folder to rebuild only one, and copy that one
   here.
-  They leave out the logo, because the app icon shows just below the header. Home and Explore show the YouTube, Spotify, and Zoom
-  icons. That's allowed: Apple's rule against other platforms' logos (guideline 2.3.10)
-  means other mobile platforms and app stores, such as Android or Google Play. If a
-  header is ever rejected for them, swap Explore for the Library screenshot and Home
-  for another Bible screenshot from the same set.
+  They leave out the logo, because the app icon shows just below the header. Home and
+  Explore show the YouTube and Spotify icons as the app does, inside their buttons, and
+  Explore's Zoom class has a generic video icon (the app has no Zoom logo). That's
+  allowed. The rules for those icons in
+  [`assets/images/brand/README.md`](../../assets/images/brand/README.md) are about the
+  icon files used on their own, not screenshots of the app. Apple's rule against other
+  platforms' logos ([guideline 2.3.10](https://developer.apple.com/app-store/review/guidelines/))
+  means other mobile platforms and alternative app marketplaces, such as Android or
+  Google Play. If a header is ever rejected for them, swap Explore for the Library
+  screenshot and Home for another Bible screenshot from the same set.
 - `google-play/foreground-service-demo.mp4`: the original of the unlisted YouTube video
   that Play Console's foreground service declaration links to. If the YouTube video is
   ever deleted, upload this file again and update the link; see

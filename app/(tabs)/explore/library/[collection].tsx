@@ -106,7 +106,9 @@ const createStyles = (
       paddingHorizontal: 20,
     },
     bookGrid: {
-      alignItems: 'flex-start',
+      // Each card in a row is as tall as the row's tallest, so a title or
+      // author that wraps further doesn't leave the row ragged (#777).
+      alignItems: 'stretch',
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 12,
