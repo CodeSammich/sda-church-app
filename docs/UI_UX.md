@@ -199,6 +199,10 @@ offline:
 3.  **Iconography:** Icons across all pillars utilize consistent stroke weights and
     monochrome styling. This provides a "premium" feel and ensures accessibility across
     both light and dark modes.
+4.  **Only what does something looks pressable:** a small card with an icon and a
+    label reads as a button, so content that opens nothing, such as About
+    Denomination's three pillars, sits on the page as an icon over its label, with no
+    card or border (`components/PillarList.tsx`, #819).
 
 #### Elevation & Modern
 
