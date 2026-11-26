@@ -12,6 +12,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import * as BibleService from '@/services/BibleService';
+import { getScreenshotState } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { router, Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
 import {
@@ -253,12 +254,17 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
     hymnNum?: string;
     highlight?: string;
     refresh?: string;
+    section?: string;
   }>();
   const backTo = firstParam(params.backTo);
   const hymnalParam = firstParam(params.hymnal);
   const hymnNum = firstParam(params.hymnNum);
   const highlight = firstParam(params.highlight);
   const refresh = firstParam(params.refresh);
+  // A key-screens build's path can ask for the page scrolled to its hymns,
+  // where the header shows the hymnal's name (#797), with `section=hymns`.
+  const paramSection = firstParam(params.section);
+  const screenshotSection = getScreenshotState(paramSection, ['hymns'] as const);
   const routedHymnalId = isHymnalBookId(hymnalParam) ? hymnalParam : defaultHymnalId;
   const route = defaultHymnalId ? HYMNALS[defaultHymnalId].route : HYMNAL_SELECTION_ROUTE;
   const order = useMemo(() => getHymnalOrder(language), [language]);
@@ -558,7 +564,16 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       </View>
       <View
         onLayout={(event: LayoutChangeEvent) => {
-          searchTop.current = event.nativeEvent.layout.y;
+          const { height, y } = event.nativeEvent.layout;
+          searchTop.current = y;
+          if (screenshotSection === 'hymns') {
+            // The first hymn at the top of the screen, past the carousel.
+            // Android ignores a scroll while the page slides in, so it's
+            // tried again once the page has settled, as the bulletin's is.
+            const scroll = () => listRef.current?.scrollToOffset({ animated: false, offset: y + height });
+            scroll();
+            setTimeout(scroll, 500);
+          }
         }}
         style={styles.searchArea}
       >

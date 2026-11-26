@@ -29,6 +29,7 @@
     "large": { "textScale": 1.5 },
     "es-default-text": { "language": "es", "textScale": 1.25 },
     "es-large": { "language": "es", "textScale": 1.5 },
+    "zh-large": { "language": "zh", "textScale": 1.5 },
     "xl": { "textScale": 2 },
     "ios-large-text": { "iosTextSize": "accessibility-large" },
     "zh": { "language": "zh" },
@@ -77,10 +78,10 @@
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"Happy Sabbath!\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. zh, zh-cn and es require the place in their own language, 紐約, 纽约 or Nueva York, NY (#729). The timer's rule allows up to three characters before it, for the days: Vision can read the iPhone's Courier \"1d\" as \"ld\" or \"la\", and RapidOCR can drop the space after it, as it dropped the one before \"in\" on the Android tablet (#695). The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). zh-large is Traditional Chinese at 150%, in place of English there, which es-large and the 200% shots cover: on the Android phone, and on a 411-point Pixel, 分享經文 and 查閱經文 broke as 分享經 / 文 beside each other, since Chinese can break between any two characters and the icons grow with the text, so the buttons stack there too, and each label must show whole, with no line ending in 分享經 or 查閱經 and no 文 alone (#797). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"Happy Sabbath!\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. zh, zh-cn and es require the place in their own language, 紐約, 纽约 or Nueva York, NY (#729). The timer's rule allows up to three characters before it, for the days: Vision can read the iPhone's Courier \"1d\" as \"ld\" or \"la\", and RapidOCR can drop the space after it, as it dropped the one before \"in\" on the Android tablet (#695). The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
       "path": "",
       "checks": ["themeStatusBarIcons"],
-      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large", "standard-contrast", "standard-contrast-dark"],
+      "variants": ["default", "dark", "zh-large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "landscape", "landscape-xl", "zh", "zh-cn"],
       "androidTabletVariants": ["default", "zh", "zh-cn", "landscape"],
       "variantRules": {
@@ -89,6 +90,7 @@
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
         "default": { "mustShowLines": ["^(Sabbath starts ?in|Happy Sabbath!?)$", "^(\\S{1,3} ?)?\\d{1,2}[:：]\\d\\d[:：]\\d\\d$"], "mustNotShowLines": ["^(Friday|Saturday), "] },
+        "zh-large": { "mustShowLines": ["分享經文", "查閱經文"], "mustNotShowLines": ["(分享|查閱)經$", "^文$"] },
         "es-large": { "mustShowLines": ["Compartir$", "^(El S.bado comienza en|.?Feliz S.bado!?)$", "^(\\S{1,3} ?)?\\d{1,2}[:：]\\d\\d[:：]\\d\\d$"], "mustNotShowLines": ["\\bCompar(t|ti)?$", "^(tir|ir)\\b"] },
         "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo(\\b|de\\b)"] },
         "xl-android-font-max": {
@@ -312,12 +314,21 @@
       "group": "bible-reading",
       "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. Below the narrator, Download notifications (#610), the switch for the app's own download notifications, which both phones that capture have. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both. RapidOCR on Android can read the narrator line's dash in Chinese as a full-width －, and \"66 books\" without its space.",
       "path": "you/audio-downloads?narrator=souer",
-      "variants": ["default", "zh"],
+      "variants": ["default"],
       "ipadVariants": ["landscape"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–－]\\s*Souer", "^Download notifications$", "^Whole Bible$", "^66\\s*books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
-        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–－]\\s*Souer", "^下載通知$", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–－]\\s*Souer", "^Download notifications$", "^Whole Bible$", "^66\\s*books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] }
       }
+    },
+    {
+      "name": "offline-bible-audio-book",
+      "group": "bible-reading",
+      "$comment": "Offline Bible Audio as the Bible's audio settings open it while Psalms is read, for the Chinese Union Version's Mandarin, in Chinese at 150% (#797): the page scrolls to the book's section, 詩歌智慧書, opened, with its name where the page's first line would be, just below the header, then Job and Psalms. When it left room for one row above the book, at 150% the section's name sat under the header's title. This took the place of offline-bible-audio's Chinese shot, the same layout as its English one. The text readers may read the section's chevron with its name.",
+      "path": "you/audio-downloads?narrator=cuv-mandarin&bookId=PSA",
+      "variants": ["zh-large"],
+      "ipadVariants": ["landscape-zh"],
+      "mustShowLines": ["(^|\\s)詩歌智慧書$", "^5\\s*卷", "^約伯記$", "^詩篇$"],
+      "mustNotShowLines": ["^已下載"]
     },
     {
       "name": "bible-audio-mobile-data",
@@ -580,6 +591,16 @@
       }
     },
     {
+      "name": "hymnal-hymns",
+      "group": "worship-and-you",
+      "$comment": "The hymnal page scrolled past its carousel to its hymns, by section=hymns in a key-screens build, where the header shows the hymnal's name in a chip beside the search button, in Chinese at 150% (#797): 中文讚美詩 — 505 版 on one line, a little smaller where it must be, never with 版 alone on a second line, as it was at 150% on an Android phone. Vision may read the dash as 一.",
+      "path": "home/hymnal-selection?section=hymns",
+      "variants": ["zh-large"],
+      "ipadVariants": ["landscape-zh"],
+      "mustShowLines": ["^中文讚美詩\\W*505 ?版$"],
+      "mustNotShowLines": ["^版$", "^505 ?版$"]
+    },
+    {
       "name": "hymnal",
       "group": "worship-and-you",
       "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, its Chinese 505 number, its With singing and Piano only videos (#424), and Show all hymns. At the app's 200% text size the Chinese 505 · 16 chip must still show its whole number (a long label wraps inside the chip), and the buttons stack, so they and Show all hymns may fall below the shot. The hymnal's name and the hymn's title wrap at 200% too, so there only their first words are required.",
@@ -800,17 +821,23 @@
     {
       "name": "text-size",
       "group": "worship-and-you",
-      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% its text runs past the popups' height limit (POPUP_MAX_HEIGHT_FRACTION in styles/PopupStyles.ts), so the dialog stops there and its text scrolls, leaving room around it to tap. Its title is also on the You screen behind it, so the rules require lines only the dialog shows. The iPad saves no text size, so its shot shows the size a tablet starts at, 150%, and Reset returns there (#324).",
+      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% its text runs past the popups' height limit (POPUP_MAX_HEIGHT_FRACTION in styles/PopupStyles.ts), so the dialog stops there and its text scrolls, leaving room around it to tap. Its title is also on the You screen behind it, so the rules require lines only the dialog shows. The iPad saves no text size, so its shot shows the size a tablet starts at, 150%, and Reset returns there (#324). zh-large is Traditional Chinese at 150%, where the sample, the last thing in the dialog, was cut off at its third line, 9:25, below the height limit (#797): the −5% and +5% buttons now sit either side of the slider where they fit, and the reference 約翰福音 9:25 moves to its line whole, which must show, ending the sample.",
       "path": "you?popup=text-size",
-      "variants": ["default", "xl"],
+      "variants": ["default", "xl", "zh-large"],
       "ipadVariants": ["default", "landscape", "landscape-xl"],
-      "mustShowLines": [
-        "^Current selection",
-        { "line": "^Reset to 125%", "platforms": ["ios", "android"] },
-        { "line": "^Reset to 150%", "platforms": ["ipad"] }
-      ],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Current selection: 150%", "platforms": ["ipad"] }] }
+        "default": {
+          "mustShowLines": [
+            "^Current selection",
+            { "line": "^Reset to 125%", "platforms": ["ios", "android"] },
+            { "line": "^Reset to 150%", "platforms": ["ipad"] },
+            { "line": "^Current selection: 150%", "platforms": ["ipad"] }
+          ]
+        },
+        "xl": { "mustShowLines": ["^Current selection", "^Reset to 125%"] },
+        "landscape": { "mustShowLines": ["^Current selection", "^Reset to 150%"] },
+        "landscape-xl": { "mustShowLines": ["^Current selection", "^Reset to 150%"] },
+        "zh-large": { "mustShowLines": ["^目前選擇[:：] ?150%", "約翰福音 ?9[:：]25$", "^重設為 ?125%"], "mustNotShowLines": ["^9[:：]25$"] }
       },
       "mustNotShowLines": ["^Apply$", "^Close$"]
     },

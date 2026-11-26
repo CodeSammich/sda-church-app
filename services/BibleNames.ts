@@ -1,4 +1,5 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
+import { unbroken } from '@/constants/LineBreaks';
 import { BIBLE_BOOK_NAMES } from './BibleService';
 
 /**
@@ -70,11 +71,9 @@ export const getBookListName = (
     ? { name: book.name }
     : twoLanguageName(book.name, BIBLE_BOOK_NAMES[book.id]?.[appLanguage]);
 
-// No line break inside one name: a no-break space for its spaces, and a word
-// joiner between its Chinese characters, which a line may otherwise break
-// between. Neither shows.
-const CHINESE_CHARACTER_PAIR = /([\u3400-\u9fff\uf900-\ufaff])(?=[\u3400-\u9fff\uf900-\ufaff])/g;
-const unbroken = (text: string) => text.replace(/ /g, '\u00a0').replace(CHINESE_CHARACTER_PAIR, '$1\u2060');
+// No line break inside one name (constants/LineBreaks.ts): a no-break space
+// for its spaces, and a word joiner between its Chinese characters, which a
+// line may otherwise break between. Neither shows.
 
 /**
  * A book's two names in a line of text, such as a search result's heading. A

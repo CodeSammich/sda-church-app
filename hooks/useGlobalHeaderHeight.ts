@@ -66,6 +66,27 @@ export const getGlobalHeaderHeightForScale = (
   );
 };
 
+/**
+ * The least a page's title in the header shrinks to stay on one line (#797),
+ * as Home's cards' titles do for a word (GRID_MENU_CARD_TEXT_MIN_SCALE).
+ */
+export const HEADER_TITLE_MIN_SCALE = 0.8;
+
+/**
+ * How large to draw a page's title in the header's chip, as a fraction of its
+ * size, so it stays on one line: whole where it fits in `room` points, or as
+ * much smaller as it takes, down to HEADER_TITLE_MIN_SCALE, below which it
+ * wraps between its words instead. At 150% on an Android phone, 中文讚美詩 —
+ * 505 版 beside the search button wrapped, leaving 版 alone on a line (#797).
+ * `titleWidth` is the title's width on one line at its full size; 0 until
+ * measured. Two points spare, since a line exactly as wide as its room broke
+ * on Android.
+ */
+export const fitHeaderTitleScale = (titleWidth: number, room: number) => {
+  if (!(titleWidth > 0) || !(room > 0) || titleWidth <= room - 2) return 1;
+  return Math.max(HEADER_TITLE_MIN_SCALE, (room - 2) / titleWidth);
+};
+
 export type BibleControlsLayout = Readonly<{
   stack: boolean;
   hideTranslationNames: boolean;

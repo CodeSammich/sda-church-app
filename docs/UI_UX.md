@@ -292,7 +292,10 @@ simple, blended colors.
     page's top matches its bottom. Their icons are grey, like the tab bar's other tabs;
     blue, or gold in the dark theme, marks what opens a list or shows a state: the back
     button, the translation button's names and arrow, like the Bible card's pills, and
-    the saved-verse button once a verse is saved. The translation button has no 文A icon
+    the saved-verse button once a verse is saved. A page's title stays on one line,
+    drawn a little smaller where it must be, down to 80%, and past that wraps only
+    between its words, in Chinese too: at 150%, 中文讚美詩 — 505 版 beside the
+    search button left 版 alone on a line (#797). The translation button has no 文A icon
     (from 1.7.0): each translation's language badge, EN or 繁, about the icon's size and
     in the pills' colors, says which language it is, and leaves room for the names.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
