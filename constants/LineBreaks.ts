@@ -27,7 +27,7 @@ const LATIN_THEN_CHINESE_SPACE = new RegExp(`([0-9A-Za-z]) (?=[${CHINESE}])`, 'g
  * as 約翰福音 9:25, which a narrow line should move to the next line whole.
  */
 export const unbroken = (text: string) =>
-  text.replace(/ /g, ' ').replace(CHINESE_CHARACTER_PAIR, '$1⁠');
+  text.replace(/ /g, '\u00a0').replace(CHINESE_CHARACTER_PAIR, '$1\u2060');
 
 /**
  * A short label or title that breaks only between its words. Text with
@@ -41,7 +41,7 @@ export const unbroken = (text: string) =>
 export const keepWordsWhole = (text: string) =>
   CHINESE_CHARACTER.test(text)
     ? text
-        .replace(CHINESE_THEN_LATIN_SPACE, '$1 ')
-        .replace(LATIN_THEN_CHINESE_SPACE, '$1 ')
-        .replace(CHINESE_CHARACTER_PAIR, '$1⁠')
+        .replace(CHINESE_THEN_LATIN_SPACE, '$1\u00a0')
+        .replace(LATIN_THEN_CHINESE_SPACE, '$1\u00a0')
+        .replace(CHINESE_CHARACTER_PAIR, '$1\u2060')
     : text;

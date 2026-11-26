@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { keepWordsWhole, unbroken } from '@/constants/LineBreaks';
 import { HYMNAL_LABELS } from '@/features/hymnal/HymnalLabels';
 
-const WJ = '⁠';
-const NBSP = ' ';
+const WJ = '\u2060';
+const NBSP = '\u00a0';
 // Where a line may break: at a plain space. A word joiner and a no-break space
 // don't allow it, and keepWordsWhole adds one between every two Chinese
 // characters, so a break between Chinese characters is a break inside a word.
@@ -36,7 +36,7 @@ describe('keeping words whole on a line (#797)', () => {
       for (const label of Object.values(labels)) {
         const whole = keepWordsWhole(label);
         // Nothing but the joiners and no-break spaces is added.
-        expect(whole.replace(/⁠/g, '').replace(/ /g, ' ')).toBe(label);
+        expect(whole.replace(/\u2060/g, '').replace(/\u00a0/g, ' ')).toBe(label);
         // A Chinese label breaks only at its dash.
         if (/[㐀-鿿]/u.test(label)) expect(breaksAt(whole)).toHaveLength(3);
       }
