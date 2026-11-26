@@ -288,7 +288,8 @@ it("logs each host that plays in the audio e2e build, since the lock screen does
     ]);
   } finally {
     log.mockRestore();
-    process.env.EXPO_PUBLIC_AUDIO_E2E = previous;
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_AUDIO_E2E;
+    else process.env.EXPO_PUBLIC_AUDIO_E2E = previous;
   }
 });
 
