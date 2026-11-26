@@ -364,6 +364,13 @@ simple, blended colors.
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`
   (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
+- **Switches:** A setting that's on or off, such as the Bible's Dual-language reading and
+  pinyin, is one row: its name, a line about it, and a switch. A tap anywhere on the row
+  turns it on or off, since older members tap the words, not the small switch (#798). A
+  screen reader hears one switch, with its name, the line as its hint, and whether it's
+  on. Code draws it with `SwitchRow` (`components/SwitchRow.tsx`); Offline Bible Audio's
+  Download notifications row, below, was already one control, with the same switch
+  (`MenuCardSwitchVisual`). `test/switch-row.test.ts` fails on a switch drawn alone.
 - **Notifications:** The app's notifications are few, quiet, and only ones the member asked
   for (Tenet 7). Today there's one kind: a Bible audio download the member started (#610).
   - **What they say, by phone.** None is needed for a download to go on in the

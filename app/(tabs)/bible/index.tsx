@@ -2,6 +2,7 @@ import { AppIcon } from '@/components/AppIcon';
 import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { PopupHeader } from '@/components/PopupHeader';
+import { SwitchRow } from '@/components/SwitchRow';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { PopupFlatList, PopupScrollView } from '@/components/PopupScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,7 +34,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Divider, IconButton, Modal, Portal, Switch, Text } from 'react-native-paper';
+import { Divider, IconButton, Modal, Portal, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -5572,60 +5573,29 @@ export default function BibleScreen() {
                     lastActiveType === 'translation' ? (
                       <View>
                         <Divider />
-                        <View style={styles.pinyinPreferenceRow}>
-                          <View style={styles.pinyinPreferenceCopy}>
-                            <Text
-                              style={[
-                                styles.pressRowText,
-                                { color: theme.colors.onSurface },
-                              ]}
-                            >
-                              {labels.dualLanguage}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.pinyinPreferenceHelp,
-                                { color: theme.colors.onSurfaceVariant },
-                              ]}
-                            >
-                              {labels.dualLanguageHelp}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={dualLanguageEnabled}
-                            onValueChange={(enabled) => {
-                              setDualLanguageEnabled(enabled);
-                              if (!enabled) setTranslationSelectionRole('primary');
-                            }}
-                            accessibilityLabel={labels.dualLanguage}
-                          />
-                        </View>
+                        {/* A tap on the words turns each on or off too (#798). */}
+                        <SwitchRow
+                          label={labels.dualLanguage}
+                          description={labels.dualLanguageHelp}
+                          value={dualLanguageEnabled}
+                          onValueChange={(enabled) => {
+                            setDualLanguageEnabled(enabled);
+                            if (!enabled) setTranslationSelectionRole('primary');
+                          }}
+                          style={styles.pinyinPreferenceRow}
+                          labelStyle={styles.pressRowText}
+                          descriptionStyle={styles.pinyinPreferenceHelp}
+                        />
                         <Divider />
-                        <View style={styles.pinyinPreferenceRow}>
-                          <View style={styles.pinyinPreferenceCopy}>
-                            <Text
-                              style={[
-                                styles.pressRowText,
-                                { color: theme.colors.onSurface },
-                              ]}
-                            >
-                              {labels.showPinyin}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.pinyinPreferenceHelp,
-                                { color: theme.colors.onSurfaceVariant },
-                              ]}
-                            >
-                              {labels.pinyinHelp}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={showPinyin}
-                            onValueChange={setShowPinyin}
-                            accessibilityLabel={labels.showPinyin}
-                          />
-                        </View>
+                        <SwitchRow
+                          label={labels.showPinyin}
+                          description={labels.pinyinHelp}
+                          value={showPinyin}
+                          onValueChange={setShowPinyin}
+                          style={styles.pinyinPreferenceRow}
+                          labelStyle={styles.pressRowText}
+                          descriptionStyle={styles.pinyinPreferenceHelp}
+                        />
                         <Divider />
                         {/* Requests set which languages come next (#241, #344). */}
                         <TouchableOpacity
@@ -5984,10 +5954,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-    },
-    pinyinPreferenceCopy: {
-      flex: 1,
-      minWidth: 0,
     },
     pinyinPreferenceHelp: {
       fontSize: scaleTypographyMetric(13, uiTextScale),
