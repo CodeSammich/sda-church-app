@@ -1314,6 +1314,10 @@ Bible chapters to check what only a real player shows:
   Audio must start without an unlock.
 - **Mid-chapter loss:** go offline and seek past what has loaded. The same host
   reloads where it stopped, and playback resumes there.
+- In both, the reader must stay on its chapter while the audio fails over: a failed
+  player's replacement once named a chapter from the old player's queue, and the
+  reader moved there for a few seconds ([#802](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/802)). It reads that from the app's log,
+  like the four below.
 - **Pause and resume** from the same place.
 - **Previous before the start (#543):** started in Leviticus 2, the media key's
   previous restarts the chapter more than 3 seconds in, goes back to Leviticus 1
