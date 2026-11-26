@@ -65,8 +65,8 @@ const copy = {
     otherNarrators: 'Other narrators',
     books: (count: number, size: string) => `${count} books · ${size}`,
     downloaded: (size: string) => `Downloaded · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `${done} of ${total} books downloaded · ${more} more`,
-    partly: (more: string) => `Partly downloaded · ${more} more`,
+    someBooks: (done: number, total: number, more: string) => `${done} of ${total} books downloaded · ${more} not yet downloaded`,
+    partly: (more: string) => `Partly downloaded · ${more} not yet downloaded`,
     nothing: 'Nothing downloaded',
     queued: (size: string) => `Waiting to download · ${size}`,
     progress: (done: string, total: string) => `${done} of ${total}`,
@@ -108,8 +108,8 @@ const copy = {
     otherNarrators: '其他朗讀者',
     books: (count: number, size: string) => `${count} 卷 · ${size}`,
     downloaded: (size: string) => `已下載 · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `已下載 ${done} / ${total} 卷 · 尚餘 ${more}`,
-    partly: (more: string) => `已下載部分 · 尚餘 ${more}`,
+    someBooks: (done: number, total: number, more: string) => `已下載 ${done} / ${total} 卷 · 未下載 ${more}`,
+    partly: (more: string) => `已下載部分 · 未下載 ${more}`,
     nothing: '尚未下載',
     queued: (size: string) => `等待下載 · ${size}`,
     progress: (done: string, total: string) => `${done} / ${total}`,
@@ -151,8 +151,8 @@ const copy = {
     otherNarrators: '其他朗读者',
     books: (count: number, size: string) => `${count} 卷 · ${size}`,
     downloaded: (size: string) => `已下载 · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `已下载 ${done} / ${total} 卷 · 还剩 ${more}`,
-    partly: (more: string) => `已下载部分 · 还剩 ${more}`,
+    someBooks: (done: number, total: number, more: string) => `已下载 ${done} / ${total} 卷 · 未下载 ${more}`,
+    partly: (more: string) => `已下载部分 · 未下载 ${more}`,
     nothing: '尚未下载',
     queued: (size: string) => `等待下载 · ${size}`,
     progress: (done: string, total: string) => `${done} / ${total}`,
@@ -195,8 +195,8 @@ const copy = {
     otherNarrators: 'Otros narradores',
     books: (count: number, size: string) => `${count} libros · ${size}`,
     downloaded: (size: string) => `Descargado · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `${done} de ${total} libros descargados · faltan ${more}`,
-    partly: (more: string) => `Descargado en parte · faltan ${more}`,
+    someBooks: (done: number, total: number, more: string) => `${done} de ${total} libros descargados · ${more} sin descargar`,
+    partly: (more: string) => `Descargado en parte · ${more} sin descargar`,
     nothing: 'Nada descargado',
     queued: (size: string) => `En espera de descarga · ${size}`,
     progress: (done: string, total: string) => `${done} de ${total}`,
@@ -317,8 +317,10 @@ function ScopeRow({ expanded, kind, narrator, onDelete, onDownload, onToggle, sc
   const caption = getBibleAudioScopeCaption(status, language);
   const complete = isComplete(status);
   const remaining = formatDownloadSize(Math.max(0, status.totalBytes - status.downloadedBytes), language);
-  // While it waits for Wi-Fi, download again offers mobile data.
-  const canDownload = !complete && (!status.downloading || status.waitingFor === 'wifi');
+  // While it downloads, or waits for Wi-Fi, only its X shows (#806): beside
+  // the X, a download arrow on a waiting row didn't say what it would do. To
+  // use mobile data instead, stop it and download again, which asks.
+  const canDownload = !complete && !status.downloading;
   const canDelete = status.downloadedChapters > 0 && !status.downloading;
   const header = kind === 'bible' || kind === 'testament';
   const iconColor = theme.colors.onSurfaceVariant;
@@ -397,18 +399,43 @@ function ScopeRow({ expanded, kind, narrator, onDelete, onDownload, onToggle, sc
         />
       )}
       {canDelete && (
-        <IconButton
+        <DeleteButton
           accessibilityLabel={
             scope.kind === 'bible' && !complete
               ? labels.deleteAll(getBibleAudioNarratorName(narrator, language) ?? narrator)
               : labels.delete(what)
           }
-          icon="delete-outline"
-          iconColor={iconColor}
           onPress={onDelete}
         />
       )}
     </View>
+  );
+}
+
+/**
+ * Delete: the trash can with the word under it (#806), as the can alone was
+ * easy to misread. Under it, not beside it, so the button is no wider than the
+ * icons beside it and the row's title keeps its room on a small phone. The
+ * popup it opens still asks first.
+ */
+function DeleteButton({ accessibilityLabel, onPress }: Readonly<{ accessibilityLabel: string; onPress: () => void }>) {
+  const { language } = useContext(LanguageContext);
+  const labels: Labels = copy[language] || copy.en;
+  const theme = useAppTheme();
+  const color = theme.colors.onSurfaceVariant;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [styles.deleteButton, { opacity: pressed ? 0.7 : 1 }]}
+    >
+      {/* The size of the download and stop icons beside it. */}
+      <AppIcon name="delete-outline" scaleWithText={false} size={24} color={color} />
+      <Text variant="labelSmall" style={{ color }}>
+        {labels.confirmDelete}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -586,6 +613,20 @@ export function OfflineBibleAudio() {
     };
     // The language only picks a first default.
   }, [narratorParam, bookParam]);
+
+  // A section that holds some of its books, but not all, opens (#806): closed,
+  // it hid which books were on the phone. Only as the page opens, or another
+  // narrator is chosen, so a download doesn't open sections as it goes, and a
+  // section the member closes stays closed.
+  useEffect(() => {
+    if (!narrator) return;
+    const partly = BIBLE_SECTIONS.filter((section) => {
+      if (section.books.length < 2) return false;
+      const status = getBibleAudioScopeStatus(narrator, { kind: 'section', sectionId: section.id });
+      return status.downloadedChapters > 0 && !isComplete(status);
+    }).map((section) => section.id);
+    if (partly.length) setExpanded((current) => new Set([...current, ...partly]));
+  }, [narrator]);
 
   const name = (option: string) => getBibleAudioNarratorName(option, language) ?? option;
 
@@ -842,10 +883,8 @@ export function OfflineBibleAudio() {
                         {labels.downloaded(formatDownloadSize(narratorTotal(option), language))}
                       </Text>
                     </Pressable>
-                    <IconButton
+                    <DeleteButton
                       accessibilityLabel={labels.deleteAll(name(option))}
-                      icon="delete-outline"
-                      iconColor={theme.colors.onSurfaceVariant}
                       onPress={() => {
                         const size = formatDownloadSize(narratorTotal(option), language);
                         showAppAlert(labels.question(labels.deleteAll(name(option)), size), labels.deleteMessage, [
@@ -900,6 +939,8 @@ const styles = StyleSheet.create({
   hidden: { opacity: 0 },
   groupTitle: { fontWeight: 'bold' },
   progress: { borderRadius: 2, height: 4, marginTop: 6 },
+  // As wide as Paper's icon buttons beside it, and a thumb's height.
+  deleteButton: { alignItems: 'center', justifyContent: 'center', marginHorizontal: 6, minHeight: 48, minWidth: 40 },
   dialogHeader: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },
   dialogScrollArea: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 0 },
   dialogContent: { paddingBottom: 24, paddingHorizontal: 24, paddingTop: 4 },

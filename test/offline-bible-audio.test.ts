@@ -9,7 +9,7 @@ import {
   type BibleAudioScopeStatus,
 } from '@/services/BibleAudioDownloads';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
 import { createElement, type ComponentType } from 'react';
 import { showAppAlert } from '@/components/AppAlert';
@@ -117,37 +117,37 @@ beforeEach(async () => {
 
 describe('Offline Bible Audio', () => {
   it('say what each row holds: its size, its progress, what it waits for, part of it, or all of it', () => {
-    expect(getBibleAudioScopeCaption(status({}), 'en').text).toBe('24.5 MB');
-    expect(getBibleAudioScopeCaption(status({ books: 4, totalBytes: 210_000_000 }), 'en').text).toBe('4 books · 210.0 MB');
-    expect(getBibleAudioScopeCaption(status({ books: 4, totalBytes: 210_000_000 }), 'zh').text).toBe('4 卷 · 210.0 MB');
+    expect(getBibleAudioScopeCaption(status({}), 'en').text).toBe('24.5\u00a0MB');
+    expect(getBibleAudioScopeCaption(status({ books: 4, totalBytes: 210_000_000 }), 'en').text).toBe('4 books · 210.0\u00a0MB');
+    expect(getBibleAudioScopeCaption(status({ books: 4, totalBytes: 210_000_000 }), 'zh').text).toBe('4 卷 · 210.0\u00a0MB');
     expect(getBibleAudioScopeCaption(status({ downloading: true, active: true, downloadedBytes: 5_100_000 }), 'en')).toEqual({
-      text: 'Downloading · 5.1 of 24.5 MB',
+      text: 'Downloading · 5.1 of 24.5\u00a0MB',
       fraction: 5.1 / 24.5,
     });
     expect(getBibleAudioScopeCaption(status({ downloading: true, downloadedBytes: 5_100_000, waitingFor: 'wifi' }), 'en').text)
-      .toBe('Waiting for Wi-Fi · 5.1 MB of 24.5 MB');
+      .toBe('Waiting for Wi-Fi · 5.1\u00a0MB of 24.5\u00a0MB');
     expect(getBibleAudioScopeCaption(status({ downloading: true, waitingFor: 'connection' }), 'zh').text)
-      .toBe('等待網路連線 · 0.0 MB / 24.5 MB');
+      .toBe('等待網路連線 · 0.0\u00a0MB / 24.5\u00a0MB');
     expect(getBibleAudioScopeCaption(status({ downloadedChapters: 21, downloadedBooks: 1, downloadedBytes: 24_600_000 }), 'en').text)
-      .toBe('Downloaded · 24.6 MB');
+      .toBe('Downloaded · 24.6\u00a0MB');
     expect(getBibleAudioScopeCaption(status({ downloadedChapters: 12, downloadedBytes: 13_000_000 }), 'es').text)
-      .toBe('Descargado en parte · faltan 11,5 MB');
+      .toBe('Descargado en parte · 11,5\u00a0MB sin descargar');
     expect(
       getBibleAudioScopeCaption(
         status({ books: 27, downloadedBooks: 12, chapters: 260, downloadedChapters: 100, downloadedBytes: 400_000_000, totalBytes: 970_000_000 }),
         'en',
       ).text,
-    ).toBe('12 of 27 books downloaded · 570.0 MB more');
+    ).toBe('12 of 27 books downloaded · 570.0\u00a0MB not yet downloaded');
     // The English Bibles run to gigabytes.
     expect(
       getBibleAudioScopeCaption(status({ books: 66, chapters: 1189, totalBytes: 5_500_000_000, downloading: true, active: true, downloadedBytes: 1_200_000_000 }), 'en').text,
-    ).toBe('Downloading · 1.20 of 5.50 GB');
+    ).toBe('Downloading · 1.20 of 5.50\u00a0GB');
     // A book waiting its turn behind the three chapters downloading.
     expect(getBibleAudioScopeCaption(status({ downloading: true, totalBytes: 10_300_000 }), 'en')).toEqual({
-      text: 'Waiting to download · 10.3 MB',
+      text: 'Waiting to download · 10.3\u00a0MB',
       fraction: null,
     });
-    expect(getBibleAudioScopeCaption(status({ downloading: true, totalBytes: 10_300_000 }), 'zh').text).toBe('等待下載 · 10.3 MB');
+    expect(getBibleAudioScopeCaption(status({ downloading: true, totalBytes: 10_300_000 }), 'zh').text).toBe('等待下載 · 10.3\u00a0MB');
   });
 
   it('show the whole Bible, both Testaments and their sections, with the sections closed, and the narrator', async () => {
@@ -378,5 +378,74 @@ describe('Offline Bible Audio', () => {
     await AsyncStorage.clear();
     screen = await renderPage({}, 'es');
     await waitFor(() => expect(screen.getByText('Español (Reina-Valera 1909)')).toBeTruthy());
+  });
+});
+
+// What a persona walk-through misread at 125% in Traditional Chinese (#806).
+describe('Offline Bible Audio, read as an older member reads it', () => {
+  it('says what is not yet downloaded, not what "remains", which read as free space', () => {
+    const some = status({ books: 66, downloadedBooks: 1, chapters: 1189, downloadedChapters: 21, downloadedBytes: 17_900_000, totalBytes: 792_300_000 });
+    expect(getBibleAudioScopeCaption(some, 'zh').text).toBe('已下載 1 / 66 卷 · 未下載 774.4\u00a0MB');
+    expect(getBibleAudioScopeCaption(some, 'zh-cn').text).toBe('已下载 1 / 66 卷 · 未下载 774.4\u00a0MB');
+    expect(getBibleAudioScopeCaption(some, 'en').text).toBe('1 of 66 books downloaded · 774.4\u00a0MB not yet downloaded');
+    expect(getBibleAudioScopeCaption(some, 'es').text).toBe('1 de 66 libros descargados · 774,4\u00a0MB sin descargar');
+    const part = status({ downloadedChapters: 12, downloadedBytes: 13_000_000 });
+    expect(getBibleAudioScopeCaption(part, 'zh').text).toBe('已下載部分 · 未下載 11.5\u00a0MB');
+    expect(getBibleAudioScopeCaption(part, 'zh-cn').text).toBe('已下载部分 · 未下载 11.5\u00a0MB');
+    for (const language of ['zh', 'zh-cn'] as const) {
+      expect([some, part].map((scope) => getBibleAudioScopeCaption(scope, language).text).join(' ')).not.toMatch(/尚餘|尚余|还剩|還剩/);
+    }
+  });
+
+  it('puts the word under each trash can', async () => {
+    putOnPhone('cuv-mandarin', 'JHN', 21);
+    const screen = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' });
+    for (const name of ['Delete John', 'Delete the Gospels', 'Delete the New Testament', 'Delete all downloads for Mandarin (Chinese Union Version)']) {
+      expect(within(screen.getByRole('button', { name })).getByText('Delete')).toBeTruthy();
+    }
+    const zh = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' }, 'zh');
+    expect(within(zh.getByRole('button', { name: '刪除約翰福音' })).getByText('刪除')).toBeTruthy();
+    const es = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' }, 'es');
+    expect(within(es.getByRole('button', { name: 'Borrar Juan' })).getByText('Borrar')).toBeTruthy();
+  });
+
+  it('keeps the size on one line in the delete question', async () => {
+    putOnPhone('cuv-mandarin', 'JHN', 21);
+    const zh = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' }, 'zh');
+    await fireEvent.press(zh.getByRole('button', { name: '刪除約翰福音' }));
+    expect(lastAlert().title).toMatch(/^刪除約翰福音？（\d+\.\d\u00a0MB）$/);
+  });
+
+  it('opens a section that holds some of its books, coming from the You tab, and still closes it at a tap', async () => {
+    putOnPhone('cuv-mandarin', 'JHN', 21);
+    const screen = await renderPage({ narrator: 'cuv-mandarin' });
+    expect(screen.getByText('John')).toBeTruthy();
+    expect(screen.getByText('Matthew')).toBeTruthy();
+    // Sections with nothing downloaded stay closed.
+    expect(screen.queryByText('Genesis')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: /^Gospels, 1 of 4 books downloaded/ }));
+    expect(screen.queryByText('John')).toBeNull();
+    // A download that finishes doesn't open it again.
+    putOnPhone('cuv-mandarin', 'MRK', 16);
+    await act(async () => undefined);
+    expect(screen.queryByText('John')).toBeNull();
+  });
+
+  it('shows only the X on a row waiting for Wi-Fi, whose arrow said nothing of mobile data', async () => {
+    mockNetwork.state = { type: 'CELLULAR', isConnected: true, isInternetReachable: true };
+    const screen = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' });
+    await fireEvent.press(screen.getByRole('button', { name: /^Download John, / }));
+    await act(async () => undefined);
+    await act(async () => lastAlert().buttons[1].onPress?.());
+    await act(async () => undefined);
+    expect(getBibleAudioScopeStatus('cuv-mandarin', JOHN)).toMatchObject({ downloading: true, waitingFor: 'wifi' });
+    expect(screen.getByRole('button', { name: 'Stop downloading John' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Download John, / })).toBeNull();
+    // Stopping it and downloading again asks about mobile data once more.
+    await fireEvent.press(screen.getByRole('button', { name: 'Stop downloading John' }));
+    (showAppAlert as jest.Mock).mockClear();
+    await fireEvent.press(screen.getByRole('button', { name: /^Download John, / }));
+    await act(async () => undefined);
+    expect(lastAlert().buttons.map(({ text }) => text)).toEqual(['Cancel', 'Wait for Wi-Fi', 'Use mobile data']);
   });
 });
