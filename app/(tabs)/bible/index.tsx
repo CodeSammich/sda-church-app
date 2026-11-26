@@ -76,8 +76,7 @@ import {
   shouldStopBibleAudioAtChapterEnd,
   type BibleAudioSleepTimerSetting,
   configureBibleAudioPlayback,
-  getBibleAudioCreditUrl,
-  getBibleAudioMediaTitle,
+  getBibleAudioArtist,
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getOrderedBibleAudioReaders,
@@ -125,6 +124,7 @@ import { getBookPillAbbreviation } from '@/services/BibleBookAbbreviations';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
   formatBookReference,
+  formatChapterTitle,
   formatTwoLanguageName,
   getBookListName,
   getBookPillName,
@@ -1344,8 +1344,6 @@ export default function BibleScreen() {
     book?.id,
     chapterNum,
   );
-  const downloadedAudioUriRef = useRef(downloadedAudioUri);
-  downloadedAudioUriRef.current = downloadedAudioUri;
   // When playback keeps stopping to load, the audio settings button points
   // the listener to Listen offline (#595).
   const downloadTip = useBibleAudioDownloadTip(
@@ -1457,6 +1455,11 @@ export default function BibleScreen() {
   };
   useEffect(() => () => clearTimeout(followResumeTimeout.current), []);
 
+  // What the lock screen and the media notification say: the chapter as the
+  // recording reads it (#723), and the narrator in the app's language (#804).
+  const getAudioChapterTitle = (chapterBook: { name: string }, chapter: number) =>
+    formatChapterTitle(chapterBook.name, chapter, supportedTranslation.lang);
+
   // `fromChapter` is the chapter being loaded, which can differ from both the
   // reader and the native player's current track during a failover.
   const buildUpcomingAudioQueue = (
@@ -1468,19 +1471,17 @@ export default function BibleScreen() {
     return buildBibleAudioQueue({
       direction,
       albumTitle: labels.audioPlayer,
-      artist: selectedAudioReader
-        ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
-        : supportedTranslation.name,
+      artist: getBibleAudioArtist(supportedTranslation, selectedAudioReader, language),
       books,
       currentBookId: activeChapter?.bookId || book?.id || '',
       currentChapter: activeChapter?.chapter ?? chapterNum,
+      getChapterTitle: getAudioChapterTitle,
       sleepTimer: sleepTimerSettingRef.current,
       preferredSourceId: selectedAudioSourceId,
       getDownloadedUri: (bookId, chapter) => queuedDownloadsRef.current(bookId, chapter),
       selectedAudioUrls: streamedAudioUrls,
       selectedReader: selectedAudioReader,
       translationId: supportedTranslation.id,
-      translationLabel: supportedTranslation.name,
     });
   };
 
@@ -1717,24 +1718,16 @@ export default function BibleScreen() {
   ]);
 
   const getReaderAudioTarget = (): AudioSourceTarget => {
-    const artist = selectedAudioReader
-      ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
-      : supportedTranslation.name;
+    const artist = getBibleAudioArtist(supportedTranslation, selectedAudioReader, language);
+    const title = book ? getAudioChapterTitle(book, chapterNum) : `${labels.bible} ${chapterNum}`;
     return {
       chapter: book
         ? { bookId: book.id, chapter: chapterNum, translationId: supportedTranslation.id }
         : undefined,
-      sources: selectedAudioUrlsRef.current.map((uri, _, uris) => {
-        const title = getBibleAudioMediaTitle(
-          `${book?.name || labels.bible} ${chapterNum}`,
-          supportedTranslation.name,
-          getBibleAudioCreditUrl(uri, uris, downloadedAudioUriRef.current),
-        );
-        return {
-          source: { uri, name: title },
-          metadata: { title, artist, albumTitle: labels.audioPlayer },
-        };
-      }),
+      sources: selectedAudioUrlsRef.current.map((uri) => ({
+        source: { uri, name: title },
+        metadata: { title, artist, albumTitle: labels.audioPlayer },
+      })),
     };
   };
 
