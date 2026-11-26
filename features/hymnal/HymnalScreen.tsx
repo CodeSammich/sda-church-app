@@ -40,6 +40,7 @@ import {
   getHymnalLabel,
   getHymnalShortLabel,
   getHymnalTitleParts,
+  getHymnTitle,
   type HymnalBookId,
 } from './HymnalLabels';
 import {
@@ -83,6 +84,8 @@ const copy = {
     pianoOnly: 'Piano only',
     youtubeHint: 'Opens the video on YouTube',
     scriptureHint: 'Opens this passage in the Bible',
+    englishWebPage: 'The sheet music opens on a web page.',
+    chineseWebPage: 'The words open on a web page, in Simplified Chinese.',
   },
   zh: {
     title: '詩歌本',
@@ -107,6 +110,9 @@ const copy = {
     pianoOnly: '鋼琴伴奏',
     youtubeHint: '在 YouTube 開啟影片',
     scriptureHint: '在聖經中開啟這段經文',
+    englishWebPage: '樂譜在網頁上開啟。',
+    // Only a Simplified copy of the words is online.
+    chineseWebPage: '歌詞在網頁上開啟，只有簡體字版。',
   },
   'zh-cn': {
     title: '诗歌本',
@@ -131,6 +137,8 @@ const copy = {
     pianoOnly: '钢琴伴奏',
     youtubeHint: '在 YouTube 打开视频',
     scriptureHint: '在圣经中打开这段经文',
+    englishWebPage: '乐谱在网页上打开。',
+    chineseWebPage: '歌词在网页上打开。',
   },
   es: {
     title: 'Himnarios',
@@ -155,6 +163,8 @@ const copy = {
     pianoOnly: 'Solo piano',
     youtubeHint: 'Abre el video en YouTube',
     scriptureHint: 'Abre este pasaje en la Biblia',
+    englishWebPage: 'La partitura se abre en una página web.',
+    chineseWebPage: 'La letra se abre en una página web, en chino simplificado.',
   },
 } as const;
 
@@ -387,6 +397,9 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
 
   const rowLabels = useMemo<HymnRowLabels>(
     () => ({
+      hymnTitle: (hymnalId, title) => getHymnTitle(hymnalId, title, language),
+      opensOnWebPage: (hymnalId) =>
+        HYMNALS[hymnalId].language === 'zh' ? labels.chineseWebPage : labels.englishWebPage,
       withSinging: labels.withSinging,
       pianoOnly: labels.pianoOnly,
       youtubeHint: labels.youtubeHint,
