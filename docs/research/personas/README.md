@@ -15,6 +15,7 @@ a key-screens build, which shows made-up bulletin and team data
 | --- | --- | --- |
 | Mrs. Lin | 76. Reads Traditional Chinese, uses text size 150%, taps words rather than small icons. First time opening the app. | [Mrs. Lin](mrs-lin/report.md) |
 | Mr. Wong | 68. Speaks Cantonese and mostly listens to the Bible read aloud. Flaky Wi-Fi at home and little mobile data. | [Mr. Wong](mr-wong/report.md) |
+| Sam | 30. English-speaking, not a member, invited by a friend. Found the app on the store the night before a first visit. | [Sam](sam/report.md) |
 
 ## How to read a report
 
