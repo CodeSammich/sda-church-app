@@ -760,8 +760,8 @@ export const GlobalHeader = (props: any) => {
                 ]}
               >
                 <Text
-                  accessibilityLabel={title}
                   maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                  accessibilityLabel={title}
                   variant="titleMedium"
                   style={titleTextStyle(titleScale)}
                   testID="header-title"
