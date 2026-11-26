@@ -169,12 +169,12 @@
     {
       "name": "bible-cuv-after-spanish",
       "group": "bible-text",
-      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent.",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent. The books sit under Testament and section headings (#807), in the app's language, so Law must show above Genesis. On the iPad, Vision may read the dimmed page beside the popup into a line, so the heading isn't anchored.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=book",
       "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["[(（]Genesis\\b", "[(（]Exodus\\b", "[(（]Leviticus\\b"],
+      "mustShowLines": [{ "line": "\\bLaw\\b", "above": "[(（]Genesis\\b" }, "[(（]Genesis\\b", "[(（]Exodus\\b", "[(（]Leviticus\\b"],
       "mustNotShowLines": ["Salmos", "^[EÉ]xodo\\b", "^Lev[ií]tico\\b", "^N[uú]meros\\b"]
     },
     {

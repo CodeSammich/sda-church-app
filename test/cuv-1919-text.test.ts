@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
   fetchBooks,
   fetchChapter,
+  getTranslationAttribution,
   isSelahMarker,
   needsSpaceAfterFootnote,
   normalizeFetchBibleText,
@@ -199,6 +200,25 @@ describe('reading the bundled text', () => {
     expect(chapter.chapter.content[0]).toEqual({ type: 'heading', content: ['〔大衛的詩。〕'] });
     expect(chapter.chapter.content[1]).toMatchObject({ type: 'verse', number: 1, content: ['耶和華是我的牧者．我必不至缺乏。'] });
     expect(chapter.numberOfVerses).toBe(6);
+  });
+
+  // A Chinese reader saw the credit at the end of each chapter in English (#807).
+  it('credits the text in the app’s language', async () => {
+    const credit = async (translationId: string, language: 'en' | 'zh' | 'zh-cn' | 'es') =>
+      getTranslationAttribution((await fetchChapter(translationId, 'PSA', 23)).translation, language);
+
+    expect(await credit('cmn_cuv', 'zh')).toBe('公有領域（1919）。經文取自 WordProject，並經校訂。');
+    expect(await credit('cmn_cu1', 'zh-cn')).toBe('公有领域（1919）。经文取自 WordProject，并经校订。');
+    expect(await credit('cmn_cuv', 'es')).toBe('Dominio público (1919). Texto adaptado de WordProject.');
+    expect(await credit('cmn_cu1', 'en')).toBe('Public domain (1919). Text adapted from WordProject.');
+    expect(await credit('spa_r09', 'zh')).toBe('公有領域。經文由 fetch(bible) 提供。');
+    expect(await credit('spa_r09', 'es')).toBe('Dominio público. Texto proporcionado por fetch(bible).');
+    // The BSB has no credit line; another translation's comes as its source gives it.
+    expect(await credit('BSB', 'zh')).toBeUndefined();
+    expect(getTranslationAttribution({ id: 'other', attribution: 'From its publisher.' }, 'zh')).toBe('From its publisher.');
+    expect(readFileSync('app/(tabs)/bible/index.tsx', 'utf8')).toContain(
+      'getTranslationAttribution(chapterData.translation, language)',
+    );
   });
 
   it('shows the 1919 notes as footnotes where they stood', async () => {
