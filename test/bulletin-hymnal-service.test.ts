@@ -6,6 +6,17 @@ import {
   toBulletinHymnText,
 } from '@/services/BulletinHymnalService';
 
+// The other hymnals load the first time a bulletin hymn isn't in the church's
+// two, and each answer is looked up once, so a test about that first look gets
+// a copy of the service of its own.
+const loadServiceAfresh = () => {
+  let service!: typeof import('@/services/BulletinHymnalService');
+  jest.isolateModules(() => {
+    service = require('@/services/BulletinHymnalService');
+  });
+  return service;
+};
+
 describe('bulletin hymnal resolution', () => {
   it('uses the submitted number despite an English title typo', () => {
     expect(
@@ -105,6 +116,18 @@ describe('bulletin hymnal resolution', () => {
     });
   });
 
+  it('reads a bare 第12首 in the English field as the 505 hymn, by its Chinese script alone', () => {
+    // There's no title to go on, and the 1985's hymn 12 is Joyful, Joyful, We Adore Thee.
+    expect(resolveBulletinHymnPresentation({ english: '第12首', chinese: '' }, 'en')).toEqual({
+      displayText: '12. 赞美上帝大君王',
+      destination: {
+        hymnalId: 'chinese-hymnal-505',
+        hymnNumber: 12,
+        route: '/home/chinese-505-hymnal',
+      },
+    });
+  });
+
   it('can resolve a slightly mistyped title when no number is present', () => {
     expect(
       resolveBulletinHymnDestination(
@@ -118,10 +141,47 @@ describe('bulletin hymnal resolution', () => {
     });
   });
 
+  it('finds a title typed with up to 3 in 10 of its characters missing, and no more', () => {
+    // "Deeper Yet" is ten characters with its space: "Dpr Yet" is three short, "Dpr Yt" four.
+    expect(resolveBulletinHymnDisplayText({ english: 'Dpr Yet', chinese: '' }, 'en')).toBe('302. Deeper Yet');
+    expect(resolveBulletinHymnPresentation({ english: 'Dpr Yt', chinese: '' }, 'en')).toEqual({
+      displayText: 'Dpr Yt',
+      youtubeSearchQuery: 'Dpr Yt',
+    });
+  });
+
+  it('finds a hymn from the first words of its title', () => {
+    expect(resolveBulletinHymnDisplayText({ english: 'Joyful, Joyful', chinese: '' }, 'en')).toBe(
+      '12. Joyful, Joyful, We Adore Thee',
+    );
+  });
+
+  it('prefers the hymn with exactly the typed title over an earlier one whose title holds it', () => {
+    // Hymn 46 is Abide With Me, 'Tis Eventide, and hymn 482 Father, Lead Me Day by Day.
+    expect(resolveBulletinHymnDisplayText({ english: 'Abide With Me', chinese: '' }, 'en')).toBe('50. Abide With Me');
+    expect(resolveBulletinHymnDisplayText({ english: 'Day by Day', chinese: '' }, 'en')).toBe('532. Day by Day');
+  });
+
+  it("matches no hymn to a dash, or to a hymnal's name alone", () => {
+    for (const value of ['—', 'AH']) {
+      const presentation = resolveBulletinHymnPresentation({ english: value, chinese: '' }, 'en');
+      expect(presentation.displayText).toBe(value);
+      expect(presentation.destination).toBeUndefined();
+    }
+  });
+
+  it('reads a title by its words when its only number is too big for any hymnal, such as a year', () => {
+    expect(resolveBulletinHymnDisplayText({ english: 'Amazing Grace (1779)', chinese: '' }, 'en')).toBe(
+      '108. Amazing Grace',
+    );
+  });
+
   it('does not invent a destination for blank values', () => {
     expect(
       resolveBulletinHymnDestination({ english: '', chinese: '' }, 'en'),
     ).toBeUndefined();
+    // Nor a YouTube search, or any text in place of the bulletin's own TBD.
+    expect(resolveBulletinHymnPresentation({ english: '', chinese: '' }, 'zh')).toEqual({ displayText: '' });
   });
 
   it('keeps display text and routing on the same selected form answer', () => {
@@ -300,6 +360,67 @@ describe('bulletin hymnal resolution', () => {
   );
 
   describe('every hymnal (#558)', () => {
+    it('answers from every hymnal in a copy of the service that has looked nothing up yet', () => {
+      const service = loadServiceAfresh();
+
+      // The church's own two, the 505's hymn known by its script alone.
+      expect(service.resolveBulletinHymnDisplayText({ english: '1. Praise to the Lord', chinese: '' }, 'en')).toBe(
+        '1. Praise to the Lord',
+      );
+      expect(service.resolveBulletinHymnDisplayText({ english: '第12首', chinese: '' }, 'en')).toBe('12. 赞美上帝大君王');
+      // The others, which load the first time they're needed: by number, then by title.
+      expect(service.resolveBulletinHymnDestination({ english: '', chinese: '第1首 聖哉真神' }, 'zh')).toEqual({
+        hymnalId: 'chinese-hymnal-506',
+        hymnNumber: 1,
+        route: '/home/chinese-506-hymnal',
+      });
+      expect(service.resolveBulletinHymnDisplayText({ english: '', chinese: '頌主造化' }, 'zh')).toBe(
+        '10. 颂主造化（707 新編簡譜）',
+      );
+    });
+
+    it("leaves out a 707 hymn numbered with a letter, which can't be opened by its number", () => {
+      // 三一頌 is only hymn 260B, in the 707's standard and four-part editions.
+      expect(
+        loadServiceAfresh().resolveBulletinHymnPresentation({ english: '', chinese: '三一頌' }, 'zh'),
+      ).toEqual({
+        displayText: '三一頌',
+        youtubeSearchQuery: '三一頌',
+      });
+    });
+
+    it("opens a number past the 1985's 695 hymns, or the 505's 505, in a hymnal that has it", () => {
+      expect(resolveBulletinHymnDisplayText({ english: '695', chinese: '' }, 'en')).toBe(
+        '695. Praise God, From Whom All Blessings',
+      );
+      expect(resolveBulletinHymnDestination({ english: '696', chinese: '' }, 'en')).toEqual({
+        hymnalId: 'chinese-hymnal-707-v3',
+        hymnNumber: 696,
+        route: '/home/chinese-707-standard-hymnal',
+      });
+      expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第505首' }, 'zh')).toBe('505. 阿门');
+      expect(resolveBulletinHymnDestination({ english: '', chinese: '第506首' }, 'zh')).toEqual({
+        hymnalId: 'chinese-hymnal-506',
+        hymnNumber: 506,
+        route: '/home/chinese-506-hymnal',
+      });
+      // The 707's last hymn.
+      expect(resolveBulletinHymnDestination({ english: '', chinese: '第707首' }, 'zh')).toEqual({
+        hymnalId: 'chinese-hymnal-707-v3',
+        hymnNumber: 707,
+        route: '/home/chinese-707-standard-hymnal',
+      });
+    });
+
+    it("opens another hymnal's hymn with exactly the typed title, not a 505 hymn with a similar one", () => {
+      // 敬拜真神 is the 506's hymn 4; the 505's hymn 3, 崇拜真神, differs by one character.
+      expect(resolveBulletinHymnDestination({ english: '', chinese: '敬拜真神' }, 'zh')).toEqual({
+        hymnalId: 'chinese-hymnal-506',
+        hymnNumber: 4,
+        route: '/home/chinese-506-hymnal',
+      });
+    });
+
     it('finds a hymn only another hymnal has, and names that hymnal', () => {
       expect(resolveBulletinHymnPresentation({ english: '', chinese: '奇異恩典' }, 'zh')).toEqual({
         displayText: '61. 奇异恩典（中文 506）',
