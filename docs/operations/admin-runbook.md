@@ -1311,7 +1311,8 @@ Bible chapters to check what only a real player shows:
 - **Next chapter with the screen off:** Psalm 117 moves on to Psalm 118 by itself,
   the screen stays off, and the media foreground service stays up.
 - **Dead zone with the screen off:** Play offline, wait 90 seconds, then reconnect.
-  Audio must start without an unlock.
+  The player must say there's no connection ([#801](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/801)), and audio must start without an
+  unlock.
 - **Mid-chapter loss:** go offline and seek past what has loaded. The same host
   reloads where it stopped, and playback resumes there.
 - **Pause and resume** from the same place.

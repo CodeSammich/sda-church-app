@@ -16,6 +16,8 @@ export const getBulletinVerseScrollOffset = (
 
 export type BibleDockLayout = Readonly<{
   audioDockHeight: number;
+  /** The audio dock's progress bar row, part of audioDockHeight. */
+  audioTimelineHeight: number;
   chapterDockHeight: number;
   controlHeight: number;
   dockHeight: number;
@@ -118,6 +120,7 @@ export const getBibleDockLayout = (
   const audioTimelineHeight = Math.max(30, Math.ceil(16 * safeScale + 14));
   return {
     audioDockHeight: audioControlHeight + audioTimelineHeight + 8,
+    audioTimelineHeight,
     chapterDockHeight: Math.max(60, controlHeight + 16),
     controlHeight,
     dockHeight,

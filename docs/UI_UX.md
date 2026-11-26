@@ -188,6 +188,19 @@ offline:
 
 `services/BibleAudioDownloadTip.ts` decides when.
 
+When the phone has no connection and the chapter isn't downloaded, the audio bar says
+so while the listener waits
+([#801](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/801)):
+"No connection: this chapter isn't downloaded. It will play once you're back online."
+The line takes the place of the progress bar until audio plays, and wraps when it
+needs more room, with the audio bar growing to fit it. It's text, not a button: a small
+phone's audio bar has no room for another. While it shows, the play button shows pause,
+since the player is still on, and a tap stops it. It goes as soon as audio plays, the
+connection comes back, or the listener pauses, since nothing plays by itself after a
+pause. A drop the player rides out on what it has already loaded shows nothing. Screen
+readers on Android announce it as it appears. The web doesn't show it.
+`services/BibleAudioOfflineLine.ts` decides when.
+
 ### Key Principles & Exceptions:
 
 1.  **Brand Neutrality:** External service destinations use official provider assets

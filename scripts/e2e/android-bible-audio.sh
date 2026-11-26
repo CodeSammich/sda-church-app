@@ -266,8 +266,9 @@ scenario_next_chapter_screen_off() {
   foreground_service || { echo 'the media foreground service stopped'; return 1; }
 }
 
-# A dead zone: Play offline, lock the screen, and wait. When the connection
-# comes back, audio starts without an unlock.
+# A dead zone: Play offline, lock the screen, and wait. The player says why
+# nothing plays (#801). When the connection comes back, audio starts without an
+# unlock.
 scenario_dead_zone_screen_off() {
   open_chapter JHN 3
   locate_controls || { echo 'no play button'; return 1; }
@@ -275,6 +276,8 @@ scenario_dead_zone_screen_off() {
   sleep 2
   tap_play_pause
   sleep 3
+  ATTR=text TRIES=15 element_bounds 'No connection: [^"]*' >/dev/null ||
+    { echo 'no line saying there is no connection'; return 1; }
   screen_off
   sleep 90
   is_playing && { echo 'playing while offline'; return 1; }
