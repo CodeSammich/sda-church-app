@@ -1397,12 +1397,13 @@ export default function BibleScreen() {
     downloaded: !!downloadedAudioUri,
     // The first drop shows the line's popup once by itself, for someone who
     // has never downloaded Bible audio (services/BibleAudioOfflineTip.ts).
+    // The hook calls the newest render's onDrop, so its values are current.
     onDrop: () => {
       if (
         !audioDownloadNarrator ||
         !shouldShowBibleAudioOfflineTip({
           appActive: AppState.currentState === 'active',
-          chapterDownloaded: !!downloadedAudioUriRef.current,
+          chapterDownloaded: !!downloadedAudioUri,
           hasEverDownloaded: hasDownloadedBibleAudio || hasHadBibleAudioDownloads(),
         })
       ) {
