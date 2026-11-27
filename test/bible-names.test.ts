@@ -206,4 +206,24 @@ describe('A chapter on the lock screen and in the media notification (#804)', ()
     expect(formatChapterTitle('John', 3, 'en')).toBe('John 3');
     expect(formatChapterTitle('Juan', 3, 'es')).toBe('Juan 3');
   });
+
+  it('is what the Android audio e2e looks for, since every scenario plays the CUV', async () => {
+    // #821 changed these titles and the e2e's checks together, but the checks
+    // looked for "Psalm 118," while the CUV's chapter is 詩篇 第 118 章, so
+    // every title check on the 1.9.2 release PR timed out on a playing chapter.
+    const script = readFileSync('scripts/e2e/android-bible-audio.sh', 'utf8');
+    const checks = [...script.matchAll(/\b(?:playing_with_title|paused_with_title|title_has) '([^']+)'/g)].map(
+      ([, check]) => check,
+    );
+    expect(checks.length).toBeGreaterThanOrEqual(12);
+    const titles = new Set(
+      (await fetchBooks('cmn_cuv')).flatMap((book) =>
+        Array.from(
+          { length: book.numberOfChapters },
+          (_, index) => `${formatChapterTitle(book.name, index + 1, languageOf('cmn_cuv'))},`,
+        ),
+      ),
+    );
+    for (const check of checks) expect({ check, isChapterTitle: titles.has(check) }).toEqual({ check, isChapterTitle: true });
+  });
 });
