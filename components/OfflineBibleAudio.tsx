@@ -11,6 +11,7 @@ import {
   type BibleTestament,
 } from '@/constants/BibleSections';
 import { formatDownloadSize, getDownloadProgressStatus } from '@/constants/DownloadCopy';
+import { useTabBarClearance } from '@/constants/BottomTabHeightContext';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useBibleAudioDownloads } from '@/hooks/useBibleAudioDownloads';
@@ -45,7 +46,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync, NetworkStateType } from 'expo-network';
 import { useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentRef, type ReactNode } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
@@ -65,8 +66,8 @@ const copy = {
     otherNarrators: 'Other narrators',
     books: (count: number, size: string) => `${count} books · ${size}`,
     downloaded: (size: string) => `Downloaded · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `${done} of ${total} books downloaded · ${more} more`,
-    partly: (more: string) => `Partly downloaded · ${more} more`,
+    someBooks: (done: number, total: number, more: string) => `${done} of ${total} books downloaded · ${more} not yet downloaded`,
+    partly: (more: string) => `Partly downloaded · ${more} not yet downloaded`,
     nothing: 'Nothing downloaded',
     queued: (size: string) => `Waiting to download · ${size}`,
     progress: (done: string, total: string) => `${done} of ${total}`,
@@ -108,8 +109,8 @@ const copy = {
     otherNarrators: '其他朗讀者',
     books: (count: number, size: string) => `${count} 卷 · ${size}`,
     downloaded: (size: string) => `已下載 · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `已下載 ${done} / ${total} 卷 · 尚餘 ${more}`,
-    partly: (more: string) => `已下載部分 · 尚餘 ${more}`,
+    someBooks: (done: number, total: number, more: string) => `已下載 ${done} / ${total} 卷 · 未下載 ${more}`,
+    partly: (more: string) => `已下載部分 · 未下載 ${more}`,
     nothing: '尚未下載',
     queued: (size: string) => `等待下載 · ${size}`,
     progress: (done: string, total: string) => `${done} / ${total}`,
@@ -151,8 +152,8 @@ const copy = {
     otherNarrators: '其他朗读者',
     books: (count: number, size: string) => `${count} 卷 · ${size}`,
     downloaded: (size: string) => `已下载 · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `已下载 ${done} / ${total} 卷 · 还剩 ${more}`,
-    partly: (more: string) => `已下载部分 · 还剩 ${more}`,
+    someBooks: (done: number, total: number, more: string) => `已下载 ${done} / ${total} 卷 · 未下载 ${more}`,
+    partly: (more: string) => `已下载部分 · 未下载 ${more}`,
     nothing: '尚未下载',
     queued: (size: string) => `等待下载 · ${size}`,
     progress: (done: string, total: string) => `${done} / ${total}`,
@@ -195,8 +196,8 @@ const copy = {
     otherNarrators: 'Otros narradores',
     books: (count: number, size: string) => `${count} libros · ${size}`,
     downloaded: (size: string) => `Descargado · ${size}`,
-    someBooks: (done: number, total: number, more: string) => `${done} de ${total} libros descargados · faltan ${more}`,
-    partly: (more: string) => `Descargado en parte · faltan ${more}`,
+    someBooks: (done: number, total: number, more: string) => `${done} de ${total} libros descargados · ${more} sin descargar`,
+    partly: (more: string) => `Descargado en parte · ${more} sin descargar`,
     nothing: 'Nada descargado',
     queued: (size: string) => `En espera de descarga · ${size}`,
     progress: (done: string, total: string) => `${done} de ${total}`,
@@ -317,8 +318,10 @@ function ScopeRow({ expanded, kind, narrator, onDelete, onDownload, onToggle, sc
   const caption = getBibleAudioScopeCaption(status, language);
   const complete = isComplete(status);
   const remaining = formatDownloadSize(Math.max(0, status.totalBytes - status.downloadedBytes), language);
-  // While it waits for Wi-Fi, download again offers mobile data.
-  const canDownload = !complete && (!status.downloading || status.waitingFor === 'wifi');
+  // While it downloads, or waits for Wi-Fi, only its X shows (#806): beside
+  // the X, a download arrow on a waiting row didn't say what it would do. To
+  // use mobile data instead, stop it and download again, which asks.
+  const canDownload = !complete && !status.downloading;
   const canDelete = status.downloadedChapters > 0 && !status.downloading;
   const header = kind === 'bible' || kind === 'testament';
   const iconColor = theme.colors.onSurfaceVariant;
@@ -397,18 +400,43 @@ function ScopeRow({ expanded, kind, narrator, onDelete, onDownload, onToggle, sc
         />
       )}
       {canDelete && (
-        <IconButton
+        <DeleteButton
           accessibilityLabel={
             scope.kind === 'bible' && !complete
               ? labels.deleteAll(getBibleAudioNarratorName(narrator, language) ?? narrator)
               : labels.delete(what)
           }
-          icon="delete-outline"
-          iconColor={iconColor}
           onPress={onDelete}
         />
       )}
     </View>
+  );
+}
+
+/**
+ * Delete: the trash can with the word under it (#806), as the can alone was
+ * easy to misread. Under it, not beside it, so the button is no wider than the
+ * icons beside it and the row's title keeps its room on a small phone. The
+ * popup it opens still asks first.
+ */
+function DeleteButton({ accessibilityLabel, onPress }: Readonly<{ accessibilityLabel: string; onPress: () => void }>) {
+  const { language } = useContext(LanguageContext);
+  const labels: Labels = copy[language] || copy.en;
+  const theme = useAppTheme();
+  const color = theme.colors.onSurfaceVariant;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [styles.deleteButton, { opacity: pressed ? 0.7 : 1 }]}
+    >
+      {/* The size of the download and stop icons beside it. */}
+      <AppIcon name="delete-outline" scaleWithText={false} size={24} color={color} />
+      <Text variant="labelSmall" style={{ color }}>
+        {labels.confirmDelete}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -494,6 +522,25 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
 /** The page's title, in the header. */
 export const getOfflineBibleAudioTitle = (language: SupportedLanguage) => (copy[language] || copy.en).title;
 
+/**
+ * How far to scroll Offline Bible Audio, opened from the Bible, to show the
+ * book being read (#797). Positions are in points within the page's content,
+ * whose first line sits 20 points below the header, where a scroll of
+ * `offset` puts the content's `offset`. The book's section, the group it's
+ * in, goes there, with its name and how much of it is downloaded, as the page's
+ * first line would; and then its books, down to the one being read. Only if
+ * the book wouldn't then show above the tab bar, in a section of many books,
+ * does the book go there itself. With room for one row above the book at 100%
+ * text, at 150% the section's line sat under the header's title.
+ */
+export const getBookScrollOffset = ({
+  sectionTop,
+  bookTop,
+  bookBottom,
+  viewport,
+}: Readonly<{ sectionTop: number; bookTop: number; bookBottom: number; viewport: number }>) =>
+  Math.max(0, bookBottom - sectionTop <= viewport ? sectionTop : bookTop);
+
 const firstParam = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 /**
@@ -529,6 +576,12 @@ export function OfflineBibleAudio() {
   // The book being read, from the Bible: the page scrolls to its row once.
   const contentRef = useRef<ComponentRef<typeof View>>(null);
   const bookRowRef = useRef<ComponentRef<typeof View>>(null);
+  const sectionRef = useRef<ComponentRef<typeof View>>(null);
+  // The page's height on screen, for how much of it shows between the header
+  // and the tab bar.
+  const pageHeight = useRef(0);
+  const { height: windowHeight } = useWindowDimensions();
+  const tabBarClearance = useTabBarClearance();
   const scrolledToBook = useRef<string | null>(null);
   // Where to scroll, until it has. Android ignores a scroll while the page
   // slides in, so it's tried again as the page and its content settle.
@@ -541,18 +594,28 @@ export function OfflineBibleAudio() {
     const content = contentRef.current;
     if (!bookParam || scrolledToBook.current === bookParam || !book || !content) return;
     scrolledToBook.current = bookParam;
+    // A section of one book, as Acts, is just the book.
+    const section = sectionRef.current ?? book;
     book.measureLayout(
       content,
-      (_x, y) => {
-        // The content starts 20 points below the header: this leaves about a
-        // row's height above the book.
-        pendingScroll.current = Math.max(0, y + 20 - 64);
-        scrollToPending();
-        setTimeout(() => {
-          scrollToPending();
-          pendingScroll.current = null;
-        }, 500);
-      },
+      (_x, bookTop, _width, bookHeight) =>
+        section.measureLayout(
+          content,
+          (_sectionX, sectionTop) => {
+            pendingScroll.current = getBookScrollOffset({
+              sectionTop,
+              bookTop,
+              bookBottom: bookTop + bookHeight,
+              viewport: (pageHeight.current || windowHeight) - headerHeight - 20 - tabBarClearance,
+            });
+            scrollToPending();
+            setTimeout(() => {
+              scrollToPending();
+              pendingScroll.current = null;
+            }, 500);
+          },
+          () => undefined,
+        ),
       () => undefined,
     );
   };
@@ -586,6 +649,20 @@ export function OfflineBibleAudio() {
     };
     // The language only picks a first default.
   }, [narratorParam, bookParam]);
+
+  // A section that holds some of its books, but not all, opens (#806): closed,
+  // it hid which books were on the phone. Only as the page opens, or another
+  // narrator is chosen, so a download doesn't open sections as it goes, and a
+  // section the member closes stays closed.
+  useEffect(() => {
+    if (!narrator) return;
+    const partly = BIBLE_SECTIONS.filter((section) => {
+      if (section.books.length < 2) return false;
+      const status = getBibleAudioScopeStatus(narrator, { kind: 'section', sectionId: section.id });
+      return status.downloadedChapters > 0 && !isComplete(status);
+    }).map((section) => section.id);
+    if (partly.length) setExpanded((current) => new Set([...current, ...partly]));
+  }, [narrator]);
 
   const name = (option: string) => getBibleAudioNarratorName(option, language) ?? option;
 
@@ -685,7 +762,10 @@ export function OfflineBibleAudio() {
     <ScrollView
       ref={scrollRef}
       onContentSizeChange={scrollToPending}
-      onLayout={scrollToPending}
+      onLayout={(event) => {
+        pageHeight.current = event.nativeEvent.layout.height;
+        scrollToPending();
+      }}
       onScrollBeginDrag={() => (pendingScroll.current = null)}
       testID="offline-bible-audio"
       style={[NavigationStyles.container, { backgroundColor: theme.colors.background }]}
@@ -779,7 +859,11 @@ export function OfflineBibleAudio() {
                     }
                     const open = expanded.has(section.id);
                     return (
-                      <View key={section.id}>
+                      <View
+                        key={section.id}
+                        ref={bookParam && section.books.includes(bookParam) ? sectionRef : undefined}
+                        collapsable={false}
+                      >
                         {row({
                           narrator,
                           scope: { kind: 'section', sectionId: section.id },
@@ -842,10 +926,8 @@ export function OfflineBibleAudio() {
                         {labels.downloaded(formatDownloadSize(narratorTotal(option), language))}
                       </Text>
                     </Pressable>
-                    <IconButton
+                    <DeleteButton
                       accessibilityLabel={labels.deleteAll(name(option))}
-                      icon="delete-outline"
-                      iconColor={theme.colors.onSurfaceVariant}
                       onPress={() => {
                         const size = formatDownloadSize(narratorTotal(option), language);
                         showAppAlert(labels.question(labels.deleteAll(name(option)), size), labels.deleteMessage, [
@@ -900,6 +982,8 @@ const styles = StyleSheet.create({
   hidden: { opacity: 0 },
   groupTitle: { fontWeight: 'bold' },
   progress: { borderRadius: 2, height: 4, marginTop: 6 },
+  // As wide as Paper's icon buttons beside it, and a thumb's height.
+  deleteButton: { alignItems: 'center', justifyContent: 'center', marginHorizontal: 6, minHeight: 48, minWidth: 40 },
   dialogHeader: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },
   dialogScrollArea: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 0 },
   dialogContent: { paddingBottom: 24, paddingHorizontal: 24, paddingTop: 4 },

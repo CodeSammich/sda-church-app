@@ -1317,7 +1317,13 @@ Bible chapters to check what only a real player shows:
   Audio must start without an unlock.
 - **Mid-chapter loss:** go offline and seek past what has loaded. The same host
   reloads where it stopped, and playback resumes there.
+- In both, the reader must stay on its chapter while the audio fails over: a failed
+  player's replacement once named a chapter from the old player's queue, and the
+  reader moved there for a few seconds ([#802](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/802)). It reads that from the app's log,
+  like the four below.
 - **Pause and resume** from the same place.
+- **After a restart:** the app is closed with John 1 paused and opened again, and Play
+  must pick up where it was paused, not at 0:00 ([#803](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/803)).
 - **Previous before the start (#543):** started in Leviticus 2, the media key's
   previous restarts the chapter more than 3 seconds in, goes back to Leviticus 1
   at the start, and next returns to Leviticus 2.
@@ -1351,8 +1357,9 @@ When it fails on a release pull request:
 
 1. Open the run. The log shows which scenario failed and why.
 2. Download the `android-audio-e2e-*` artifact. For each failed scenario it has a
-   screenshot, the app's log, and the media session, whose title names the host
-   that was playing, plus the emulator and DNS logs. The reader scenarios also leave
+   screenshot, the app's log, which names each host that played, such as
+   `Bible reader: audio from archive.org`, and the media session, plus the
+   emulator and DNS logs. The reader scenarios also leave
    their screenshots, and the scroll-by-hand filmstrip, there.
 3. The test plays real recordings, so check the
    [external dependency monitor](#external-dependency-monitor-alerts) first. A host

@@ -43,11 +43,24 @@ also follows the phone's text size. The two multiply:
   cards share a row at every size (#387): on a 412-point Pixel 9a, Spanish
   "Compañerismo" already fills its card at 1.25×, and English "Livestream" and
   "Denomination" broke from about 1.4×.
+- Words stay whole at every size, in Chinese too (#797). Chinese has no spaces
+  between its words, so a phone may break a line between any two characters: at
+  150%, Home's 分享經文 broke as 分享經 / 文, and the hymnal page's 中文讚美詩 — 505 版
+  left 版 alone on a line. So:
+  - Home's verse buttons count a Chinese label as one word, and their icons at the
+    size they're drawn, and stack where a label wouldn't fit on one line beside
+    the other (`labelsFitSideBySide` in `components/WrappingActionButton.tsx`).
+  - A page's title in the header stays on one line, a little smaller where it must
+    be, down to 80% (`fitHeaderTitleScale` in `hooks/useGlobalHeaderHeight.ts`);
+    past that it wraps, and in Chinese only between its words
+    (`keepWordsWhole` in `constants/LineBreaks.ts`).
+  - A reference such as 約翰福音 9:25 moves to the next line whole (`unbroken`).
 - `npm run check:text-scale` (`scripts/check-text-scale-coverage.mjs`) fails on raw
-  `fontSize` or `lineHeight` numbers in `app/`, `components/`, and `styles/`, and on
-  any `maxFontSizeMultiplier` cap other than the header's, and on `allowFontScaling`
-  outside the grid cards, which apply the phone's text size themselves. The **PR Unit Tests**
-  workflow runs it.
+  `fontSize` or `lineHeight` numbers in `app/`, `components/`, `features/`, and
+  `styles/`, except the Android home screen widget's, which Android draws at the
+  phone's own text size; on any `maxFontSizeMultiplier` cap other than the
+  header's; and on `allowFontScaling` outside the grid cards, which apply the
+  phone's text size themselves. The **PR Unit Tests** workflow runs it.
 
 ## Screen readers (VoiceOver and TalkBack)
 

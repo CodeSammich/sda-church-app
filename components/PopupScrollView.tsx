@@ -1,5 +1,6 @@
 import { AppIcon } from '@/components/AppIcon';
 import { useAppTheme } from '@/constants/Themes';
+import { MIN_TAP_TARGET } from '@/styles/ReaderStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   type ComponentRef,
@@ -16,6 +17,7 @@ import {
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Pressable,
   ScrollView,
   type ScrollViewProps,
   type StyleProp,
@@ -30,8 +32,12 @@ import {
  * scrolling, and a popup ends cleanly at its height limit. So while there's
  * more below, the bottom edge fades and a ⌄ in a circle sits above it; once the content
  * has scrolled, the top edge fades too; and the scroll bar flashes once when a
- * popup opens with more than fits. The hints are decorative: they don't take
- * taps or screen-reader focus.
+ * popup opens with more than fits. The fades are decorative and let taps
+ * through. The ⌄ looks like a button, so it is one: a tap on it scrolls down
+ * most of a page, and never reaches the row under it, which once opened
+ * 1 Samuel from the Bible's book list (#794). Its tap target is at least 44
+ * points square. Screen readers scroll a list themselves, so it's hidden from
+ * them, as the fades are.
  */
 
 // Within this many points of an edge counts as at it, so rounding doesn't
@@ -49,6 +55,16 @@ export const getScrollHints = ({ offset, viewport, content }: ScrollMetrics) => 
   above: viewport > 0 && offset > EDGE,
   below: viewport > 0 && offset + viewport < content - EDGE,
 });
+
+/**
+ * Where a tap on the ⌄ scrolls to: down a page, less the two fades, so what
+ * showed faded at the bottom ends up just below the top fade. A short popup
+ * still moves at least half its height, and it stops at the end.
+ */
+export const getScrollDownOffset = ({ offset, viewport, content }: ScrollMetrics) => {
+  const step = Math.max(viewport - 2 * FADE_HEIGHT, viewport / 2);
+  return Math.max(0, Math.min(offset + step, content - viewport));
+};
 
 // `color` with alpha 0, so a fade into it doesn't pass through grey.
 const transparent = (color: string) =>
@@ -108,11 +124,17 @@ export function usePopupScrollHints(handlers: ScrollHandlers = {}, flash?: () =>
     scrollEventThrottle: handlers.scrollEventThrottle ?? 16,
   };
 
-  return { hints, scrollProps };
+  return { hints, metrics, scrollProps };
 }
 
-/** The fades and ⌄ over a popup's scrolling content, from usePopupScrollHints. */
-export function PopupScrollHints({ hints }: Readonly<{ hints: ReturnType<typeof getScrollHints> }>) {
+/**
+ * The fades and ⌄ over a popup's scrolling content, from usePopupScrollHints.
+ * onScrollDown scrolls the content when the ⌄ is tapped.
+ */
+export function PopupScrollHints({
+  hints,
+  onScrollDown,
+}: Readonly<{ hints: ReturnType<typeof getScrollHints>; onScrollDown: () => void }>) {
   const theme = useAppTheme();
   const background = theme.colors.background;
   const clear = transparent(background);
@@ -128,23 +150,34 @@ export function PopupScrollHints({ hints }: Readonly<{ hints: ReturnType<typeof 
         />
       )}
       {hints.below && (
+        // box-none: only the ⌄'s button takes taps; beside it, they reach the row.
         <View
           testID="popup-scroll-hint-below"
-          pointerEvents="none"
+          pointerEvents="box-none"
           importantForAccessibility="no-hide-descendants"
           accessibilityElementsHidden
-          style={[styles.fade, styles.bottom]}
+          style={styles.below}
         >
-          <LinearGradient colors={[clear, background]} style={StyleSheet.absoluteFill} />
-          <View style={[styles.circle, { backgroundColor: theme.colors.primary }]}>
-            <AppIcon
-              name="chevron-down"
-              size={CHEVRON_SIZE}
-              scaleWithText={false}
-              color={theme.colors.onPrimary}
-              pointerEvents="none"
-            />
-          </View>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[clear, background]}
+            style={[styles.fade, styles.bottom]}
+          />
+          <Pressable
+            testID="popup-scroll-more"
+            onPress={onScrollDown}
+            style={({ pressed }) => [styles.more, pressed && styles.morePressed]}
+          >
+            <View style={[styles.circle, { backgroundColor: theme.colors.primary }]}>
+              <AppIcon
+                name="chevron-down"
+                size={CHEVRON_SIZE}
+                scaleWithText={false}
+                color={theme.colors.onPrimary}
+                pointerEvents="none"
+              />
+            </View>
+          </Pressable>
         </View>
       )}
     </>
@@ -170,15 +203,16 @@ export const PopupScrollView = forwardRef<ScrollViewRef, ScrollViewProps & { fra
   const scrollRef = useRef<ScrollViewRef>(null);
   useImperativeHandle(ref, () => scrollRef.current as ScrollViewRef);
   const flash = useCallback(() => scrollRef.current?.flashScrollIndicators(), []);
-  const { hints, scrollProps } = usePopupScrollHints(
+  const { hints, metrics, scrollProps } = usePopupScrollHints(
     { onLayout, onContentSizeChange, onScroll, scrollEventThrottle },
     flash,
   );
+  const scrollDown = () => scrollRef.current?.scrollTo({ y: getScrollDownOffset(metrics), animated: true });
 
   return (
     <View style={[popupFrameStyle, frameStyle]}>
       <ScrollView ref={scrollRef} {...props} {...scrollProps} />
-      <PopupScrollHints hints={hints} />
+      <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
     </View>
   );
 });
@@ -193,15 +227,17 @@ export function PopupFlatList<ItemT>({
 }: FlatListProps<ItemT>) {
   const listRef = useRef<FlatList<ItemT>>(null);
   const flash = useCallback(() => listRef.current?.flashScrollIndicators(), []);
-  const { hints, scrollProps } = usePopupScrollHints(
+  const { hints, metrics, scrollProps } = usePopupScrollHints(
     { onLayout, onContentSizeChange, onScroll, scrollEventThrottle },
     flash,
   );
+  const scrollDown = () =>
+    listRef.current?.scrollToOffset({ offset: getScrollDownOffset(metrics), animated: true });
 
   return (
     <View style={popupFrameStyle}>
       <FlatList ref={listRef} {...props} {...scrollProps} />
-      <PopupScrollHints hints={hints} />
+      <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
     </View>
   );
 }
@@ -214,12 +250,25 @@ const styles = StyleSheet.create({
     right: 0,
   },
   top: { top: 0 },
-  bottom: {
+  bottom: { bottom: 0 },
+  // The fade at the bottom, and above it the ⌄'s button, which is taller.
+  below: {
     alignItems: 'center',
     bottom: 0,
+    height: Math.max(FADE_HEIGHT, MIN_TAP_TARGET),
+    left: 0,
+    position: 'absolute',
+    right: 0,
+  },
+  // The ⌄ sits 4 points above the bottom edge, as it did before it took taps.
+  more: {
+    alignItems: 'center',
+    height: MIN_TAP_TARGET,
     justifyContent: 'flex-end',
     paddingBottom: 4,
+    width: MIN_TAP_TARGET,
   },
+  morePressed: { opacity: 0.7 },
   circle: {
     alignItems: 'center',
     borderRadius: CIRCLE_SIZE / 2,

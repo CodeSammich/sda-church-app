@@ -33,6 +33,7 @@ function setup() {
     }),
     remove: jest.fn((index: number) => sources.splice(index, 1)),
     play: jest.fn(), pause: jest.fn(), updateLockScreenMetadata: jest.fn(),
+    setActiveForLockScreen: jest.fn(), clearLockScreenControls: jest.fn(),
   };
   const queue = new BibleAudioNativeQueue(() => playlist as unknown as AudioPlaylist);
   queue.mount();
@@ -202,6 +203,96 @@ it('identifies the first chapter when native Previous returns to it', () => {
   expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(1).metadata);
 });
 
+describe("the notification's progress bar after a chapter change (#804)", () => {
+  const OPTIONS = { showSeekBackward: true, showSeekForward: true };
+  // Lock-screen controls on, as initializeBibleAudioPlayback leaves them.
+  const listening = () => {
+    const context = setup();
+    context.queue.setActiveForLockScreen(true, chapter(1).metadata, OPTIONS);
+    context.playlist.setActiveForLockScreen.mockClear();
+    return context;
+  };
+
+  it('publishes the controls again when the playlist moves on by itself, so the bar starts the new chapter', () => {
+    const { playlist, emit } = listening();
+    emit({ currentIndex: 0, playing: true, currentTime: 290 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+    emit({ currentIndex: 1, playing: true, currentTime: 0, duration: 483 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+    expect(playlist.setActiveForLockScreen).toHaveBeenLastCalledWith(true, chapter(2).metadata, OPTIONS);
+    // Once a chapter: not on every status update.
+    emit({ currentIndex: 1, playing: true, currentTime: 1, duration: 483 });
+    emit({ currentIndex: 1, playing: false, currentTime: 2, duration: 483 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+    // The notification's or earbuds' previous moves the playlist too.
+    emit({ currentIndex: 0, playing: true, currentTime: 0, duration: 300 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenLastCalledWith(true, chapter(1).metadata, OPTIONS);
+  });
+
+  it("waits for the new chapter's length, which the bar needs", () => {
+    const { playlist, status, emit } = listening();
+    status.currentIndex = 1;
+    emit({ playing: false, isBuffering: true, duration: 0 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+    // Its title changes at once.
+    expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(2).metadata);
+    emit({ currentIndex: 1, playing: true, duration: 483 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the controls alone for the chapter they were turned on with, or once they are off', () => {
+    const { queue, playlist, emit } = listening();
+    emit({ currentIndex: 0, playing: true, duration: 300 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+    queue.clearLockScreenControls();
+    emit({ currentIndex: 1, playing: true, duration: 483 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+  });
+
+  it('leaves a new recording to publish its own controls', () => {
+    const { queue, playlist, emit } = listening();
+    queue.replace(chapter(8).source);
+    queue.setCurrentChapter(chapter(8));
+    emit({ currentIndex: 0, playing: true, duration: 300 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+  });
+
+  it('keeps playing when the native refresh fails', () => {
+    const { playlist, emit } = listening();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    playlist.setActiveForLockScreen.mockImplementation(() => { throw new Error('bridge failed'); });
+    expect(() => emit({ currentIndex: 1, playing: true, duration: 483 })).not.toThrow();
+    expect(warn).toHaveBeenCalledWith('Bible audio lock-screen refresh failed', expect.any(Error));
+    warn.mockRestore();
+  });
+});
+
+it("logs each host that plays in the audio e2e build, since the lock screen doesn't name it (#804)", () => {
+  const previous = process.env.EXPO_PUBLIC_AUDIO_E2E;
+  process.env.EXPO_PUBLIC_AUDIO_E2E = '1';
+  const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+  try {
+    const { queue, emit } = setup();
+    emit();
+    emit();
+    queue.replace({ uri: 'https://archive.org/download/a/2.mp3' });
+    queue.setCurrentChapter({ ...chapter(2), source: { uri: 'https://archive.org/download/a/2.mp3' } });
+    emit();
+    queue.replace({ uri: 'file:///data/bible-audio/2.mp3' });
+    queue.setCurrentChapter({ ...chapter(2), source: { uri: 'file:///data/bible-audio/2.mp3' } });
+    emit();
+    expect(log.mock.calls.map(([line]) => line)).toEqual([
+      'Bible reader: audio from example.com',
+      'Bible reader: audio from archive.org',
+      'Bible reader: audio from the phone',
+    ]);
+  } finally {
+    log.mockRestore();
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_AUDIO_E2E;
+    else process.env.EXPO_PUBLIC_AUDIO_E2E = previous;
+  }
+});
+
 it('discards the previous queue and chapter identity when the user selects a new recording', () => {
   const { queue, sources } = setup();
   queue.replace(chapter(8).source);
@@ -353,6 +444,11 @@ function recordingPlaylist() {
       // A healthy player starts buffering a new source; a failed one stays idle.
       if (status.isLoaded) Object.assign(status, { isLoaded: false, isBuffering: true });
     }),
+    // Like Media3: an item inserted at or before the current one moves it on.
+    insert: jest.fn((source: AudioSource, index: number) => {
+      sources.splice(index, 0, source);
+      if (sources.length > 1 && index <= status.currentIndex) status.currentIndex += 1;
+    }),
     play: jest.fn(), pause: jest.fn(), updateLockScreenMetadata: jest.fn(),
   };
   return {
@@ -418,6 +514,67 @@ it('keeps the failed playlist until the fresh one plays, so the lock-screen serv
   expect(first.native.destroy).toHaveBeenCalledTimes(1);
   expect(first.native.release).toHaveBeenCalledTimes(1);
   expect(second.native.destroy).not.toHaveBeenCalled();
+});
+
+describe('a fresh playlist after a failed one (#802)', () => {
+  const at = (bookId: string, number: number, host = 'https://example.com'): BibleAudioQueueItem => ({
+    bookId, chapter: number, translationId: 'cmn_cuv',
+    source: { uri: `${host}/${bookId}-${number}.mp3` },
+    metadata: { title: `${bookId} ${number}` },
+  });
+  // The 24 chapters the reader queues before John 5, nearest first: John 4
+  // to 1, then Luke 24 down to Luke 5, which ends up first in the playlist.
+  const beforeJohn5 = [
+    ...[4, 3, 2, 1].map(n => at('JHN', n)),
+    ...Array.from({ length: 20 }, (_, i) => at('LUK', 24 - i)),
+  ];
+  const startJohn5 = (host?: string) => {
+    const context = failoverQueue(3);
+    const john5 = at('JHN', 5, host);
+    context.queue.replace(john5.source);
+    context.queue.setCurrentChapter(john5);
+    context.queue.setQueue([at('JHN', 6, host)]);
+    context.queue.setPreviousQueue(beforeJohn5);
+    return context;
+  };
+
+  it('never names a chapter from the failed playlist while the next host loads', () => {
+    const { queue, playlists: [first] } = startJohn5();
+    expect(queue.currentStatus.activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+    const seen: string[] = [];
+    queue.subscribe(() => {
+      const active = queue.getStatus().activeChapter;
+      if (active) seen.push(`${active.bookId} ${active.chapter}`);
+    });
+
+    // Offline, John 5 fails on HelloAO, and the church's copy is loaded into a
+    // fresh playlist, which starts at index 0. Read against the failed
+    // playlist's queue, index 0 was Luke 5, and the reader would follow it there.
+    first.fail();
+    first.emit({ error: { message: 'Source error', code: 2001 } });
+    const mirror = at('JHN', 5, 'https://church.example');
+    queue.replace(mirror.source);
+    queue.setCurrentChapter(mirror);
+    queue.setQueue([at('JHN', 6, 'https://church.example')]);
+    queue.setPreviousQueue(beforeJohn5);
+
+    expect(seen.filter(chapter => chapter !== 'JHN 5')).toEqual([]);
+    expect(queue.currentStatus.activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+  });
+
+  it("reads the fresh playlist's own events as the chapter it is loading", () => {
+    const { queue, playlists: [first, second] } = startJohn5();
+    first.fail();
+    const mirror = at('JHN', 5, 'https://church.example');
+    queue.replace(mirror.source);
+    queue.setCurrentChapter(mirror);
+    queue.setPreviousQueue(beforeJohn5);
+    // Sent before the inserts, when the church's John 5 was its only track.
+    second.emit({ currentIndex: 0, trackCount: 1 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+    second.emit({ currentIndex: 24, trackCount: 25 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+  });
 });
 
 it('keeps at most the two newest failed playlists', () => {

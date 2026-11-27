@@ -12,21 +12,43 @@ describe("the verse card's buttons (#385, #324)", () => {
     // 114-point button leaves 50 for its label.
     expect(labelWordsFit('Share Verse', 114, 1.5)).toBe(false);
     expect(labelWordsFit('Share Verse', 142, 1.5)).toBe(true);
-    // "Compartir" is 84 points at 125%, more than a 142-point button's 78.
+    // "Compartir" is 84 points at 125%, more than a 142-point button's 72.
     expect(labelWordsFit('Compartir', 142, 1.25)).toBe(false);
     expect(labelWordsFit('Compartir', 174, 1.25)).toBe(true);
-    // Chinese can break between any two characters.
-    expect(labelWordsFit('分享經文', 114, 2)).toBe(true);
+  });
+
+  it('count a Chinese label whole, and the icon at its size on screen (#797)', () => {
+    // At 150% on a 411-point Pixel, each button was 159.5 points: less its
+    // padding, border, gap, and 33-point icon, 84.5 for 分享經文, 84 points
+    // wide. Counted as breakable anywhere, with a 22-point icon, it seemed to
+    // fit, and broke as 分享經 / 文.
+    expect(labelWordsFit('分享經文', 159.5, 1.5)).toBe(false);
+    // With a row of its own it fits, as it does at 125%.
+    expect(labelWordsFit('分享經文', 331, 1.5)).toBe(true);
+    expect(labelWordsFit('分享經文', 146, 1.25)).toBe(true);
+    // Between spaces, a run of Chinese is one word; a number beside it is another.
+    expect(labelWordsFit('中文 505', 120, 1.5, 1)).toBe(true);
+    // The icon follows the app's text size alone, not the phone's.
+    expect(labelWordsFit('Share Verse', 142, 1.5, 1)).toBe(true);
+    expect(labelWordsFit('Share Verse', 128, 1.5, 1.5)).toBe(false);
   });
 
   it.each([
     ['English at 150% in a 320-point iPad window', ['Share Verse', 'Read Verse'], 320, 1.5, false],
     ['English at 150% on a 375-point iPhone', ['Share Verse', 'Read Verse'], 375, 1.5, true],
-    ['English at 175% on a 375-point iPhone', ['Share Verse', 'Read Verse'], 375, 1.75, true],
+    // With its 38.5-point icon, a 141.5-point button leaves 61 points for
+    // "Share", which measures about 67 at 175%.
+    ['English at 175% on a 375-point iPhone', ['Share Verse', 'Read Verse'], 375, 1.75, false],
+    ['English at 175% on a 440-point iPhone', ['Share Verse', 'Read Verse'], 440, 1.75, true],
     ['Spanish at 125% on a 375-point iPhone', ['Compartir', 'Leer Versículo'], 375, 1.25, false],
     ['Spanish at 125% on a 440-point iPhone', ['Compartir', 'Leer Versículo'], 440, 1.25, true],
     ['Spanish at 150% on a 402-point iPhone', ['Compartir', 'Leer Versículo'], 402, 1.5, false],
-    ['Chinese at 150% in a 320-point iPad window', ['分享經文', '查閱經文'], 320, 1.5, true],
+    ['Chinese at 150% in a 320-point iPad window', ['分享經文', '查閱經文'], 320, 1.5, false],
+    ['Chinese at 150% on the 384-point Android phone', ['分享經文', '查閱經文'], 384, 1.5, false],
+    ['Chinese at 150% on a 411-point Pixel', ['分享經文', '查閱經文'], 411, 1.5, false],
+    ['Chinese at 150% on a 440-point iPhone', ['分享經文', '查閱經文'], 440, 1.5, true],
+    ['Chinese at 125% on the 384-point Android phone', ['分享經文', '查閱經文'], 384, 1.25, true],
+    ['Simplified Chinese at 150% on a 411-point Pixel', ['分享经文', '查阅经文'], 411, 1.5, false],
     ['English at 150% on the 13-inch iPad, in the content column', ['Share Verse', 'Read Verse'], 1032, 1.5, true],
   ])('sit side by side for %s: %p', (_case, labels, width, scale, sideBySide) => {
     expect(labelsFitSideBySide(labels as string[], heroRow(width as number, scale as number), 12, scale as number)).toBe(
@@ -37,6 +59,8 @@ describe("the verse card's buttons (#385, #324)", () => {
   it('stack on Home wherever they would not fit side by side, as well as at 2× text', () => {
     const home = readFileSync('app/(tabs)/index.tsx', 'utf8');
     expect(home).toMatch(/stackHeroActions =\s*effectiveTextScale >= 2 \|\|\s*!labelsFitSideBySide\(/);
+    // The icons follow the app's text size, as AppIcon does.
+    expect(home).toMatch(/HERO_ACTIONS_GAP,\s*effectiveTextScale,\s*textScale,\s*\);/);
     expect(home).toMatch(/HERO_SIDE_PADDING = 24;\s*const HERO_ACTIONS_PADDING = 16;\s*const HERO_ACTIONS_GAP = 12;/);
   });
 });

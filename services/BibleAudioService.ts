@@ -4,7 +4,8 @@ import {
   type AudioPlayer,
 } from 'expo-audio';
 
-import { BIBLE_AUDIO_NARRATOR_ORDER } from '@/constants/BibleAudioNarrators';
+import { BIBLE_AUDIO_NARRATOR_ORDER, getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
+import type { SupportedLanguage } from '@/constants/LanguageContext';
 import type { TranslationBook } from './BibleService';
 import {
   getBibleAudioNarrator,
@@ -134,12 +135,22 @@ export const getBibleAudioSourceLabel = (url: string) => {
   return host.replace(/^www\./, '');
 };
 
-export const getBibleAudioMediaTitle = (
-  chapterTitle: string,
-  translationLabel: string,
-  sourceUrl: string,
+/**
+ * The narrator, as the lock screen and the media notification name it under
+ * the chapter (#804): as Offline Bible Audio does, in the app's language, such
+ * as 粵語（和合本） or English – Souer (BSB). The chapter's line is
+ * formatChapterTitle's (services/BibleNames.ts). Neither names the host a
+ * chapter streams from: its name is English, and it changed as playback failed
+ * over, so the two lines could name different sources. The audio settings
+ * still name the sources.
+ */
+export const getBibleAudioArtist = (
+  translation: Readonly<{ id: string; name: string }>,
+  reader: string | undefined,
+  language: SupportedLanguage,
 ) =>
-  `${chapterTitle} · ${translationLabel} (${getBibleAudioSourceLabel(sourceUrl)})`;
+  getBibleAudioNarratorName(reader ? getBibleAudioNarrator(translation.id, reader) : null, language) ??
+  (reader ? `${translation.name} • ${reader}` : translation.name);
 
 /**
  * Moves a preferred provider to the front without removing automatic
@@ -277,19 +288,14 @@ export const shouldStopBibleAudioAtChapterEnd = (
 export const withDownloadedCopy = (urls: readonly string[], downloadedUri: string | null) =>
   downloadedUri ? [downloadedUri, ...urls.filter((url) => url !== downloadedUri)] : [...urls];
 
-/**
- * The recording a title credits. A downloaded copy is credited to the source
- * it's a copy of, the first one that streams.
- */
-export const getBibleAudioCreditUrl = (url: string, urls: readonly string[], downloadedUri: string | null) =>
-  url === downloadedUri ? (urls.find((other) => other !== downloadedUri) ?? url) : url;
-
 interface BibleAudioQueueOptions {
   albumTitle: string;
   artist: string;
   books: TranslationBook[];
   currentBookId: string;
   currentChapter: number;
+  /** A chapter's title on the lock screen (formatChapterTitle), or the book's own name and the number. */
+  getChapterTitle?: (book: TranslationBook, chapter: number) => string;
   /** The chapters after the current one, or before it, nearest first. */
   direction?: 'following' | 'preceding';
   /** The phone's copy of a chapter, played first, or null (#556). */
@@ -300,7 +306,6 @@ interface BibleAudioQueueOptions {
   selectedAudioUrls: string[];
   selectedReader?: string;
   translationId: string;
-  translationLabel: string;
 }
 
 /**
@@ -315,6 +320,7 @@ export const buildBibleAudioQueue = ({
   currentBookId,
   currentChapter,
   direction = 'following',
+  getChapterTitle = (book, chapter) => `${book.name} ${chapter}`,
   getDownloadedUri,
   // Keep descriptors available when background React effects are suspended.
   // The web adapter still preloads only the immediate next recording.
@@ -324,7 +330,6 @@ export const buildBibleAudioQueue = ({
   selectedAudioUrls,
   selectedReader,
   translationId,
-  translationLabel,
 }: BibleAudioQueueOptions): BibleAudioQueueItem[] =>
   (direction === 'preceding' ? getPrecedingBibleChapters : getFollowingBibleChapters)(
     books,
@@ -352,17 +357,11 @@ export const buildBibleAudioQueue = ({
     }
 
     const downloadedUri = getDownloadedUri?.(book.id, chapter) ?? null;
-    const tracks = withDownloadedCopy(queuedUrls, downloadedUri).map((url) => {
-      const title = getBibleAudioMediaTitle(
-        `${book.name} ${chapter}`,
-        translationLabel,
-        getBibleAudioCreditUrl(url, queuedUrls, downloadedUri),
-      );
-      return {
-        source: { uri: url, name: title },
-        metadata: { title, artist, albumTitle },
-      };
-    });
+    const title = getChapterTitle(book, chapter);
+    const tracks = withDownloadedCopy(queuedUrls, downloadedUri).map((url) => ({
+      source: { uri: url, name: title },
+      metadata: { title, artist, albumTitle },
+    }));
     const [primary, ...fallbacks] = tracks;
     if (!primary) return [];
 

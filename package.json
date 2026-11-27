@@ -119,7 +119,7 @@
           "\\.web\\.test\\.ts$"
         ],
         "transformIgnorePatterns": [
-          "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|react-native-paper|react-native-safe-area-context))",
+          "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|react-native-paper|react-native-safe-area-context|opencc-js/dist/esm-lib))",
           "/node_modules/react-native-reanimated/plugin/"
         ]
       },
@@ -136,7 +136,7 @@
           "<rootDir>/test/**/*.web.test.ts"
         ],
         "transformIgnorePatterns": [
-          "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|react-native-paper|react-native-safe-area-context))",
+          "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|react-native-paper|react-native-safe-area-context|opencc-js/dist/esm-lib))",
           "/node_modules/react-native-reanimated/plugin/"
         ]
       }
