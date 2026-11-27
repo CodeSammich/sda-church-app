@@ -464,6 +464,7 @@ describe('bulletin hymnal resolution', () => {
         hymnNumber: 1,
         route: '/home/chinese-506-hymnal',
       });
+      // In the reader's script (#795).
       expect(service.resolveBulletinHymnDisplayText({ english: '', chinese: '頌主造化' }, 'zh')).toBe(
         '10. 頌主造化（707 新編簡譜）',
       );
