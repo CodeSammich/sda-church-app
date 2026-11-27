@@ -155,7 +155,11 @@ const SetupChoiceGroup = ({
   return (
     <View accessibilityRole="radiogroup" style={styles.choiceGroup}>
       {options.map((option) => {
+        // The chosen one is filled in, edged more thickly and checked, like a
+        // selected tab (#807): with only a thin outline on a near-white fill,
+        // a member couldn't tell their choice had taken.
         const selected = option.value === value;
+        const contentColor = selected ? theme.colors.onPrimaryContainer : theme.colors.onSurface;
         return (
           <Pressable
             key={option.value}
@@ -167,9 +171,10 @@ const SetupChoiceGroup = ({
             style={({ pressed }) => [
               styles.choiceButton,
               twoColumn && styles.twoColumnChoiceButton,
+              selected && styles.selectedChoiceButton,
               {
                 backgroundColor: selected
-                  ? theme.colors.secondaryContainer
+                  ? theme.colors.primaryContainer
                   : theme.colors.surface,
                 borderColor: selected
                   ? theme.colors.primary
@@ -178,13 +183,12 @@ const SetupChoiceGroup = ({
               },
             ]}
           >
+            {selected && (
+              <AppIcon testID="setup-choice-check" color={contentColor} name="check" size={20} />
+            )}
             {option.icon && (
               <AppIcon
-                color={
-                  selected
-                    ? theme.colors.onSecondaryContainer
-                    : theme.colors.onSurface
-                }
+                color={contentColor}
                 name={option.icon}
                 size={20}
               />
@@ -192,14 +196,7 @@ const SetupChoiceGroup = ({
             <Text
               adjustsFontSizeToFit
               numberOfLines={1}
-              style={[
-                styles.choiceButtonText,
-                {
-                  color: selected
-                    ? theme.colors.onSecondaryContainer
-                    : theme.colors.onSurface,
-                },
-              ]}
+              style={[styles.choiceButtonText, { color: contentColor }]}
               variant="labelLarge"
             >
               {option.label}
@@ -498,6 +495,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 10,
     paddingVertical: 10,
+  },
+  // A 2-point edge, with a point less padding, so the button keeps its size.
+  selectedChoiceButton: {
+    borderWidth: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 9,
   },
   choiceButtonText: {
     flexShrink: 1,
