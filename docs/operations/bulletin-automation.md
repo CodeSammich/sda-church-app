@@ -1400,10 +1400,10 @@ weeks are in `made-up-data.cjs`: invented names only.
 - line heights are modelled from each font's metrics, not measured in Docs;
 - the QR codes, the logo, and the cover pictures are grey boxes, at the sizes
   the script sets. A cover picture's height comes from its shape, which isn't
-  in the repository: the Last Supper's is measured from a printed Word copy
-  (3.33 × 2.63 in), and the church sketch's (about 1.88 : 1) is estimated
-  from a screenshot of a real cover, to confirm by measuring a Word copy
-  (`IMAGE_SIZES` in `made-up-data.cjs`);
+  in the repository, so it's measured and kept in `IMAGE_SIZES` in
+  `made-up-data.cjs`: the Last Supper is 947 × 749 px (3.33 × 2.63 in
+  printed), and the church sketch 1253 × 674 px. A new cover picture needs
+  its size there too;
 - it doesn't model how Docs moves a table row or paragraph to the next page, or
   the Word copy that's printed; and
 - the data is made up, so a real week can be longer.
