@@ -118,6 +118,29 @@ describe('the checks on the Doc’s structure', () => {
     expect(html).toContain('&lt;b&gt;one&lt;/b&gt;');
     expect(html).toContain('window.__fit');
   });
+
+  it('draws the Word copy in Songti TC at its exact line heights', () => {
+    const { body } = letterBody();
+    const mixed = body.appendParagraph('主席 Chairman');
+    mixed.editAsText().setFontSize(10).setFontFamily('Times New Roman').setFontFamily(0, 1, 'UoqMunThenKhung');
+    mixed.setLineSpacing(1);
+    body.appendParagraph('').appendInlineImage({ w: 48, h: 48 });
+    const wordCopy = { chineseFont: 'Songti TC', lineHeight: 1.15 };
+    const html = documentHtml(body, 'test', { wordCopy });
+    // The Chinese font's run is all Songti TC; the English run's Chinese would be too.
+    expect(html).toContain(`font-family:'Songti TC', 'Noto Serif CJK TC'`);
+    expect(html).toContain(`font-family:'Times New Roman', 'Liberation Serif', 'Tinos', 'Songti TC'`);
+    // 1.15 × 10 pt × single spacing, not the Doc's font-based height.
+    expect(html).toContain('line-height:11.50pt">');
+    // A paragraph with a picture keeps the Doc's own height: Arial's 1.117 × 11 pt × 1.15.
+    expect(html).toContain('line-height:14.13pt">');
+    expect(documentHtml(body, 'test')).not.toContain('Songti TC');
+  });
+
+  it('reads the Word copy’s font and line height from the Apps Script', () => {
+    const source = readAppsScript(join(__dirname, '..', 'google-apps-script'));
+    expect(buildVariant(source, VARIANTS[0]).wordCopy).toEqual({ chineseFont: 'Songti TC', lineHeight: 1.15 });
+  });
 });
 
 describe('the pass/fail rules', () => {
@@ -172,13 +195,19 @@ describe('the pass/fail rules', () => {
     expect(summary.split('\n')[0]).toBe('## Printed bulletin preview');
     expect(summary).toContain('**Every page fits.**');
     expect(summary).toContain('Pages drawn: q (1), b (3).');
+    expect(summaryMarkdown(outcome, { wordCopy: 'Songti TC' })).toMatch(/^## Printed bulletin preview in Songti TC\n[\s\S]*Chinese in Songti TC, at the copy's exact line heights/);
     expect(summary).toContain('| q | page 1, left half | +12 | +12 |  |');
     expect(summary).toContain('| q | page 1, right half | −2 | −2 | over on the base too |');
     expect(summaryMarkdown(evaluate({ q: result([[-1, 1]]) }, null))).toContain('**1 problem:**');
+    // A fraction of a point over says so, not "0".
+    const fraction = evaluate({ q: result([[-0.3, 1]]) }, null);
+    expect(fraction.failures).toEqual(['q, page 1, left half: overflows by under 1 pt']);
+    expect(summaryMarkdown(fraction)).toContain('| q | page 1, left half | −<1 | — | overflows |');
   });
 
   it('reads its options', () => {
     expect(parseArgs(['--out', '/tmp/x', '--base=none', '--only', 'a,b'])).toMatchObject({ out: '/tmp/x', base: 'none', only: ['a', 'b'] });
+    expect(parseArgs(['--word-copy', '--word-font', 'Songti SC'])).toMatchObject({ wordCopy: true, wordFont: 'Songti SC' });
     expect(() => parseArgs(['--bogus'])).toThrow(/Unknown option/);
   });
 });
@@ -238,5 +267,81 @@ describe('the Printed Bulletin Preview workflow', () => {
   it('is in the bulletin docs and the list of checks', () => {
     expect(repoFile('docs/operations/bulletin-automation.md')).toContain('## Printed bulletin preview');
     expect(repoFile('docs/CONTRIBUTING.md')).toContain('### `Printed Bulletin Preview` (`.github/workflows/printed-bulletin-preview.yml`)');
+  });
+});
+
+describe('the Printed Bulletin Songti Preview workflow', () => {
+  const workflow = repoFile('.github/workflows/printed-bulletin-songti-preview.yml');
+
+  it('runs only on the release PR into main, and by hand', () => {
+    expect(workflow).toMatch(/pull_request:\n {4}branches:\n {6}- main\n {2}workflow_dispatch:/);
+    expect(workflow).toContain("github.head_ref == 'release-candidate' &&\n        github.event.pull_request.head.repo.full_name == github.repository");
+    expect(workflow).not.toContain('pull_request_target');
+    expect(workflow).not.toMatch(/^\s+workflow_run:/m);
+  });
+
+  it('waits on Linux for the iOS key screens join, then draws on a Mac', () => {
+    const wait = workflow.slice(workflow.indexOf('\n  wait:\n'), workflow.indexOf('\n  preview:\n'));
+    const preview = workflow.slice(workflow.indexOf('\n  preview:\n'));
+    expect(wait).toContain('runs-on: ubuntu-latest');
+    expect(wait).toContain('ios-key-screens.yml/runs?head_sha=$SHA&event=pull_request');
+    expect(wait).toContain('select(.name == "iOS key screens join")');
+    expect(preview).toContain('needs: wait');
+    expect(preview).toContain('runs-on: macos-26');
+    expect(preview).toContain('--word-copy');
+  });
+
+  it('reads only, uses no secrets, and pins its actions', () => {
+    expect(workflow).toMatch(/^permissions:\n {2}contents: read\n/m);
+    expect(workflow).not.toMatch(/:\s*write\b/);
+    expect(workflow.match(/^\s+actions: read$/gm)).toHaveLength(1);
+    expect(workflow).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    expect(workflow).toContain('persist-credentials: false');
+    for (const [, ref] of workflow.matchAll(/uses: [\w./-]+@(\S+)/g)) expect(ref).toMatch(/^[0-9a-f]{40}$/);
+    const lines = workflow.split('\n');
+    lines.forEach((line, index) => {
+      const key = /^(\s*(?:-\s+)?)run:(.*)$/.exec(line);
+      if (!key) return;
+      const script = [key[2]];
+      for (const next of lines.slice(index + 1)) {
+        if (next.trim() && next.search(/\S/) <= key[1].length) break;
+        script.push(next);
+      }
+      expect(script.join('\n')).not.toContain('${{');
+    });
+  });
+
+  it('uploads what it drew, then fails on a missing font or a layout problem', () => {
+    const preview = workflow.slice(workflow.indexOf('\n  preview:\n'));
+    const step = (name: string) => preview.indexOf(`- name: ${name}\n`);
+    // Every step runs with or without the font, so the pages are drawn in the fallback.
+    expect(preview).not.toContain('steps.font.outputs.have ==');
+    expect(preview).toContain('--word-copy --word-font "$WORD_FONT"');
+    expect(preview).toContain('|| status=$?');
+    // The job fails in its last step, after the upload and the summary.
+    const fail = preview.slice(step('Fail on a missing font or a layout problem'));
+    expect(step('Upload the pages')).toBeLessThan(step('Link the pages in the run summary'));
+    expect(step('Link the pages in the run summary')).toBeLessThan(step('Fail on a missing font or a layout problem'));
+    expect(fail).toMatch(/^- name: Fail on a missing font or a layout problem\n\s+if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(fail).toContain('::error::$WORD_FONT not found on this runner; pages drawn with $FALLBACK. Fix the job.');
+    expect(fail).toContain('::error::The $WORD_FONT preview found layout problems');
+    expect(fail).toContain('exit "$failed"');
+    expect(preview).toContain('**$WORD_FONT not found on this runner; pages drawn with $FALLBACK. Fix the job.**');
+    expect(preview).toContain('[Download the $WORD_FONT page images]($ARTIFACT_URL)');
+    expect(workflow).toContain('name: printed-bulletin-preview-songti-tc');
+    expect(workflow.match(/^\s+path: .*/gm)).toEqual(['          path: ${{ runner.temp }}/printed-bulletin-songti-tc/']);
+    // Apple's font stays on the Mac: nothing copies a font file anywhere.
+    expect(workflow).not.toMatch(/\b(cp|mv|ditto|tar|zip)\b[^\n]*(Fonts|\.tt[cf]|\.otf)/);
+  });
+
+  it('checks for the Word copy’s own Chinese font', () => {
+    const source = readAppsScript(join(__dirname, '..', 'google-apps-script'));
+    const font = /^\s+WORD_FONT: (.+)$/m.exec(workflow)![1];
+    expect(font).toBe(buildVariant(source, VARIANTS[0]).wordCopy.chineseFont);
+  });
+
+  it('is in the bulletin docs and the list of checks', () => {
+    expect(repoFile('docs/operations/bulletin-automation.md')).toContain('### Songti TC preview');
+    expect(repoFile('docs/CONTRIBUTING.md')).toContain('### `Printed Bulletin Songti Preview` (`.github/workflows/printed-bulletin-songti-preview.yml`)');
   });
 });

@@ -128,8 +128,14 @@ function buildVariant(source, variant) {
   `, ctx);
   const body = ctx.__body;
   addTrailingParagraphs(body);
+  // The Word copy's font and line height, as the Apps Script sets them (#627).
+  const wordCopy = vm.runInContext(
+    "typeof PRINTED_BULLETIN_WORD_COPY === 'undefined' ? null : { chineseFont: PRINTED_BULLETIN_WORD_COPY.chineseFont, lineHeight: PRINTED_BULLETIN_WORD_COPY.lineHeight }",
+    ctx,
+  );
   return {
     body,
+    wordCopy: wordCopy && { chineseFont: wordCopy.chineseFont, lineHeight: wordCopy.lineHeight },
     unknownCalls: [...model.unknown],
     missingUrls: [...problems.missingUrls],
     unknownImages: [...problems.unknownImages],
@@ -227,24 +233,34 @@ function round(n) {
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const cssFamilies = (names) => names.map((n) => `'${n}'`).join(', ');
 
-function fontFor(style) {
+// With `wordCopy`, the Word copy printed on a Mac (#627): a run in a Chinese
+// font is all in its Chinese font (Songti TC), and any other run's Chinese
+// characters are too.
+function fontFor(style, wordCopy) {
   const entry = FONT_TABLE[style.font] || UNKNOWN_FONT;
-  const names = [style.font].concat(entry.css.filter((n) => n !== style.font), CJK_STANDINS);
+  const own = [style.font].concat(entry.css.filter((n) => n !== style.font));
+  const names = wordCopy
+    ? (entry.cjk ? [] : own).concat(wordCopy.chineseFont, CJK_STANDINS)
+    : own.concat(CJK_STANDINS);
   return { family: cssFamilies([...new Set(names)]), ratio: entry.ratio };
 }
 
-function paragraphHtml(p) {
+function paragraphHtml(p, opts) {
+  const wordCopy = opts.wordCopy;
   const runs = runsOf(p);
   let lineHeight = 0;
+  let largest = 0;
   const html = runs.map((run) => {
-    const f = fontFor(run.style);
+    const f = fontFor(run.style, wordCopy);
     lineHeight = Math.max(lineHeight, f.ratio * run.style.size);
+    largest = Math.max(largest, run.style.size);
     const s = run.style;
     return `<span style="font-family:${esc(f.family)};font-size:${s.size}pt;font-weight:${s.bold ? 700 : 400};font-style:${s.italic ? 'italic' : 'normal'};text-decoration:${s.underline ? 'underline' : 'none'}">${esc(run.text)}</span>`;
   });
   if (!runs.length) {
-    const f = fontFor(p.base);
+    const f = fontFor(p.base, wordCopy);
     lineHeight = f.ratio * p.base.size;
+    largest = p.base.size;
     html.push(`<span style="font-family:${esc(f.family)};font-size:${p.base.size}pt">​</span>`);
   }
   p.inline.forEach((item) => {
@@ -252,18 +268,21 @@ function paragraphHtml(p) {
     if (item.type === 'image') html.push(`<span class="img" style="width:${item.w}px;height:${item.h}px"></span>`);
     if (item.type === 'hr') html.push('<span class="hr"></span>');
   });
-  const lh = (lineHeight * p.lineSpacing).toFixed(2);
+  // The Word copy gives every paragraph without a picture an exact line
+  // height: lineHeight times its largest size, times its line spacing.
+  const exact = wordCopy && !p.inline.some((item) => item.type === 'image');
+  const lh = ((exact ? wordCopy.lineHeight * largest : lineHeight) * p.lineSpacing).toFixed(2);
   const align = { LEFT: 'left', CENTER: 'center', RIGHT: 'right', JUSTIFY: 'justify' }[p.align] || 'left';
   const first = p.indentFirstLine == null ? p.indentStart : p.indentFirstLine;
   const indent = `padding-left:${p.indentStart || 0}pt;padding-right:${p.indentEnd || 0}pt;text-indent:${first - (p.indentStart || 0)}pt;`;
   return `<div class="p" style="${indent}text-align:${align};padding-top:${p.spacingBefore}pt;padding-bottom:${p.spacingAfter}pt;line-height:${lh}pt">${html.join('')}</div>`;
 }
 
-function containerHtml(container, width) {
-  return container.children.map((child) => (child.kind === 'TABLE' ? tableHtml(child, width) : paragraphHtml(child))).join('');
+function containerHtml(container, width, opts) {
+  return container.children.map((child) => (child.kind === 'TABLE' ? tableHtml(child, width, opts) : paragraphHtml(child, opts))).join('');
 }
 
-function tableHtml(t, containerWidth) {
+function tableHtml(t, containerWidth, opts) {
   const widths = columnWidths(t, containerWidth);
   const total = widths.reduce((a, b) => a + b, 0);
   const border = t.borderWidth > 0 ? `${t.borderWidth}pt solid ${t.borderColor}` : 'none';
@@ -271,7 +290,7 @@ function tableHtml(t, containerWidth) {
     const pad = cell.padding;
     const inner = widths[i] - pad.left - pad.right;
     const valign = { TOP: 'top', CENTER: 'middle', BOTTOM: 'bottom' }[cell.valign] || 'top';
-    return `<td style="padding:${pad.top}pt ${pad.right}pt ${pad.bottom}pt ${pad.left}pt;vertical-align:${valign};border:${border}">${containerHtml(cell, inner)}</td>`;
+    return `<td style="padding:${pad.top}pt ${pad.right}pt ${pad.bottom}pt ${pad.left}pt;vertical-align:${valign};border:${border}">${containerHtml(cell, inner, opts)}</td>`;
   }).join('') + '</tr>').join('');
   return `<table style="width:${total}pt"><colgroup>${widths.map((w) => `<col style="width:${w}pt">`).join('')}</colgroup>${rows}</table>`;
 }
@@ -319,7 +338,11 @@ window.__fit = document.fonts.ready.then(function () {
   });
 });`;
 
-function documentHtml(body, title) {
+/**
+ * The Doc as HTML, one sheet per page. `opts.wordCopy` ({ chineseFont,
+ * lineHeight }) draws the Word copy printed on a Mac instead of the Doc.
+ */
+function documentHtml(body, title, opts = {}) {
   const page = body.page;
   const contentWidth = page.width - page.left - page.right;
   const available = page.height - page.top - page.bottom;
@@ -328,7 +351,7 @@ function documentHtml(body, title) {
   <div class="label">${esc(title)} · page ${index + 1}</div>
   <div class="meas"></div>
   <div class="limit" style="top:${page.height - page.bottom}pt"></div>
-  <div class="content">${containerHtml({ children }, contentWidth)}</div>
+  <div class="content">${containerHtml({ children }, contentWidth, opts)}</div>
 </div>`).join('');
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
 body { margin: 0; padding: 1px 0; background: #ddd; font-family: 'Liberation Serif', serif; }

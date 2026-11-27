@@ -1,0 +1,202 @@
+name: Printed Bulletin Songti Preview
+
+# Draws the printed bulletin as its Word copy prints on a Mac, with the
+# Chinese in Songti TC (#852): the same made-up layouts and pages as the
+# Printed Bulletin Preview (#844), on a macOS runner, since Songti TC comes
+# only with macOS. Apple's font is used only inside the macOS job: never
+# copied into the repository, an artifact, or another job. Only the drawn
+# pages leave. It isn't a required check, but it fails when Songti TC is
+# missing or a booklet half no longer fits, after uploading what it drew. See
+# docs/operations/bulletin-automation.md#songti-tc-preview.
+on:
+  # Only the release PR into main, and by hand.
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: printed-bulletin-songti-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  wait:
+    # A release PR comes from this repository's release-candidate branch.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.head_ref == 'release-candidate' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    name: Wait for the iOS key screens
+    runs-on: ubuntu-latest
+    # The iOS batches take about an hour; the wait gives up long after.
+    timeout-minutes: 240
+    permissions:
+      # To read the iOS key screens run's jobs.
+      actions: read
+    steps:
+      # The Mac job waits until the iOS key screens' batches are done, so it
+      # never holds a Mac while they wait for their shared app. It goes ahead
+      # if there's no iOS run, or the wait runs out.
+      - name: Wait for the iOS key screens join
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          if [ "$EVENT" != pull_request ] || [ "$BASE_REF" != main ]; then
+            echo "No iOS key screens run to wait for."
+            exit 0
+          fi
+          run=""
+          for _ in $(seq 1 10); do
+            run=$(gh api "repos/$REPO/actions/workflows/ios-key-screens.yml/runs?head_sha=$SHA&event=pull_request" \
+              --jq '.workflow_runs[0].id // empty' || true)
+            [ -n "$run" ] && break
+            sleep 30
+          done
+          if [ -z "$run" ]; then
+            echo "No iOS key screens run for $SHA; going ahead."
+            exit 0
+          fi
+          for _ in $(seq 1 200); do
+            join=$(gh api "repos/$REPO/actions/runs/$run/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == "iOS key screens join")][0].status // "not started"' || true)
+            status=$(gh api "repos/$REPO/actions/runs/$run" --jq .status || true)
+            if [ "$join" = completed ] || [ "$status" = completed ]; then
+              echo "iOS key screens run $run: join $join, run $status."
+              exit 0
+            fi
+            sleep 60
+          done
+          echo "::notice::The iOS key screens join didn't finish in time; going ahead."
+
+  preview:
+    name: Printed bulletin preview in Songti TC
+    needs: wait
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      # The Word copy's Chinese font, PRINTED_BULLETIN_WORD_COPY.chineseFont.
+      WORD_FONT: Songti TC
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Songti TC comes with macOS 26 (/System/Library/Fonts/Supplemental),
+      # not as a font macOS downloads on demand. Without it, the pages are
+      # still drawn and uploaded, in the font macOS falls back to, and the
+      # last step fails the job: font type changes the layout too much to
+      # pass, so the job needs fixing.
+      - name: Check for Songti TC
+        id: font
+        run: |
+          cat > "$RUNNER_TEMP/font-check.swift" <<'SWIFT'
+          import CoreText
+          let family = CommandLine.arguments[1]
+          let wanted = CTFontDescriptorCreateWithAttributes([kCTFontFamilyNameAttribute: family] as CFDictionary)
+          if CTFontDescriptorCreateMatchingFontDescriptors(wanted, nil) != nil {
+            print("yes")
+          } else {
+            // The font macOS draws Chinese in instead.
+            let text = "安息日" as CFString
+            let base = CTFontCreateWithName("Times New Roman" as CFString, 10, nil)
+            let fallback = CTFontCreateForString(base, text, CFRange(location: 0, length: CFStringGetLength(text)))
+            print("no " + (CTFontCopyFamilyName(fallback) as String))
+          }
+          SWIFT
+          result=$(swift "$RUNNER_TEMP/font-check.swift" "$WORD_FONT" 2>/dev/null || true)
+          case "$result" in
+            yes) echo "have=yes" >> "$GITHUB_OUTPUT" ;;
+            no\ *) { echo "have=no"; echo "fallback=${result#no }"; } >> "$GITHUB_OUTPUT" ;;
+            *) { echo "have=no"; echo "fallback=an unknown font (the font check didn't run)"; } >> "$GITHUB_OUTPUT" ;;
+          esac
+          echo "$WORD_FONT: ${result:-no answer}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Fetch the base branch's Apps Script
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "${PR_BASE_SHA:-main}"
+          echo "PREVIEW_BASE=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
+
+      # Same rules as the Linux preview: a half that fit on the base and no
+      # longer does, or one already over that grows, is a problem. The job
+      # fails in its last step, after the pages are uploaded.
+      - name: Draw the Word copy in Songti TC
+        id: draw
+        run: |
+          status=0
+          node tools/printed-bulletin-preview/preview.cjs --word-copy --word-font "$WORD_FONT" --out "$RUNNER_TEMP/printed-bulletin-songti-tc" --base "$PREVIEW_BASE" || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the pages
+        id: upload
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: printed-bulletin-preview-songti-tc
+          path: ${{ runner.temp }}/printed-bulletin-songti-tc/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Link the pages in the run summary
+        if: ${{ !cancelled() }}
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          HAVE_FONT: ${{ steps.font.outputs.have }}
+          FALLBACK: ${{ steps.font.outputs.fallback }}
+          SUMMARY: ${{ runner.temp }}/printed-bulletin-songti-tc/summary.md
+        run: |
+          {
+            if [ -f "$SUMMARY" ]; then head -n 1 "$SUMMARY"; else echo "## Printed bulletin preview in $WORD_FONT"; fi
+            echo
+            if [ "$HAVE_FONT" != yes ]; then
+              echo "**$WORD_FONT not found on this runner; pages drawn with $FALLBACK. Fix the job.**"
+              echo
+            fi
+            if [ -n "$ARTIFACT_URL" ]; then
+              echo "**[Download the $WORD_FONT page images]($ARTIFACT_URL)**: a zip with a folder per layout and a PNG per page, kept 14 days. It holds no font."
+            else
+              echo 'No page images were uploaded; the step before says why.'
+            fi
+            if [ -f "$SUMMARY" ]; then tail -n +2 "$SUMMARY"; else printf '\nThe preview stopped before its checks; its log says why.\n'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on a missing font or a layout problem
+        if: ${{ !cancelled() }}
+        env:
+          HAVE_FONT: ${{ steps.font.outputs.have }}
+          FALLBACK: ${{ steps.font.outputs.fallback }}
+          STATUS: ${{ steps.draw.outputs.status }}
+        run: |
+          failed=0
+          if [ "$HAVE_FONT" != yes ]; then
+            echo "::error::$WORD_FONT not found on this runner; pages drawn with $FALLBACK. Fix the job."
+            failed=1
+          fi
+          case "$STATUS" in
+            0) ;;
+            1) echo "::error::The $WORD_FONT preview found layout problems; see the run summary."; failed=1 ;;
+            *) echo "::error::The $WORD_FONT preview couldn't run; see the Draw step's log."; failed=1 ;;
+          esac
+          exit "$failed"

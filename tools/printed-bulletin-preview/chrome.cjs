@@ -1,5 +1,5 @@
 // Headless Chrome over the DevTools protocol, through a pipe, with no npm
-// package. GitHub's Ubuntu runners have Google Chrome; locally, any Chrome,
+// package. GitHub's Ubuntu and macOS runners have Google Chrome; locally, any Chrome,
 // Chromium, or Playwright's headless shell works (CHROME_PATH picks one).
 'use strict';
 
@@ -14,6 +14,8 @@ function findChrome() {
     const found = spawnSync('sh', ['-c', `command -v ${name}`], { encoding: 'utf8' }).stdout.trim();
     if (found) return found;
   }
+  const mac = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  if (process.platform === 'darwin' && fs.existsSync(mac)) return mac;
   const playwright = path.join(os.homedir(), '.cache', 'ms-playwright');
   if (fs.existsSync(playwright)) {
     const candidates = fs.readdirSync(playwright).sort().reverse().flatMap((dir) => [

@@ -297,6 +297,17 @@ GitHub's code scanning default setup and have no workflow file.
   playback with the screen off, and the reader following the verse being read. See
   [Bible audio emulator test](operations/admin-runbook.md#bible-audio-emulator-test).
 
+### `Printed Bulletin Songti Preview` (`.github/workflows/printed-bulletin-songti-preview.yml`)
+
+- Checks: `Wait for the iOS key screens` and `Printed bulletin preview in Songti TC`. Runs
+  on the release PR into `main`, and by hand. Not a required check. After uploading the
+  pages, it fails on a half that no longer fits (the Linux preview's rules), or when
+  Songti TC isn't on the runner.
+- Waits on Linux for the iOS key screens' join, then draws the printed bulletin's Word
+  copy in Songti TC on a macOS runner, and uploads the pages as PNGs. The font never
+  leaves the Mac. See
+  [Songti TC preview](operations/bulletin-automation.md#songti-tc-preview).
+
 ### `Issues - Pending Release Label` (`.github/workflows/pending-release-label.yml`)
 
 - Adds `pending release` to issues referenced with `Closes #<issue>` (or `Fixes`/`Resolves`) when a PR merges

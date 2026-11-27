@@ -17,14 +17,17 @@ function regions(page) {
   return [{ key: `${page.page}:page`, name: `page ${page.page}`, slack: page.slackPt }];
 }
 
-const pt = (n) => `${n >= 0 ? '+' : '−'}${Math.abs(Math.round(n))}`;
+// Points over, at least "under 1" for a fraction of a point.
+const by = (n) => (Math.abs(n) < 0.5 ? 'under 1' : String(Math.abs(Math.round(n))));
+const pt = (n) => (n >= 0 ? `+${Math.round(n)}` : `−${by(n) === 'under 1' ? '<1' : by(n)}`);
 
 /**
  * `head` and `base` map each variant's name to its result: pages (measured
  * in Chrome) plus smallText, tooWide, unknownCalls, missingUrls,
  * unknownImages and unknownFonts (from build.cjs). `base` may be null.
+ * `realCheck` names what settles a half that was already over.
  */
-function evaluate(head, base) {
+function evaluate(head, base, { realCheck = 'a real Doc' } = {}) {
   const failures = [];
   const notes = [];
   const rows = [];
@@ -47,7 +50,7 @@ function evaluate(head, base) {
       const was = baseSlack.has(region.key) ? baseSlack.get(region.key) : null;
       let status = 'fits';
       if (region.slack < 0) {
-        const over = `${name}, ${region.name}: overflows by ${Math.abs(Math.round(region.slack))} pt`;
+        const over = `${name}, ${region.name}: overflows by ${by(region.slack)} pt`;
         if (!base) {
           status = 'overflows';
           failures.push(over);
@@ -62,7 +65,7 @@ function evaluate(head, base) {
           failures.push(`${over}, ${Math.round(was - region.slack)} pt more than on the base`);
         } else {
           status = 'over on the base too';
-          notes.push(`${over}, as on the base (${Math.abs(Math.round(was))} pt), so not because of this change; a real Doc shows whether it fits`);
+          notes.push(`${over}, as on the base (${by(was)} pt), so not because of this change; ${realCheck} shows whether it fits`);
         }
       }
       rows.push({ variant: name, region: region.name, slack: region.slack, base: was, status });
@@ -71,8 +74,9 @@ function evaluate(head, base) {
   return { failures, notes, rows };
 }
 
-function summaryMarkdown({ failures, notes, rows }, { baseLabel, pageCounts } = {}) {
-  const lines = ['## Printed bulletin preview', ''];
+function summaryMarkdown({ failures, notes, rows }, { baseLabel, pageCounts, wordCopy } = {}) {
+  // `wordCopy` names the Word copy's Chinese font when it's drawn.
+  const lines = [wordCopy ? `## Printed bulletin preview in ${wordCopy}` : '## Printed bulletin preview', ''];
   lines.push(failures.length ? `**${failures.length} problem${failures.length === 1 ? '' : 's'}:**` : '**Every page fits.**');
   failures.forEach((f) => lines.push(`- ${f}`));
   lines.push('');
@@ -93,7 +97,9 @@ function summaryMarkdown({ failures, notes, rows }, { baseLabel, pageCounts } = 
     lines.push('', '**Notes**', '');
     notes.forEach((n) => lines.push(`- ${n}`));
   }
-  lines.push('', 'The preview imitates Google Docs: stand-in fonts, grey boxes for the QR codes and pictures, and approximate line heights. Check a real Doc after the deploy.');
+  lines.push('', wordCopy
+    ? `This draws the Word copy printed on a Mac: Chinese in ${wordCopy}, at the copy's exact line heights. Chrome lays it out, not Word, with grey boxes for the QR codes and pictures, so the final check is a real print.`
+    : 'The preview imitates Google Docs: stand-in fonts, grey boxes for the QR codes and pictures, and approximate line heights. Check a real Doc after the deploy.');
   return lines.join('\n') + '\n';
 }
 
