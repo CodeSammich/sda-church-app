@@ -185,9 +185,11 @@ seek_to_fraction() {
 }
 
 # This app's media session: its playback state, position in ms, and title.
-# The title line is the chapter, the narrator and the album, joined by ", ",
-# such as "Psalm 118, English – Souer (BSB), Bible audio" (#804), so a
-# chapter's number is matched with the comma after it.
+# The title line is the chapter, the narrator and the album, joined by ", ".
+# The chapter is in the recording's words (#804): "Psalm 118, English – Souer
+# (BSB), Bible audio", or for the CUV, which this English app reads,
+# "利未記 第 2 章, Mandarin (Chinese Union Version), Bible audio". So a
+# chapter's number is matched with the comma after it, or 章 and the comma.
 session() {
   sh_ dumpsys media_session | awk '
     /package=/ { ours = ($0 ~ /package=org\.nyccsda\.app/) }
@@ -214,7 +216,7 @@ wait_until() { # timeout-seconds description command...
 }
 is_playing() { [ "$(session_field state)" = PLAYING ]; }
 is_paused() { [ "$(session_field state)" = PAUSED ]; }
-title_has() { session_field title | grep -- "$1" >/dev/null; }
+title_has() { session_field title | grep -E -- "$1" >/dev/null; }
 playing_with_title() { is_playing && title_has "$1"; }
 foreground_service() { sh_ dumpsys activity services "$PKG" | grep 'isForeground=true' >/dev/null; }
 app_log_has() { adb_ logcat -d -s ReactNativeJS:V | tr -d '\r' | grep -- "$1" >/dev/null; }
@@ -245,7 +247,7 @@ run() { # name function
 # from the Internet Archive, its third copy (#749), as soon as the player
 # reports both failures. The title doesn't name the host (#804); the e2e
 # build logs it.
-playing_from_archive() { playing_with_title 'Genesis 1,' && app_log_has 'Bible reader: audio from archive.org'; }
+playing_from_archive() { playing_with_title ' 1( 章)?,' && app_log_has 'Bible reader: audio from archive.org'; }
 scenario_primary_host_down() {
   open_chapter GEN 1
   locate_controls || { echo 'no play button'; return 1; }
@@ -265,7 +267,7 @@ scenario_next_chapter_screen_off() {
   tap_play_pause
   wait_until 60 'Psalm 117 playing' is_playing || return 1
   screen_off
-  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118,' || return 1
+  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118( 章)?,' || return 1
   screen_is_off || { echo 'the screen turned on'; return 1; }
   foreground_service || { echo 'the media foreground service stopped'; return 1; }
 }
@@ -355,17 +357,17 @@ scenario_previous_before_start() {
   open_chapter LEV 2
   locate_controls || { echo 'no play button'; return 1; }
   tap_play_pause
-  wait_until 60 'Leviticus 2 playing' playing_with_title ' 2,' || return 1
+  wait_until 60 'Leviticus 2 playing' playing_with_title ' 2( 章)?,' || return 1
   sleep 6
-  title_has ' 2,' || { echo "moved to $(session_field title) by itself"; return 1; }
+  title_has ' 2( 章)?,' || { echo "moved to $(session_field title) by itself"; return 1; }
   media_key KEYCODE_MEDIA_PREVIOUS
   media_key KEYCODE_MEDIA_PAUSE
-  wait_until 20 'Leviticus 2 restarted and paused' paused_with_title ' 2,' || return 1
+  wait_until 20 'Leviticus 2 restarted and paused' paused_with_title ' 2( 章)?,' || return 1
   position_under 3000 || { echo "previous left Leviticus 2 at $(session_field position)ms"; return 1; }
   media_key KEYCODE_MEDIA_PREVIOUS
-  wait_until 20 'Leviticus 1 after previous at the start' title_has ' 1,' || return 1
+  wait_until 20 'Leviticus 1 after previous at the start' title_has ' 1( 章)?,' || return 1
   media_key KEYCODE_MEDIA_NEXT
-  wait_until 20 'Leviticus 2 after next' title_has ' 2,' || return 1
+  wait_until 20 'Leviticus 2 after next' title_has ' 2( 章)?,' || return 1
 }
 
 # Bible audio downloaded to listen offline (#556): download 2 Thessalonians,
@@ -406,14 +408,14 @@ scenario_downloaded_book_offline() {
   sleep 2
   locate_controls || { echo 'no play button'; return 1; }
   tap_play_pause
-  wait_until 30 '2 Thessalonians 1 playing offline' playing_with_title ' 1,' || return 1
+  wait_until 30 '2 Thessalonians 1 playing offline' playing_with_title ' 1( 章)?,' || return 1
   media_key KEYCODE_MEDIA_NEXT
-  wait_until 20 '2 Thessalonians 2 playing offline' playing_with_title ' 2,' || return 1
+  wait_until 20 '2 Thessalonians 2 playing offline' playing_with_title ' 2( 章)?,' || return 1
   # Previous goes back a chapter in a chapter's first seconds, and restarts it after.
   media_key KEYCODE_MEDIA_PREVIOUS
   sleep 1
-  title_has ' 2,' && media_key KEYCODE_MEDIA_PREVIOUS
-  wait_until 20 '2 Thessalonians 1 playing offline again' playing_with_title ' 1,' || return 1
+  title_has ' 2( 章)?,' && media_key KEYCODE_MEDIA_PREVIOUS
+  wait_until 20 '2 Thessalonians 1 playing offline again' playing_with_title ' 1( 章)?,' || return 1
 }
 
 # What the reader decided (#561), oldest first: one decision a line, such as
@@ -622,7 +624,7 @@ scenario_follow_after_screen_off() {
   tap_play_pause
   wait_until 60 'Psalm 117 marked' reader_has_after '^PSA 117:[0-9]+ is being read' || return 1
   screen_off
-  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118,' || return 1
+  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118( 章)?,' || return 1
   local mark
   mark=$(reader_lines)
   wake
