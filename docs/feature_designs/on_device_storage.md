@@ -54,6 +54,7 @@ The app saves its settings and the member's saved verses with [AsyncStorage](htt
 | `saved-bible-verses-v1` | Saved verses | `services/SavedVersesService.ts` |
 | `preferred-bulletin-location` | Which congregation's bulletin to show | `app/(tabs)/home/bulletin.tsx` |
 | `chinese-mission-spotlight` | The newest Mandarin mission video (聖工剪影) the phone has found: its YouTube ID, Sabbath, and story title, a few bytes, so the app in Chinese can offer it until the next one is found (#508) | `features/sabbath-school/ChineseMissionSpotlight.ts` |
+| `bible-audio-resume` | Where the listener stopped in a chapter's audio, for its recording, so Play picks up there after the app restarts (#803): one place, forgotten when the chapter finishes or the reader moves to another | `services/BibleAudioResume.ts` |
 | `bible-audio-download-tip` | Whether the tip pointing to Listen offline may show again (#595): `downloaded` once Bible audio has been on the phone, or when its 7-day rest ends | `services/BibleAudioDownloadTip.ts` |
 | `pwa-update-last-check-v1` | When the web app last checked for an update (web only, in `localStorage` directly) | `app/_layout.tsx` |
 | `screenshot-route` | The screen to open, in key-screen builds only | The key-screen capture scripts; `services/ScreenshotRoute.ts` reads it, then deletes it |
