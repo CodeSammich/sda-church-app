@@ -1002,9 +1002,10 @@ Queens Regular is two physical pages:
 Queens Holy Communion is four physical pages in imposed order:
 
 1. left: announcements/back; right: cover;
-2. left: Church at Study; right intentionally blank;
-3. left intentionally blank; right: Church at Worship, with the
-   [giving footer](#the-giving-footer) below them;
+2. left: Church at Study, with the [footer's](#the-giving-footer) app code
+   under its verses; right intentionally blank;
+3. left intentionally blank; right: Church at Worship, with the footer's
+   giving notes below it;
 4. left: Foot Washing; right: the complete Holy Communion service.
 
 The Communion ceremony has fixed references and fixed order. The `Weekly Data`
@@ -1028,7 +1029,7 @@ the topic before the day/time.
 ### The giving footer
 
 Queens Regular, Queens Holy Communion, and Brooklyn Regular share one footer,
-under the doc page with the worship panel (#833):
+under Sabbath School and worship (#833):
 
 ```text
         left half                              worship half
@@ -1051,9 +1052,11 @@ fold. The notes are inset 6 points from each side, so a full line stays about
 listed, reserved for #384) gets its own 80-point column beside the notes, which
 narrows them, so check the fit with a long week before deploying it.
 
-In Queens Holy Communion the left half of that doc page is the booklet's blank
-page 6, so after folding the app code prints at the foot of that page, not
-beside the worship page (page 3).
+Queens Holy Communion splits the footer over two doc pages, because the left
+half of its worship doc page folds to the blank page 6. The app code goes under
+Church at Study and its verses (page 2), and the giving notes under Church at
+Worship (page 3), which face each other in the folded booklet as they do in
+Queens Regular.
 
 ### Type
 

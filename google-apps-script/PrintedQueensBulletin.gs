@@ -239,10 +239,12 @@ function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslat
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study | blank, blank | worship with the
-  // footer, foot washing | the complete Holy Communion service. The footer is
-  // the regular bulletin's (#833): the giving notes under the worship half,
-  // and the app code under the left half, which folds to the blank page 6.
+  // back/announcements | cover, study | blank, blank | worship,
+  // foot washing | the complete Holy Communion service. The regular
+  // bulletin's footer (#833) is split over two doc pages here, so each half
+  // lands on the right booklet page: the app code under Sabbath School and
+  // its verses (page 2), and the giving notes under worship (page 3). The
+  // left half of the worship doc page is the blank page 6.
   appendBookletPage_(
     body,
     function (cell) {
@@ -260,6 +262,10 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     function (cell) {},
     false,
+    function (appCell, givingTextCell, givingQrCells) {
+      appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'queens');
+    },
+    getGivingFooterOptions_('queens', { giving: false }),
   );
   appendBookletPage_(
     body,
@@ -271,7 +277,7 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     function (appCell, givingTextCell, givingQrCells) {
       appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'queens');
     },
-    getGivingFooterOptions_('queens'),
+    getGivingFooterOptions_('queens', { app: false }),
   );
   appendBookletPage_(
     body,

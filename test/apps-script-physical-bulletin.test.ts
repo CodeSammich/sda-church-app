@@ -1909,7 +1909,7 @@ describe('printed bulletin Apps Script helpers', () => {
   // The footer under the Sabbath School and worship spread (#833): the app code
   // alone on the left half, and the giving notes and codes on the right half,
   // under a rule over that half only.
-  const renderFooter = (givingQrCount: number) => {
+  const renderFooter = (givingQrCount: number, parts = '') => {
     const makeParagraph = (owner: string) => {
       const paragraph = {
         owner,
@@ -1989,11 +1989,14 @@ describe('printed bulletin Apps Script helpers', () => {
     });
     Object.assign(context, {
       testContainer: container,
-      testRenderer: (appCell: { column: number }, textCell: { column: number }, qrCells: Array<{ column: number }>) =>
-        rendered.push(appCell.column, textCell.column, qrCells.map((cell) => cell.column)),
+      testRenderer: (
+        appCell: { column: number } | null,
+        textCell: { column: number } | null,
+        qrCells: Array<{ column: number }>,
+      ) => rendered.push(appCell && appCell.column, textCell && textCell.column, qrCells.map((cell) => cell.column)),
     });
     runInContext(
-      `appendBookletFooter_(testContainer, testRenderer, { ruleSpacingBefore: 4, givingQrCount: ${givingQrCount} })`,
+      `appendBookletFooter_(testContainer, testRenderer, { ruleSpacingBefore: 4, givingQrCount: ${givingQrCount}${parts} })`,
       context,
     );
     return { bodyParagraphs, widths, tableShape, cells, rendered };
@@ -2035,6 +2038,18 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(cells.map((cell) => cell.children[0].rule)).toEqual([false, false, true, true]);
   });
 
+  it('prints only the half a doc page asks for', () => {
+    // Queens Communion: the app code under Sabbath School, with no rule.
+    const appOnly = renderFooter(0, ', giving: false');
+    expect(appOnly.rendered).toEqual([0, null, []]);
+    expect(appOnly.cells.map((cell) => cell.children[0].rule)).toEqual([false, false, false]);
+    expect(appOnly.cells[0].children[0].size).toBe(3);
+    // And the giving notes, under their rule, under worship.
+    const givingOnly = renderFooter(0, ', app: false');
+    expect(givingOnly.rendered).toEqual([null, 2, []]);
+    expect(givingOnly.cells.map((cell) => cell.children[0].rule)).toEqual([false, false, true]);
+  });
+
   it('gives Queens Regular, Queens Communion, and Brooklyn Regular the same footer', () => {
     const footers: Record<string, unknown[]> = {};
     const context = loadAppsScript({});
@@ -2069,18 +2084,19 @@ describe('printed bulletin Apps Script helpers', () => {
       runInContext(call, context);
     }
 
-    // Once per bulletin, with the same spacing and no giving code: Zelle is
-    // reserved in Queens (#384) and Brooklyn has none.
-    const footer = (location: string) => [
-      {
-        options: { ruleSpacingBefore: 4, givingQrCount: 0 },
-        calls: [['app cell', 'text cell', [], location]],
-      },
-    ];
+    // The same spacing and no giving code: Zelle is reserved in Queens (#384)
+    // and Brooklyn has none.
+    const footer = (location: string, parts = {}) => ({
+      options: { ruleSpacingBefore: 4, givingQrCount: 0, ...parts },
+      calls: [['app cell', 'text cell', [], location]],
+    });
     expect(footers).toEqual({
-      queens: footer('queens'),
-      communion: footer('queens'),
-      brooklyn: footer('brooklyn'),
+      queens: [footer('queens')],
+      // Communion splits it so each half lands on the right booklet page: the
+      // app code under Sabbath School (page 2), the giving notes under worship
+      // (page 3). The worship doc page's left half folds to the blank page 6.
+      communion: [footer('queens', { giving: false }), footer('queens', { app: false })],
+      brooklyn: [footer('brooklyn')],
     });
   });
 

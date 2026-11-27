@@ -2658,16 +2658,21 @@ function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
  *
  * Each code has its own column. A table nested in a cell keeps a blank line
  * above it, which pushed the QR captions onto a new page.
+ *
+ * A layout whose app code and giving notes are on different doc pages (Queens
+ * Holy Communion) passes `app: false` or `giving: false` to print one half.
  */
 function appendBookletFooter_(container, footerRenderer, footerOptions) {
   footerOptions = footerOptions || {};
+  var withApp = footerOptions.app !== false;
+  var withGiving = footerOptions.giving !== false;
   var spacer = container.appendParagraph('');
   spacer.setAttributes(getCompactParagraphAttributes_());
   spacer.setSpacingBefore(footerOptions.ruleSpacingBefore || 0);
 
   var halfWidth = PRINTED_BULLETIN_CONFIG.bookletHalfWidth;
   var qrWidth = PRINTED_BULLETIN_CONFIG.footerQrColumnWidth;
-  var qrCount = Math.max(0, footerOptions.givingQrCount || 0);
+  var qrCount = withGiving ? Math.max(0, footerOptions.givingQrCount || 0) : 0;
   var footerTable = container.appendTable([Array(qrCount + 3).fill('')]);
   footerTable.setBorderWidth(0);
   footerTable.setColumnWidth(0, halfWidth);
@@ -2691,15 +2696,21 @@ function appendBookletFooter_(container, footerRenderer, footerOptions) {
   var givingQrCells = cells.slice(3);
   // The app half's first line is as tall as the rule's, so the codes on the
   // two halves line up.
-  var appLeadingParagraph = getLeadingEmptyParagraph_(appCell);
+  var appLeadingParagraph = withApp ? getLeadingEmptyParagraph_(appCell) : null;
   if (appLeadingParagraph) {
     appLeadingParagraph.setLineSpacing(1);
     appLeadingParagraph.setSpacingBefore(0);
     appLeadingParagraph.setSpacingAfter(0);
     setPrintedRuleParagraphSize_(appLeadingParagraph);
   }
-  [givingTextCell].concat(givingQrCells).forEach(appendPrintedFooterRule_);
-  footerRenderer(appCell, givingTextCell, givingQrCells);
+  if (withGiving) {
+    [givingTextCell].concat(givingQrCells).forEach(appendPrintedFooterRule_);
+  }
+  footerRenderer(
+    withApp ? appCell : null,
+    withGiving ? givingTextCell : null,
+    withGiving ? givingQrCells : [],
+  );
 }
 
 // Puts the rule in the paragraph clear() leaves at the top of a footer cell.
@@ -2715,13 +2726,19 @@ function appendPrintedFooterRule_(cell) {
 /**
  * Fills the footer: the app code on the left half, and the giving notes, under
  * the rule, on the right. Every layout shares it. The rule is each right-half
- * cell's first line, so nothing here reuses or clears it.
+ * cell's first line, so nothing here reuses or clears it. A half the footer
+ * leaves out comes as null.
  */
 function appendGivingFooter_(appCell, givingTextCell, givingQrCells, location) {
-  appendGivingQrPlaceholderCell_(appCell, getPrintedMobileAppQrItem_(), {
-    imageMaxWidth: PRINTED_BULLETIN_CONFIG.footerQrImageMaxWidth,
-    location: location,
-  });
+  if (appCell) {
+    appendGivingQrPlaceholderCell_(appCell, getPrintedMobileAppQrItem_(), {
+      imageMaxWidth: PRINTED_BULLETIN_CONFIG.footerQrImageMaxWidth,
+      location: location,
+    });
+  }
+  if (!givingTextCell) {
+    return;
+  }
   appendGivingText_(givingTextCell);
   // The notes' longest lines would fill the half, about 15 pt (5 mm) from the
   // sheet edge, and many printers can't print the outer 4-5 mm. Indent them to
@@ -2747,12 +2764,22 @@ function appendGivingFooter_(appCell, givingTextCell, givingQrCells, location) {
 }
 
 // The footer's options for a location: one right-half column per giving code,
-// none while Zelle is reserved.
-function getGivingFooterOptions_(location) {
-  return {
+// none while Zelle is reserved. `parts` can leave out the app code
+// ({ app: false }) or the giving notes ({ giving: false }).
+function getGivingFooterOptions_(location, parts) {
+  parts = parts || {};
+  var options = {
     ruleSpacingBefore: 4,
     givingQrCount: getPrintedFooterGivingQrItems_(location).length,
   };
+  if (parts.app === false) {
+    options.app = false;
+  }
+  if (parts.giving === false) {
+    options.giving = false;
+    options.givingQrCount = 0;
+  }
+  return options;
 }
 
 function appendPrintedBulletinLogo_(cell) {
