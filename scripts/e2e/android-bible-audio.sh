@@ -185,6 +185,9 @@ seek_to_fraction() {
 }
 
 # This app's media session: its playback state, position in ms, and title.
+# The title line is the chapter, the narrator and the album, joined by ", ",
+# such as "Psalm 118, English – Souer (BSB), Bible audio" (#804), so a
+# chapter's number is matched with the comma after it.
 session() {
   sh_ dumpsys media_session | awk '
     /package=/ { ours = ($0 ~ /package=org\.nyccsda\.app/) }
@@ -240,13 +243,14 @@ run() { # name function
 
 # Neither HelloAO's host nor the church's can be resolved, so Genesis 1 plays
 # from the Internet Archive, its third copy (#749), as soon as the player
-# reports both failures.
+# reports both failures. The title doesn't name the host (#804); the e2e
+# build logs it.
+playing_from_archive() { playing_with_title 'Genesis 1,' && app_log_has 'Bible reader: audio from archive.org'; }
 scenario_primary_host_down() {
   open_chapter GEN 1
   locate_controls || { echo 'no play button'; return 1; }
   tap_play_pause
-  wait_until 90 'Genesis 1 playing from the Internet Archive' \
-    playing_with_title '(Internet Archive)' || return 1
+  wait_until 90 'Genesis 1 playing from the Internet Archive' playing_from_archive || return 1
   app_log_has 'Bible audio source failed to load; trying the next configured source.' ||
     { echo 'no failover logged'; return 1; }
 }
@@ -261,13 +265,13 @@ scenario_next_chapter_screen_off() {
   tap_play_pause
   wait_until 60 'Psalm 117 playing' is_playing || return 1
   screen_off
-  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118 ' || return 1
+  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118,' || return 1
   screen_is_off || { echo 'the screen turned on'; return 1; }
   foreground_service || { echo 'the media foreground service stopped'; return 1; }
 }
 
 # A dead zone: Play offline, lock the screen, and wait. When the connection
-# comes back, audio starts without an unlock.
+# comes back, audio starts without an unlock, and the reader never left John 3.
 scenario_dead_zone_screen_off() {
   open_chapter JHN 3
   locate_controls || { echo 'no play button'; return 1; }
@@ -285,10 +289,12 @@ scenario_dead_zone_screen_off() {
   wait_until 60 'John 3 playing after the connection returned' is_playing || return 1
   screen_is_off || { echo 'the screen turned on'; return 1; }
   foreground_service || { echo 'the media foreground service stopped'; return 1; }
+  stayed_on_chapter
 }
 
 # The connection drops mid-chapter: the same host reloads where it stopped,
-# and playback resumes there once the connection returns.
+# and playback resumes there once the connection returns. The reader stays on
+# Psalm 78 throughout.
 scenario_mid_chapter_offline() {
   open_chapter PSA 78
   locate_controls || { echo 'no play button'; return 1; }
@@ -311,9 +317,11 @@ scenario_mid_chapter_offline() {
   position=$(session_field position)
   [ "${position:-0}" -ge 240000 ] ||
     { echo "resumed at ${position}ms instead of where it stopped"; return 1; }
+  stayed_on_chapter
 }
 
-# Pausing and resuming a playing chapter continues from the same place.
+# Pausing and resuming a playing chapter continues from the same place, and
+# so does Play after the app is closed and opened again.
 scenario_pause_and_resume() {
   open_chapter JHN 1
   locate_controls || { echo 'no play button'; return 1; }
@@ -330,6 +338,18 @@ scenario_pause_and_resume() {
   resumed_at=$(session_field position)
   [ "${resumed_at:-0}" -ge "${paused_at:-0}" ] && [ "${resumed_at:-0}" -gt 0 ] ||
     { echo "resumed at ${resumed_at}ms after pausing at ${paused_at}ms"; return 1; }
+  # Closed and opened again, John 1 picks up where it was paused, not at 0:00
+  # (#803). The session's position can trail the player's by a moment.
+  tap_play_pause
+  wait_until 20 'John 1 paused again' is_paused || return 1
+  paused_at=$(session_field position)
+  open_chapter JHN 1
+  locate_controls || { echo 'no play button after the restart'; return 1; }
+  tap_play_pause
+  wait_until 60 'John 1 playing after the restart' is_playing || return 1
+  resumed_at=$(session_field position)
+  [ "${paused_at:-0}" -gt 3000 ] && [ "${resumed_at:-0}" -ge $(( ${paused_at:-0} - 1500 )) ] ||
+    { echo "after the restart, started at ${resumed_at}ms; it was paused at ${paused_at}ms"; return 1; }
 }
 
 # Earbuds' previous and next (#543). Started in Leviticus 2: previous more
@@ -344,17 +364,17 @@ scenario_previous_before_start() {
   open_chapter LEV 2
   locate_controls || { echo 'no play button'; return 1; }
   tap_play_pause
-  wait_until 60 'Leviticus 2 playing' playing_with_title ' 2 ' || return 1
+  wait_until 60 'Leviticus 2 playing' playing_with_title ' 2,' || return 1
   sleep 6
-  title_has ' 2 ' || { echo "moved to $(session_field title) by itself"; return 1; }
+  title_has ' 2,' || { echo "moved to $(session_field title) by itself"; return 1; }
   media_key KEYCODE_MEDIA_PREVIOUS
   media_key KEYCODE_MEDIA_PAUSE
-  wait_until 20 'Leviticus 2 restarted and paused' paused_with_title ' 2 ' || return 1
+  wait_until 20 'Leviticus 2 restarted and paused' paused_with_title ' 2,' || return 1
   position_under 3000 || { echo "previous left Leviticus 2 at $(session_field position)ms"; return 1; }
   media_key KEYCODE_MEDIA_PREVIOUS
-  wait_until 20 'Leviticus 1 after previous at the start' title_has ' 1 ' || return 1
+  wait_until 20 'Leviticus 1 after previous at the start' title_has ' 1,' || return 1
   media_key KEYCODE_MEDIA_NEXT
-  wait_until 20 'Leviticus 2 after next' title_has ' 2 ' || return 1
+  wait_until 20 'Leviticus 2 after next' title_has ' 2,' || return 1
 }
 
 # Bible audio downloaded to listen offline (#556): download 2 Thessalonians,
@@ -395,14 +415,14 @@ scenario_downloaded_book_offline() {
   sleep 2
   locate_controls || { echo 'no play button'; return 1; }
   tap_play_pause
-  wait_until 30 '2 Thessalonians 1 playing offline' playing_with_title ' 1 ' || return 1
+  wait_until 30 '2 Thessalonians 1 playing offline' playing_with_title ' 1,' || return 1
   media_key KEYCODE_MEDIA_NEXT
-  wait_until 20 '2 Thessalonians 2 playing offline' playing_with_title ' 2 ' || return 1
+  wait_until 20 '2 Thessalonians 2 playing offline' playing_with_title ' 2,' || return 1
   # Previous goes back a chapter in a chapter's first seconds, and restarts it after.
   media_key KEYCODE_MEDIA_PREVIOUS
   sleep 1
-  title_has ' 2 ' && media_key KEYCODE_MEDIA_PREVIOUS
-  wait_until 20 '2 Thessalonians 1 playing offline again' playing_with_title ' 1 ' || return 1
+  title_has ' 2,' && media_key KEYCODE_MEDIA_PREVIOUS
+  wait_until 20 '2 Thessalonians 1 playing offline again' playing_with_title ' 1,' || return 1
 }
 
 # What the reader decided (#561), oldest first: one decision a line, such as
@@ -416,6 +436,14 @@ reader_line_after() { # regex [after-line]
   reader_log | awk -v after="${2:-0}" -v re="$1" 'NR > after && $0 ~ re { print NR; exit }'
 }
 reader_has_after() { [ -n "$(reader_line_after "$1" "${2:-0}")" ]; }
+# Whether the reader stayed on its chapter, as it must while the audio fails
+# over: a failed player's replacement once named a chapter from the old one's
+# queue, and the reader moved there for a few seconds (#802).
+stayed_on_chapter() {
+  local moved
+  moved=$(reader_log | sed -n 's/^following the audio to //p' | head -1)
+  [ -z "$moved" ] || { echo "the reader moved to $moved while the audio failed over"; return 1; }
+}
 
 # The verse the bundled times say is being read at a position, with the
 # reader's half-second lead (services/BibleAudioTimings.ts).
@@ -603,7 +631,7 @@ scenario_follow_after_screen_off() {
   tap_play_pause
   wait_until 60 'Psalm 117 marked' reader_has_after '^PSA 117:[0-9]+ is being read' || return 1
   screen_off
-  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118 ' || return 1
+  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118,' || return 1
   local mark
   mark=$(reader_lines)
   wake

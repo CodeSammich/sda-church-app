@@ -357,3 +357,33 @@ describe('Bible audio source failover', () => {
     expect(loads()).toEqual([CHURCH, CHURCH]);
   });
 });
+
+describe('Play after the app restarts (#803)', () => {
+  it('starts where the listener stopped the chapter, by itself', async () => {
+    const { controller, host, player, loads } = setup();
+    host.getSavedPositionMillis = jest.fn(() => 215_000);
+    await controller.start();
+    expect(host.getSavedPositionMillis).toHaveBeenCalledWith(targetFor(JOHN_3));
+    expect(loads()).toEqual([CHURCH]);
+    expect(player.seekTo).toHaveBeenCalledWith(215);
+    expect(player.play).toHaveBeenCalledTimes(1);
+  });
+
+  it('on iOS, seeks there once the recording has loaded', async () => {
+    const { controller, host, player, setStatus } = setup({ platform: 'ios' });
+    host.getSavedPositionMillis = () => 215_000;
+    await controller.start();
+    expect(controller.isResumePending).toBe(true);
+    setStatus({ isLoaded: true, duration: 300 });
+    controller.onStatus(player.currentStatus);
+    await flush();
+    expect(player.seekTo).toHaveBeenCalledWith(215);
+  });
+
+  it('starts at 0:00 with nothing saved', async () => {
+    const { controller, host, player } = setup();
+    host.getSavedPositionMillis = () => 0;
+    await controller.start();
+    expect(player.seekTo).not.toHaveBeenCalled();
+  });
+});

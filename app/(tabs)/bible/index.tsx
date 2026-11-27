@@ -2,6 +2,7 @@ import { AppIcon } from '@/components/AppIcon';
 import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { PopupHeader } from '@/components/PopupHeader';
+import { SwitchRow } from '@/components/SwitchRow';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { PopupFlatList, PopupScrollView } from '@/components/PopupScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,7 +34,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Divider, IconButton, Modal, Portal, Switch, Text } from 'react-native-paper';
+import { Divider, IconButton, Modal, Portal, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -42,6 +43,7 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { useBottomTabHeight } from '@/constants/BottomTabHeightContext';
+import { type BookListHeading, getBookListRows, isBookListHeading } from '@/constants/BibleSections';
 import {
   CAPSULE_STACK_GAP,
   getCapsuleBottomGap,
@@ -66,6 +68,7 @@ import {
   getCurrentAndroidAudioBrowser,
 } from '@/services/AndroidBackgroundAudioGuidance';
 import { logForAudioE2e } from '@/services/AudioE2eLog';
+import { BibleAudioResumeTracker } from '@/services/BibleAudioResume';
 import {
   useBibleAudioPlayer,
   useBibleAudioPlayerStatus,
@@ -76,8 +79,7 @@ import {
   shouldStopBibleAudioAtChapterEnd,
   type BibleAudioSleepTimerSetting,
   configureBibleAudioPlayback,
-  getBibleAudioCreditUrl,
-  getBibleAudioMediaTitle,
+  getBibleAudioArtist,
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getOrderedBibleAudioReaders,
@@ -135,6 +137,7 @@ import { getBookPillAbbreviation } from '@/services/BibleBookAbbreviations';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
   formatBookReference,
+  formatChapterTitle,
   formatTwoLanguageName,
   getBookListName,
   getBookPillName,
@@ -182,7 +185,7 @@ import {
 } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
-import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
+import { getHymnalShortLabel, getHymnTitle } from '@/features/hymnal/HymnalLabels';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { getPopupSurfaceStyle, getPopupWidthStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
@@ -1303,6 +1306,12 @@ export default function BibleScreen() {
   const selectedAudioSource = selectedAudioReader
     ? chapterAudioLinks?.[selectedAudioReader]
     : undefined;
+  // The recording playing, for where it picks up after the app restarts
+  // (#803): its narrator, which both CUV scripts share.
+  const audioRecording = selectedAudioReader
+    ? getBibleAudioNarrator(supportedTranslation.id, selectedAudioReader) ??
+      `${supportedTranslation.id}:${selectedAudioReader}`
+    : null;
   // The CUV recordings differ in spoken language, so the audio bar names the
   // selected language instead of showing a generic narrator icon.
   const selectedAudioLanguage = selectedAudioReader
@@ -1356,8 +1365,6 @@ export default function BibleScreen() {
     book?.id,
     chapterNum,
   );
-  const downloadedAudioUriRef = useRef(downloadedAudioUri);
-  downloadedAudioUriRef.current = downloadedAudioUri;
   // When playback keeps stopping to load, the audio settings button points
   // the listener to Listen offline (#595).
   const downloadTip = useBibleAudioDownloadTip(
@@ -1458,6 +1465,26 @@ export default function BibleScreen() {
         activeAudioChapter.bookId === book?.id &&
         activeAudioChapter.chapter === chapterNum
       : selectedAudioUrls.includes(loadedAudioUrl));
+  // Where the listener is in this chapter's recording, saved as it plays so
+  // that after the app restarts, Play picks up there by itself (#803).
+  const [audioResume] = useState(() => new BibleAudioResumeTracker());
+  useEffect(() => {
+    void audioResume.load();
+  }, [audioResume]);
+  const audioResumePlace =
+    isThisChapterAudioLoaded && book && audioRecording
+      ? { recording: audioRecording, bookId: book.id, chapter: chapterNum }
+      : null;
+  useEffect(() => {
+    // A chapter that just finished is forgotten (below), not saved at its end.
+    if (!audioResumePlace || !audioStatus.playing || audioStatus.didJustFinish) return;
+    audioResume.note({ ...audioResumePlace, positionMillis: audioPositionMillis });
+  }, [audioPositionMillis]);
+  // Another chapter chosen, or the next one the audio moved on to, forgets the
+  // place in the last.
+  useEffect(() => {
+    if (book) audioResume.follow({ bookId: book.id, chapter: chapterNum });
+  }, [book?.id, chapterNum]);
   const readingVerse =
     isThisChapterAudioLoaded &&
     audioVerseTimes?.key === audioVerseTimesKey &&
@@ -1510,6 +1537,11 @@ export default function BibleScreen() {
   };
   useEffect(() => () => clearTimeout(followResumeTimeout.current), []);
 
+  // What the lock screen and the media notification say: the chapter as the
+  // recording reads it (#723), and the narrator in the app's language (#804).
+  const getAudioChapterTitle = (chapterBook: { name: string }, chapter: number) =>
+    formatChapterTitle(chapterBook.name, chapter, supportedTranslation.lang);
+
   // `fromChapter` is the chapter being loaded, which can differ from both the
   // reader and the native player's current track during a failover.
   const buildUpcomingAudioQueue = (
@@ -1521,19 +1553,17 @@ export default function BibleScreen() {
     return buildBibleAudioQueue({
       direction,
       albumTitle: labels.audioPlayer,
-      artist: selectedAudioReader
-        ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
-        : supportedTranslation.name,
+      artist: getBibleAudioArtist(supportedTranslation, selectedAudioReader, language),
       books,
       currentBookId: activeChapter?.bookId || book?.id || '',
       currentChapter: activeChapter?.chapter ?? chapterNum,
+      getChapterTitle: getAudioChapterTitle,
       sleepTimer: sleepTimerSettingRef.current,
       preferredSourceId: selectedAudioSourceId,
       getDownloadedUri: (bookId, chapter) => queuedDownloadsRef.current(bookId, chapter),
       selectedAudioUrls: streamedAudioUrls,
       selectedReader: selectedAudioReader,
       translationId: supportedTranslation.id,
-      translationLabel: supportedTranslation.name,
     });
   };
 
@@ -1576,6 +1606,7 @@ export default function BibleScreen() {
           clearNativeAutoplayRetryTimeout();
           clearNativeRecoveryTimeout();
           releaseNativeAudioFocus();
+          audioResume.save();
           try {
             safePauseAudio();
           } catch (e) {
@@ -1652,6 +1683,8 @@ export default function BibleScreen() {
     }
 
     if (audioStatus.didJustFinish) {
+      // The next Play of a chapter played to its end starts at its beginning.
+      audioResume.finish();
       // Android's AudioPlaylist advances ExoPlayer to the next media item
       // itself. Navigating from this callback races that native transition and
       // can make the route cleanup pause/reconfigure the playlist mid-change.
@@ -1751,6 +1784,7 @@ export default function BibleScreen() {
       }
       lastSyncedAudioChapterRef.current = activeKey;
       preserveAudioOnNextRouteChangeRef.current = true;
+      logForAudioE2e(`following the audio to ${activeBook.id} ${activeChapter.chapter}`);
       setBook(activeBook);
       setChapterNum(activeChapter.chapter);
     };
@@ -1770,24 +1804,16 @@ export default function BibleScreen() {
   ]);
 
   const getReaderAudioTarget = (): AudioSourceTarget => {
-    const artist = selectedAudioReader
-      ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
-      : supportedTranslation.name;
+    const artist = getBibleAudioArtist(supportedTranslation, selectedAudioReader, language);
+    const title = book ? getAudioChapterTitle(book, chapterNum) : `${labels.bible} ${chapterNum}`;
     return {
       chapter: book
         ? { bookId: book.id, chapter: chapterNum, translationId: supportedTranslation.id }
         : undefined,
-      sources: selectedAudioUrlsRef.current.map((uri, _, uris) => {
-        const title = getBibleAudioMediaTitle(
-          `${book?.name || labels.bible} ${chapterNum}`,
-          supportedTranslation.name,
-          getBibleAudioCreditUrl(uri, uris, downloadedAudioUriRef.current),
-        );
-        return {
-          source: { uri, name: title },
-          metadata: { title, artist, albumTitle: labels.audioPlayer },
-        };
-      }),
+      sources: selectedAudioUrlsRef.current.map((uri) => ({
+        source: { uri, name: title },
+        metadata: { title, artist, albumTitle: labels.audioPlayer },
+      })),
     };
   };
 
@@ -1803,6 +1829,19 @@ export default function BibleScreen() {
     sourceReady: audioSourceReadyRef,
     getReaderTarget: getReaderAudioTarget,
     getPositionMillis: () => Math.max(getCurrentAudioPositionMillis(), audioPositionMillis),
+    getSavedPositionMillis: (target) => {
+      const millis =
+        target.chapter && audioRecording
+          ? audioResume.resumeMillis({
+              recording: audioRecording,
+              bookId: target.chapter.bookId,
+              chapter: target.chapter.chapter,
+            })
+          : 0;
+      // Starting there loads as a skip does, which isn't a stall (#595).
+      if (millis > 0) downloadTip.watcher.noteSeek();
+      return millis;
+    },
     initializePlayback: (target, entry) => {
       // Seed the native playlist once, then publish it to lock-screen controls.
       // Android's MediaSession must observe the complete initial playlist
@@ -1857,6 +1896,8 @@ export default function BibleScreen() {
     });
     const appState = AppState.addEventListener('change', (state) => {
       if (state === 'active') audioSources.retryNow();
+      // The app can be closed from here without another word (#803).
+      else audioResume.save();
     });
     return () => {
       network.remove();
@@ -1964,6 +2005,9 @@ export default function BibleScreen() {
       audioSources.cancel();
       nativePlaybackIntentRef.current = false;
       pendingNativeAutoplayRef.current = false;
+      if (audioResumePlace) {
+        audioResume.save({ ...audioResumePlace, positionMillis: getCurrentAudioPositionMillis() });
+      }
       safePauseAudio();
       releaseNativeAudioFocus();
       return;
@@ -1986,6 +2030,8 @@ export default function BibleScreen() {
   }, [audioStatus.interruptionCount, androidAudioBrowserName]);
 
   const unloadAudio = () => {
+    // Before a translation switch, say, which keeps the chapter (#803).
+    audioResume.save();
     seekController.cancel();
     clearChapterAutoplayRetry();
     chapterAutoplayRetryCountRef.current = 0;
@@ -4187,7 +4233,8 @@ export default function BibleScreen() {
                   opacity: 0.5,
                 }}
               >
-                {chapterData.translation.attribution}
+                {/* In the app's language (#807). */}
+                {BibleService.getTranslationAttribution(chapterData.translation, language)}
               </Text>
             )}
             {/* WordProject asks for a link to its site and app (docs/LEGAL.md). */}
@@ -5064,7 +5111,7 @@ export default function BibleScreen() {
                             { color: theme.colors.onSurface, fontWeight: '700' },
                           ]}
                         >
-                          {hymn.number}. {hymn.title}
+                          {hymn.number}. {getHymnTitle(hymn.hymnalId, hymn.title, language)}
                         </Text>
                         <Text
                           style={[
@@ -5543,7 +5590,7 @@ export default function BibleScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={
                         verseHymns.length === 1
-                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${verseHymns[0].title}`
+                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${getHymnTitle(verseHymns[0].hymnalId, verseHymns[0].title, language)}`
                           : labels.verseHymnsTitle
                       }
                       accessibilityHint={verseHymns.length === 1 ? labels.verseHymnHint : undefined}
@@ -5588,6 +5635,7 @@ export default function BibleScreen() {
                 <PopupFlatList<
                   | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
                   | BibleService.TranslationBook
+                  | BookListHeading
                   | number
                 >
                   data={
@@ -5598,7 +5646,8 @@ export default function BibleScreen() {
                             translation.id !== supportedTranslation.id,
                         )
                       : lastActiveType === 'book'
-                        ? books
+                        ? // Under Testament and section headings (#807).
+                          getBookListRows(books, language)
                         : lastActiveType === 'verse'
                           ? Array.from(
                               { length: chapterData?.numberOfVerses || 0 },
@@ -5688,60 +5737,29 @@ export default function BibleScreen() {
                     lastActiveType === 'translation' ? (
                       <View>
                         <Divider />
-                        <View style={styles.pinyinPreferenceRow}>
-                          <View style={styles.pinyinPreferenceCopy}>
-                            <Text
-                              style={[
-                                styles.pressRowText,
-                                { color: theme.colors.onSurface },
-                              ]}
-                            >
-                              {labels.dualLanguage}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.pinyinPreferenceHelp,
-                                { color: theme.colors.onSurfaceVariant },
-                              ]}
-                            >
-                              {labels.dualLanguageHelp}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={dualLanguageEnabled}
-                            onValueChange={(enabled) => {
-                              setDualLanguageEnabled(enabled);
-                              if (!enabled) setTranslationSelectionRole('primary');
-                            }}
-                            accessibilityLabel={labels.dualLanguage}
-                          />
-                        </View>
+                        {/* A tap on the words turns each on or off too (#798). */}
+                        <SwitchRow
+                          label={labels.dualLanguage}
+                          description={labels.dualLanguageHelp}
+                          value={dualLanguageEnabled}
+                          onValueChange={(enabled) => {
+                            setDualLanguageEnabled(enabled);
+                            if (!enabled) setTranslationSelectionRole('primary');
+                          }}
+                          style={styles.pinyinPreferenceRow}
+                          labelStyle={styles.pressRowText}
+                          descriptionStyle={styles.pinyinPreferenceHelp}
+                        />
                         <Divider />
-                        <View style={styles.pinyinPreferenceRow}>
-                          <View style={styles.pinyinPreferenceCopy}>
-                            <Text
-                              style={[
-                                styles.pressRowText,
-                                { color: theme.colors.onSurface },
-                              ]}
-                            >
-                              {labels.showPinyin}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.pinyinPreferenceHelp,
-                                { color: theme.colors.onSurfaceVariant },
-                              ]}
-                            >
-                              {labels.pinyinHelp}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={showPinyin}
-                            onValueChange={setShowPinyin}
-                            accessibilityLabel={labels.showPinyin}
-                          />
-                        </View>
+                        <SwitchRow
+                          label={labels.showPinyin}
+                          description={labels.pinyinHelp}
+                          value={showPinyin}
+                          onValueChange={setShowPinyin}
+                          style={styles.pinyinPreferenceRow}
+                          labelStyle={styles.pressRowText}
+                          descriptionStyle={styles.pinyinPreferenceHelp}
+                        />
                         <Divider />
                         {/* Requests set which languages come next (#241, #344). */}
                         <TouchableOpacity
@@ -5763,6 +5781,27 @@ export default function BibleScreen() {
                     ) : undefined
                   }
                   renderItem={({ item }) => {
+                    // The book list's headings (#807): small, and no tap
+                    // target, so the list stays quick to scroll. A
+                    // Testament's is a little stronger than its sections'.
+                    if (typeof item === 'object' && isBookListHeading(item)) {
+                      const isTestament = item.heading === 'testament';
+                      return (
+                        <Text
+                          accessibilityRole="header"
+                          style={[
+                            isTestament ? styles.bookListTestament : styles.bookListSection,
+                            {
+                              color: isTestament
+                                ? theme.colors.onSurface
+                                : theme.colors.onSurfaceVariant,
+                            },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                      );
+                    }
                     // A book, chapter, or verse in the translation's language,
                     // then the app's, when they differ (#723).
                     const itemName: TwoLanguageName =
@@ -6080,6 +6119,24 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       fontSize: scaleTypographyMetric(16, uiTextScale),
       lineHeight: scaleTypographyMetric(22, uiTextScale),
     },
+    // The book list's headings (#807), smaller than its 16-point names and
+    // with little space around them. A section's sits close above its first
+    // book; a Testament's, a point larger and bold, has a little more above.
+    bookListTestament: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 2,
+      fontSize: scaleTypographyMetric(14, uiTextScale),
+      lineHeight: scaleTypographyMetric(19, uiTextScale),
+      fontWeight: '700',
+    },
+    bookListSection: {
+      paddingHorizontal: 16,
+      paddingTop: 6,
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+      fontWeight: '600',
+    },
     pressRowTitle: {
       fontSize: scaleTypographyMetric(16, uiTextScale),
       lineHeight: scaleTypographyMetric(22, uiTextScale),
@@ -6121,10 +6178,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-    },
-    pinyinPreferenceCopy: {
-      flex: 1,
-      minWidth: 0,
     },
     pinyinPreferenceHelp: {
       fontSize: scaleTypographyMetric(13, uiTextScale),

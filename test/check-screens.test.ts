@@ -252,7 +252,9 @@ describe('screen rules', () => {
     // parentheses since #723; the pill names the book in English whichever
     // names are loaded.
     const after = shot('bible-cuv-after-spanish-default');
-    const list = (names: string[]) => names.map((name, index) => line(name, 0.3 + index * 0.06));
+    // Its books sit under Testament and section headings since #807.
+    const headings = ['Old Testament', 'Law'];
+    const list = (names: string[]) => [...headings, ...names].map((name, index) => line(name, 0.3 + index * 0.06));
     expect(checkShot(after, list(['創世記 (Genesis)', '出埃及記 (Exodus)', '利未記 (Leviticus)']))).toEqual([]);
     // Vision, reading English first, may miss the Chinese.
     expect(checkShot(after, list(['(Genesis)', '(Exodus)', '(Leviticus)', '(Numbers)']))).toEqual([]);
@@ -261,11 +263,20 @@ describe('screen rules', () => {
       '"Éxodo (Exodus)" matches /^[EÉ]xodo\\b/, which must not show',
       '"Levítico (Leviticus)" matches /^Lev[ií]tico\\b/, which must not show',
     ]);
-    // The list before #723, with no English.
+    // The list before #723, with no English. Law's rule misses Genesis too.
     expect(checkShot(after, list(['創世記', '出埃及記', '利未記']))).toEqual([
+      'no line matches /[(（]Genesis\\b/',
       'no line matches /[(（]Genesis\\b/',
       'no line matches /[(（]Exodus\\b/',
       'no line matches /[(（]Leviticus\\b/',
+    ]);
+    // The list before #807, with no headings, and one with Law below Genesis.
+    const books = ['創世記 (Genesis)', '出埃及記 (Exodus)', '利未記 (Leviticus)'];
+    expect(checkShot(after, books.map((name, index) => line(name, 0.3 + index * 0.06)))).toEqual([
+      'no line matches /\\bLaw\\b/',
+    ]);
+    expect(checkShot(after, [...books, 'Law'].map((name, index) => line(name, 0.3 + index * 0.06)))).toEqual([
+      '/\\bLaw\\b/ is not above /[(（]Genesis\\b/',
     ]);
   });
 

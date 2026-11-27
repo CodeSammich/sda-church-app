@@ -3,12 +3,12 @@ import { getSortedChinese505Hymns } from './Chinese505Hymnal';
 import { getSortedChinese506Hymns } from './Chinese506Hymnal';
 import { getSortedChinese707Hymns } from './Chinese707Hymnal';
 import { getSortedHymns } from './EnglishHymnal';
-import { getHymnalLabel, type HymnalBookId } from './HymnalLabels';
+import { getHymnalLabel, getHymnTitle, type HymnalBookId } from './HymnalLabels';
 import { getHymnEquivalents, HYMNAL_CROSS_REFERENCE_TABLES } from './HymnalNumberMappings';
 
 /** One hymn in the search across every hymnal. */
 export interface HymnalSearchItem {
-  /** "Number. Title", as the hymnal page shows it. */
+  /** "Number. Title", as the hymnal page shows it, in the reader's script. */
   title: string;
   /** The number, title, an English hymn's scripture, and the hymnal's name. */
   keywords: string[];
@@ -179,35 +179,35 @@ export const getHymnalSearchItems = (
   }));
 
   const chinese505 = getSortedChinese505Hymns().map((hymn) => ({
-    title: `${hymn.number}. ${hymn.title}`,
+    title: `${hymn.number}. ${getHymnTitle('chinese-hymnal-505', hymn.title, language)}`,
     keywords: [hymn.number.toString(), hymn.title, label('chinese-hymnal-505')],
     hymnalId: 'chinese-hymnal-505' as const,
     hymnNumber: hymn.number,
   }));
 
   const chinese506 = getSortedChinese506Hymns().map((hymn) => ({
-    title: `${hymn.number}. ${hymn.title}`,
+    title: `${hymn.number}. ${getHymnTitle('chinese-hymnal-506', hymn.title, language)}`,
     keywords: [hymn.number.toString(), hymn.title, label('chinese-hymnal-506')],
     hymnalId: 'chinese-hymnal-506' as const,
     hymnNumber: hymn.number,
   }));
 
   const chinese707V1 = getSortedChinese707Hymns(1).map((hymn) => ({
-    title: `${hymn.number}. ${hymn.title}`,
+    title: `${hymn.number}. ${getHymnTitle('chinese-hymnal-707-v1', hymn.title, language)}`,
     keywords: [hymn.number.toString(), hymn.title, label('chinese-hymnal-707-v1')],
     hymnalId: 'chinese-hymnal-707-v1' as const,
     hymnNumber: hymn.number,
   }));
 
   const chinese707V2 = getSortedChinese707Hymns(2).map((hymn) => ({
-    title: `${hymn.number}. ${hymn.title}`,
+    title: `${hymn.number}. ${getHymnTitle('chinese-hymnal-707-v2', hymn.title, language)}`,
     keywords: [hymn.number.toString(), hymn.title, label('chinese-hymnal-707-v2')],
     hymnalId: 'chinese-hymnal-707-v2' as const,
     hymnNumber: hymn.number,
   }));
 
   const chinese707V3 = getSortedChinese707Hymns(3).map((hymn) => ({
-    title: `${hymn.number}. ${hymn.title}`,
+    title: `${hymn.number}. ${getHymnTitle('chinese-hymnal-707-v3', hymn.title, language)}`,
     keywords: [hymn.number.toString(), hymn.title, label('chinese-hymnal-707-v3')],
     hymnalId: 'chinese-hymnal-707-v3' as const,
     hymnNumber: hymn.number,

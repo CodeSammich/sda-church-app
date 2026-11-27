@@ -7,6 +7,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { AppIcon } from '@/components/AppIcon';
+import { PillarList, type Pillar } from '@/components/PillarList';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -388,42 +389,7 @@ export default function AboutSDAScreen() {
               </Text>
             </Card.Content>
           </Card>
-          <View
-            style={[
-              styles.pillarContainer,
-            ]}
-          >
-            {(labels as any).pillarItems.map((item: any, index: number) => (
-              <Card
-                key={index}
-                style={[
-                  styles.pillarCard,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderWidth: 1,
-                    borderColor: theme.colors.outlineVariant,
-                  },
-                ]}
-                mode="contained"
-              >
-                <View style={styles.pillarContent}>
-                  <AppIcon
-                    name={item.icon as any}
-                    size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
-                    color={theme.colors.tertiary}
-                  />
-                  <Text
-                    variant="labelSmall"
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                    style={[styles.pillarText, { color: theme.colors.onSurface }]}
-                  >
-                    {item.title}
-                  </Text>
-                </View>
-              </Card>
-            ))}
-          </View>
+          <PillarList pillars={labels.pillarItems as Pillar[]} />
         </View>
 
         <View style={DocumentStyles.section}>
@@ -527,28 +493,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  pillarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  pillarCard: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
   beliefsButton: {
     alignSelf: 'center',
     width: '100%',
     marginHorizontal: 16,
-  },
-  pillarContent: {
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pillarText: {
-    marginTop: 4,
-    textAlign: 'center',
-    fontWeight: '600',
   },
 });
