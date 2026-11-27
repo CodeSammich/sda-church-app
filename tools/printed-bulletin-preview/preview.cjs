@@ -11,6 +11,9 @@
 //   --only A,B     only these layouts (see made-up-data.cjs)
 //   --fonts DIR    extra fonts, such as a Chinese font this machine lacks
 //                  (also PRINTED_PREVIEW_FONTS)
+//   --word-copy    draw the Word copy printed on a Mac (#627, #852): Chinese
+//                  in Songti TC, at the copy's exact line heights. Songti TC
+//                  comes only with macOS; elsewhere a stand-in draws it.
 //
 // Exits 1 if a check fails, 2 if it couldn't run. See
 // docs/operations/bulletin-automation.md#printed-bulletin-preview.
@@ -38,6 +41,7 @@ function parseArgs(argv) {
     else if (flag === '--base') args.base = value();
     else if (flag === '--only') args.only = value().split(',');
     else if (flag === '--fonts') args.fonts = value();
+    else if (flag === '--word-copy') args.wordCopy = true;
     else throw new Error(`Unknown option ${argv[i]}`);
   }
   return args;
@@ -70,14 +74,18 @@ function checkoutAppsScript(sha, dir) {
   return dir;
 }
 
-async function measureVariants(chrome, source, variants, outDir, { screenshots }) {
+// The Word copy's settings if the Apps Script has none (#627).
+const WORD_COPY_DEFAULTS = { chineseFont: 'Songti TC', lineHeight: 1.15 };
+
+async function measureVariants(chrome, source, variants, outDir, { screenshots, wordCopy }) {
   const results = {};
   for (const variant of variants) {
     const built = buildVariant(source, variant);
     const dir = path.join(outDir, variant.name);
     fs.mkdirSync(dir, { recursive: true });
     const htmlFile = path.join(dir, 'doc.html');
-    fs.writeFileSync(htmlFile, documentHtml(built.body, variant.name));
+    const opts = wordCopy ? { wordCopy: built.wordCopy || WORD_COPY_DEFAULTS } : {};
+    fs.writeFileSync(htmlFile, documentHtml(built.body, variant.name, opts));
     const page = await chrome.open(pathToFileURL(htmlFile).href);
     const pages = await page.evaluate('window.__fit');
     if (screenshots) {
@@ -113,24 +121,26 @@ async function main() {
   let head;
   let before = null;
   try {
-    head = await measureVariants(chrome, readAppsScript(path.join(REPO, 'google-apps-script')), variants, args.out, { screenshots: true });
+    head = await measureVariants(chrome, readAppsScript(path.join(REPO, 'google-apps-script')), variants, args.out, { screenshots: true, wordCopy: args.wordCopy });
     if (base) {
       const baseSource = readAppsScript(checkoutAppsScript(base.sha, path.join(work, 'base-apps-script')));
-      before = await measureVariants(chrome, baseSource, variants, path.join(work, 'base'), { screenshots: false });
+      before = await measureVariants(chrome, baseSource, variants, path.join(work, 'base'), { screenshots: false, wordCopy: args.wordCopy });
     }
   } finally {
     await chrome.close();
     fs.rmSync(work, { recursive: true, force: true });
   }
 
-  const outcome = evaluate(head, before);
+  const outcome = evaluate(head, before, { realCheck: args.wordCopy ? 'a real print' : 'a real Doc' });
   const pageCounts = Object.fromEntries(Object.keys(head).map((name) => [name, head[name].pages.length]));
-  const summary = summaryMarkdown(outcome, { baseLabel: base && `${base.label} (${base.sha.slice(0, 8)})`, pageCounts });
+  const summary = summaryMarkdown(outcome, { baseLabel: base && `${base.label} (${base.sha.slice(0, 8)})`, pageCounts, wordCopy: args.wordCopy });
   fs.writeFileSync(path.join(args.out, 'summary.md'), summary);
   fs.writeFileSync(path.join(args.out, 'summary.json'), JSON.stringify({ base: base && base.sha, head, before, ...outcome }, null, 1));
   process.stdout.write(summary);
   const own = chinese && chinese.find((family) => family.startsWith('UoqMunThenKhung'));
-  const drawnWith = own ? 'UoqMunThenKhung, the bulletin\'s font' : chinese && `stand-ins (${chinese.slice(0, 2).join('; ')})`;
+  const drawnWith = args.wordCopy
+    ? 'Songti TC where the system has it'
+    : own ? 'UoqMunThenKhung, the bulletin\'s font' : chinese && `stand-ins (${chinese.slice(0, 2).join('; ')})`;
   process.stdout.write(`\nPages: ${args.out}${drawnWith ? `\nChinese drawn in ${drawnWith}` : ''}\n`);
   return outcome.failures.length ? 1 : 0;
 }

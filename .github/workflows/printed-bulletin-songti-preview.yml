@@ -1,39 +1,166 @@
 name: Printed Bulletin Songti Preview
 
-# TEMPORARY PROBE for #852: does GitHub's macOS image have Songti TC?
+# Draws the printed bulletin as its Word copy prints on a Mac, with the
+# Chinese in Songti TC (#852): the same made-up layouts and pages as the
+# Printed Bulletin Preview (#844), on a macOS runner, since Songti TC comes
+# only with macOS. Apple's font is used only inside the macOS job: never
+# copied into the repository, an artifact, or another job. Only the drawn
+# pages leave. It never blocks a release: the Linux preview is the check that
+# fails. See docs/operations/bulletin-automation.md#songti-tc-preview.
 on:
+  # Only the release PR into main, and by hand.
   pull_request:
     branches:
-      - release-candidate
-    paths:
-      - '.github/workflows/printed-bulletin-songti-preview.yml'
+      - main
+  workflow_dispatch: {}
 
 permissions:
   contents: read
 
+concurrency:
+  group: printed-bulletin-songti-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
 jobs:
-  probe:
-    name: Songti TC probe
-    runs-on: macos-26
-    timeout-minutes: 10
+  wait:
+    # A release PR comes from this repository's release-candidate branch.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.head_ref == 'release-candidate' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    name: Wait for the iOS key screens
+    runs-on: ubuntu-latest
+    # The iOS batches take about an hour; the wait gives up long after.
+    timeout-minutes: 240
+    permissions:
+      # To read the iOS key screens run's jobs.
+      actions: read
     steps:
-      - name: Look for Songti TC
+      # The Mac job waits until the iOS key screens' batches are done, so it
+      # never holds a Mac while they wait for their shared app. It goes ahead
+      # if there's no iOS run, or the wait runs out.
+      - name: Wait for the iOS key screens join
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          sw_vers
-          ls -la /System/Library/Fonts/Supplemental/ | grep -i -E 'songti|st[a-z]*\.tt' || echo 'No Songti in Supplemental'
-          ls /System/Library/AssetsV2/ 2>/dev/null | grep -i font || echo 'No font assets folder'
-          ls "/Applications/Google Chrome.app" >/dev/null 2>&1 && echo 'Google Chrome is installed' || echo 'No Google Chrome'
-          cat > probe.swift <<'EOF'
+          set -uo pipefail
+          if [ "$EVENT" != pull_request ] || [ "$BASE_REF" != main ]; then
+            echo "No iOS key screens run to wait for."
+            exit 0
+          fi
+          run=""
+          for _ in $(seq 1 10); do
+            run=$(gh api "repos/$REPO/actions/workflows/ios-key-screens.yml/runs?head_sha=$SHA&event=pull_request" \
+              --jq '.workflow_runs[0].id // empty' || true)
+            [ -n "$run" ] && break
+            sleep 30
+          done
+          if [ -z "$run" ]; then
+            echo "No iOS key screens run for $SHA; going ahead."
+            exit 0
+          fi
+          for _ in $(seq 1 220); do
+            join=$(gh api "repos/$REPO/actions/runs/$run/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == "iOS key screens join")][0].status // "not started"' || true)
+            status=$(gh api "repos/$REPO/actions/runs/$run" --jq .status || true)
+            if [ "$join" = completed ] || [ "$status" = completed ]; then
+              echo "iOS key screens run $run: join $join, run $status."
+              exit 0
+            fi
+            sleep 60
+          done
+          echo "::notice::The iOS key screens join didn't finish in time; going ahead."
+
+  preview:
+    name: Printed bulletin preview in Songti TC
+    needs: wait
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Songti TC comes with macOS 26 (/System/Library/Fonts/Supplemental),
+      # not as a font macOS downloads on demand. If an image drops it, the
+      # summary says so and the job passes.
+      - name: Check for Songti TC
+        id: font
+        run: |
+          cat > "$RUNNER_TEMP/songti.swift" <<'SWIFT'
           import CoreText
-          import Foundation
-          let families = (CTFontManagerCopyAvailableFontFamilyNames() as! [String]).filter { $0.contains("Songti") }
-          print("Families with Songti:", families)
-          for name in ["STSongti-TC-Regular", "STSongti-TC-Bold", "STSongti-SC-Regular"] {
-            let descriptor = CTFontDescriptorCreateWithAttributes([kCTFontNameAttribute: name] as CFDictionary)
-            let font = CTFontCreateWithFontDescriptor(descriptor, 10, nil)
-            let url = CTFontCopyAttribute(font, kCTFontURLAttribute) as? URL
-            let downloadable = CTFontDescriptorCopyAttribute(descriptor, kCTFontDownloadableAttribute)
-            print(name, "->", CTFontCopyPostScriptName(font), url?.path ?? "no file", "downloadable:", downloadable ?? "nil")
-          }
-          EOF
-          swift probe.swift
+          let font = CTFontCreateWithName("STSongti-TC-Regular" as CFString, 10, nil)
+          print(CTFontCopyPostScriptName(font) as String == "STSongti-TC-Regular" ? "yes" : "no")
+          SWIFT
+          have=$(swift "$RUNNER_TEMP/songti.swift" 2>/dev/null || echo no)
+          echo "have=$have" >> "$GITHUB_OUTPUT"
+          if [ "$have" != yes ]; then
+            echo "::warning::Songti TC isn't on this macOS image, so there's no Songti TC preview."
+            printf '## Printed bulletin preview in Songti TC\n\nSongti TC isn'"'"'t on this macOS image, so there are no pages. The Linux preview still checks the layout.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Node.js
+        if: steps.font.outputs.have == 'yes'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.font.outputs.have == 'yes'
+        run: npm ci --ignore-scripts
+
+      - name: Fetch the base branch's Apps Script
+        if: steps.font.outputs.have == 'yes'
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "${PR_BASE_SHA:-main}"
+          echo "PREVIEW_BASE=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
+
+      # Problems are warnings here: this job never blocks a release.
+      - name: Draw the Word copy in Songti TC
+        if: steps.font.outputs.have == 'yes'
+        run: |
+          status=0
+          node tools/printed-bulletin-preview/preview.cjs --word-copy --out "$RUNNER_TEMP/printed-bulletin-songti-tc" --base "$PREVIEW_BASE" || status=$?
+          if [ "$status" -eq 1 ]; then
+            echo "::warning::The Songti TC preview found layout problems; see the run summary."
+          elif [ "$status" -ne 0 ]; then
+            echo "::warning::The Songti TC preview couldn't run; see this step's log."
+          fi
+
+      - name: Upload the pages
+        id: upload
+        if: ${{ !cancelled() && steps.font.outputs.have == 'yes' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: printed-bulletin-preview-songti-tc
+          path: ${{ runner.temp }}/printed-bulletin-songti-tc/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Link the pages in the run summary
+        if: ${{ !cancelled() && steps.font.outputs.have == 'yes' }}
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          SUMMARY: ${{ runner.temp }}/printed-bulletin-songti-tc/summary.md
+        run: |
+          {
+            if [ -f "$SUMMARY" ]; then head -n 1 "$SUMMARY"; else echo '## Printed bulletin preview in Songti TC'; fi
+            echo
+            if [ -n "$ARTIFACT_URL" ]; then
+              echo "**[Download the Songti TC page images]($ARTIFACT_URL)**: a zip with a folder per layout and a PNG per page, kept 14 days. It holds no font."
+            else
+              echo 'No page images were uploaded; the step before says why.'
+            fi
+            if [ -f "$SUMMARY" ]; then tail -n +2 "$SUMMARY"; else printf '\nThe preview stopped before its checks; its log says why.\n'; fi
+          } >> "$GITHUB_STEP_SUMMARY"

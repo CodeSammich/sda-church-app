@@ -1406,6 +1406,40 @@ weeks are in `made-up-data.cjs`: invented names only.
 So a passing run doesn't replace checking a real Doc after the deploy (see
 [Deployment and verification](#deployment-and-verification)).
 
+### Songti TC preview
+
+The bulletin is printed from its [Word copy](#printing-the-final-version) on
+a Mac, in Songti TC, a font that comes only with macOS. So the release PR into
+`main` also gets the **Printed Bulletin Songti Preview** workflow
+(`.github/workflows/printed-bulletin-songti-preview.yml`, #852). It draws the
+same layouts and pages on a macOS runner (`preview.cjs --word-copy`) as the
+Word copy prints:
+
+- Chinese is drawn in Songti TC, which is preinstalled on GitHub's macOS 26
+  image (`/System/Library/Fonts/Supplemental/Songti.ttc`), not downloaded on
+  demand; and
+- every paragraph without a picture gets the Word copy's exact line height:
+  `PRINTED_BULLETIN_WORD_COPY.lineHeight` (1.15) times its largest size, times
+  its line spacing.
+
+It starts after the iOS key screens' batches are done: a Linux job waits for the
+**iOS key screens join** of the same commit, so the Mac job never holds a Mac
+while the iOS batches wait for their shared app. It can also be started by hand
+from **Actions**. Its run summary opens with **Download the Songti TC page
+images** (the **printed-bulletin-preview-songti-tc** zip), then the same table
+as the Linux preview.
+
+It never blocks a release: layout problems are warnings, and if an image ever
+lacks Songti TC, the summary says so and the job passes. The
+[Linux preview](#printed-bulletin-preview) is the check that fails. Apple's
+license allows its fonts only on Apple hardware, so the font stays inside the
+macOS job: it's never copied into the repository, an artifact, or another job.
+Only the drawn pages leave.
+
+It's still the preview's own layout in Chrome, not Word's, so it's an
+approximation; a real print of the Word copy is the final check. Run locally
+with `--word-copy` on a Mac; elsewhere a stand-in font draws the Chinese.
+
 ## Deployment and verification
 
 The repository is the canonical source. Local WSL deployment uses the existing

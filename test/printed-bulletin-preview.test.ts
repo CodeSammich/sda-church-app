@@ -118,6 +118,29 @@ describe('the checks on the Doc’s structure', () => {
     expect(html).toContain('&lt;b&gt;one&lt;/b&gt;');
     expect(html).toContain('window.__fit');
   });
+
+  it('draws the Word copy in Songti TC at its exact line heights', () => {
+    const { body } = letterBody();
+    const mixed = body.appendParagraph('主席 Chairman');
+    mixed.editAsText().setFontSize(10).setFontFamily('Times New Roman').setFontFamily(0, 1, 'UoqMunThenKhung');
+    mixed.setLineSpacing(1);
+    body.appendParagraph('').appendInlineImage({ w: 48, h: 48 });
+    const wordCopy = { chineseFont: 'Songti TC', lineHeight: 1.15 };
+    const html = documentHtml(body, 'test', { wordCopy });
+    // The Chinese font's run is all Songti TC; the English run's Chinese would be too.
+    expect(html).toContain(`font-family:'Songti TC', 'Noto Serif CJK TC'`);
+    expect(html).toContain(`font-family:'Times New Roman', 'Liberation Serif', 'Tinos', 'Songti TC'`);
+    // 1.15 × 10 pt × single spacing, not the Doc's font-based height.
+    expect(html).toContain('line-height:11.50pt">');
+    // A paragraph with a picture keeps the Doc's own height: Arial's 1.117 × 11 pt × 1.15.
+    expect(html).toContain('line-height:14.13pt">');
+    expect(documentHtml(body, 'test')).not.toContain('Songti TC');
+  });
+
+  it('reads the Word copy’s font and line height from the Apps Script', () => {
+    const source = readAppsScript(join(__dirname, '..', 'google-apps-script'));
+    expect(buildVariant(source, VARIANTS[0]).wordCopy).toEqual({ chineseFont: 'Songti TC', lineHeight: 1.15 });
+  });
 });
 
 describe('the pass/fail rules', () => {
@@ -238,5 +261,64 @@ describe('the Printed Bulletin Preview workflow', () => {
   it('is in the bulletin docs and the list of checks', () => {
     expect(repoFile('docs/operations/bulletin-automation.md')).toContain('## Printed bulletin preview');
     expect(repoFile('docs/CONTRIBUTING.md')).toContain('### `Printed Bulletin Preview` (`.github/workflows/printed-bulletin-preview.yml`)');
+  });
+});
+
+describe('the Printed Bulletin Songti Preview workflow', () => {
+  const workflow = repoFile('.github/workflows/printed-bulletin-songti-preview.yml');
+
+  it('runs only on the release PR into main, and by hand', () => {
+    expect(workflow).toMatch(/pull_request:\n {4}branches:\n {6}- main\n {2}workflow_dispatch:/);
+    expect(workflow).toContain("github.head_ref == 'release-candidate' &&\n        github.event.pull_request.head.repo.full_name == github.repository");
+    expect(workflow).not.toContain('pull_request_target');
+    expect(workflow).not.toMatch(/^\s+workflow_run:/m);
+  });
+
+  it('waits on Linux for the iOS key screens join, then draws on a Mac', () => {
+    const wait = workflow.slice(workflow.indexOf('\n  wait:\n'), workflow.indexOf('\n  preview:\n'));
+    const preview = workflow.slice(workflow.indexOf('\n  preview:\n'));
+    expect(wait).toContain('runs-on: ubuntu-latest');
+    expect(wait).toContain('ios-key-screens.yml/runs?head_sha=$SHA&event=pull_request');
+    expect(wait).toContain('select(.name == "iOS key screens join")');
+    expect(preview).toContain('needs: wait');
+    expect(preview).toContain('runs-on: macos-26');
+    expect(preview).toContain('--word-copy');
+  });
+
+  it('reads only, uses no secrets, and pins its actions', () => {
+    expect(workflow).toMatch(/^permissions:\n {2}contents: read\n/m);
+    expect(workflow).not.toMatch(/:\s*write\b/);
+    expect(workflow.match(/^\s+actions: read$/gm)).toHaveLength(1);
+    expect(workflow).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    expect(workflow).toContain('persist-credentials: false');
+    for (const [, ref] of workflow.matchAll(/uses: [\w./-]+@(\S+)/g)) expect(ref).toMatch(/^[0-9a-f]{40}$/);
+    const lines = workflow.split('\n');
+    lines.forEach((line, index) => {
+      const key = /^(\s*(?:-\s+)?)run:(.*)$/.exec(line);
+      if (!key) return;
+      const script = [key[2]];
+      for (const next of lines.slice(index + 1)) {
+        if (next.trim() && next.search(/\S/) <= key[1].length) break;
+        script.push(next);
+      }
+      expect(script.join('\n')).not.toContain('${{');
+    });
+  });
+
+  it('never blocks a release, and uploads only the drawn pages', () => {
+    // No font: a warning and a summary line, and the job passes.
+    expect(workflow).toContain("Songti TC isn'\"'\"'t on this macOS image");
+    expect(workflow).toContain('|| status=$?');
+    expect(workflow).toContain('::warning::The Songti TC preview found layout problems');
+    expect(workflow).toContain('name: printed-bulletin-preview-songti-tc');
+    expect(workflow.match(/^\s+path: .*/gm)).toEqual(['          path: ${{ runner.temp }}/printed-bulletin-songti-tc/']);
+    // Apple's font stays on the Mac: nothing copies a font file anywhere.
+    expect(workflow).not.toMatch(/\b(cp|mv|ditto|tar|zip)\b[^\n]*(Fonts|\.tt[cf]|\.otf)/);
+    expect(workflow).toContain('[Download the Songti TC page images]($ARTIFACT_URL)');
+  });
+
+  it('is in the bulletin docs and the list of checks', () => {
+    expect(repoFile('docs/operations/bulletin-automation.md')).toContain('### Songti TC preview');
+    expect(repoFile('docs/CONTRIBUTING.md')).toContain('### `Printed Bulletin Songti Preview` (`.github/workflows/printed-bulletin-songti-preview.yml`)');
   });
 });
