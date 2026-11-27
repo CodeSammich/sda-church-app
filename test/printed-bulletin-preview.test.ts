@@ -113,6 +113,19 @@ describe('the made-up layouts', () => {
   });
 });
 
+describe('the tool’s source', () => {
+  it('writes no range of non-ASCII characters literally, so normalising a character can’t widen it', () => {
+    // A CJK class once ran from 豈, which Unicode normalisation had turned
+    // from U+F900 into U+8C48, so it took in Hangul, private use, and
+    // surrogates. Ranges are written as \u escapes instead.
+    const { readdirSync } = require('node:fs');
+    for (const file of readdirSync(join(__dirname, '..', 'tools/printed-bulletin-preview')).filter((f: string) => f.endsWith('.cjs'))) {
+      const source = repoFile(`tools/printed-bulletin-preview/${file}`);
+      expect({ file, ranges: source.match(/[^\x00-\x7F]-[^\x00-\x7F]/g) ?? [] }).toEqual({ file, ranges: [] });
+    }
+  });
+});
+
 describe('the checks on the Doc’s structure', () => {
   it('flags type under 10 pt and anything wider than where it sits', () => {
     const { body } = letterBody();

@@ -31,7 +31,6 @@ const FONT_TABLE = {
   'Noto Serif TC': { css: ['Noto Serif TC', 'Noto Serif CJK TC'], ratio: 1.437, cjk: true },
 };
 const UNKNOWN_FONT = { css: ['Times New Roman', 'Liberation Serif'], ratio: 1.107, cjk: false };
-const CJK_RE = /[⺀-⿟　-〿㐀-鿿豈-﫿︰-﹏＀-￯]|[\ud840-\ud87f][\udc00-\udfff]/;
 const GENERATED = new Set(['HymnalData.gs', 'PinyinPro.gs']);
 
 // ---------- The Apps Script, with fake Google services ----------
