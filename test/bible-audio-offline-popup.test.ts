@@ -116,7 +116,7 @@ describe('the one-time tip', () => {
     const drop = bible.slice(bible.indexOf('onDrop: () => {'));
     const handler = drop.slice(0, drop.indexOf('\n    },\n'));
     expect(handler).toContain("appActive: AppState.currentState === 'active'");
-    expect(handler).toContain('chapterDownloaded: !!downloadedAudioUriRef.current');
+    expect(handler).toContain('chapterDownloaded: !!downloadedAudioUri,');
     expect(handler).toContain('hasEverDownloaded: hasDownloadedBibleAudio || hasHadBibleAudioDownloads()');
     expect(handler).toContain('noteBibleAudioOfflineTipShown();');
     expect(handler).toContain('setAudioOfflinePopupVisible(true);');
