@@ -60,6 +60,15 @@ The resolver looks in every hymnal on the hymnal page (`HYMNALS` in
   side is set by how it's written) gets a bonus, so a bare number
   stays in the church's hymnal. A typed title still counts, so `第1首 聖哉真神` opens the
   506's hymn 1, because the 505's hymn 1 has another title.
+- **What counts as a number.** A number is a hymn number when it's marked as one: alone
+  (`10`, `10.`), after `#` or a hymnal's name (`#10`, `No. 10`, `Hymn 10`, `AH 73`), as
+  `第10首`, or first in the cell with a full stop after it (`10. Title`). Any other number,
+  as in `286 Wonderful Words of Life`, counts only beside that hymn's title, matched as
+  strictly as a title alone, so `12 Gates to the City` stays as typed. A number that's part
+  of a figure or a word, as in `10,000 Reasons` or `1st`, is never one (#830).
+- **A plain number in the Chinese cell** is the 505's number, as `第N首` is, never a 1985
+  number mapped across. A number past the 505's last hymn is treated as a hymn no hymnal has
+  (#834). The English cell's plain number is still looked up in every hymnal.
 - **Titles.** A title-only answer is compared with every hymnal's titles, Traditional and
   Simplified alike. It matches a hymn whose title contains it, or that it contains, or one
   close enough by edit distance to be that title misspelled: 0.7 in the church's two
@@ -156,7 +165,8 @@ selection, and the adapter types rather than merely adding another constant.
 ## Regression coverage
 
 `test/bulletin-hymnal-service.test.ts` is the behavioral specification. In particular, it
-covers bidirectional mappings, number-first typo repair, title-only fuzzy matching,
+covers bidirectional mappings, number-first typo repair, which numbers count as hymn
+numbers, the Chinese cell's plain number, title-only fuzzy matching,
 wrong-field detection, unmapped fallbacks, fixed Queens responses, hymns only another
 hymnal has, the YouTube fallback, how a Sabbath School cell is read, and the requirement
 that display text and routing use the same selected form answer.

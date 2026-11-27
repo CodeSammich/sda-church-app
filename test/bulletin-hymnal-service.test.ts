@@ -164,11 +164,65 @@ describe('bulletin hymnal resolution', () => {
   });
 
   it("matches no hymn to a dash, or to a hymnal's name alone", () => {
-    for (const value of ['—', 'AH']) {
+    // "Hymn" once matched 58, Hark, the Vesper Hymn Is Stealing (#831).
+    for (const value of ['—', 'AH', 'Hymn', 'Hymnal']) {
       const presentation = resolveBulletinHymnPresentation({ english: value, chinese: '' }, 'en');
       expect(presentation.displayText).toBe(value);
       expect(presentation.destination).toBeUndefined();
     }
+  });
+
+  it('keeps a song whose title starts with a number as typed, unless the number is marked or beside its title (#830)', () => {
+    // Hymn 10 is Come, Christians, Join to Sing, and hymn 12 Joyful, Joyful, We Adore Thee.
+    for (const value of ['10,000 Reasons', '12 Gates to the City', '3.5 Reasons', '1st Song']) {
+      expect(resolveBulletinHymnPresentation({ english: value, chinese: '' }, 'en')).toEqual({
+        displayText: value,
+        youtubeSearchQuery: value,
+      });
+    }
+    expect(resolveBulletinHymnDisplayText({ english: '10,000 Reasons', chinese: '' }, 'zh')).toBe(
+      '10,000 Reasons',
+    );
+
+    // A number marked as a hymn number, or beside its own hymn's title, is still that hymn.
+    for (const value of ['10', '10.', '#10', 'No. 10', 'Hymn 10', 'AH 10', 'SDAH no. 10']) {
+      expect(resolveBulletinHymnDestination({ english: value, chinese: '' }, 'en')).toEqual({
+        hymnalId: 'sdah-1985-en',
+        hymnNumber: 10,
+        route: '/home/english-hymnal',
+      });
+    }
+    // A full stop marks it even when the title is another song's.
+    expect(resolveBulletinHymnDisplayText({ english: '12. Gates to the City', chinese: '' }, 'en')).toBe(
+      '12. Joyful, Joyful, We Adore Thee',
+    );
+    expect(
+      resolveBulletinHymnDisplayText({ english: 'Wonderful Words of Life 286', chinese: '' }, 'en'),
+    ).toBe('286. Wonderful Words of Life');
+    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第10首' }, 'zh')).toBe('10. 聖徒崇拜');
+    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '165 奇哉生命之道' }, 'zh')).toBe(
+      '165. 奇哉生命之道',
+    );
+  });
+
+  it("reads a plain number in the Chinese cell as the 505's, never as a 1985 number (#834)", () => {
+    // The 1985's 520 maps to the 505's 209, 奇妙的救主; the 505 has 505 hymns.
+    for (const language of ['zh', 'en']) {
+      for (const value of ['520', '#520', '600']) {
+        expect(resolveBulletinHymnPresentation({ english: '', chinese: value }, language)).toEqual({
+          displayText: value,
+          youtubeSearchQuery: value,
+        });
+      }
+    }
+    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '505' }, 'zh')).toBe('505. 阿門');
+    // A Sabbath School cell's bare number is a Chinese hymnal number too.
+    expect(resolveBulletinHymnPresentation(toBulletinHymnText('520'), 'zh').destination).toBeUndefined();
+    // The English cell still reads it as the 1985's.
+    expect(resolveBulletinHymnDisplayText({ english: '520', chinese: '' }, 'zh')).toBe('209. 奇妙的救主');
+    expect(resolveBulletinHymnDisplayText({ english: '520', chinese: '' }, 'en')).toBe(
+      '520. He Hideth My Soul',
+    );
   });
 
   it('reads a title by its words when its only number is too big for any hymnal, such as a year', () => {
