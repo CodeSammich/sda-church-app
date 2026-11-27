@@ -564,15 +564,16 @@ name DAFgiving360 with its old name, Schwab Charitable. The sponsors are one lis
 
 **New Member & Visitor** (`app/(tabs)/home/discover.tsx`) starts with **Address &
 Service Times** (`components/AddressAndServiceTimes.tsx`), above its cards: each place
-the church meets, its gathering and hours, its street address, and **Get Directions**,
-which opens Maps (#793). Before, the addresses were only inside Locations & History and
-the times only inside Fellowships and the Sabbath Worship page it opens, where a member
-looking for them didn't find them. The address is in English in every language, since
-maps and drivers need it, in the page's full ink, and can be selected to copy. The
-gatherings and hours are one list,
-`CHURCH_SERVICE_TIMES` in `constants/ChurchData.ts`, which Fellowships reads too. In
-Chinese the Saturday service is 安息日崇拜, Sabbath worship: many Chinese Christians read
-主日崇拜 as Sunday's.
+the church meets, the day and hours it meets, its street address, and **Get
+Directions**, which opens Maps (#793). Before, the addresses were only inside Locations
+& History and the times only inside Fellowships and the Sabbath Worship page it opens,
+where a member looking for them didn't find them. The hours don't name the gathering,
+such as "Saturdays, 10:00 AM – 1:00 PM" or 每週六 上午10:00–下午1:00: a Saturday holds
+Sabbath School and the service, and some afternoons more (#808). They're
+`CHURCH_SERVICE_TIMES` in `constants/ChurchData.ts`. The address is in English in every
+language, since maps and drivers need it, in the page's full ink, and can be selected
+to copy. Where the app names the Saturday service in Chinese, as on Fellowships, it's
+安息日崇拜, Sabbath worship: many Chinese Christians read 主日崇拜 as Sunday's.
 
 **Tenet Alignment:**
 

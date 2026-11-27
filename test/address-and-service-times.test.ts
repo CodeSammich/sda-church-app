@@ -106,13 +106,31 @@ describe('Address & Service Times on New Member & Visitor (#793)', () => {
     expect(view.getAllByTestId('church-location')).toHaveLength(CHURCH_LOCATIONS.length);
     CHURCH_LOCATIONS.forEach((location, index) => {
       const at = texts.indexOf(names[index]);
-      // The name, then its gathering and hours, then the English address.
+      // The name, then the day and hours alone, then the English address.
       expect(at).toBeGreaterThan(heading);
-      expect(texts[at + 1]).toBe(`${times[index].service}${labels.separator}${times[index].time}`);
+      expect(texts[at + 1]).toBe(times[index]);
       expect(texts[at + 2]).toBe(location.address);
       expect(at).toBeLessThan(firstCard);
     });
     expect(view.getAllByText(labels.getDirections)).toHaveLength(CHURCH_LOCATIONS.length);
+  });
+
+  it.each<[SupportedLanguage, string, string]>([
+    ['en', 'Saturdays, 10:00 AM – 1:00 PM', 'Thursdays, 6:30 – 9:00 PM'],
+    ['zh', '每週六 上午10:00–下午1:00', '每週四 晚上6:30–9:00'],
+    ['zh-cn', '每周六 上午10:00–下午1:00', '每周四 晚上6:30–9:00'],
+    ['es', 'Sábados, 10:00 a. m. – 1:00 p. m.', 'Jueves, 6:30 – 9:00 p. m.'],
+  ])('gives the day and hours in %s without naming the gathering (#808)', async (language, saturday, thursday) => {
+    // The no-break spaces read as spaces.
+    const shown = getServiceTimes(language).map((time) => time.replace(/ /g, ' '));
+    expect(shown).toEqual([saturday, saturday, thursday]);
+    const texts = textsOf((await renderIn(language, DiscoverScreen)).toJSON());
+    expect(texts.filter((text) => /Sabbath Worship|Adoración|崇拜/.test(text))).toEqual([]);
+  });
+
+  it('keeps "10:00 AM" and "a. m." whole on a line', () => {
+    expect(CHURCH_SERVICE_TIMES.en[0]).toContain('10:00 AM');
+    expect(CHURCH_SERVICE_TIMES.es[0]).toContain('10:00 a. m.');
   });
 
   it('keeps the English street address in Chinese, for maps and drivers, and lets it be copied', async () => {
@@ -133,30 +151,20 @@ describe('Address & Service Times on New Member & Visitor (#793)', () => {
     });
   });
 
-  it('has a gathering for every location in every language', () => {
+  it('has hours for every location in every language', () => {
     for (const language of LANGUAGES) {
       expect(CHURCH_SERVICE_TIMES[language]).toHaveLength(CHURCH_LOCATIONS.length);
-      for (const { service, time } of CHURCH_SERVICE_TIMES[language]) {
-        expect(service.trim()).not.toBe('');
-        expect(time).toMatch(/\d{1,2}:\d\d/);
-      }
+      for (const time of CHURCH_SERVICE_TIMES[language]) expect(time).toMatch(/\d{1,2}:\d\d/);
     }
     expect(getServiceTimes('ko')).toBe(CHURCH_SERVICE_TIMES.en);
   });
 });
 
 describe('the Saturday service is Sabbath worship, 安息日崇拜 (#793)', () => {
-  it('names Elmhurst and Brooklyn’s Saturday service 安息日崇拜 in Chinese', () => {
-    for (const language of ['zh', 'zh-cn'] as const) {
-      expect(CHURCH_SERVICE_TIMES[language][0]).toMatchObject({ service: '安息日崇拜', time: expect.stringMatching(/^星期六/) });
-      expect(CHURCH_SERVICE_TIMES[language][1]).toMatchObject({ service: '安息日崇拜', time: expect.stringMatching(/^星期六/) });
-    }
-  });
-
-  it.each(['zh', 'zh-cn'] as const)('says 安息日崇拜 on Fellowships in %s, with the shared hours', async (language) => {
+  it.each(['zh', 'zh-cn'] as const)('says 安息日崇拜 on Fellowships in %s', async (language) => {
     const view = await renderIn(language, FellowshipsScreen);
     const texts = textsOf(view.toJSON());
-    const worship = texts.find((text) => text.startsWith(`${CHURCH_SERVICE_TIMES[language][0].time} • `));
+    const worship = texts.find((text) => text.startsWith('星期六上午 10:00 - 下午 1:00 • '));
     expect(worship).toContain('安息日崇拜');
     // Under its title, Sabbath worship too.
     expect(texts[texts.indexOf(worship as string) - 1]).toBe('安息日崇拜');

@@ -718,14 +718,14 @@
     {
       "name": "discover",
       "group": "home",
-      "$comment": "New Member & Visitor opens with Address & Service Times (#793), under its photo: each location's name, its gathering and hours, and its English street address, with Get Directions. Its heading must show whole, and Elmhurst's Saturday service must be named Sabbath worship, 安息日崇拜 in Chinese, never 主日崇拜, which many Chinese Christians read as Sunday worship. The service line may wrap after its name. The cards come below it; discover-cards checks them.",
+      "$comment": "New Member & Visitor opens with Address & Service Times (#793), under its photo: each location's name, the day and hours it meets, and its English street address, with Get Directions. Its heading must show whole, and Elmhurst's hours must start their line, with no name for the gathering before them (#808): a Saturday holds Sabbath School and the service, and some afternoons more. OCR may drop the space after the comma or before AM, and read the dash as a hyphen, so the rules stop before it. The cards come below it; discover-cards checks them.",
       "path": "home/discover",
       "variants": ["default", "zh"],
       "ipadVariants": ["default", "landscape"],
-      "mustNotShowLines": ["主日崇拜"],
+      "mustNotShowLines": ["Sabbath Worship", "崇拜"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Address & Service Times$", "^Sabbath Worship\\b"] },
-        "zh": { "mustShowLines": ["^教會地址與聚會時間$", "^安息日崇拜"] }
+        "default": { "mustShowLines": ["^Address & Service Times$", "^Saturdays, ?10:00 ?AM\\b"] },
+        "zh": { "mustShowLines": ["^教會地址與聚會時間$", "^每週六 ?上午 ?10[:：]00"] }
       }
     },
     {
