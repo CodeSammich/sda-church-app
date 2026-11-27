@@ -1,0 +1,85 @@
+name: Printed Bulletin Preview
+
+# Draws every printed bulletin layout from the pull request's Apps Script,
+# with made-up data and a fake Google Docs, and uploads the pages as PNGs
+# (#844). It fails when type drops under 10 points, something is wider than
+# its booklet half or the page, or a half that fit on the base branch no
+# longer fits. It needs no Google account and reads no secrets. See
+# docs/operations/bulletin-automation.md#printed-bulletin-preview.
+on:
+  pull_request:
+    branches:
+      - release-candidate
+      - main
+    paths:
+      - 'google-apps-script/**'
+      - 'tools/printed-bulletin-preview/**'
+      - '.github/workflows/printed-bulletin-preview.yml'
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Branch to compare the heights with
+        required: false
+        default: release-candidate
+
+permissions:
+  contents: read
+
+concurrency:
+  group: printed-bulletin-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  preview:
+    name: Printed bulletin preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # The hymn titles are made from features/hymnal/ with opencc-js, as
+      # at deploy. Nothing else from npm is used, so no install scripts run.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Fetch the base branch's Apps Script
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          INPUT_BASE: ${{ inputs.base }}
+        run: |
+          base="${PR_BASE_SHA:-${INPUT_BASE:-release-candidate}}"
+          git fetch --no-tags --depth=1 origin "$base"
+          echo "PREVIEW_BASE=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
+
+      - name: Install a Chinese font
+        # Chinese is drawn in a stand-in font: Noto CJK, from Ubuntu.
+        run: |
+          if ! fc-list :lang=zh family | grep -q .; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends fonts-noto-cjk
+          fi
+          fc-list :lang=zh family | head -n 3
+
+      - name: Draw and check the printed bulletin
+        run: node tools/printed-bulletin-preview/preview.cjs --out "$RUNNER_TEMP/printed-bulletin-preview" --base "$PREVIEW_BASE"
+
+      - name: Upload the pages
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: printed-bulletin-preview
+          path: ${{ runner.temp }}/printed-bulletin-preview/
+          if-no-files-found: warn
+          retention-days: 14
