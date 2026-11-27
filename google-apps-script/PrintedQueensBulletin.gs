@@ -41,11 +41,11 @@ function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulleti
       appendWorshipPanel_(cell, bulletin, true);
     },
     true,
-    // The app code under Sabbath School, and giving under worship (#833).
-    function (appCell, givingTextCell, givingQrCells) {
-      appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'queens');
+    // The Sabbath School footer and the Tithe & Offering footer (#833).
+    function (sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells) {
+      appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, 'queens');
     },
-    getGivingFooterOptions_('queens'),
+    getPrintedFooterOptions_('queens'),
   );
   appendBookletPage_(
     body,
@@ -169,7 +169,7 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
   appendProgramTable_(cell, worshipRowsAfterSermon, worshipColumns);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
-    // When this column is taller than the study column, the giving footer's
+    // When this column is taller than the study column, the Tithe & Offering footer's
     // divider sits right under the prayer. These spacers only add height in
     // that case; a taller study column already leaves room.
     appendSpacer_(cell);
@@ -242,8 +242,8 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // back/announcements | cover, study | blank, blank | worship,
   // foot washing | the complete Holy Communion service. The regular
   // bulletin's footer (#833) is split over two doc pages here, so each half
-  // lands on the right booklet page: the app code under Sabbath School and
-  // its verses (page 2), and the giving notes under worship (page 3). The
+  // lands on the right booklet page: the Sabbath School footer under its
+  // verses (page 2), and the Tithe & Offering footer under worship (page 3). The
   // left half of the worship doc page is the blank page 6.
   appendBookletPage_(
     body,
@@ -262,10 +262,10 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     function (cell) {},
     false,
-    function (appCell, givingTextCell, givingQrCells) {
-      appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'queens');
+    function (sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells) {
+      appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, 'queens');
     },
-    getGivingFooterOptions_('queens', { giving: false }),
+    getPrintedFooterOptions_('queens', { titheOffering: false }),
   );
   appendBookletPage_(
     body,
@@ -274,10 +274,10 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
       appendWorshipPanel_(cell, bulletin, false);
     },
     false,
-    function (appCell, givingTextCell, givingQrCells) {
-      appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'queens');
+    function (sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells) {
+      appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, 'queens');
     },
-    getGivingFooterOptions_('queens', { app: false }),
+    getPrintedFooterOptions_('queens', { sabbathSchool: false }),
   );
   appendBookletPage_(
     body,

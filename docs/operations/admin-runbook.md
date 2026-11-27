@@ -249,7 +249,7 @@ The QR codes and where they point are listed in
 | --- | --- |
 | `mobile_app_qr_code_368x368.jpg` | `https://app.nyccsda.org/download`, which sends phones to their app store |
 
-The bulletin prints no online-giving code: people give by bank transfer or card in
+The bulletin prints no code for gifts by bank transfer or card: people make them in
 the app's **Tithe & Offering** page (#833). The old
 `queens_adventist_giving_qr_code_368x368.jpg` and
 `brooklyn_adventist_giving_qr_code_368x368.jpg` in the QR code folder, and an
@@ -314,7 +314,7 @@ Sabbath Encouragement PDF can't be overwritten. To upload a new file, add its ex
 name to the allowlist in a reviewed pull request.
 
 Which slots print, and why the mobile app code waited for launch (#323), is in
-[Giving QR slots](bulletin-automation.md#giving-qr-slots). The Zelle codes are made by hand.
+[Footer QR codes](bulletin-automation.md#footer-qr-codes). The Zelle codes are made by hand.
 
 ## Deploying the bulletin Apps Script
 

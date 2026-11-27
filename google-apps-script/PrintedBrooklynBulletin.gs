@@ -152,12 +152,12 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
         appendBrooklynWorshipPanel_(cell, bulletin, true);
       },
       false,
-      // The same footer as Queens: the app code under Sabbath School, and
-      // giving under worship (#833). Brooklyn has no Zelle code.
-      function (appCell, givingTextCell, givingQrCells) {
-        appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'brooklyn');
+      // The same Sabbath School and Tithe & Offering footers as Queens
+      // (#833). Brooklyn has no Zelle code.
+      function (sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells) {
+        appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, 'brooklyn');
       },
-      getGivingFooterOptions_('brooklyn'),
+      getPrintedFooterOptions_('brooklyn'),
     );
     appendBrooklynEncouragementPage_(body, bulletin);
   } else {
@@ -284,7 +284,7 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
   appendBrooklynProgramTable_(cell, worshipRowsAfterSermon);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
-    // Match the Queens worship panel's room above the giving divider.
+    // Match the Queens worship panel's room above the Tithe & Offering rule.
     appendSpacer_(cell);
     appendSpacer_(cell);
   }

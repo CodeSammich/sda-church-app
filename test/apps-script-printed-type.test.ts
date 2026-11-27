@@ -527,7 +527,7 @@ describe('printed bulletin type (#603)', () => {
     Object.assign(data.queens as Record<string, unknown>, { sabbathSchoolHymns: ['第2首 聖哉真神'] });
     const { paragraphs } = render(data, 'regular', 'queens');
 
-    // The footer's giving notes are inset the same on both sides, which keeps
+    // The Tithe & Offering footer's notes are inset the same on both sides, which keeps
     // them centred (#833).
     const offCentre = paragraphs.filter(
       (paragraph) =>

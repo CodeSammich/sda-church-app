@@ -9,7 +9,7 @@ describe('printed bulletin QR codes', () => {
   const bulletin = readFileSync('google-apps-script/PrintedBulletin.gs', 'utf8');
 
   it('points each code at an HTTPS destination', () => {
-    // Online giving is in the app, so the bulletin prints no giving code
+    // Gifts by bank transfer or card are made in the app, so the bulletin prints no code for them
     // (#833). The download page sends phones to their app store (issue #237).
     expect(codes).toEqual({
       'mobile_app_qr_code_368x368.jpg': 'https://app.nyccsda.org/download',
