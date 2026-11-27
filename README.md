@@ -137,6 +137,10 @@ one place. Church admins can start at [Operate](#operate).
 
 ### App stores
 
+- [What's New for the stores (copy-paste)](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/docs/store-assets/whats-new.md):
+  the next store submission's "What's New" text, each store and language in its own
+  block with a Copy button, on `main`, since the stores are updated after a release
+  reaches it
 - [App Store and Google Play setup](docs/operations/app-store-setup.md): store accounts,
   signing files, yearly renewals, and account ownership and recovery
 - [Store listings](docs/operations/store-listing.md): the listing text in all four app
