@@ -37,7 +37,7 @@ var PRINTED_BULLETIN_TYPE = Object.freeze({
   latinFontProperty: 'PRINTED_BULLETIN_LATIN_FONT',
   chineseFontProperty: 'PRINTED_BULLETIN_CJK_FONT',
   chineseFallbackFontProperty: 'PRINTED_BULLETIN_CJK_FALLBACK_FONT',
-  bodySize: 11,
+  bodySize: 10,
   subheadingSize: 11,
   headingSize: 13,
   lineSpacing: 1,
