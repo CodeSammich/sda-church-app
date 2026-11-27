@@ -45,9 +45,9 @@ function fontEnvironment(fontDir, workDir) {
   return { ...process.env, FONTCONFIG_FILE: file };
 }
 
-/** The Chinese font families fontconfig finds, or null without fc-list. */
+/** The fonts with 安息日 that fontconfig finds, or null without fc-list. */
 function chineseFonts(env) {
-  const result = spawnSync('fc-list', [':lang=zh', 'family'], { encoding: 'utf8', env });
+  const result = spawnSync('fc-list', [':charset=5b89 606f 65e5', 'family'], { encoding: 'utf8', env });
   if (result.error) return null;
   return [...new Set(result.stdout.split('\n').map((l) => l.trim()).filter(Boolean))];
 }

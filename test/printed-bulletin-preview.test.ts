@@ -143,7 +143,7 @@ describe('the pass/fail rules', () => {
       'q, page 2, right half: overflows by 12 pt, 2 pt more than on the base',
     ]);
     // Over by the same as on the base: the model's heights run long there.
-    expect(outcome.notes).toEqual([expect.stringContaining('q, page 1, right half: overflows by 20 pt in the preview, as on the base')]);
+    expect(outcome.notes).toEqual(['q, page 1, right half: overflows by 20 pt, as on the base (20 pt), so not because of this change; a real Doc shows whether it fits']);
   });
 
   it('fails an overflowing page the base doesn’t have, and notes a new page count', () => {
@@ -214,7 +214,10 @@ describe('the Printed Bulletin Preview workflow', () => {
   });
 
   it('compares with the base branch and uploads the pages even when a check fails', () => {
-    expect(workflow).toContain('node tools/printed-bulletin-preview/preview.cjs --out "$RUNNER_TEMP/printed-bulletin-preview" --base "$PREVIEW_BASE"');
+    expect(workflow).toContain('node tools/printed-bulletin-preview/preview.cjs --out "$RUNNER_TEMP/printed-bulletin-preview" --base "$PREVIEW_BASE" --fonts "$RUNNER_TEMP/fonts"');
+    // The bulletin's own Chinese font, pinned and checked.
+    expect(workflow).toMatch(/google\/fonts\/[0-9a-f]{40}\/ofl\/uoqmunthenkhung\/UoqMunThenKhung-Regular\.ttf/);
+    expect(workflow).toContain('sha256sum -c -');
     expect(workflow).toMatch(/- name: Upload the pages\n\s+if: \$\{\{ !cancelled\(\) \}\}/);
     expect(workflow).toContain('name: printed-bulletin-preview');
   });

@@ -63,17 +63,24 @@ jobs:
           git fetch --no-tags --depth=1 origin "$base"
           echo "PREVIEW_BASE=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
 
-      - name: Install a Chinese font
-        # Chinese is drawn in a stand-in font: Noto CJK, from Ubuntu.
+      - name: Install the Chinese fonts
+        # The bulletin's Chinese font, UoqMunThenKhung (SIL Open Font
+        # License), from Google Fonts at a fixed commit, checked against its
+        # hash; and Noto CJK from Ubuntu for any other Chinese font.
+        env:
+          UOQ_URL: https://raw.githubusercontent.com/google/fonts/021c80e5932f1130340038c2cff627e4d27bca8b/ofl/uoqmunthenkhung/UoqMunThenKhung-Regular.ttf
+          UOQ_SHA256: 943a23eb10d40ca85ee08491c0e3fb3adbc4bd111ef1f93526a4f766a8e66fbd
         run: |
-          if ! fc-list :lang=zh family | grep -q .; then
+          mkdir -p "$RUNNER_TEMP/fonts"
+          curl -sSfL --retry 3 -o "$RUNNER_TEMP/fonts/UoqMunThenKhung-Regular.ttf" "$UOQ_URL"
+          echo "$UOQ_SHA256  $RUNNER_TEMP/fonts/UoqMunThenKhung-Regular.ttf" | sha256sum -c -
+          if ! fc-list ':charset=5b89 606f 65e5' family | grep -q CJK; then
             sudo apt-get update -qq
             sudo apt-get install -y -qq --no-install-recommends fonts-noto-cjk
           fi
-          fc-list :lang=zh family | head -n 3
 
       - name: Draw and check the printed bulletin
-        run: node tools/printed-bulletin-preview/preview.cjs --out "$RUNNER_TEMP/printed-bulletin-preview" --base "$PREVIEW_BASE"
+        run: node tools/printed-bulletin-preview/preview.cjs --out "$RUNNER_TEMP/printed-bulletin-preview" --base "$PREVIEW_BASE" --fonts "$RUNNER_TEMP/fonts"
 
       - name: Upload the pages
         if: ${{ !cancelled() }}

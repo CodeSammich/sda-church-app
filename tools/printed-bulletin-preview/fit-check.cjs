@@ -62,7 +62,7 @@ function evaluate(head, base) {
           failures.push(`${over}, ${Math.round(was - region.slack)} pt more than on the base`);
         } else {
           status = 'over on the base too';
-          notes.push(`${over} in the preview, as on the base (${Math.abs(Math.round(was))} pt); the preview's heights run long here`);
+          notes.push(`${over}, as on the base (${Math.abs(Math.round(was))} pt), so not because of this change; a real Doc shows whether it fits`);
         }
       }
       rows.push({ variant: name, region: region.name, slack: region.slack, base: was, status });

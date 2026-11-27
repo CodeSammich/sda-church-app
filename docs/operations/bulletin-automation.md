@@ -1344,9 +1344,13 @@ A real Doc decides whether those fit; the run fails only if they grow.
 node tools/printed-bulletin-preview/preview.cjs
 ```
 
-It needs Chrome or Chromium (`CHROME_PATH` names one), and a Chinese font: on
-Ubuntu, `sudo apt-get install fonts-noto-cjk`, or `--fonts <folder>` with the
-font files. The pages go to `build/printed-bulletin-preview/`. It compares with
+It needs Chrome or Chromium (`CHROME_PATH` names one) and a Chinese font. The
+workflow draws the Chinese in the bulletin's own font, UoqMunThenKhung, which
+it downloads from [Google Fonts](https://fonts.google.com/specimen/UoqMunThenKhung);
+put that file in a folder and pass `--fonts <folder>` to match its numbers.
+Without it, any installed Chinese font stands in (on Ubuntu,
+`sudo apt-get install fonts-noto-cjk`), and lines can break a little
+differently. The pages go to `build/printed-bulletin-preview/`. It compares with
 where the branch left `upstream/release-candidate` (or
 `origin/release-candidate`); `--base <ref>` picks another, `--base none` none,
 and `--only queens-regular,brooklyn-regular` some of the layouts. The made-up
@@ -1354,9 +1358,8 @@ weeks are in `made-up-data.cjs`: invented names only.
 
 **What it can't show.** It imitates Google Docs, so:
 
-- the fonts are stand-ins: Liberation for Times New Roman and Arial (the same
-  widths), and Noto CJK for the Chinese, so lines can break a little
-  differently;
+- Liberation stands in for Times New Roman and Arial (the same widths), and
+  Chrome breaks lines, not Docs, so a line can break a little differently;
 - line heights are modelled from each font's metrics, not measured in Docs;
 - the QR codes, the logo, and the cover pictures are grey boxes, and the cover
   pictures' real sizes aren't known (the church sketch is taken as 3:2, the
