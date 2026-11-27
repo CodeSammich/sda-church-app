@@ -1315,6 +1315,8 @@ Bible chapters to check what only a real player shows:
 - **Mid-chapter loss:** go offline and seek past what has loaded. The same host
   reloads where it stopped, and playback resumes there.
 - **Pause and resume** from the same place.
+- **After a restart:** the app is closed with John 1 paused and opened again, and Play
+  must pick up where it was paused, not at 0:00 ([#803](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/803)).
 - **Previous before the start (#543):** started in Leviticus 2, the media key's
   previous restarts the chapter more than 3 seconds in, goes back to Leviticus 1
   at the start, and next returns to Leviticus 2.
