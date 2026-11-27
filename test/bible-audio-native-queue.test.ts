@@ -444,6 +444,11 @@ function recordingPlaylist() {
       // A healthy player starts buffering a new source; a failed one stays idle.
       if (status.isLoaded) Object.assign(status, { isLoaded: false, isBuffering: true });
     }),
+    // Like Media3: an item inserted at or before the current one moves it on.
+    insert: jest.fn((source: AudioSource, index: number) => {
+      sources.splice(index, 0, source);
+      if (sources.length > 1 && index <= status.currentIndex) status.currentIndex += 1;
+    }),
     play: jest.fn(), pause: jest.fn(), updateLockScreenMetadata: jest.fn(),
   };
   return {
@@ -509,6 +514,67 @@ it('keeps the failed playlist until the fresh one plays, so the lock-screen serv
   expect(first.native.destroy).toHaveBeenCalledTimes(1);
   expect(first.native.release).toHaveBeenCalledTimes(1);
   expect(second.native.destroy).not.toHaveBeenCalled();
+});
+
+describe('a fresh playlist after a failed one (#802)', () => {
+  const at = (bookId: string, number: number, host = 'https://example.com'): BibleAudioQueueItem => ({
+    bookId, chapter: number, translationId: 'cmn_cuv',
+    source: { uri: `${host}/${bookId}-${number}.mp3` },
+    metadata: { title: `${bookId} ${number}` },
+  });
+  // The 24 chapters the reader queues before John 5, nearest first: John 4
+  // to 1, then Luke 24 down to Luke 5, which ends up first in the playlist.
+  const beforeJohn5 = [
+    ...[4, 3, 2, 1].map(n => at('JHN', n)),
+    ...Array.from({ length: 20 }, (_, i) => at('LUK', 24 - i)),
+  ];
+  const startJohn5 = (host?: string) => {
+    const context = failoverQueue(3);
+    const john5 = at('JHN', 5, host);
+    context.queue.replace(john5.source);
+    context.queue.setCurrentChapter(john5);
+    context.queue.setQueue([at('JHN', 6, host)]);
+    context.queue.setPreviousQueue(beforeJohn5);
+    return context;
+  };
+
+  it('never names a chapter from the failed playlist while the next host loads', () => {
+    const { queue, playlists: [first] } = startJohn5();
+    expect(queue.currentStatus.activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+    const seen: string[] = [];
+    queue.subscribe(() => {
+      const active = queue.getStatus().activeChapter;
+      if (active) seen.push(`${active.bookId} ${active.chapter}`);
+    });
+
+    // Offline, John 5 fails on HelloAO, and the church's copy is loaded into a
+    // fresh playlist, which starts at index 0. Read against the failed
+    // playlist's queue, index 0 was Luke 5, and the reader would follow it there.
+    first.fail();
+    first.emit({ error: { message: 'Source error', code: 2001 } });
+    const mirror = at('JHN', 5, 'https://church.example');
+    queue.replace(mirror.source);
+    queue.setCurrentChapter(mirror);
+    queue.setQueue([at('JHN', 6, 'https://church.example')]);
+    queue.setPreviousQueue(beforeJohn5);
+
+    expect(seen.filter(chapter => chapter !== 'JHN 5')).toEqual([]);
+    expect(queue.currentStatus.activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+  });
+
+  it("reads the fresh playlist's own events as the chapter it is loading", () => {
+    const { queue, playlists: [first, second] } = startJohn5();
+    first.fail();
+    const mirror = at('JHN', 5, 'https://church.example');
+    queue.replace(mirror.source);
+    queue.setCurrentChapter(mirror);
+    queue.setPreviousQueue(beforeJohn5);
+    // Sent before the inserts, when the church's John 5 was its only track.
+    second.emit({ currentIndex: 0, trackCount: 1 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+    second.emit({ currentIndex: 24, trackCount: 25 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ bookId: 'JHN', chapter: 5 });
+  });
 });
 
 it('keeps at most the two newest failed playlists', () => {

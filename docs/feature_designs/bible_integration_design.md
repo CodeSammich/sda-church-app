@@ -611,3 +611,19 @@ and keeps following.
   `transformers` for the checks). On a consumer GPU each chapter takes 3 to 5 seconds, so
   all 3,567 take about four hours, plus the downloads. Checking every verse takes another
   2 to 3 hours a narrator.
+
+### 4.8 Picking Up Where the Listener Stopped (done)
+
+After the app is closed and opened again, Play in the chapter the listener was hearing
+starts where they stopped, not at 0:00, by itself, with no button or question
+([#803](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/803)).
+The place is saved for the chapter and its recording, named by its narrator
+(`getBibleAudioNarrator`), so the two CUV scripts share it and another narrator starts at
+the beginning. It's saved every 5 seconds while the audio plays, and exactly when the
+listener pauses, the sleep timer pauses it, the translation changes, or the app goes to
+the background, from where it can be closed. Only one place is kept, in AsyncStorage
+(`bible-audio-resume`), and it's forgotten when the chapter plays to its end or the reader
+moves to another chapter, whether the listener chose it or the audio moved on to it. A
+phone switched off while playing loses at most the last 5 seconds.
+`services/BibleAudioResume.ts` keeps the place, and `BibleAudioSourceController.start`
+starts there.

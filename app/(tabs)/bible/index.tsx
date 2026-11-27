@@ -66,6 +66,7 @@ import {
   getCurrentAndroidAudioBrowser,
 } from '@/services/AndroidBackgroundAudioGuidance';
 import { logForAudioE2e } from '@/services/AudioE2eLog';
+import { BibleAudioResumeTracker } from '@/services/BibleAudioResume';
 import {
   useBibleAudioPlayer,
   useBibleAudioPlayerStatus,
@@ -1291,6 +1292,12 @@ export default function BibleScreen() {
   const selectedAudioSource = selectedAudioReader
     ? chapterAudioLinks?.[selectedAudioReader]
     : undefined;
+  // The recording playing, for where it picks up after the app restarts
+  // (#803): its narrator, which both CUV scripts share.
+  const audioRecording = selectedAudioReader
+    ? getBibleAudioNarrator(supportedTranslation.id, selectedAudioReader) ??
+      `${supportedTranslation.id}:${selectedAudioReader}`
+    : null;
   // The CUV recordings differ in spoken language, so the audio bar names the
   // selected language instead of showing a generic narrator icon.
   const selectedAudioLanguage = selectedAudioReader
@@ -1403,6 +1410,26 @@ export default function BibleScreen() {
         activeAudioChapter.bookId === book?.id &&
         activeAudioChapter.chapter === chapterNum
       : selectedAudioUrls.includes(loadedAudioUrl));
+  // Where the listener is in this chapter's recording, saved as it plays so
+  // that after the app restarts, Play picks up there by itself (#803).
+  const [audioResume] = useState(() => new BibleAudioResumeTracker());
+  useEffect(() => {
+    void audioResume.load();
+  }, [audioResume]);
+  const audioResumePlace =
+    isThisChapterAudioLoaded && book && audioRecording
+      ? { recording: audioRecording, bookId: book.id, chapter: chapterNum }
+      : null;
+  useEffect(() => {
+    // A chapter that just finished is forgotten (below), not saved at its end.
+    if (!audioResumePlace || !audioStatus.playing || audioStatus.didJustFinish) return;
+    audioResume.note({ ...audioResumePlace, positionMillis: audioPositionMillis });
+  }, [audioPositionMillis]);
+  // Another chapter chosen, or the next one the audio moved on to, forgets the
+  // place in the last.
+  useEffect(() => {
+    if (book) audioResume.follow({ bookId: book.id, chapter: chapterNum });
+  }, [book?.id, chapterNum]);
   const readingVerse =
     isThisChapterAudioLoaded &&
     audioVerseTimes?.key === audioVerseTimesKey &&
@@ -1524,6 +1551,7 @@ export default function BibleScreen() {
           clearNativeAutoplayRetryTimeout();
           clearNativeRecoveryTimeout();
           releaseNativeAudioFocus();
+          audioResume.save();
           try {
             safePauseAudio();
           } catch (e) {
@@ -1600,6 +1628,8 @@ export default function BibleScreen() {
     }
 
     if (audioStatus.didJustFinish) {
+      // The next Play of a chapter played to its end starts at its beginning.
+      audioResume.finish();
       // Android's AudioPlaylist advances ExoPlayer to the next media item
       // itself. Navigating from this callback races that native transition and
       // can make the route cleanup pause/reconfigure the playlist mid-change.
@@ -1699,6 +1729,7 @@ export default function BibleScreen() {
       }
       lastSyncedAudioChapterRef.current = activeKey;
       preserveAudioOnNextRouteChangeRef.current = true;
+      logForAudioE2e(`following the audio to ${activeBook.id} ${activeChapter.chapter}`);
       setBook(activeBook);
       setChapterNum(activeChapter.chapter);
     };
@@ -1743,6 +1774,19 @@ export default function BibleScreen() {
     sourceReady: audioSourceReadyRef,
     getReaderTarget: getReaderAudioTarget,
     getPositionMillis: () => Math.max(getCurrentAudioPositionMillis(), audioPositionMillis),
+    getSavedPositionMillis: (target) => {
+      const millis =
+        target.chapter && audioRecording
+          ? audioResume.resumeMillis({
+              recording: audioRecording,
+              bookId: target.chapter.bookId,
+              chapter: target.chapter.chapter,
+            })
+          : 0;
+      // Starting there loads as a skip does, which isn't a stall (#595).
+      if (millis > 0) downloadTip.watcher.noteSeek();
+      return millis;
+    },
     initializePlayback: (target, entry) => {
       // Seed the native playlist once, then publish it to lock-screen controls.
       // Android's MediaSession must observe the complete initial playlist
@@ -1797,6 +1841,8 @@ export default function BibleScreen() {
     });
     const appState = AppState.addEventListener('change', (state) => {
       if (state === 'active') audioSources.retryNow();
+      // The app can be closed from here without another word (#803).
+      else audioResume.save();
     });
     return () => {
       network.remove();
@@ -1902,6 +1948,9 @@ export default function BibleScreen() {
       audioSources.cancel();
       nativePlaybackIntentRef.current = false;
       pendingNativeAutoplayRef.current = false;
+      if (audioResumePlace) {
+        audioResume.save({ ...audioResumePlace, positionMillis: getCurrentAudioPositionMillis() });
+      }
       safePauseAudio();
       releaseNativeAudioFocus();
       return;
@@ -1924,6 +1973,8 @@ export default function BibleScreen() {
   }, [audioStatus.interruptionCount, androidAudioBrowserName]);
 
   const unloadAudio = () => {
+    // Before a translation switch, say, which keeps the chapter (#803).
+    audioResume.save();
     seekController.cancel();
     clearChapterAutoplayRetry();
     chapterAutoplayRetryCountRef.current = 0;

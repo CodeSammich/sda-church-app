@@ -143,11 +143,7 @@ export class BibleAudioNativeQueue {
       // The event emitter can already be gone when native cleanup races React.
     }
     this.subscription = undefined;
-    this.tracks = [];
-    this.pendingIndexShift = 0;
-    this.frontInsertCounts = [];
-    this.lastMetadataTrack = undefined;
-    this.lockScreen = undefined;
+    this.forgetTracks();
     this.snapshot = idleStatus();
     this.destroyRetiredPlaylists();
     destroyPlaylist(playlist);
@@ -204,6 +200,11 @@ export class BibleAudioNativeQueue {
       // The emitter may already have been released with the playlist.
     }
     this.subscription = undefined;
+    // The track list numbers the retired playlist's queue. The fresh one starts
+    // at index 0, which in that queue is the farthest chapter queued before the
+    // one playing, so its first status would name that chapter (Luke 5 while
+    // John 5 failed over), and the reader would follow it there (#802).
+    this.forgetTracks();
     // One of the two newest failed playlists may still own the lock screen.
     // An older one handed it over while two newer playlists loaded and failed.
     this.retiredPlaylists.push(playlist);
@@ -225,11 +226,19 @@ export class BibleAudioNativeQueue {
       // The emitter may already have been released with the playlist.
     }
     this.subscription = undefined;
+    this.forgetTracks();
+    this.snapshot = idleStatus();
+  }
+
+  // Forgets which chapter each native track is, and the inserts still being
+  // counted, for a queue that is being emptied or replaced.
+  private forgetTracks() {
     this.tracks = [];
     this.pendingIndexShift = 0;
     this.frontInsertCounts = [];
+    this.lastMetadataTrack = undefined;
+    // The controls were published for those tracks; the next ones publish their own.
     this.lockScreen = undefined;
-    this.snapshot = idleStatus();
   }
 
   private callNative<T>(operation: string, call: (playlist: AudioPlaylist) => T): T | undefined {
@@ -298,10 +307,7 @@ export class BibleAudioNativeQueue {
     // (initializeBibleAudioPlayback); until then there's none to refresh.
     this.lockScreen = undefined;
     this.callNative('replace', playlist => {
-      this.tracks = [];
-      this.pendingIndexShift = 0;
-      this.frontInsertCounts = [];
-      this.lastMetadataTrack = undefined;
+      this.forgetTracks();
       playlist.clear();
       if (source) {
         this.tracks.push(undefined);

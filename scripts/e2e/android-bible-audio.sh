@@ -271,7 +271,7 @@ scenario_next_chapter_screen_off() {
 }
 
 # A dead zone: Play offline, lock the screen, and wait. When the connection
-# comes back, audio starts without an unlock.
+# comes back, audio starts without an unlock, and the reader never left John 3.
 scenario_dead_zone_screen_off() {
   open_chapter JHN 3
   locate_controls || { echo 'no play button'; return 1; }
@@ -286,10 +286,12 @@ scenario_dead_zone_screen_off() {
   wait_until 60 'John 3 playing after the connection returned' is_playing || return 1
   screen_is_off || { echo 'the screen turned on'; return 1; }
   foreground_service || { echo 'the media foreground service stopped'; return 1; }
+  stayed_on_chapter
 }
 
 # The connection drops mid-chapter: the same host reloads where it stopped,
-# and playback resumes there once the connection returns.
+# and playback resumes there once the connection returns. The reader stays on
+# Psalm 78 throughout.
 scenario_mid_chapter_offline() {
   open_chapter PSA 78
   locate_controls || { echo 'no play button'; return 1; }
@@ -306,9 +308,11 @@ scenario_mid_chapter_offline() {
   position=$(session_field position)
   [ "${position:-0}" -ge 240000 ] ||
     { echo "resumed at ${position}ms instead of where it stopped"; return 1; }
+  stayed_on_chapter
 }
 
-# Pausing and resuming a playing chapter continues from the same place.
+# Pausing and resuming a playing chapter continues from the same place, and
+# so does Play after the app is closed and opened again.
 scenario_pause_and_resume() {
   open_chapter JHN 1
   locate_controls || { echo 'no play button'; return 1; }
@@ -325,6 +329,18 @@ scenario_pause_and_resume() {
   resumed_at=$(session_field position)
   [ "${resumed_at:-0}" -ge "${paused_at:-0}" ] && [ "${resumed_at:-0}" -gt 0 ] ||
     { echo "resumed at ${resumed_at}ms after pausing at ${paused_at}ms"; return 1; }
+  # Closed and opened again, John 1 picks up where it was paused, not at 0:00
+  # (#803). The session's position can trail the player's by a moment.
+  tap_play_pause
+  wait_until 20 'John 1 paused again' is_paused || return 1
+  paused_at=$(session_field position)
+  open_chapter JHN 1
+  locate_controls || { echo 'no play button after the restart'; return 1; }
+  tap_play_pause
+  wait_until 60 'John 1 playing after the restart' is_playing || return 1
+  resumed_at=$(session_field position)
+  [ "${paused_at:-0}" -gt 3000 ] && [ "${resumed_at:-0}" -ge $(( ${paused_at:-0} - 1500 )) ] ||
+    { echo "after the restart, started at ${resumed_at}ms; it was paused at ${paused_at}ms"; return 1; }
 }
 
 # Earbuds' previous and next (#543). Started in Leviticus 2: previous more
@@ -411,6 +427,14 @@ reader_line_after() { # regex [after-line]
   reader_log | awk -v after="${2:-0}" -v re="$1" 'NR > after && $0 ~ re { print NR; exit }'
 }
 reader_has_after() { [ -n "$(reader_line_after "$1" "${2:-0}")" ]; }
+# Whether the reader stayed on its chapter, as it must while the audio fails
+# over: a failed player's replacement once named a chapter from the old one's
+# queue, and the reader moved there for a few seconds (#802).
+stayed_on_chapter() {
+  local moved
+  moved=$(reader_log | sed -n 's/^following the audio to //p' | head -1)
+  [ -z "$moved" ] || { echo "the reader moved to $moved while the audio failed over"; return 1; }
+}
 
 # The verse the bundled times say is being read at a position, with the
 # reader's half-second lead (services/BibleAudioTimings.ts).
