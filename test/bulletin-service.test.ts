@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 import { mockFiles } from './helpers/file-system-mock';
 
@@ -89,6 +90,10 @@ describe('bulletin service', () => {
     // Ten minutes old, but downloaded before the Sabbath began.
     expect(isBulletinCacheFresh(copy(fridayNight), sabbathStart + 1)).toBe(false);
     expect(isBulletinCacheFresh(copy(sabbathMorning), sabbathMorning)).toBe(true);
+    // The Sabbath begins at midnight itself: a copy from before then is out of
+    // date from that moment, and one downloaded at that moment is current.
+    expect(isBulletinCacheFresh(copy(fridayNight), sabbathStart)).toBe(false);
+    expect(isBulletinCacheFresh(copy(sabbathStart), sabbathStart + 1)).toBe(true);
   });
 
   it('expires a copy once it is 30 minutes old (#702)', () => {
@@ -130,6 +135,25 @@ describe('bulletin service', () => {
     expect(await getCachedBulletin('2026-08-08', tuesday + 60 * 1000)).toEqual(copy(tuesday).bulletin);
   });
 
+  it("doesn't use a stored copy that holds another date's bulletin, or has no download time", async () => {
+    const tuesday = new Date(2026, 7, 4, 10).getTime();
+    const stored = { folder: 'bulletins', name: '2026-08-08.json', key: 'bulletin-cache-v2:2026-08-08' };
+
+    // A copy is found by its date, so one that holds another week's bulletin
+    // is never shown as this week's.
+    await writeCachedText(
+      stored,
+      JSON.stringify({ ...copy(tuesday), bulletin: { ...copy(tuesday).bulletin, date: '2026-08-15' } }),
+    );
+    expect(await readCachedBulletin('2026-08-08', tuesday)).toBeUndefined();
+
+    // Without a download time there's no telling how old it is.
+    const { fetchedAt: _, ...undated } = copy(tuesday);
+    await writeCachedText(stored, JSON.stringify(undated));
+    expect(await readCachedBulletin('2026-08-08', tuesday)).toBeUndefined();
+    expect(await getCachedBulletin('2026-08-08', tuesday, { allowStale: true })).toBeUndefined();
+  });
+
   it('returns an outdated cached bulletin only when asked for a fallback', async () => {
     const bulletin = {
       date: '2026-08-08',
@@ -163,6 +187,35 @@ describe('bulletin service', () => {
     expect(String(fetchSpy.mock.calls[0][0])).toMatch(/\?date=2026-08-08&appVersion=1\.6\.0$/);
   });
 
+  it('asks past any HTTP cache, so staff edits reach phones, and lets the screen cancel the request', async () => {
+    const fetchSpy = respondWith(bulletinFor('2026-08-08'));
+    const controller = new AbortController();
+
+    await fetchBulletin('2026-08-08', controller.signal);
+
+    expect(fetchSpy).toHaveBeenCalledWith(expect.any(String), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+  });
+
+  it('rejects an answer missing its date, Queens or Brooklyn, and keeps the stored copy', async () => {
+    const stored = { ...bulletinFor('2026-08-08'), quarter: 'Q3' };
+    await cacheBulletin(stored, new Date(2026, 7, 7, 20).getTime());
+    const { queens: _queens, ...withoutQueens } = bulletinFor('2026-08-08');
+    const { brooklyn: _brooklyn, ...withoutBrooklyn } = bulletinFor('2026-08-08');
+
+    for (const bulletin of [undefined, bulletinFor(''), withoutQueens, withoutBrooklyn]) {
+      jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({ ok: true, bulletin }),
+      } as Response);
+      await expect(fetchBulletin('2026-08-08')).rejects.toThrow('Bulletin response is incomplete');
+    }
+    expect(await getCachedBulletin('2026-08-08', 0, { allowStale: true })).toEqual(stored);
+  });
+
   it("doesn't store a bulletin without its schedule over a copy that has one", async () => {
     const stored = { ...bulletinFor('2026-08-08'), quarter: 'Q3' };
     await cacheBulletin(stored, new Date(2026, 7, 7, 20).getTime());
@@ -188,6 +241,16 @@ describe('bulletin service', () => {
     expect(await AsyncStorage.getAllKeys()).toEqual([]);
     expect(await getCachedBulletin('2026-08-08', 0, { allowStale: true })).toEqual(bulletinFor('2026-08-08'));
     expect(await getRefreshAvailableAt('2026-08-08')).toBe(1234);
+  });
+
+  it('keeps the refresh time apart from the stored copy on the web, where both are AsyncStorage keys', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    await cacheBulletin(bulletinFor('2026-08-08'), new Date(2026, 7, 7, 20).getTime());
+    await setRefreshAvailableAt('2026-08-08', 1234);
+
+    expect(await getCachedBulletin('2026-08-08', 0, { allowStale: true })).toEqual(bulletinFor('2026-08-08'));
+    expect(await getRefreshAvailableAt('2026-08-08')).toBe(1234);
+    expect(mockFiles.size).toBe(0);
   });
 
   it('drops the copies AsyncStorage kept before #524, once a new one is saved', async () => {
