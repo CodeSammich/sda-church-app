@@ -410,8 +410,9 @@ describe('bulletin hymnal resolution', () => {
         hymnNumber: 1,
         route: '/home/chinese-506-hymnal',
       });
+      // In the reader's script (#795).
       expect(service.resolveBulletinHymnDisplayText({ english: '', chinese: '頌主造化' }, 'zh')).toBe(
-        '10. 颂主造化（707 新編簡譜）',
+        '10. 頌主造化（707 新編簡譜）',
       );
     });
 
@@ -434,7 +435,7 @@ describe('bulletin hymnal resolution', () => {
         hymnNumber: 696,
         route: '/home/chinese-707-standard-hymnal',
       });
-      expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第505首' }, 'zh')).toBe('505. 阿门');
+      expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第505首' }, 'zh')).toBe('505. 阿門');
       expect(resolveBulletinHymnDestination({ english: '', chinese: '第506首' }, 'zh')).toEqual({
         hymnalId: 'chinese-hymnal-506',
         hymnNumber: 506,
