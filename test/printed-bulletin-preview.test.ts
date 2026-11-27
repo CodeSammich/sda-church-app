@@ -82,6 +82,29 @@ describe('the made-up layouts', () => {
     expect(html).toContain('Surely He took up our infirmities');
     expect(html).toContain('溫保羅');
   });
+
+  // Pictures as the script sizes them, in document order, in CSS pixels.
+  type Container = { children: Array<{ kind: string; inline?: Array<{ type: string; w: number; h: number }>; rows?: Array<{ cells: Container[] }> }> };
+  const pictures = (container: Container): Array<[number, number]> => container.children.flatMap((child) => (child.kind === 'P'
+    ? child.inline!.filter((item) => item.type === 'image').map((item): [number, number] => [item.w, item.h])
+    : child.rows!.flatMap((row) => row.cells.flatMap(pictures))));
+
+  it.each(names)('draws every picture in %s at the size the script sets', (name: string) => {
+    const { body } = built[name];
+    const drawn = [...documentHtml(body, name).matchAll(/class="img" style="width:(\d+)px;height:(\d+)px"/g)]
+      .map((match): [number, number] => [Number(match[1]), Number(match[2])]);
+    expect(drawn).toEqual(pictures(body));
+    expect(drawn.length).toBeGreaterThan(0);
+  });
+
+  it('draws the Communion cover’s Last Supper at its printed 240 × 189 pt, and the logo and app code at their own sizes', () => {
+    const sizes = pictures(built['queens-communion'].body).map(([w, h]) => [w * 0.75, h * 0.75]);
+    // 3.33 × 2.63 in, as the Word copy prints it.
+    expect(sizes).toContainEqual([240, 189]);
+    // The 48-pixel logo, and the app code at the footer's 50 pixels.
+    expect(sizes).toContainEqual([36, 36]);
+    expect(sizes).toContainEqual([37.5, 37.5]);
+  });
 });
 
 describe('the checks on the Doc’s structure', () => {

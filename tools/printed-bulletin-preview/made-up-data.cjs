@@ -140,14 +140,19 @@ function fakeTranslate(text, from, to) {
     .join(' ');
 }
 
-// Pixel sizes of the Drive images. The logo (48×48) and the QR codes
-// (368×368) are the documented sizes. The covers' real sizes aren't in the
-// repository: the church sketch is assumed 3:2, the Last Supper square.
+// Pixel sizes of the Drive images. The script sets each one's width, at
+// most a cap, and scales its height by the picture's own shape, so only the
+// shape matters here. The logo (48×48) and the QR codes (368×368) are the
+// documented sizes. The Last Supper prints 3.33 × 2.63 in (240 × 189 pt) in
+// the Word copy, measured in LibreOffice on 2026-11-27: 320 × 252 px at
+// Communion's 320 px cap, so 800 × 630 has its shape. The church sketch is
+// about 1.88 : 1, 460 × 245 px at Regular's 460 px cap: ESTIMATED FROM A
+// SCREENSHOT of a real Queens cover; to confirm by measuring a Word copy.
 const IMAGE_SIZES = {
   logo: [48, 48],
   qr: [368, 368],
-  churchSketch: [1200, 800],
-  lastSupper: [800, 800],
+  churchSketch: [1880, 1000],
+  lastSupper: [800, 630],
 };
 
 const VARIANTS = [
