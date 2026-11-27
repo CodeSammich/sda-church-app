@@ -198,6 +198,10 @@ describe('the pass/fail rules', () => {
     expect(summary).toContain('| q | page 1, left half | +12 | +12 |  |');
     expect(summary).toContain('| q | page 1, right half | −2 | −2 | over on the base too |');
     expect(summaryMarkdown(evaluate({ q: result([[-1, 1]]) }, null))).toContain('**1 problem:**');
+    // A fraction of a point over says so, not "0".
+    const fraction = evaluate({ q: result([[-0.3, 1]]) }, null);
+    expect(fraction.failures).toEqual(['q, page 1, left half: overflows by under 1 pt']);
+    expect(summaryMarkdown(fraction)).toContain('| q | page 1, left half | −<1 | — | overflows |');
   });
 
   it('reads its options', () => {
