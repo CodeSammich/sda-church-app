@@ -11,6 +11,7 @@ import {
   type BibleTestament,
 } from '@/constants/BibleSections';
 import { formatDownloadSize, getDownloadProgressStatus } from '@/constants/DownloadCopy';
+import { useTabBarClearance } from '@/constants/BottomTabHeightContext';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useBibleAudioDownloads } from '@/hooks/useBibleAudioDownloads';
@@ -45,7 +46,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync, NetworkStateType } from 'expo-network';
 import { useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentRef, type ReactNode } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
@@ -494,6 +495,25 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
 /** The page's title, in the header. */
 export const getOfflineBibleAudioTitle = (language: SupportedLanguage) => (copy[language] || copy.en).title;
 
+/**
+ * How far to scroll Offline Bible Audio, opened from the Bible, to show the
+ * book being read (#797). Positions are in points within the page's content,
+ * whose first line sits 20 points below the header, where a scroll of
+ * `offset` puts the content's `offset`. The book's section, the group it's
+ * in, goes there, with its name and how much of it is downloaded, as the page's
+ * first line would; and then its books, down to the one being read. Only if
+ * the book wouldn't then show above the tab bar, in a section of many books,
+ * does the book go there itself. With room for one row above the book at 100%
+ * text, at 150% the section's line sat under the header's title.
+ */
+export const getBookScrollOffset = ({
+  sectionTop,
+  bookTop,
+  bookBottom,
+  viewport,
+}: Readonly<{ sectionTop: number; bookTop: number; bookBottom: number; viewport: number }>) =>
+  Math.max(0, bookBottom - sectionTop <= viewport ? sectionTop : bookTop);
+
 const firstParam = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 /**
@@ -529,6 +549,12 @@ export function OfflineBibleAudio() {
   // The book being read, from the Bible: the page scrolls to its row once.
   const contentRef = useRef<ComponentRef<typeof View>>(null);
   const bookRowRef = useRef<ComponentRef<typeof View>>(null);
+  const sectionRef = useRef<ComponentRef<typeof View>>(null);
+  // The page's height on screen, for how much of it shows between the header
+  // and the tab bar.
+  const pageHeight = useRef(0);
+  const { height: windowHeight } = useWindowDimensions();
+  const tabBarClearance = useTabBarClearance();
   const scrolledToBook = useRef<string | null>(null);
   // Where to scroll, until it has. Android ignores a scroll while the page
   // slides in, so it's tried again as the page and its content settle.
@@ -541,18 +567,28 @@ export function OfflineBibleAudio() {
     const content = contentRef.current;
     if (!bookParam || scrolledToBook.current === bookParam || !book || !content) return;
     scrolledToBook.current = bookParam;
+    // A section of one book, as Acts, is just the book.
+    const section = sectionRef.current ?? book;
     book.measureLayout(
       content,
-      (_x, y) => {
-        // The content starts 20 points below the header: this leaves about a
-        // row's height above the book.
-        pendingScroll.current = Math.max(0, y + 20 - 64);
-        scrollToPending();
-        setTimeout(() => {
-          scrollToPending();
-          pendingScroll.current = null;
-        }, 500);
-      },
+      (_x, bookTop, _width, bookHeight) =>
+        section.measureLayout(
+          content,
+          (_sectionX, sectionTop) => {
+            pendingScroll.current = getBookScrollOffset({
+              sectionTop,
+              bookTop,
+              bookBottom: bookTop + bookHeight,
+              viewport: (pageHeight.current || windowHeight) - headerHeight - 20 - tabBarClearance,
+            });
+            scrollToPending();
+            setTimeout(() => {
+              scrollToPending();
+              pendingScroll.current = null;
+            }, 500);
+          },
+          () => undefined,
+        ),
       () => undefined,
     );
   };
@@ -685,7 +721,10 @@ export function OfflineBibleAudio() {
     <ScrollView
       ref={scrollRef}
       onContentSizeChange={scrollToPending}
-      onLayout={scrollToPending}
+      onLayout={(event) => {
+        pageHeight.current = event.nativeEvent.layout.height;
+        scrollToPending();
+      }}
       onScrollBeginDrag={() => (pendingScroll.current = null)}
       testID="offline-bible-audio"
       style={[NavigationStyles.container, { backgroundColor: theme.colors.background }]}
@@ -779,7 +818,11 @@ export function OfflineBibleAudio() {
                     }
                     const open = expanded.has(section.id);
                     return (
-                      <View key={section.id}>
+                      <View
+                        key={section.id}
+                        ref={bookParam && section.books.includes(bookParam) ? sectionRef : undefined}
+                        collapsable={false}
+                      >
                         {row({
                           narrator,
                           scope: { kind: 'section', sectionId: section.id },

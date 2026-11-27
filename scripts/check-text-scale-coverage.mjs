@@ -8,12 +8,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const sourceRoots = ['app', 'components', 'styles'];
+// features/ holds whole screens too, such as the hymnal page, whose title and
+// rows must follow the saved size as the app's own screens do (#797).
+const sourceRoots = ['app', 'components', 'features', 'styles'];
 const sourcePattern = /\.(?:ts|tsx)$/;
 const prohibitedPatterns = [
   {
     reason: 'raw typography metric',
     pattern: /\b(?:fontSize|lineHeight)\s*:\s*\d+(?:\.\d+)?\b/g,
+    // The Android home screen widget, which Android draws outside the app,
+    // at the phone's own text size; the app's setting can't reach it.
+    allowedFiles: ['features/verse-of-the-day/VerseOfTheDayWidgetLayout.tsx'],
   },
   {
     // Except the header's own cap (#368). It limits only the phone's text size,
@@ -68,5 +73,5 @@ if (violations.length) {
   violations.forEach((violation) => console.error(`- ${violation}`));
   process.exitCode = 1;
 } else {
-  console.log('Text-scale coverage passed across app, components, and styles.');
+  console.log(`Text-scale coverage passed across ${sourceRoots.join(', ')}.`);
 }
