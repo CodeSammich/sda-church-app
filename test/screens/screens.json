@@ -731,9 +731,23 @@
     {
       "name": "about-sda",
       "group": "home",
+      "$comment": "About Denomination: its three pillars, plain content under the description, an icon over each label, with no card or border, which made them look like buttons that did nothing (#819). At the default 125%, \"Bible-Centered\" broke mid-word on an Android phone as \"Bible-Cente\" / \"red\"; it may break only after its hyphen, so it shows whole on one line or as Bible- over Centered, never ending a line in Cente or starting one with red. The Android phone's shot ends above the pillars, so only the iPhone's must show them; test/pillar-list.test.ts checks the Android phone's widths.",
       "path": "home/about-sda",
       "variants": ["default", "es"],
-      "ipadVariants": ["landscape"]
+      "ipadVariants": ["landscape"],
+      "variantRules": {
+        "default": {
+          "mustShowLines": [
+            { "line": "^(Bible-)?Centered$", "platforms": ["ios"] },
+            { "line": "^Faith & Love$", "platforms": ["ios"] },
+            { "line": "^Community$", "platforms": ["ios"] }
+          ],
+          "mustNotShowLines": ["Cente$", "^(t?e?red)$"]
+        },
+        "es": {
+          "mustShowLines": [{ "line": "^Fe y Amor$", "platforms": ["ios"] }, { "line": "^Comunidad$", "platforms": ["ios"] }]
+        }
+      }
     },
     {
       "name": "about-my-church",
