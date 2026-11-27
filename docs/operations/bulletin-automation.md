@@ -1367,11 +1367,13 @@ workflow can't comment on it.
   Bible chapter or picture it has no made-up copy of. The error says which
   file in `tools/printed-bulletin-preview/` to add it to.
 
-Heights are compared with the base because they're approximate, and on
-today's code two halves already read over: the Holy Communion cover, and in
-the long week Brooklyn's Sabbath Encouragement page, whose English is made-up
-filler about three times the Chinese length.
-A real Doc decides whether those fit; the run fails only if they grow.
+Heights are compared with the base because they're approximate. On today's
+code, one half already reads over in the long week: Brooklyn's Sabbath
+Encouragement page, whose English is made-up filler about three times the
+Chinese length. A real Doc decides whether it fits; the run fails only if it
+grows. The base is drawn with the same tool and made-up data as the branch,
+so a fix to the preview itself moves both, and a half that then fits fails
+again if it overflows.
 
 **Running it locally.** After `npm ci`, from the repository:
 
@@ -1396,9 +1398,12 @@ weeks are in `made-up-data.cjs`: invented names only.
 - Liberation stands in for Times New Roman and Arial (the same widths), and
   Chrome breaks lines, not Docs, so a line can break a little differently;
 - line heights are modelled from each font's metrics, not measured in Docs;
-- the QR codes, the logo, and the cover pictures are grey boxes, and the cover
-  pictures' real sizes aren't known (the church sketch is taken as 3:2, the
-  Last Supper as square);
+- the QR codes, the logo, and the cover pictures are grey boxes, at the sizes
+  the script sets. A cover picture's height comes from its shape, which isn't
+  in the repository, so it's measured and kept in `IMAGE_SIZES` in
+  `made-up-data.cjs`: the Last Supper is 947 × 749 px (3.33 × 2.63 in
+  printed), and the church sketch 1253 × 674 px. A new cover picture needs
+  its size there too;
 - it doesn't model how Docs moves a table row or paragraph to the next page, or
   the Word copy that's printed; and
 - the data is made up, so a real week can be longer.
