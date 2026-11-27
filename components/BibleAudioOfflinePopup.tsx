@@ -56,7 +56,8 @@ export function BibleAudioOfflinePopup({ onClose, onOpen, visible }: BibleAudioO
 }
 
 const styles = StyleSheet.create({
-  actions: { paddingBottom: 20, paddingHorizontal: 24, paddingTop: 16 },
+  // Paper puts actions at the end; the one button sits in the middle.
+  actions: { justifyContent: 'center', paddingBottom: 20, paddingHorizontal: 24, paddingTop: 16 },
   body: { paddingTop: 4 },
   header: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },
   scrollArea: { borderBottomWidth: 0, borderTopWidth: 0, paddingHorizontal: 24 },

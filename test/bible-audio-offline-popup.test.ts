@@ -60,6 +60,10 @@ describe('the popup', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
     fireEvent.press(screen.getByLabelText('關閉'));
     expect(onClose).toHaveBeenCalledTimes(1);
+    // Its one button sits in the middle, not at Paper's end.
+    expect(readFileSync('components/BibleAudioOfflinePopup.tsx', 'utf8')).toMatch(
+      /actions: \{ justifyContent: 'center',/,
+    );
   });
 
   it("opens from the line's link, which names where it leads, and opens the book being read", () => {
