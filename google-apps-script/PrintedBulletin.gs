@@ -80,7 +80,6 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   churchSketchImageProperty: 'CHURCH_SKETCH_IMAGE_FILE_ID',
   lastSupperImageProperty: 'LAST_SUPPER_IMAGE_FILE_ID',
   sdaLogoImageProperty: 'SDA_LOGO_IMAGE_FILE_ID',
-  adventistGivingQrImageProperty: 'ADVENTIST_GIVING_QR_IMAGE_FILE_ID',
   zelleQrImageProperty: 'ZELLE_QR_IMAGE_FILE_ID',
   mobileAppQrImageProperty: 'MOBILE_APP_QR_IMAGE_FILE_ID',
   // The QR codes live in one folder of a restricted shared drive: admins
@@ -119,10 +118,11 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   bookletHorizontalMargin: 14,
   bookletHalfWidth: 368,
   bookletFoldGutter: 28,
-  // Each giving code's column on the footer's right half (#833), and the
-  // printed width of every footer code.
-  footerQrColumnWidth: 80,
+  // The printed width of the footer's app code (#833), the column a giving
+  // code would get beside the notes, and the notes' inset from each side.
   footerQrImageMaxWidth: 50,
+  footerQrColumnWidth: 80,
+  footerTextInset: 6,
   // The cover art is a little smaller than before #603 to leave room for the
   // 10-point contact and Zoom lines below it.
   regularCoverImageMaxWidth: 460,
@@ -2643,11 +2643,13 @@ function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
 }
 
 /**
- * The footer under the Sabbath School and worship spread (#833). The Download
- * Mobile App code is on its own on the left half, so the app doesn't look like
- * a way to give, and the half has room for a code that could later open the
- * week's verse in the app (#768). The giving notes and the giving codes are on
- * the right half, under a rule that spans only that half.
+ * The footer under the worship page (#833), the same in every layout. The
+ * Download Mobile App code is on its own on the left half, so the app doesn't
+ * look like a way to give, and the half has room for a code that could later
+ * open the week's verse in the app (#768). The Tithes & Offerings notes are on
+ * the right half, under a rule that spans only that half. Online giving is in
+ * the app, so the bulletin prints no giving code: a code turned on later (only
+ * Zelle is listed, reserved for #384) gets its own column beside the notes.
  *
  * Docs keeps a paragraph between two tables. It held the rule when the rule
  * spanned the page. Now it only spaces the footer from the spread, and the
@@ -2660,10 +2662,8 @@ function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
 function appendBookletFooter_(container, footerRenderer, footerOptions) {
   footerOptions = footerOptions || {};
   var spacer = container.appendParagraph('');
-  spacer.setLineSpacing(1);
+  spacer.setAttributes(getCompactParagraphAttributes_());
   spacer.setSpacingBefore(footerOptions.ruleSpacingBefore || 0);
-  spacer.setSpacingAfter(0);
-  setPrintedRuleParagraphSize_(spacer);
 
   var halfWidth = PRINTED_BULLETIN_CONFIG.bookletHalfWidth;
   var qrWidth = PRINTED_BULLETIN_CONFIG.footerQrColumnWidth;
@@ -2713,9 +2713,9 @@ function appendPrintedFooterRule_(cell) {
 }
 
 /**
- * Fills the footer: the app code on the left half, and the giving notes and
- * codes, under the rule, on the right. Queens and Brooklyn share it. The rule
- * is each right-half cell's first line, so nothing here reuses or clears it.
+ * Fills the footer: the app code on the left half, and the giving notes, under
+ * the rule, on the right. Every layout shares it. The rule is each right-half
+ * cell's first line, so nothing here reuses or clears it.
  */
 function appendGivingFooter_(appCell, givingTextCell, givingQrCells, location) {
   appendGivingQrPlaceholderCell_(appCell, getPrintedMobileAppQrItem_(), {
@@ -2723,6 +2723,19 @@ function appendGivingFooter_(appCell, givingTextCell, givingQrCells, location) {
     location: location,
   });
   appendGivingText_(givingTextCell);
+  // The notes' longest lines would fill the half, about 15 pt (5 mm) from the
+  // sheet edge, and many printers can't print the outer 4-5 mm. Indent them to
+  // about 20 pt in, like the rest of the page; the rule keeps the whole half.
+  for (var index = 0; index < givingTextCell.getNumChildren(); index += 1) {
+    var child = givingTextCell.getChild(index);
+    if (child.getType() === DocumentApp.ElementType.PARAGRAPH && child.asParagraph().getText() !== '') {
+      child
+        .asParagraph()
+        .setIndentFirstLine(PRINTED_BULLETIN_CONFIG.footerTextInset)
+        .setIndentStart(PRINTED_BULLETIN_CONFIG.footerTextInset)
+        .setIndentEnd(PRINTED_BULLETIN_CONFIG.footerTextInset);
+    }
+  }
   getPrintedFooterGivingQrItems_(location).forEach(function (item, index) {
     if (givingQrCells[index]) {
       appendGivingQrPlaceholderCell_(givingQrCells[index], item, {
@@ -2733,7 +2746,8 @@ function appendGivingFooter_(appCell, givingTextCell, givingQrCells, location) {
   });
 }
 
-// The footer's options for a location: one right-half column per giving code.
+// The footer's options for a location: one right-half column per giving code,
+// none while Zelle is reserved.
 function getGivingFooterOptions_(location) {
   return {
     ruleSpacingBefore: 4,
@@ -2961,44 +2975,6 @@ function appendGivingText_(cell, options) {
   // here pushed the bulletin onto a second page at the 10-point minimum.
 }
 
-function appendGivingQrPlaceholders_(cell, options) {
-  options = options || {};
-  var compact = Boolean(options.compact);
-  var location = options.location || 'queens';
-  var imageMaxWidth = compact ? 50 : 58;
-  var cellPadding = compact ? 0 : 3;
-  var reuseLeadingParagraph = Boolean(options.reuseLeadingParagraph);
-  // The outer footer cell starts with an empty paragraph after clear(). Keep a
-  // reference and remove it only after inserting the QR table; removing it
-  // first can cause Docs to recreate a new blank paragraph before the table.
-  var leadingParagraph = reuseLeadingParagraph
-    ? getLeadingEmptyParagraph_(cell)
-    : null;
-  var table = cell.appendTable([['', '', '']]);
-  table.setBorderWidth(0);
-  if (leadingParagraph) {
-    leadingParagraph.removeFromParent();
-  }
-  getGivingQrItems_(location).forEach(function (item, index) {
-    var width = 120;
-    table.setColumnWidth(index, width);
-    var tableCell = table.getCell(0, index);
-    tableCell.clear();
-    tableCell.setPaddingTop(cellPadding);
-    tableCell.setPaddingBottom(cellPadding);
-    tableCell.setPaddingLeft(0);
-    tableCell.setPaddingRight(0);
-    tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    // Put each code in the paragraph clear() leaves, so no blank 11-point
-    // line sits above it.
-    appendGivingQrPlaceholderCell_(tableCell, item, {
-      imageMaxWidth: imageMaxWidth,
-      location: location,
-      reuseLeadingParagraph: true,
-    });
-  });
-}
-
 function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   options = options || {};
   if (item && item.reserved) {
@@ -3034,43 +3010,32 @@ function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   appendCompactCenteredText_(tableCell, item.label, PRINTED_BULLETIN_TYPE.bodySize, true);
 }
 
-// The three QR slots of the Communion giving panel, in order. The regular
-// footer puts the app code on its own half and only the giving codes under the
-// rule (getPrintedFooterGivingQrItems_).
+// The giving codes a location could print beside its giving notes. Online
+// giving, by bank transfer or card, is in the app's Tithe & Offering page, so
+// the bulletin has no code for it (#833). Brooklyn has no Zelle.
 function getGivingQrItems_(location) {
-  var items = [
-    getPrintedMobileAppQrItem_(),
-    {
-      label: printedBilingualText_('ACH or card', 'ACH／信用卡'),
-      kind: 'adventistGiving',
-    },
+  if (String(location || '').trim().toLowerCase() === 'brooklyn') {
+    return [];
+  }
+  // Queens keeps Zelle reserved until the treasury confirms the address
+  // (#384). Removing the reserved flag turns it on.
+  return [
     {
       label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
       kind: 'zelle',
+      reserved: true,
     },
   ];
-  // A reserved slot prints nothing but keeps its space, so the three-slot
-  // giving layout doesn't shift. The mobile app code points at the store
-  // download page, so deploy this script only once both apps are public (#323).
-  if (String(location || '').trim().toLowerCase() === 'brooklyn') {
-    // Zelle does not exist for Brooklyn.
-    return [items[0], items[1], { kind: 'unused', reserved: true }];
-  }
-  // Queens keeps the Zelle slot reserved until the treasury confirms the
-  // address (#384). Leave its definition above intact so restoring it later
-  // only requires removing its reserved flag.
-  return [items[0], items[1], { kind: 'zelle', reserved: true }];
 }
 
 /**
- * The giving codes on the footer's right half: ACH/card, and Zelle once it's
- * no longer reserved (#384). A reserved slot takes no room there. Turning
- * Zelle on adds a column to the right half and narrows the giving notes, so
- * check the fit before turning it on.
+ * The giving codes the footer prints beside the notes: none while Zelle is
+ * reserved (#384). Turning Zelle on adds an 80-point column to the right half
+ * and narrows the notes, so check the fit before turning it on.
  */
 function getPrintedFooterGivingQrItems_(location) {
   return getGivingQrItems_(location).filter(function (item) {
-    return item.kind !== 'mobileApp' && !item.reserved;
+    return !item.reserved;
   });
 }
 
@@ -3121,13 +3086,11 @@ function getPrintedBulletinQrImageFileId_(kind, location) {
   }
 
   var propertyName =
-    kind === 'adventistGiving'
-      ? PRINTED_BULLETIN_CONFIG.adventistGivingQrImageProperty
-      : kind === 'mobileApp'
-        ? PRINTED_BULLETIN_CONFIG.mobileAppQrImageProperty
-        : kind === 'zelle'
-          ? PRINTED_BULLETIN_CONFIG.zelleQrImageProperty
-          : '';
+    kind === 'mobileApp'
+      ? PRINTED_BULLETIN_CONFIG.mobileAppQrImageProperty
+      : kind === 'zelle'
+        ? PRINTED_BULLETIN_CONFIG.zelleQrImageProperty
+        : '';
   var configuredFileId = propertyName
     ? PropertiesService.getScriptProperties().getProperty(propertyName) || ''
     : '';
@@ -3206,9 +3169,6 @@ function getPrintedBulletinQrImageFileName_(kind, location) {
   var normalizedLocation = location === 'brooklyn' ? 'brooklyn' : 'queens';
   if (kind === 'mobileApp') {
     return 'mobile_app_qr_code_368x368.jpg';
-  }
-  if (kind === 'adventistGiving') {
-    return normalizedLocation + '_adventist_giving_qr_code_368x368.jpg';
   }
   if (kind === 'zelle') {
     return normalizedLocation + '_zelle_qr_code_368x368.jpg';

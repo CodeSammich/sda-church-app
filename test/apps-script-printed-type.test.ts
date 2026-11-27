@@ -19,6 +19,7 @@ class FakeParagraph {
   alignment = '';
   indentStart = 0;
   indentFirstLine = 0;
+  indentEnd = 0;
   spacingBefore = 0;
   spacingAfter = 0;
   constructor(text: string, public parent: FakeContainer | null) {
@@ -36,6 +37,7 @@ class FakeParagraph {
   setAlignment(value: string) { this.alignment = value; return this; }
   setIndentStart(value: number) { this.indentStart = value; return this; }
   setIndentFirstLine(value: number) { this.indentFirstLine = value; return this; }
+  setIndentEnd(value: number) { this.indentEnd = value; return this; }
   setLineSpacing(value: number) { this.lineSpacing = value; return this; }
   setSpacingBefore(value: number) { this.spacingBefore = value; return this; }
   setSpacingAfter(value: number) { this.spacingAfter = value; return this; }
@@ -525,7 +527,14 @@ describe('printed bulletin type (#603)', () => {
     Object.assign(data.queens as Record<string, unknown>, { sabbathSchoolHymns: ['第2首 聖哉真神'] });
     const { paragraphs } = render(data, 'regular', 'queens');
 
-    expect(paragraphs.filter((paragraph) => paragraph.indentStart || paragraph.indentFirstLine)).toEqual([]);
+    // The footer's giving notes are inset the same on both sides, which keeps
+    // them centred (#833).
+    const offCentre = paragraphs.filter(
+      (paragraph) =>
+        paragraph.indentStart !== paragraph.indentEnd ||
+        paragraph.indentFirstLine !== paragraph.indentEnd,
+    );
+    expect(offCentre).toEqual([]);
   });
 
   it('keeps the Chinese and English panel titles close together', () => {

@@ -239,8 +239,10 @@ function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslat
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study | blank, worship + giving |
-  // foot washing | the complete Holy Communion service.
+  // back/announcements | cover, study | blank, blank | worship with the
+  // footer, foot washing | the complete Holy Communion service. The footer is
+  // the regular bulletin's (#833): the giving notes under the worship half,
+  // and the app code under the left half, which folds to the blank page 6.
   appendBookletPage_(
     body,
     function (cell) {
@@ -264,9 +266,12 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     function (cell) {},
     function (cell) {
       appendWorshipPanel_(cell, bulletin, false);
-      appendCommunionVerticalGivingPanel_(cell);
     },
     false,
+    function (appCell, givingTextCell, givingQrCells) {
+      appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'queens');
+    },
+    getGivingFooterOptions_('queens'),
   );
   appendBookletPage_(
     body,
@@ -278,25 +283,4 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     false,
   );
-}
-
-function appendCommunionVerticalGivingPanel_(cell) {
-  appendSpacer_(cell);
-  // As in the Queens and Brooklyn footers, the giving heading sits right under
-  // the divider.
-  appendCommunionSectionDivider_(cell);
-  appendGivingText_(cell);
-  appendSpacer_(cell);
-  appendGivingQrPlaceholders_(cell, { compact: true });
-}
-
-function appendCommunionSectionDivider_(cell) {
-  var rule = cell.appendHorizontalRule();
-  var ruleParent = rule.getParent();
-  if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
-    ruleParent.asParagraph().setLineSpacing(1);
-    ruleParent.asParagraph().setSpacingBefore(0);
-    ruleParent.asParagraph().setSpacingAfter(0);
-    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
-  }
 }

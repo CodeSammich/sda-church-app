@@ -1003,8 +1003,8 @@ Queens Holy Communion is four physical pages in imposed order:
 
 1. left: announcements/back; right: cover;
 2. left: Church at Study; right intentionally blank;
-3. left intentionally blank; right: Church at Worship, followed by the vertical
-   giving section with the QR codes;
+3. left intentionally blank; right: Church at Worship, with the
+   [giving footer](#the-giving-footer) below them;
 4. left: Foot Washing; right: the complete Holy Communion service.
 
 The Communion ceremony has fixed references and fixed order. The `Weekly Data`
@@ -1027,34 +1027,33 @@ the topic before the day/time.
 
 ### The giving footer
 
-Queens Regular and Brooklyn Regular share one footer under the Sabbath School
-and worship spread (#833):
+Queens Regular, Queens Holy Communion, and Brooklyn Regular share one footer,
+under the doc page with the worship panel (#833):
 
 ```text
-          Sabbath School                       Worship
-                                    ───────────────────────────────
-         [app QR code]               Tithes & Offerings  [ACH/card ]
-           下載 APP                  cash-offering notes  [ QR code ]
-      Download Mobile App            (Chinese, English)    ACH／信用卡
-                                                           ACH or card
+        left half                              worship half
+                                    ───────────────────────────────────
+         [app QR code]                  Tithes & Offerings | 什一奉獻…
+           下載 APP                     現金奉獻：…  (Chinese notes)
+      Download Mobile App               Cash offerings: …  (English)
 ```
 
 - **Left half:** the Download Mobile App code on its own. The app isn't only a
-  way to give, so its code sits apart from the giving block. The half also has
+  way to give, so its code sits apart from the giving notes. The half also has
   room for a code that could later open the week's verse in the app (#768).
-- **Right half:** the Tithes & Offerings notes, with every digital giving code
-  beside them, under a rule over that half only. ACH/card goes to
-  AdventistGiving, which the app's Give page also opens.
+- **Right half:** the Tithes & Offerings heading and the cash-offering notes,
+  under a rule over that half only. The bulletin prints no online-giving code:
+  people give by bank transfer or card in the app's **Tithe & Offering** page.
 
-Each code has its own table column; a table nested in a cell keeps a blank line
-above it, which once pushed the captions onto a new page. The rule is the first
-line of each right-half cell, so it never crosses the fold. Turning Zelle on
-(#384) adds an 80-point column to the right half and narrows the notes, so
-check the fit with a long week before deploying it.
+The rule is the first line of the right-half cell, so it never crosses the
+fold. The notes are inset 6 points from each side, so a full line stays about
+20 points from the sheet edge. A giving code turned on later (only Zelle is
+listed, reserved for #384) gets its own 80-point column beside the notes, which
+narrows them, so check the fit with a long week before deploying it.
 
-Queens Holy Communion has no footer: its giving section is part of the worship
-page, under its own rule, with the three codes in one row (see
-[Giving QR slots](#giving-qr-slots)).
+In Queens Holy Communion the left half of that doc page is the booklet's blank
+page 6, so after folding the app code prints at the foot of that page, not
+beside the worship page (page 3).
 
 ### Type
 
@@ -1290,25 +1289,16 @@ matching `SABBATH_BIBLE_BOOKS_`.
 
 ### Giving QR slots
 
-The code lists three codes in stable order:
+The [giving footer](#the-giving-footer) prints these codes:
 
-```text
-1. Mobile App
-2. ACH/card
-3. Zelle
-```
-
-Queens Holy Communion prints them in one row, where a reserved slot prints
-nothing but keeps its space. The [giving footer](#the-giving-footer) of Queens
-Regular and Brooklyn puts the Mobile App code on the left half and the giving
-codes on the right half, where a reserved slot takes no room. The same rules
-apply to every layout:
-
-- **Mobile App** prints. Unlike the giving codes, it never falls back to the
-  placeholder image: if its code isn't found, the slot stays blank.
-- **ACH/card** always prints.
+- **Mobile App**, on the left half of every layout. It never falls back to the
+  placeholder image: if its code isn't found, the space stays blank.
+- **No online-giving code.** Giving by bank transfer or card is in the app's
+  **Tithe & Offering** page, so the bulletin stopped printing the ACH/card code
+  (#833).
 - **Zelle** stays reserved in Queens until the treasury confirms the address
-  (#384). Brooklyn has no Zelle destination, so it never prints one.
+  (#384), and a reserved code takes no room. Brooklyn has no Zelle destination,
+  so it never prints one.
 
 Asset file names end in `_368x368.jpg`; the mobile-app caption is
 `Download Mobile App | 下載 APP`. The script finds each code by its exact file name

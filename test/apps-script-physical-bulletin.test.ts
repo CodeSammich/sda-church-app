@@ -1348,37 +1348,24 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(givingQrItems).toContain("'Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'");
 
     const context = loadAppsScript({});
-    expect(JSON.parse(runInContext(
-      `JSON.stringify(getGivingQrItems_('brooklyn').map(function (item) { return item.kind; }))`,
-      context,
-    ) as string)).toEqual(['mobileApp', 'adventistGiving', 'unused']);
-    expect(JSON.parse(runInContext(
-      `JSON.stringify(getGivingQrItems_('queens').map(function (item) { return item.kind; }))`,
-      context,
-    ) as string)).toEqual(['mobileApp', 'adventistGiving', 'zelle']);
-    // The mobile app and ACH/card codes print. Zelle stays reserved until the
-    // treasury confirms the address (#384), and Brooklyn has no Zelle.
-    for (const location of ['queens', 'brooklyn']) {
-      expect(JSON.parse(runInContext(
-        `JSON.stringify(getGivingQrItems_('${location}').map(function (item) { return Boolean(item.reserved); }))`,
+    const kinds = (call: string) =>
+      JSON.parse(runInContext(
+        `JSON.stringify(${call}.map(function (item) { return item.kind + (item.reserved ? ' (reserved)' : ''); }))`,
         context,
-      ) as string)).toEqual([false, false, true]);
-    }
-    expect(runInContext(`getGivingQrItems_('queens')[0].label`, context)).toBe(
-      '下載 APP\nDownload Mobile App',
-    );
-    expect(runInContext(`getGivingQrItems_('brooklyn')[0].label`, context)).toBe(
-      '下載 APP\nDownload Mobile App',
-    );
-    // The footer keeps the app code apart from giving (#833), and a reserved
-    // slot takes no room under the rule.
-    for (const location of ['queens', 'brooklyn']) {
-      expect(JSON.parse(runInContext(
-        `JSON.stringify(getPrintedFooterGivingQrItems_('${location}').map(function (item) { return item.kind; }))`,
-        context,
-      ) as string)).toEqual(['adventistGiving']);
-    }
+      ) as string);
+    // Online giving (ACH or card) is in the app, so the bulletin has no code
+    // for it (#833). Zelle stays reserved until the treasury confirms the
+    // address (#384), and Brooklyn has no Zelle.
+    expect(kinds(`getGivingQrItems_('queens')`)).toEqual(['zelle (reserved)']);
+    expect(kinds(`getGivingQrItems_('brooklyn')`)).toEqual([]);
+    // So the footer prints no giving code beside the notes.
+    expect(kinds(`getPrintedFooterGivingQrItems_('queens')`)).toEqual([]);
+    expect(kinds(`getPrintedFooterGivingQrItems_('brooklyn')`)).toEqual([]);
+    expect(runInContext(`getPrintedBulletinQrImageFileName_('adventistGiving', 'queens')`, context)).toBe('');
     expect(runInContext(`getPrintedMobileAppQrItem_().kind`, context)).toBe('mobileApp');
+    expect(runInContext(`getPrintedMobileAppQrItem_().label`, context)).toBe(
+      '下載 APP\nDownload Mobile App',
+    );
   });
 
   it('leaves the mobile app slot blank, with no placeholder, when its code is missing', () => {
@@ -1400,7 +1387,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp')`, context)).toBe('');
     runInContext(
-      `appendGivingQrPlaceholderCell_(tableCell, getGivingQrItems_('queens')[0], {})`,
+      `appendGivingQrPlaceholderCell_(tableCell, getPrintedMobileAppQrItem_(), {})`,
       context,
     );
     expect(calls).toEqual(['clear']);
@@ -1414,9 +1401,6 @@ describe('printed bulletin Apps Script helpers', () => {
     });
 
     expect(runInContext(`getPrintedBulletinQrImageFileId_('zelle')`, context)).toBe(
-      '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
-    );
-    expect(runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving')`, context)).toBe(
       '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
     );
   });
@@ -1458,7 +1442,6 @@ describe('printed bulletin Apps Script helpers', () => {
     const context = loadAppsScript({
       Drive: driveApi(
         {
-          'brooklyn_adventist_giving_qr_code_368x368.jpg': 'brooklyn-giving-code',
           'queens_zelle_qr_code_368x368.jpg': 'queens-zelle-code',
           'mobile_app_qr_code_368x368.jpg': 'mobile-app-code',
         },
@@ -1468,9 +1451,6 @@ describe('printed bulletin Apps Script helpers', () => {
       Logger: { log: () => undefined },
     });
 
-    expect(runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving', 'brooklyn')`, context)).toBe(
-      'brooklyn-giving-code',
-    );
     expect(runInContext(`getPrintedBulletinQrImageFileId_('zelle', 'queens')`, context)).toBe(
       'queens-zelle-code',
     );
@@ -1478,7 +1458,6 @@ describe('printed bulletin Apps Script helpers', () => {
       'mobile-app-code',
     );
     expect(calls.map((call) => call.q)).toEqual([
-      `'${qrFolderId}' in parents and name = 'brooklyn_adventist_giving_qr_code_368x368.jpg' and trashed = false`,
       `'${qrFolderId}' in parents and name = 'queens_zelle_qr_code_368x368.jpg' and trashed = false`,
       `'${qrFolderId}' in parents and name = 'mobile_app_qr_code_368x368.jpg' and trashed = false`,
     ]);
@@ -1517,7 +1496,7 @@ describe('printed bulletin Apps Script helpers', () => {
         { id: 'old-trashed-code', trashed: true },
         { id: 'current-code', trashed: false },
       ],
-      'queens_adventist_giving_qr_code_368x368.jpg': [{ id: 'trashed-only', trashed: true }],
+      'queens_zelle_qr_code_368x368.jpg': [{ id: 'trashed-only', trashed: true }],
     };
     const folder = {
       getFilesByName: (name: string) => {
@@ -1551,7 +1530,7 @@ describe('printed bulletin Apps Script helpers', () => {
       'current-code',
     );
     expect(
-      runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving', 'queens')`, context),
+      runInContext(`getPrintedBulletinQrImageFileId_('zelle', 'queens')`, context),
     ).toBe('12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq');
   });
 
@@ -1949,6 +1928,7 @@ describe('printed bulletin Apps Script helpers', () => {
         setSpacingAfter: () => undefined,
         setAttributes: (attributes: Record<string, number>) => {
           paragraph.size = attributes.FONT_SIZE;
+          return paragraph;
         },
       };
       return paragraph;
@@ -1999,7 +1979,12 @@ describe('printed bulletin Apps Script helpers', () => {
       DocumentApp: {
         VerticalAlignment: { TOP: 'TOP' },
         ElementType: { PARAGRAPH: 'PARAGRAPH' },
-        Attribute: { FONT_SIZE: 'FONT_SIZE' },
+        Attribute: {
+          FONT_SIZE: 'FONT_SIZE',
+          LINE_SPACING: 'LINE_SPACING',
+          SPACING_BEFORE: 'SPACING_BEFORE',
+          SPACING_AFTER: 'SPACING_AFTER',
+        },
       },
     });
     Object.assign(context, {
@@ -2014,45 +1999,44 @@ describe('printed bulletin Apps Script helpers', () => {
     return { bodyParagraphs, widths, tableShape, cells, rendered };
   };
 
-  it('puts the app code on the left half and the giving block, under the rule, on the right', () => {
-    const { bodyParagraphs, widths, tableShape, cells, rendered } = renderFooter(1);
+  it('puts the app code on the left half and the giving notes, under the rule, on the right', () => {
+    const { bodyParagraphs, widths, tableShape, cells, rendered } = renderFooter(0);
 
-    // One row: the app half, the fold, the giving notes, and the ACH/card code.
-    expect(tableShape).toEqual([['', '', '', '']]);
-    expect(widths).toEqual([368, 28, 288, 80]);
-    // Together the giving columns are exactly the right half, so they can't
-    // run past it.
-    expect(widths[2] + widths[3]).toBe(widths[0]);
-    expect(rendered).toEqual([0, 2, [3]]);
+    // One row: the app half, the fold, and the giving notes across the whole
+    // right half. No giving code prints beside them (#833).
+    expect(tableShape).toEqual([['', '', '']]);
+    expect(widths).toEqual([368, 28, 368]);
+    expect(rendered).toEqual([0, 2, []]);
 
     // The paragraph between the spread and the footer only spaces them.
     expect(bodyParagraphs).toHaveLength(1);
     expect(bodyParagraphs[0].rule).toBe(false);
-    // The rule is the first line of each right-half cell, and only those.
+    // The rule is the first line of the right half, and only there.
     const ruled = cells.map((cell) => cell.children.some((paragraph) => paragraph.rule));
-    expect(ruled).toEqual([false, false, true, true]);
-    for (const cell of [cells[2], cells[3]]) {
-      expect(cell.children[0].rule).toBe(true);
-      expect(cell.children[0].size).toBe(3);
-    }
-    // The app half's first line is as tall as the rule's, so the codes line up.
+    expect(ruled).toEqual([false, false, true]);
+    expect(cells[2].children[0].rule).toBe(true);
+    expect(cells[2].children[0].size).toBe(3);
+    // The app half's first line is as tall as the rule's, so the code lines up
+    // with the heading.
     expect(cells[0].children[0].size).toBe(3);
-    // No padding, so the two cells' rules meet in one line.
+    // No padding: the rule spans the whole half.
     for (const cell of cells) {
       expect(cell.padding).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
     }
   });
 
-  it('splits the right half among the giving codes when Zelle is turned on', () => {
-    const { widths, rendered } = renderFooter(2);
+  it('gives a giving code turned on later its own column, with the rule across it too', () => {
+    const { widths, cells, rendered } = renderFooter(1);
 
-    expect(widths).toEqual([368, 28, 208, 80, 80]);
-    expect(widths[2] + widths[3] + widths[4]).toBe(widths[0]);
-    expect(rendered).toEqual([0, 2, [3, 4]]);
+    expect(widths).toEqual([368, 28, 288, 80]);
+    // The giving columns still add up to exactly the right half.
+    expect(widths[2] + widths[3]).toBe(widths[0]);
+    expect(rendered).toEqual([0, 2, [3]]);
+    expect(cells.map((cell) => cell.children[0].rule)).toEqual([false, false, true, true]);
   });
 
-  it('gives Queens and Brooklyn the same footer', () => {
-    const footers: Record<string, unknown> = {};
+  it('gives Queens Regular, Queens Communion, and Brooklyn Regular the same footer', () => {
+    const footers: Record<string, unknown[]> = {};
     const context = loadAppsScript({});
     Object.assign(context, {
       appendBookletPage_: (
@@ -2064,11 +2048,11 @@ describe('printed bulletin Apps Script helpers', () => {
         options?: unknown,
       ) => {
         if (!footerRenderer) return;
-        footerRenderer('app cell', 'text cell', ['qr cell']);
-        footers[context.currentLocation as string] = {
+        footerRenderer('app cell', 'text cell', []);
+        (footers[context.currentLayout as string] ||= []).push({
           options,
           calls: (context.footerCalls as unknown[]).splice(0),
-        };
+        });
       },
       appendBrooklynEncouragementPage_: () => undefined,
       footerCalls: [],
@@ -2076,47 +2060,74 @@ describe('printed bulletin Apps Script helpers', () => {
         (context.footerCalls as unknown[]).push(args),
     });
 
-    Object.assign(context, { currentLocation: 'queens' });
-    runInContext(`renderQueensRegularPrintedBulletinDocument_({}, {}, {}, 'regular')`, context);
-    Object.assign(context, { currentLocation: 'brooklyn' });
-    runInContext(`renderBrooklynPrintedBulletinDocument_({}, {}, {}, 'regular')`, context);
+    for (const [layout, call] of [
+      ['queens', `renderQueensRegularPrintedBulletinDocument_({}, {}, {}, 'regular')`],
+      ['communion', `renderCommunionPrintedBulletinDocument_({}, {}, {})`],
+      ['brooklyn', `renderBrooklynPrintedBulletinDocument_({}, {}, {}, 'regular')`],
+    ]) {
+      Object.assign(context, { currentLayout: layout });
+      runInContext(call, context);
+    }
 
-    // The same rule spacing, and one giving code (ACH/card) on each: Zelle is
+    // Once per bulletin, with the same spacing and no giving code: Zelle is
     // reserved in Queens (#384) and Brooklyn has none.
+    const footer = (location: string) => [
+      {
+        options: { ruleSpacingBefore: 4, givingQrCount: 0 },
+        calls: [['app cell', 'text cell', [], location]],
+      },
+    ];
     expect(footers).toEqual({
-      queens: {
-        options: { ruleSpacingBefore: 4, givingQrCount: 1 },
-        calls: [['app cell', 'text cell', ['qr cell'], 'queens']],
-      },
-      brooklyn: {
-        options: { ruleSpacingBefore: 4, givingQrCount: 1 },
-        calls: [['app cell', 'text cell', ['qr cell'], 'brooklyn']],
-      },
+      queens: footer('queens'),
+      communion: footer('queens'),
+      brooklyn: footer('brooklyn'),
     });
   });
 
   it.each(['queens', 'brooklyn'])(
-    'fills the %s footer: the app code on the left, the giving notes and ACH/card on the right',
+    'fills the %s footer: the app code on the left, the giving notes inset on the right',
     (location) => {
       const calls: Array<[string, unknown, unknown]> = [];
-      const context = loadAppsScript({});
+      const makeParagraph = (text: string) => {
+        const paragraph = {
+          text,
+          indents: [] as number[],
+          getType: () => 'PARAGRAPH',
+          getText: () => paragraph.text,
+          asParagraph: () => paragraph,
+          setIndentFirstLine: (value: number) => (paragraph.indents.push(value), paragraph),
+          setIndentStart: (value: number) => (paragraph.indents.push(value), paragraph),
+          setIndentEnd: (value: number) => (paragraph.indents.push(value), paragraph),
+        };
+        return paragraph;
+      };
+      // The rule, then what appendGivingText_ adds.
+      const paragraphs = [makeParagraph('')];
+      const textCell = {
+        getNumChildren: () => paragraphs.length,
+        getChild: (index: number) => paragraphs[index],
+      };
+      const context = loadAppsScript({ DocumentApp: { ElementType: { PARAGRAPH: 'PARAGRAPH' } } });
       Object.assign(context, {
-        appendGivingText_: (cell: unknown, options: unknown) => calls.push(['text', cell, options]),
+        textCell,
+        appendGivingText_: (cell: unknown, options: unknown) => {
+          calls.push(['text', cell === textCell ? 'text cell' : cell, options]);
+          paragraphs.push(makeParagraph('Tithes & Offerings | 什一奉獻與自由奉獻'), makeParagraph('現金奉獻：…'));
+        },
         appendGivingQrPlaceholderCell_: (cell: unknown, item: { kind: string }, options: unknown) =>
           calls.push(['qr ' + item.kind, cell, options]),
       });
 
-      runInContext(
-        `appendGivingFooter_('app cell', 'text cell', ['qr cell'], '${location}')`,
-        context,
-      );
+      runInContext(`appendGivingFooter_('app cell', textCell, [], '${location}')`, context);
 
       // Nothing reuses a cell's first paragraph: on the right it's the rule.
       expect(calls).toEqual([
         ['qr mobileApp', 'app cell', { imageMaxWidth: 50, location }],
         ['text', 'text cell', undefined],
-        ['qr adventistGiving', 'qr cell', { imageMaxWidth: 50, location }],
       ]);
+      // The notes sit 6 points in from each side, so a full line stays about
+      // 20 points from the sheet edge; the rule keeps the whole half.
+      expect(paragraphs.map((paragraph) => paragraph.indents)).toEqual([[], [6, 6, 6], [6, 6, 6]]);
     },
   );
 

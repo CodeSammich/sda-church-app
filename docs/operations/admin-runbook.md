@@ -247,9 +247,14 @@ The QR codes and where they point are listed in
 
 | File | Destination |
 | --- | --- |
-| `queens_adventist_giving_qr_code_368x368.jpg` | The church's AdventistGiving page, which the app's **Tithe & Offering** page opens too |
-| `brooklyn_adventist_giving_qr_code_368x368.jpg` | The same address as the Queens code: both giving codes encode one address |
 | `mobile_app_qr_code_368x368.jpg` | `https://app.nyccsda.org/download`, which sends phones to their app store |
+
+The bulletin prints no online-giving code: people give by bank transfer or card in
+the app's **Tithe & Offering** page (#833). The old
+`queens_adventist_giving_qr_code_368x368.jpg` and
+`brooklyn_adventist_giving_qr_code_368x368.jpg` in the QR code folder, and an
+`ADVENTIST_GIVING_QR_IMAGE_FILE_ID` Script Property if one is set, are no longer read
+and can be deleted.
 
 The app code uses the church's own `app.nyccsda.org` address, never the GitHub Pages
 address it redirects to, so printed codes keep working if the website moves.
@@ -300,8 +305,6 @@ The images are also saved as the run's **bulletin-qr-codes** artifact for 90 day
 **What the upload script may write.** `scripts/upload-google-drive.mjs` only uploads
 `.apk`, `.aab`, and `.ipa` files and these QR codes:
 
-- `brooklyn_adventist_giving_qr_code_368x368.jpg`
-- `queens_adventist_giving_qr_code_368x368.jpg`
 - `brooklyn_zelle_qr_code_368x368.jpg`
 - `queens_zelle_qr_code_368x368.jpg`
 - `mobile_app_qr_code_368x368.jpg`
