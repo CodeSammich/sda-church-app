@@ -142,9 +142,9 @@ describe('Bible reader text scaling', () => {
     // content column's on a wide screen (#324).
     expect(source).toContain('() => getBibleDockLayout(dockCardWidth, dockTextScale),');
     // The book, chapter, and Verse labels, the selection count, the audio
-    // language mark, both audio times, the line for no connection (#801), and
+    // language mark, both audio times, the line for no connection and its link (#801), and
     // the hidden copy that measures pills.
-    expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(9);
+    expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(11);
   });
 
   it('shortens the Verse label before the book name is cut short (#376)', () => {

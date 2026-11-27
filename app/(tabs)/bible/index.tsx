@@ -89,7 +89,15 @@ import {
   getDownloadableBibleAudioNarrator,
   snapshotDownloadedChapters,
 } from '@/services/BibleAudioDownloads';
-import { useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
+import { useDownloadedBibleAudioBytes, useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
+import { BibleAudioOfflinePopup } from '@/components/BibleAudioOfflinePopup';
+import { getBibleAudioOfflineCopy } from '@/services/BibleAudioOfflineLine';
+import {
+  loadBibleAudioOfflineTip,
+  noteBibleAudioOfflineTipShown,
+  shouldShowBibleAudioOfflineTip,
+} from '@/services/BibleAudioOfflineTip';
+import { hasHadBibleAudioDownloads } from '@/services/BibleAudioDownloadTip';
 import { useBibleAudioDownloadTip } from '@/hooks/useBibleAudioDownloadTip';
 import { useBibleAudioOfflineLine } from '@/hooks/useBibleAudioOfflineLine';
 import { useRenderingRef } from '@/hooks/useRenderingRef';
@@ -1368,13 +1376,44 @@ export default function BibleScreen() {
   );
   // While the phone has no connection and the chapter isn't downloaded, the
   // player says so in place of its progress bar (#801).
+  const hasDownloadedBibleAudio = useDownloadedBibleAudioBytes() > 0;
+  useEffect(() => {
+    void loadBibleAudioOfflineTip();
+  }, []);
+  const [audioOfflinePopupVisible, setAudioOfflinePopupVisible] = useState(false);
+  const audioOfflineCopy = getBibleAudioOfflineCopy(language);
   const audioOfflineLine = useBibleAudioOfflineLine({
     enabled: Platform.OS !== 'web',
     language,
     listening: nativePlaybackIntentRef.current,
     audible: audioStatus.playing && !audioStatus.isBuffering,
     downloaded: !!downloadedAudioUri,
+    // The first drop shows the line's popup once by itself, for someone who
+    // has never downloaded Bible audio (services/BibleAudioOfflineTip.ts).
+    onDrop: () => {
+      if (
+        !audioDownloadNarrator ||
+        !shouldShowBibleAudioOfflineTip({
+          appActive: AppState.currentState === 'active',
+          chapterDownloaded: !!downloadedAudioUriRef.current,
+          hasEverDownloaded: hasDownloadedBibleAudio || hasHadBibleAudioDownloads(),
+        })
+      ) {
+        return;
+      }
+      noteBibleAudioOfflineTipShown();
+      logForAudioE2e('showing the one-time offline tip');
+      setAudioOfflinePopupVisible(true);
+    },
   });
+  // Offline Bible Audio, showing the book being read, as Listen offline opens it.
+  const openOfflineBibleAudio = () => {
+    setAudioOfflinePopupVisible(false);
+    router.push({
+      pathname: '/you/audio-downloads',
+      params: { backTo: '/bible', narrator: audioDownloadNarrator ?? '', bookId: book?.id ?? '' },
+    } as any);
+  };
   const [audioOfflineLineHeight, setAudioOfflineLineHeight] = useState(0);
   const audioSettingsScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const scrolledToDownloadTipRef = useRef(false);
@@ -4422,18 +4461,48 @@ export default function BibleScreen() {
               </View>
 
               {audioOfflineLine && (
-                // In the progress bar's place until audio plays (#801).
+                // In the progress bar's place until audio plays (#801). Its
+                // "not downloaded" opens a popup about listening offline, as a
+                // link with a 44-point target that stays clear of the buttons.
                 <View
+                  accessibilityLiveRegion="polite"
                   onLayout={(event) => setAudioOfflineLineHeight(event.nativeEvent.layout.height)}
-                  style={[styles.audioOfflineLineRow, { minHeight: dockLayout.audioTimelineHeight }]}
+                  style={[
+                    styles.audioOfflineLineRow,
+                    { minHeight: Math.max(dockLayout.audioTimelineHeight, MIN_TAP_TARGET) },
+                  ]}
                 >
                   <Text
                     maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
-                    accessibilityLiveRegion="polite"
+                    numberOfLines={1}
                     style={[styles.audioOfflineLine, { color: theme.colors.onSurface }]}
                   >
-                    {audioOfflineLine}
+                    {`${audioOfflineCopy.connection} · `}
                   </Text>
+                  {audioDownloadNarrator ? (
+                    <TouchableOpacity
+                      accessibilityRole="link"
+                      accessibilityLabel={audioOfflineCopy.linkLabel}
+                      onPress={() => setAudioOfflinePopupVisible(true)}
+                      style={styles.audioOfflineLink}
+                    >
+                      <Text
+                        maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                        numberOfLines={1}
+                        style={[styles.audioOfflineLine, styles.audioOfflineLinkText, { color: theme.colors.primary }]}
+                      >
+                        {audioOfflineCopy.notDownloaded}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text
+                      maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                      numberOfLines={1}
+                      style={[styles.audioOfflineLine, { color: theme.colors.onSurface }]}
+                    >
+                      {audioOfflineCopy.notDownloaded}
+                    </Text>
+                  )}
                 </View>
               )}
               <View
@@ -4557,6 +4626,12 @@ export default function BibleScreen() {
         {/* Below the card, the capsule's room while it shows. */}
         <Animated.View style={{ height: animatedDockBottomClearance }} />
       </Animated.View>
+
+      <BibleAudioOfflinePopup
+        visible={audioOfflinePopupVisible}
+        onClose={() => setAudioOfflinePopupVisible(false)}
+        onOpen={openOfflineBibleAudio}
+      />
 
       <Portal>
         <Modal
@@ -6014,8 +6089,17 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       lineHeight: scaleTypographyMetric(18, uiTextScale),
     },
     audioOfflineLineRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
       justifyContent: 'center',
-      paddingBottom: 6,
+      paddingBottom: 2,
+    },
+    audioOfflineLink: {
+      justifyContent: 'center',
+      minHeight: MIN_TAP_TARGET,
+    },
+    audioOfflineLinkText: {
+      textDecorationLine: 'underline',
     },
     audioOfflineLine: {
       fontSize: scaleTypographyMetric(13, uiTextScale),

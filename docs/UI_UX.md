@@ -193,14 +193,30 @@ so while the listener waits
 ([#801](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/801)),
 in one short line: "No connection · not downloaded" (沒有網路 · 未下載, worded as
 Offline Bible Audio words it). The player keeps trying meanwhile, and plays by itself
-once the connection is back. The line takes the place of the progress bar until audio
-plays, and wraps only if it needs more room, with the audio bar growing to fit it. It's text, not a button: a small
-phone's audio bar has no room for another. While it shows, the play button shows pause,
-since the player is still on, and a tap stops it. It goes as soon as audio plays, the
-connection comes back, or the listener pauses, since nothing plays by itself after a
-pause. A drop the player rides out on what it has already loaded shows nothing. Screen
-readers on Android announce it as it appears. The web doesn't show it.
-`services/BibleAudioOfflineLine.ts` decides when.
+once the connection is back.
+- **Where:** in place of the progress bar until audio plays, on one line, with the
+  audio bar growing to fit it if it ever wraps. It's text, not a button: a small phone's
+  audio bar has no room for another.
+- **Its link:** "not downloaded" is a link, underlined in the theme's main color, with a
+  44-point target in a row as tall, clear of the buttons above. Screen readers hear "Not
+  downloaded. Open Offline Bible Audio". It opens a popup, titled "No connection" with
+  the X in its title row, that says the chapter isn't saved on the phone and that next
+  time it's online it can download chapters in Offline Bible Audio, with one button,
+  Open Offline Bible Audio, which opens that page at the book being read, as Listen
+  offline does. The popup and the page both work offline, though a download can only
+  start with a connection.
+- **The one-time tip:** the first time the connection drops while Bible audio plays a
+  chapter that isn't downloaded, with the app open, the same popup shows by itself, once
+  ever, and only for someone who has never had Bible audio on the phone. Starting to
+  listen while already offline isn't a drop. Nothing else announces it: no sound, no
+  notification, and nothing while the app is in the background.
+  `services/BibleAudioOfflineTip.ts` decides when.
+- **When it goes:** as soon as audio plays, the connection comes back, or the listener
+  pauses, since nothing plays by itself after a pause. A drop the player rides out on
+  what it has already loaded shows no line. While the line shows, the play button shows
+  pause, since the player is still on, and a tap stops it. Screen readers on Android
+  announce the line as it appears. The web doesn't show it.
+  `services/BibleAudioOfflineLine.ts` decides when.
 
 ### Key Principles & Exceptions:
 

@@ -132,6 +132,45 @@ describe('on the Bible screen', () => {
   });
 });
 
+describe('a drop while listening, for the one-time tip (#801)', () => {
+  const listen = async (onDrop: () => void) => {
+    await renderHook(() =>
+      useBibleAudioOfflineLine({
+        enabled: true,
+        language: 'en',
+        listening: true,
+        audible: true,
+        downloaded: false,
+        onDrop,
+      }),
+    );
+    // The first reading of the connection arrives a few ticks later.
+    await act(async () => {
+      for (let i = 0; i < 5; i += 1) await Promise.resolve();
+    });
+  };
+
+  it('comes from a drop while listening', async () => {
+    jest.mocked(getNetworkStateAsync).mockResolvedValue(ONLINE);
+    const onDrop = jest.fn();
+    await listen(onDrop);
+    await act(async () => networkListeners.forEach((listener) => listener(OFFLINE)));
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    // Staying offline isn't another drop.
+    await act(async () => networkListeners.forEach((listener) => listener(OFFLINE)));
+    expect(onDrop).toHaveBeenCalledTimes(1);
+  });
+
+  it('not from starting to listen offline', async () => {
+    jest.mocked(getNetworkStateAsync).mockResolvedValue(OFFLINE);
+    const onDrop = jest.fn();
+    await listen(onDrop);
+    await act(async () => networkListeners.forEach((listener) => listener(OFFLINE)));
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
+});
+
 describe('the listening flag the line depends on', () => {
   it('re-renders the screen when a callback changes it, and only then', async () => {
     let renders = 0;
