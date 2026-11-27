@@ -87,6 +87,20 @@ export const fitHeaderTitleScale = (titleWidth: number, room: number) => {
   return Math.max(HEADER_TITLE_MIN_SCALE, (room - 2) / titleWidth);
 };
 
+/**
+ * The title's font size at `scale` of `fontSize`: smaller, in whole pixels
+ * (#797). Android draws text at a whole number of pixels, rounding a size up,
+ * so a title shrunk just enough to fit on one line grew back by up to a pixel
+ * a character and wrapped anyway, as 中文讚美詩 — / 505 版 at 150%. Rounding
+ * down first leaves it no wider than fitHeaderTitleScale allows.
+ * `pixelsPerPoint` is the screen's pixel ratio times the phone's text size,
+ * as the header caps it.
+ */
+export const getHeaderTitleFontSize = (fontSize: number, scale: number, pixelsPerPoint: number) =>
+  scale >= 1 || !(pixelsPerPoint > 0)
+    ? fontSize
+    : Math.floor(fontSize * scale * pixelsPerPoint) / pixelsPerPoint;
+
 export type BibleControlsLayout = Readonly<{
   stack: boolean;
   hideTranslationNames: boolean;

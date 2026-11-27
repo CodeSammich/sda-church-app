@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import {
   fitHeaderTitleScale,
   getGlobalHeaderHeightForScale,
+  getHeaderTitleFontSize,
   HEADER_TITLE_MIN_SCALE,
 } from '@/hooks/useGlobalHeaderHeight';
 
@@ -44,6 +45,18 @@ describe("a page's title in the header (#797)", () => {
     expect(fitHeaderTitleScale(226, 0)).toBe(1);
     expect(fitHeaderTitleScale(226, -20)).toBe(1);
     expect(fitHeaderTitleScale(Number.NaN, 198)).toBe(1);
+  });
+
+  it('draws a smaller title in whole pixels, rounded down, since Android rounds a size up', () => {
+    // 24 points at 0.83 on the 1.875-pixel Android phone: 37.35 pixels, which
+    // Android drew at 38, so the title wrapped. 37 pixels fits.
+    expect(getHeaderTitleFontSize(24, 0.83, 1.875) * 1.875).toBeCloseTo(37);
+    expect(getHeaderTitleFontSize(24, 0.83, 1.875)).toBeLessThanOrEqual(24 * 0.83);
+    // Whole, it's left as it is, and so is a size without a pixel ratio.
+    expect(getHeaderTitleFontSize(24, 1, 1.875)).toBe(24);
+    expect(getHeaderTitleFontSize(24, 0.83, 0)).toBe(24);
+    const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
+    expect(header).toContain('PixelRatio.get() * getHeaderFontScale(fontScale)');
   });
 
   it('measures a hidden copy at full size and sizes the shown title from it', () => {

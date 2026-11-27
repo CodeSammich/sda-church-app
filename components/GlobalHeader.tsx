@@ -15,6 +15,7 @@ import { keepWordsWhole } from '@/constants/LineBreaks';
 import {
   fitHeaderTitleScale,
   getGlobalHeaderHeightForScale,
+  getHeaderTitleFontSize,
   getHeaderFontScale,
   HEADER_MAX_FONT_SCALE,
   getBibleControlsLayout,
@@ -53,6 +54,7 @@ import {
   Animated,
   BackHandler,
   FlatList,
+  PixelRatio,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -267,9 +269,12 @@ export const GlobalHeader = (props: any) => {
     titleWidth,
     Math.min(titleAreaWidth - TITLE_CHIP_MARGIN_RIGHT, titleChipMaxWidth) - 2 * titleChipPadding,
   );
+  // Pixels a point of the title's text takes: the screen's, times the
+  // phone's text size up to the header's cap.
+  const titlePixelsPerPoint = PixelRatio.get() * getHeaderFontScale(fontScale);
   const titleTextStyle = (scale: number) => ({
     color: theme.colors.onSurface,
-    fontSize: scaleTypographyMetric(16, textScale) * scale,
+    fontSize: getHeaderTitleFontSize(scaleTypographyMetric(16, textScale), scale, titlePixelsPerPoint),
     fontWeight: 'bold' as const,
     lineHeight: scaleTypographyMetric(20, textScale) * scale,
     textAlign: 'center' as const,
