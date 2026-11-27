@@ -167,9 +167,9 @@ versions automatically from dates, issue activity, or feature merges.
 Each workflow is listed by the name the Actions tab shows, with its file and its check
 names. Which checks are required on `main` and on `release-candidate` is in
 [Required checks](operations/admin-runbook.md#required-checks). A feature PR into
-`release-candidate` runs only the first three workflows below (and **Issues - Pending
-Release Label** when it merges); the slower ones run once per release, on the release PR
-into `main`. Other PRs into `main`, such as Dependabot's security updates, skip the slow
+`release-candidate` runs only the first three workflows below, the fourth when it changes
+the Apps Script (and **Issues - Pending Release Label** when it merges); the slower ones
+run once per release, on the release PR into `main`. Other PRs into `main`, such as Dependabot's security updates, skip the slow
 ones, because the source gate stops them from merging anyway. `main` also requires the `CodeQL`,
 `Analyze (actions)`, and `Analyze (javascript-typescript)` checks, which come from
 GitHub's code scanning default setup and have no workflow file.
@@ -206,6 +206,17 @@ GitHub's code scanning default setup and have no workflow file.
 - Reruns when the description is edited, so fixing the description clears it without a
   new commit.
 - Skips Dependabot PRs and PRs labeled `no linked issue`.
+
+### `Printed Bulletin Preview` (`.github/workflows/printed-bulletin-preview.yml`)
+
+- Check: `Printed bulletin preview`. Runs on PRs into `release-candidate` and `main` that
+  change `google-apps-script/` or the tool, and by hand. Not a required check: it
+  doesn't run on other PRs.
+- Draws every printed bulletin layout from the PR's Apps Script, with made-up data and a
+  fake Google Docs, and uploads the pages as PNGs. Fails on type under 10 points,
+  anything wider than its booklet half, or a half that no longer fits. It reads no
+  secrets. See
+  [Printed bulletin preview](operations/bulletin-automation.md#printed-bulletin-preview).
 
 ### `PR Version Check` (`.github/workflows/pr-check.yml`)
 

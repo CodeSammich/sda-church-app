@@ -100,6 +100,7 @@ the church's Workspace terms during annual maintenance.
 | `test/apps-script-word-copy.test.ts` | The Word copy for printing on a Mac (#627) |
 | `test/apps-script-hymnal-data.test.ts` | The generated `HymnalData.gs` and the printed hymn lookup (#619) |
 | `test/apps-script-announcements.test.ts`, `test/apps-script-dialog-announcements.test.ts` | `Weekly Data`'s announcements, and the **Create Word Doc…** dialog's (#562) |
+| `tools/printed-bulletin-preview/`, `test/printed-bulletin-preview.test.ts` | The [printed bulletin preview](#printed-bulletin-preview): a fake Google Docs, made-up weeks, and the page images and fit checks of the **Printed Bulletin Preview** workflow (#844) |
 | `test/apps-script-live-check.test.ts` | The deploy's check for code edited outside git (`scripts/apps-script-live-check.cjs`) |
 | `test/bulletin-changeovers.test.ts` | The monitor's cleanup issues for retired changeovers (`scripts/bulletin-changeovers.cjs`) |
 | `test/integration/bulletin-api.mjs` | Opt-in read-only production API contract check |
@@ -1332,6 +1333,79 @@ deploy. If a printed code stops working:
 3. Generate test bulletins for Queens (Regular and Holy Communion) and Brooklyn,
    and scan the printed code with an Android phone and an iPhone.
 
+## Printed bulletin preview
+
+A pull request into `release-candidate` or `main` that changes
+`google-apps-script/` gets a preview of every printed layout before it
+merges (#844). The **Printed Bulletin Preview** workflow
+(`.github/workflows/printed-bulletin-preview.yml`) runs the pull request's
+printed-bulletin code with made-up data against a fake Google Docs, with no
+Google account, sheet, or secret, and draws each page in headless Chrome. It
+makes Queens Regular, Queens Holy Communion, and Brooklyn Regular, each for an
+ordinary week and a long one (a long sermon title, two singers, a reading of
+several verses, and four announcements).
+
+**Where the pages are.** On the pull request, open the **Printed bulletin
+preview** check's **Details**, then **Summary**. Its first line, **Download the
+page images**, downloads the **printed-bulletin-preview** zip (kept 14 days):
+a folder per layout with `page-1.png`, `page-2.png`, and so on, and
+`summary.md`. Below it, the summary lists the pages drawn and the room left in
+points at the foot of each booklet half, on this branch and on the base branch.
+Each page image is labelled with its own numbers, and a dashed red line marks
+the bottom margin. A pull request from a fork gets a read-only token, so the
+workflow can't comment on it.
+
+**When it fails.** The run fails if:
+
+- any text is under 10 points;
+- a table or image is wider than the page, or than the booklet half or cell it
+  sits in (a table may run into its cell's padding, as the 360-point tables do
+  in a 368-point half);
+- a booklet half that fit on the base branch no longer does, or one already
+  over there grows by more than a point; or
+- the renderers use something the fake Google Docs doesn't have, or ask for a
+  Bible chapter or picture it has no made-up copy of. The error says which
+  file in `tools/printed-bulletin-preview/` to add it to.
+
+Heights are compared with the base because they're approximate, and on
+today's code two halves already read over: the Holy Communion cover, and in
+the long week Brooklyn's Sabbath Encouragement page, whose English is made-up
+filler about three times the Chinese length.
+A real Doc decides whether those fit; the run fails only if they grow.
+
+**Running it locally.** After `npm ci`, from the repository:
+
+```bash
+node tools/printed-bulletin-preview/preview.cjs
+```
+
+It needs Chrome or Chromium (`CHROME_PATH` names one) and a Chinese font. The
+workflow draws the Chinese in the bulletin's own font, UoqMunThenKhung, which
+it downloads from [Google Fonts](https://fonts.google.com/specimen/UoqMunThenKhung);
+put that file in a folder and pass `--fonts <folder>` to match its numbers.
+Without it, any installed Chinese font stands in (on Ubuntu,
+`sudo apt-get install fonts-noto-cjk`), and lines can break a little
+differently. The pages go to `build/printed-bulletin-preview/`. It compares with
+where the branch left `upstream/release-candidate` (or
+`origin/release-candidate`); `--base <ref>` picks another, `--base none` none,
+and `--only queens-regular,brooklyn-regular` some of the layouts. The made-up
+weeks are in `made-up-data.cjs`: invented names only.
+
+**What it can't show.** It imitates Google Docs, so:
+
+- Liberation stands in for Times New Roman and Arial (the same widths), and
+  Chrome breaks lines, not Docs, so a line can break a little differently;
+- line heights are modelled from each font's metrics, not measured in Docs;
+- the QR codes, the logo, and the cover pictures are grey boxes, and the cover
+  pictures' real sizes aren't known (the church sketch is taken as 3:2, the
+  Last Supper as square);
+- it doesn't model how Docs moves a table row or paragraph to the next page, or
+  the Word copy that's printed; and
+- the data is made up, so a real week can be longer.
+
+So a passing run doesn't replace checking a real Doc after the deploy (see
+[Deployment and verification](#deployment-and-verification)).
+
 ## Deployment and verification
 
 The repository is the canonical source. Local WSL deployment uses the existing
@@ -1433,6 +1507,8 @@ Before changing a bulletin field, sheet column, or layout:
 - update the mobile-app type/UI when the public JSON changes;
 - update the three-sheet/header documentation;
 - add or update deterministic tests;
+- for a printed layout change, look at the pull request's
+  [printed bulletin preview](#printed-bulletin-preview) pages;
 - run the relevant Apps Script and mobile tests;
 - approve the Apps Script deploy that the release's merge into `main` starts;
 - build/upload an APK only when native app code changes; and
