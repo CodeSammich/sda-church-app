@@ -152,18 +152,24 @@ is the second use, for later rather than to open now. It's downloaded and delete
 page, **Offline Bible Audio** in the You tab, which **Listen offline** in the Bible's audio
 settings opens. The page is a tree of the whole Bible, its Testaments, their sections,
 closed until tapped, and their books, for one narrator; opened from the Bible, it shows
-the book being read. Each row says what it holds: its size, how far along its download
-is, part of it, or all of it. Narrators are named language first, as "English – Souer
+the book being read, and a section that holds some of its books, not all, opens, so they
+show (#806). Each row says what it holds: its size, how far along its download is, part
+of it, such as "1 of 66 books downloaded · 774.4 MB not yet downloaded" (未下載, not 尚餘,
+which read as the phone's free space), or all of it. A size never breaks across lines.
+Narrators are named language first, as "English – Souer
 (BSB)" or "Mandarin (Chinese Union Version)", and listed in one order, as the translation
 picker lists their translations (`constants/BibleAudioNarrators.ts`); the Bible's audio
 settings name the English ones the same way. A row's download
-progress shows at once, with an X that stops it. It goes on when the page closes, and
+progress shows at once, with an X that stops it; while it waits for Wi-Fi, only the X
+shows, and to use mobile data instead, the member stops it and downloads again, which
+asks. It goes on when the page closes, and
 with the phone locked or the app in the background, since the whole Bible takes a while:
 the phone itself downloads it (#611), on Wi-Fi only unless the member chose mobile data.
 Meanwhile a notification can show it, with Stop, as **Notifications** below says: the
 app's own on Android 14 and later, and the system's download notification on Android 13
-and lower; on the iPhone, a word when it's done. Deleting goes by the same rows, after the app's popup
-asks, naming what it deletes and its size. It stays in the documents directory until the
+and lower; on the iPhone, a word when it's done. Deleting goes by the same rows: a trash can with the
+word Delete under it, not beside it, so it's no wider than the icons beside it on a small
+phone (#806). The app's popup asks first, naming what it deletes and its size. It stays in the documents directory until the
 member deletes it, rather than in the cache, and the size of each choice shows before it
 starts. Over mobile data,
 the app's popup asks first: Use mobile data, Wait for Wi-Fi, or Cancel; and a download
