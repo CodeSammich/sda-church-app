@@ -66,7 +66,7 @@ jobs:
             echo "No iOS key screens run for $SHA; going ahead."
             exit 0
           fi
-          for _ in $(seq 1 220); do
+          for _ in $(seq 1 200); do
             join=$(gh api "repos/$REPO/actions/runs/$run/jobs?per_page=100" \
               --jq '[.jobs[] | select(.name == "iOS key screens join")][0].status // "not started"' || true)
             status=$(gh api "repos/$REPO/actions/runs/$run" --jq .status || true)
