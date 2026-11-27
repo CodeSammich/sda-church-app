@@ -293,12 +293,12 @@ Watch for:
 - An outage issue from the [status page](status-page.md), which checks John 3 in
   each recording a few times a day
   ([how often](status-page.md#how-often-it-checks)).
-- Reports that audio takes several seconds to start, or that the lock screen or
-  notification title ends in something other than the first source,
-  `(HelloAO)`. A Mandarin, Cantonese or Spanish title ending in `(NYCCSDA.org)`
-  means HelloAO is failing; a Mandarin one ending in `(Internet Archive)` or
-  `(Audio Power)` means the library is failing too.
-  The audio settings don't show this; they show the source the listener chose.
+- Reports that audio takes several seconds to start. Nothing on the phone says
+  which source is playing: the lock screen and the notification name only the
+  chapter and the narrator, in the app's language (#804), and the audio settings
+  show the source the listener chose. The
+  [Bible audio emulator test](admin-runbook.md#bible-audio-emulator-test) logs
+  each host it plays from.
 - Listening growing towards the "wide adoption" row, for example from app store
   install counts.
 

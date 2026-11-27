@@ -280,14 +280,14 @@ describe("the children's lesson popup", () => {
     // Until the first progress event, and then without a size if the server gives none.
     expect(getChildrenLessonStatus({ bytesWritten: 0, totalBytes: -1 }, 'zh')).toEqual({ text: '下載中…', fraction: null });
     expect(getChildrenLessonStatus({ bytesWritten: 1_200_000, totalBytes: -1 }, 'en')).toEqual({
-      text: 'Downloading · 1.2 MB',
+      text: 'Downloading · 1.2\u00a0MB',
       fraction: null,
     });
     expect(getChildrenLessonStatus({ bytesWritten: 4_200_000, totalBytes: 9_300_000 }, 'es')).toMatchObject({
-      text: 'Descargando · 4,2 de 9,3 MB',
+      text: 'Descargando · 4,2 de 9,3\u00a0MB',
     });
     expect(getChildrenLessonStatus({ bytesWritten: 16_450_000, totalBytes: 32_900_000 }, 'zh-cn')).toEqual({
-      text: '下载中 · 16.4 / 32.9 MB',
+      text: '下载中 · 16.4 / 32.9\u00a0MB',
       fraction: 0.5,
     });
   });
@@ -324,7 +324,7 @@ describe("the children's lesson popup", () => {
         visible: true,
       }),
     );
-    expect(screen.getByText('Downloading · 4.2 of 9.3 MB')).toBeTruthy();
+    expect(screen.getByText('Downloading · 4.2 of 9.3\u00a0MB')).toBeTruthy();
     expect(screen.queryByText('Close')).toBeNull();
     await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
     expect(onCancel).toHaveBeenCalledTimes(1);

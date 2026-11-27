@@ -11,8 +11,11 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { UIStateContext } from '@/constants/UIStateContext';
 import { useTextSize } from '@/constants/TextSizeContext';
+import { keepWordsWhole } from '@/constants/LineBreaks';
 import {
+  fitHeaderTitleScale,
   getGlobalHeaderHeightForScale,
+  getHeaderTitleFontSize,
   getHeaderFontScale,
   HEADER_MAX_FONT_SCALE,
   getBibleControlsLayout,
@@ -51,6 +54,7 @@ import {
   Animated,
   BackHandler,
   FlatList,
+  PixelRatio,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -114,6 +118,9 @@ type BibleTranslationChipItem = Readonly<{
   badge: string;
   label: string;
 }>;
+
+// The space to the right of the title's chip.
+const TITLE_CHIP_MARGIN_RIGHT = 12;
 
 export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
@@ -191,6 +198,9 @@ export const GlobalHeader = (props: any) => {
   const isSubPage = !isPillarRoot;
 
   const title = props.options?.title;
+  // In Chinese, a title breaks only between its words, never inside one, as
+  // 505 版 did (#797).
+  const shownTitle = typeof title === 'string' ? keepWordsWhole(title) : title;
   const onBibleTranslationPress = props.options?.onBibleTranslationPress as
     | (() => void)
     | undefined;
@@ -246,6 +256,29 @@ export const GlobalHeader = (props: any) => {
   useEffect(() => {
     setMeasuredHeaderContentHeight(0);
   }, [effectiveTextScale, title, windowWidth]);
+
+  // The title stays on one line where it can (#797): a hidden copy measures
+  // it at its full size, and where it's wider than the chip's room it's drawn
+  // smaller, down to HEADER_TITLE_MIN_SCALE, then wraps between its words.
+  const [titleAreaWidth, setTitleAreaWidth] = useState(0);
+  const [titleWidth, setTitleWidth] = useState(0);
+  const titleChipPadding = effectiveTextScale >= 1.75 ? 8 : 16;
+  const titleChipMaxWidth =
+    windowWidth - 86 - (headerSearchButton ? compactControlHeight + 12 : 0);
+  const titleScale = fitHeaderTitleScale(
+    titleWidth,
+    Math.min(titleAreaWidth - TITLE_CHIP_MARGIN_RIGHT, titleChipMaxWidth) - 2 * titleChipPadding,
+  );
+  // Pixels a point of the title's text takes: the screen's, times the
+  // phone's text size up to the header's cap.
+  const titlePixelsPerPoint = PixelRatio.get() * getHeaderFontScale(fontScale);
+  const titleTextStyle = (scale: number) => ({
+    color: theme.colors.onSurface,
+    fontSize: getHeaderTitleFontSize(scaleTypographyMetric(16, textScale), scale, titlePixelsPerPoint),
+    fontWeight: 'bold' as const,
+    lineHeight: scaleTypographyMetric(20, textScale) * scale,
+    textAlign: 'center' as const,
+  });
 
   useEffect(() => {
     Animated.timing(titleChipAnim, {
@@ -683,7 +716,31 @@ export const GlobalHeader = (props: any) => {
           </Pressable>
         )}
         {!isBiblePage && !isHeaderSearchPage ? (
-          <View style={{ flex: 1, justifyContent: 'center' }}>
+          <View
+            onLayout={(event) => setTitleAreaWidth(event.nativeEvent.layout.width)}
+            style={{ flex: 1, justifyContent: 'center' }}
+          >
+            {isSubPage && title && (
+              <View
+                aria-hidden
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                pointerEvents="none"
+                style={styles.titleMeasureClip}
+              >
+                <View style={styles.titleMeasure}>
+                  <Text
+                    maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                    onLayout={(event) => setTitleWidth(Math.ceil(event.nativeEvent.layout.width))}
+                    style={[titleTextStyle(1), styles.titleMeasureText]}
+                    testID="header-title-measure"
+                    variant="titleMedium"
+                  >
+                    {shownTitle}
+                  </Text>
+                </View>
+              </View>
+            )}
             {isSubPage && title && (
               <Animated.View
                 pointerEvents={showTitleChip ? 'auto' : 'none'}
@@ -697,9 +754,8 @@ export const GlobalHeader = (props: any) => {
                   styles.floatingTitleChip,
                   {
                     minHeight: compactControlHeight,
-                    maxWidth:
-                      windowWidth - 86 - (headerSearchButton ? compactControlHeight + 12 : 0),
-                    paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
+                    maxWidth: titleChipMaxWidth,
+                    paddingHorizontal: titleChipPadding,
                   },
                   getFloatingSurfaceStyle(theme),
                   {
@@ -710,16 +766,12 @@ export const GlobalHeader = (props: any) => {
               >
                 <Text
                   maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                  accessibilityLabel={title}
                   variant="titleMedium"
-                  style={{
-                    color: theme.colors.onSurface,
-                    fontSize: scaleTypographyMetric(16, textScale),
-                    fontWeight: 'bold',
-                    lineHeight: scaleTypographyMetric(20, textScale),
-                    textAlign: 'center',
-                  }}
+                  style={titleTextStyle(titleScale)}
+                  testID="header-title"
                 >
-                  {title}
+                  {shownTitle}
                 </Text>
               </Animated.View>
             )}
@@ -963,7 +1015,24 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: TITLE_CHIP_MARGIN_RIGHT,
+  },
+  // The title's hidden copy: in a frame wide enough that it never wraps,
+  // clipped to nothing, so the frame takes no room and, on the web, adds no
+  // sideways scrolling.
+  titleMeasureClip: {
+    height: 0,
+    left: 0,
+    overflow: 'hidden',
+    position: 'absolute',
+    top: 0,
+    width: 0,
+  },
+  titleMeasure: {
+    width: 4000,
+  },
+  titleMeasureText: {
+    alignSelf: 'flex-start',
   },
   floatingSearchbar: {
     borderRadius: 24,

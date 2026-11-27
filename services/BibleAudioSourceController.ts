@@ -81,6 +81,11 @@ export type BibleAudioSourceHost = {
   getReaderTarget(): AudioSourceTarget;
   /** The best-known playback position, for resuming a reloaded source. */
   getPositionMillis(): number;
+  /**
+   * Where the listener stopped in `target`'s chapter before the app last
+   * closed, for its recording, or 0 (#803). Play starts there.
+   */
+  getSavedPositionMillis?(target: AudioSourceTarget): number;
   /** Seeds the native queue and lock-screen controls for a loaded source. */
   initializePlayback(target: AudioSourceTarget, entry: BibleAudioQueueSource): void;
   setLoading(loading: boolean): void;
@@ -311,14 +316,18 @@ export class BibleAudioSourceController {
     const loadedIndex = loadedUrl ? readerUrls.indexOf(loadedUrl) : -1;
     if (!loadedUrl || loadedIndex < 0) {
       // After every source failed mid-chapter, start again where it stopped.
+      // Otherwise start where the listener stopped this chapter before the
+      // app last closed, if they did (#803).
       const lastAttempt = this.currentAttempt;
-      const resumePositionMillis =
+      const stoppedAtMillis =
         !loadedUrl &&
         lastAttempt?.target.chapter &&
         readerTarget.chapter &&
         isSameAudioChapter(lastAttempt.target.chapter, readerTarget.chapter)
           ? lastAttempt.resumePositionMillis
           : 0;
+      const resumePositionMillis =
+        stoppedAtMillis || (host.getSavedPositionMillis?.(readerTarget) ?? 0);
       await this.load(readerTarget, 0, resumePositionMillis);
       return;
     }

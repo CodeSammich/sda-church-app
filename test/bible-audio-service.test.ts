@@ -3,11 +3,12 @@ jest.mock('expo-audio', () => ({
 }));
 
 import { setAudioModeAsync } from 'expo-audio';
+import { CANTONESE_CUV_READER, RV1909_READER } from '@/services/BibleAudioSources';
 import {
   activateBibleAudioLockScreen,
   buildBibleAudioQueue,
   configureBibleAudioPlayback,
-  getBibleAudioCreditUrl,
+  getBibleAudioArtist,
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getFollowingBibleChapters,
@@ -231,14 +232,13 @@ describe('Bible audio playback', () => {
         ],
         selectedReader: 'souer',
         translationId: 'BSB',
-        translationLabel: 'BSB',
       }),
     ).toEqual([
       expect.objectContaining({
         bookId: 'GEN',
         chapter: 2,
         metadata: expect.objectContaining({
-          title: 'Genesis 2 · BSB (HelloAO)',
+          title: 'Genesis 2',
         }),
         source: expect.objectContaining({
           uri: 'https://bible.helloao.org/api/BSB/GEN/2/audio/souer.mp3',
@@ -248,7 +248,7 @@ describe('Bible audio playback', () => {
         bookId: 'GEN',
         chapter: 3,
         metadata: expect.objectContaining({
-          title: 'Genesis 3 · BSB (HelloAO)',
+          title: 'Genesis 3',
         }),
         source: expect.objectContaining({
           uri: 'https://bible.helloao.org/api/BSB/GEN/3/audio/souer.mp3',
@@ -279,7 +279,6 @@ describe('Bible audio playback', () => {
       preferredSourceId: 'archive.org',
       selectedAudioUrls: [],
       translationId: 'cmn_cuv',
-      translationLabel: 'CUV',
     });
 
     expect(queued.source).toEqual(
@@ -311,7 +310,6 @@ describe('Downloaded Bible audio in the queue (#556)', () => {
       preferredSourceId: 'archive.org',
       selectedAudioUrls: [],
       translationId: 'cmn_cuv',
-      translationLabel: 'CUV',
     });
 
     expect([second.source, ...(second.fallbacks ?? []).map(({ source }) => source)].map((source) => (source as any).uri))
@@ -322,8 +320,11 @@ describe('Downloaded Bible audio in the queue (#556)', () => {
         expect.stringContaining('assets.adventistconnect.org'),
         expect.stringContaining('theaudiopower'),
       ]);
-    // Credited to the first source it would otherwise stream from, not to a file path.
-    expect(second.metadata.title).toBe('Genesis 2 · CUV (Internet Archive)');
+    // The lock screen names the chapter alone, whichever copy plays (#804).
+    expect(second.metadata.title).toBe('Genesis 2');
+    expect(second.fallbacks?.map(({ metadata }) => metadata.title)).toEqual(
+      second.fallbacks?.map(() => 'Genesis 2'),
+    );
     // A chapter that isn't on the phone streams.
     expect((third.source as any).uri).toContain('archive.org');
   });
@@ -332,8 +333,23 @@ describe('Downloaded Bible audio in the queue (#556)', () => {
     const streamed = ['https://assets.adventistconnect.org/a.mp3', 'https://archive.org/a.mp3'];
     expect(withDownloadedCopy(streamed, DOWNLOADED)).toEqual([DOWNLOADED, ...streamed]);
     expect(withDownloadedCopy(streamed, null)).toEqual(streamed);
-    expect(getBibleAudioCreditUrl(DOWNLOADED, [DOWNLOADED, ...streamed], DOWNLOADED)).toBe(streamed[0]);
-    expect(getBibleAudioCreditUrl(streamed[1], [DOWNLOADED, ...streamed], DOWNLOADED)).toBe(streamed[1]);
+  });
+});
+
+describe('The narrator on the lock screen and in the media notification (#804)', () => {
+  it("is named in the app's language, as Offline Bible Audio names it", () => {
+    const cuv = { id: 'cmn_cuv', name: 'CUV' };
+    expect(getBibleAudioArtist(cuv, CANTONESE_CUV_READER, 'zh')).toBe('粵語（和合本）');
+    expect(getBibleAudioArtist(cuv, CANTONESE_CUV_READER, 'zh-cn')).toBe('粤语（和合本）');
+    expect(getBibleAudioArtist(cuv, CANTONESE_CUV_READER, 'en')).toBe('Cantonese (Chinese Union Version)');
+    expect(getBibleAudioArtist({ id: 'BSB', name: 'BSB' }, 'souer', 'es')).toBe('Inglés – Souer (BSB)');
+    expect(getBibleAudioArtist({ id: 'spa_r09', name: 'RVR09' }, RV1909_READER, 'es'))
+      .toBe('Español (Reina-Valera 1909)');
+  });
+
+  it("falls back to the translation's name for a narrator it doesn't know", () => {
+    expect(getBibleAudioArtist({ id: 'BSB', name: 'BSB' }, 'newcomer', 'en')).toBe('BSB • newcomer');
+    expect(getBibleAudioArtist({ id: 'BSB', name: 'BSB' }, undefined, 'en')).toBe('BSB');
   });
 });
 
@@ -346,7 +362,7 @@ describe('Bible audio sleep timer boundaries', () => {
     })),
     currentBookId: 'GEN', currentChapter: 48,
     selectedAudioUrls: ['https://bible.helloao.org/api/BSB/GEN/48/audio/souer.mp3'],
-    translationId: 'BSB', translationLabel: 'BSB',
+    translationId: 'BSB',
   };
 
   it('retains 24 chapter descriptors for background playback by default', () => {

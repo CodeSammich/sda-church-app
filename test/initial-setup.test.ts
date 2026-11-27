@@ -2,7 +2,9 @@ import {
   InitialSetup,
   shouldUseTwoColumnOnboardingChoices,
 } from '@/components/InitialSetup';
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { customDarkTheme, customLightTheme } from '@/constants/Themes';
+import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { createElement } from 'react';
 import { renderWithPreferences } from './helpers/render-preferences';
 
@@ -95,6 +97,46 @@ describe('InitialSetup', () => {
     expect(setLanguage).toHaveBeenCalledWith('zh');
     expect(setThemeMode).toHaveBeenCalledWith('dark');
     expect(screen.queryByRole('radio', { name: 'Automatic' })).toBeNull();
+  });
+
+  // With only a thin outline on a near-white fill, a member couldn't tell the
+  // size they'd chosen had taken (#807). It's filled in, edged more thickly,
+  // and checked, like a selected tab, in either theme.
+  it.each([
+    ['light', customLightTheme],
+    ['dark', customDarkTheme],
+  ] as const)('marks the chosen text size plainly, in the %s theme', async (_, theme) => {
+    const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete: jest.fn() }), {
+      textScale: 1.5,
+      theme,
+    });
+    await goOn(screen);
+
+    const sizes = screen.getAllByRole('radio');
+    const look = (radio: (typeof sizes)[number]) => {
+      const { backgroundColor, borderColor, borderWidth } = StyleSheet.flatten(radio.props.style);
+      return {
+        backgroundColor,
+        borderColor,
+        borderWidth,
+        checked: within(radio).queryByTestId('setup-choice-check') !== null,
+      };
+    };
+    const chosen = screen.getByRole('radio', { name: '150 percent text size' });
+    expect(look(chosen)).toEqual({
+      backgroundColor: theme.colors.primaryContainer,
+      borderColor: theme.colors.primary,
+      borderWidth: 2,
+      checked: true,
+    });
+    for (const size of sizes.filter((radio) => radio !== chosen)) {
+      expect(look(size)).toEqual({
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.outline,
+        borderWidth: 1,
+        checked: false,
+      });
+    }
   });
 
   it('exposes the four explicit appearance choices', async () => {

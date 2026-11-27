@@ -22,9 +22,13 @@ const inUnit = (bytes: number, scale: number, language: SupportedLanguage) =>
 
 const unitOf = (scale: number) => (scale >= GIGABYTE ? 'GB' : 'MB');
 
-/** A file's size, such as "24.5 MB" or "4.01 GB". */
+/**
+ * A file's size, such as "24.5 MB" or "4.01 GB", with a no-break space, so a
+ * line never breaks inside it: Offline Bible Audio's delete question put
+ * 刪除約翰福音？（17.9 on one line and MB） on the next (#806).
+ */
 export const formatDownloadSize = (bytes: number, language: SupportedLanguage) =>
-  `${inUnit(bytes, bytes, language)} ${unitOf(bytes)}`;
+  `${inUnit(bytes, bytes, language)}\u00a0${unitOf(bytes)}`;
 
 const copy = {
   en: {
@@ -65,8 +69,8 @@ export const getDownloadProgressStatus = (
   const done = inUnit(progress.bytesWritten, scale, language);
   return {
     text: known
-      ? labels.downloading(done, `${inUnit(progress.totalBytes, scale, language)} ${unitOf(scale)}`)
-      : labels.downloading(`${done} ${unitOf(scale)}`),
+      ? labels.downloading(done, `${inUnit(progress.totalBytes, scale, language)}\u00a0${unitOf(scale)}`)
+      : labels.downloading(`${done}\u00a0${unitOf(scale)}`),
     fraction: known ? Math.min(1, progress.bytesWritten / progress.totalBytes) : null,
   };
 };

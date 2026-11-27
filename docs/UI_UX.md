@@ -152,18 +152,24 @@ is the second use, for later rather than to open now. It's downloaded and delete
 page, **Offline Bible Audio** in the You tab, which **Listen offline** in the Bible's audio
 settings opens. The page is a tree of the whole Bible, its Testaments, their sections,
 closed until tapped, and their books, for one narrator; opened from the Bible, it shows
-the book being read. Each row says what it holds: its size, how far along its download
-is, part of it, or all of it. Narrators are named language first, as "English – Souer
+the book being read, and a section that holds some of its books, not all, opens, so they
+show (#806). Each row says what it holds: its size, how far along its download is, part
+of it, such as "1 of 66 books downloaded · 774.4 MB not yet downloaded" (未下載, not 尚餘,
+which read as the phone's free space), or all of it. A size never breaks across lines.
+Narrators are named language first, as "English – Souer
 (BSB)" or "Mandarin (Chinese Union Version)", and listed in one order, as the translation
 picker lists their translations (`constants/BibleAudioNarrators.ts`); the Bible's audio
 settings name the English ones the same way. A row's download
-progress shows at once, with an X that stops it. It goes on when the page closes, and
+progress shows at once, with an X that stops it; while it waits for Wi-Fi, only the X
+shows, and to use mobile data instead, the member stops it and downloads again, which
+asks. It goes on when the page closes, and
 with the phone locked or the app in the background, since the whole Bible takes a while:
 the phone itself downloads it (#611), on Wi-Fi only unless the member chose mobile data.
 Meanwhile a notification can show it, with Stop, as **Notifications** below says: the
 app's own on Android 14 and later, and the system's download notification on Android 13
-and lower; on the iPhone, a word when it's done. Deleting goes by the same rows, after the app's popup
-asks, naming what it deletes and its size. It stays in the documents directory until the
+and lower; on the iPhone, a word when it's done. Deleting goes by the same rows: a trash can with the
+word Delete under it, not beside it, so it's no wider than the icons beside it on a small
+phone (#806). The app's popup asks first, naming what it deletes and its size. It stays in the documents directory until the
 member deletes it, rather than in the cache, and the size of each choice shows before it
 starts. Over mobile data,
 the app's popup asks first: Use mobile data, Wait for Wi-Fi, or Cancel; and a download
@@ -199,6 +205,10 @@ offline:
 3.  **Iconography:** Icons across all pillars utilize consistent stroke weights and
     monochrome styling. This provides a "premium" feel and ensures accessibility across
     both light and dark modes.
+4.  **Only what does something looks pressable:** a small card with an icon and a
+    label reads as a button, so content that opens nothing, such as About
+    Denomination's three pillars, sits on the page as an icon over its label, with no
+    card or border (`components/PillarList.tsx`, #819).
 
 #### Elevation & Modern
 
@@ -292,7 +302,10 @@ simple, blended colors.
     page's top matches its bottom. Their icons are grey, like the tab bar's other tabs;
     blue, or gold in the dark theme, marks what opens a list or shows a state: the back
     button, the translation button's names and arrow, like the Bible card's pills, and
-    the saved-verse button once a verse is saved. The translation button has no 文A icon
+    the saved-verse button once a verse is saved. A page's title stays on one line,
+    drawn a little smaller where it must be, down to 80%, and past that wraps only
+    between its words, in Chinese too: at 150%, 中文讚美詩 — 505 版 beside the
+    search button left 版 alone on a line (#797). The translation button has no 文A icon
     (from 1.7.0): each translation's language badge, EN or 繁, about the icon's size and
     in the pills' colors, says which language it is, and leaves room for the names.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
@@ -364,6 +377,13 @@ simple, blended colors.
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`
   (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
+- **Switches:** A setting that's on or off, such as the Bible's Dual-language reading and
+  pinyin, is one row: its name, a line about it, and a switch. A tap anywhere on the row
+  turns it on or off, since older members tap the words, not the small switch (#798). A
+  screen reader hears one switch, with its name, the line as its hint, and whether it's
+  on. Code draws it with `SwitchRow` (`components/SwitchRow.tsx`); Offline Bible Audio's
+  Download notifications row, below, was already one control, with the same switch
+  (`MenuCardSwitchVisual`). `test/switch-row.test.ts` fails on a switch drawn alone.
 - **Notifications:** The app's notifications are few, quiet, and only ones the member asked
   for (Tenet 7). Today there's one kind: a Bible audio download the member started (#610).
   - **What they say, by phone.** None is needed for a download to go on in the
@@ -398,6 +418,18 @@ simple, blended colors.
     posts a notification.
   - **Anything new,** such as announcements (#562) or event reminders (#49), needs its own
     decision, and an update to this policy, first.
+  - **Not one of these: the media controls** the phone shows while Bible audio plays, on
+    the lock screen and in the notification shade. They name the chapter as the recording
+    reads it, as a shared verse does (#723), such as 約翰福音 第 3 章 for the Chinese Union
+    Version or John 3 for the BSB, and under it the narrator in the app's language, as
+    Offline Bible Audio names it, such as 粵語（和合本）, never the host a chapter streams
+    from (#804). On Android, paused controls can't be swiped away until the app is closed from
+    the recent apps screen. Android doesn't let anyone dismiss a media notification while
+    its playback service runs in the foreground
+    ([Android 14 behavior changes](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)),
+    and expo-audio 58 keeps that service in the foreground while paused, where Media3's
+    own service lets it go 10 minutes after a pause
+    ([`DEFAULT_FOREGROUND_SERVICE_TIMEOUT_MS`](https://developer.android.com/reference/androidx/media3/session/MediaSessionService#DEFAULT_FOREGROUND_SERVICE_TIMEOUT_MS())).
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 
