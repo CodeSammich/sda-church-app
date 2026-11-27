@@ -267,7 +267,7 @@ scenario_next_chapter_screen_off() {
 }
 
 # A dead zone: Play offline, lock the screen, and wait. When the connection
-# comes back, audio starts without an unlock.
+# comes back, audio starts without an unlock, and the reader never left John 3.
 scenario_dead_zone_screen_off() {
   open_chapter JHN 3
   locate_controls || { echo 'no play button'; return 1; }
@@ -282,10 +282,12 @@ scenario_dead_zone_screen_off() {
   wait_until 60 'John 3 playing after the connection returned' is_playing || return 1
   screen_is_off || { echo 'the screen turned on'; return 1; }
   foreground_service || { echo 'the media foreground service stopped'; return 1; }
+  stayed_on_chapter
 }
 
 # The connection drops mid-chapter: the same host reloads where it stopped,
-# and playback resumes there once the connection returns.
+# and playback resumes there once the connection returns. The reader stays on
+# Psalm 78 throughout.
 scenario_mid_chapter_offline() {
   open_chapter PSA 78
   locate_controls || { echo 'no play button'; return 1; }
@@ -302,6 +304,7 @@ scenario_mid_chapter_offline() {
   position=$(session_field position)
   [ "${position:-0}" -ge 240000 ] ||
     { echo "resumed at ${position}ms instead of where it stopped"; return 1; }
+  stayed_on_chapter
 }
 
 # Pausing and resuming a playing chapter continues from the same place, and
@@ -420,6 +423,14 @@ reader_line_after() { # regex [after-line]
   reader_log | awk -v after="${2:-0}" -v re="$1" 'NR > after && $0 ~ re { print NR; exit }'
 }
 reader_has_after() { [ -n "$(reader_line_after "$1" "${2:-0}")" ]; }
+# Whether the reader stayed on its chapter, as it must while the audio fails
+# over: a failed player's replacement once named a chapter from the old one's
+# queue, and the reader moved there for a few seconds (#802).
+stayed_on_chapter() {
+  local moved
+  moved=$(reader_log | sed -n 's/^following the audio to //p' | head -1)
+  [ -z "$moved" ] || { echo "the reader moved to $moved while the audio failed over"; return 1; }
+}
 
 # The verse the bundled times say is being read at a position, with the
 # reader's half-second lead (services/BibleAudioTimings.ts).

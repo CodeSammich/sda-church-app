@@ -1728,6 +1728,7 @@ export default function BibleScreen() {
       }
       lastSyncedAudioChapterRef.current = activeKey;
       preserveAudioOnNextRouteChangeRef.current = true;
+      logForAudioE2e(`following the audio to ${activeBook.id} ${activeChapter.chapter}`);
       setBook(activeBook);
       setChapterNum(activeChapter.chapter);
     };
