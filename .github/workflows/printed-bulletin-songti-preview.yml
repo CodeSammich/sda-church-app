@@ -1,0 +1,39 @@
+name: Printed Bulletin Songti Preview
+
+# TEMPORARY PROBE for #852: does GitHub's macOS image have Songti TC?
+on:
+  pull_request:
+    branches:
+      - release-candidate
+    paths:
+      - '.github/workflows/printed-bulletin-songti-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Songti TC probe
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Look for Songti TC
+        run: |
+          sw_vers
+          ls -la /System/Library/Fonts/Supplemental/ | grep -i -E 'songti|st[a-z]*\.tt' || echo 'No Songti in Supplemental'
+          ls /System/Library/AssetsV2/ 2>/dev/null | grep -i font || echo 'No font assets folder'
+          ls "/Applications/Google Chrome.app" >/dev/null 2>&1 && echo 'Google Chrome is installed' || echo 'No Google Chrome'
+          cat > probe.swift <<'EOF'
+          import CoreText
+          import Foundation
+          let families = (CTFontManagerCopyAvailableFontFamilyNames() as! [String]).filter { $0.contains("Songti") }
+          print("Families with Songti:", families)
+          for name in ["STSongti-TC-Regular", "STSongti-TC-Bold", "STSongti-SC-Regular"] {
+            let descriptor = CTFontDescriptorCreateWithAttributes([kCTFontNameAttribute: name] as CFDictionary)
+            let font = CTFontCreateWithFontDescriptor(descriptor, 10, nil)
+            let url = CTFontCopyAttribute(font, kCTFontURLAttribute) as? URL
+            let downloadable = CTFontDescriptorCopyAttribute(descriptor, kCTFontDownloadableAttribute)
+            print(name, "->", CTFontCopyPostScriptName(font), url?.path ?? "no file", "downloadable:", downloadable ?? "nil")
+          }
+          EOF
+          swift probe.swift
