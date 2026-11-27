@@ -16,7 +16,7 @@ const loadAppsScript = (context: Record<string, unknown>) => {
 };
 
 // A cut-down document.xml as Google Docs exports a bulletin: a Chinese title
-// in the Docs font, an English line, the 0.9-spaced giving notes, a line with
+// in the Docs font, an English line, the 0.9-spaced Tithe & Offering notes, a line with
 // no paragraph properties, a picture, an empty paragraph, and the section with
 // its document grid.
 const DOCUMENT_XML =
@@ -54,15 +54,15 @@ describe('the Word copy for printing on a Mac (#627)', () => {
   };
 
   it('gives each paragraph of text an exact height from its largest font size', () => {
-    const [title, english, giving, plain] = paragraphs(convert());
+    const [title, english, titheOffering, plain] = paragraphs(convert());
 
     // 13 points × 1.15, in twentieths of a point.
     expect(title).toContain('<w:spacing w:before="0" w:after="0" w:line="299" w:lineRule="exact"/>');
     // No w:spacing yet: it goes before w:jc, as the schema orders them, and
     // the default 1.15 spacing applies: 10 points × 1.15 × 1.15.
     expect(english).toContain('<w:pPr><w:spacing w:line="265" w:lineRule="exact"/><w:jc w:val="left"/>');
-    // The giving notes keep their 0.9.
-    expect(giving).toContain('<w:spacing w:line="207" w:lineRule="exact"/>');
+    // The Tithe & Offering notes keep their 0.9.
+    expect(titheOffering).toContain('<w:spacing w:line="207" w:lineRule="exact"/>');
     // No properties or sizes: the defaults, 11 points at 1.15 spacing.
     expect(plain).toContain('<w:p><w:pPr><w:spacing w:line="291" w:lineRule="exact"/></w:pPr>');
     // A run's letter spacing is a w:spacing too, and stays as it was.
