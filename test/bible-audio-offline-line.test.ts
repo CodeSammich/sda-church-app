@@ -38,15 +38,12 @@ const networkChanges = async (state: NetworkState) =>
 const waiting = { listening: true, audible: false, offline: true, downloaded: false };
 
 describe('the line', () => {
-  it('names the network, the missing download, and that it plays by itself, in each app language', () => {
-    expect(getBibleAudioOfflineLine('en')).toBe(
-      "No connection: this chapter isn't downloaded. It will play once you're back online.",
-    );
-    expect(getBibleAudioOfflineLine('zh')).toBe('沒有網路連線：本章尚未下載，恢復連線後會自動播放。');
-    expect(getBibleAudioOfflineLine('zh-cn')).toBe('没有网络连接：本章尚未下载，恢复连接后会自动播放。');
-    expect(getBibleAudioOfflineLine('es')).toBe(
-      'Sin conexión: este capítulo no está descargado. Se reproducirá cuando vuelva la conexión.',
-    );
+  it('names the network and the missing download in one short line, in each app language', () => {
+    // 未下載 as Offline Bible Audio says it (#822).
+    expect(getBibleAudioOfflineLine('en')).toBe('No connection · not downloaded');
+    expect(getBibleAudioOfflineLine('zh')).toBe('沒有網路 · 未下載');
+    expect(getBibleAudioOfflineLine('zh-cn')).toBe('没有网络 · 未下载');
+    expect(getBibleAudioOfflineLine('es')).toBe('Sin conexión · no descargado');
   });
 
   it('shows while the listener waits for audio that needs the network', () => {
@@ -56,7 +53,7 @@ describe('the line', () => {
   it('stays away once the audio is heard, after a pause, online, or for a downloaded chapter', () => {
     // A short drop the player rides out on what it has already loaded.
     expect(showsBibleAudioOfflineLine({ ...waiting, audible: true })).toBe(false);
-    // Nothing plays by itself after a pause, so the line would be untrue.
+    // After a pause nothing waits for the connection, so there's nothing to explain.
     expect(showsBibleAudioOfflineLine({ ...waiting, listening: false })).toBe(false);
     expect(showsBibleAudioOfflineLine({ ...waiting, offline: false })).toBe(false);
     expect(showsBibleAudioOfflineLine({ ...waiting, downloaded: true })).toBe(false);
@@ -92,7 +89,7 @@ describe('on the Bible screen', () => {
 
   it('shows when the network is down as a chapter starts, and goes when it comes back', async () => {
     const { result } = await renderLine();
-    expect(result.current).toBe('沒有網路連線：本章尚未下載，恢復連線後會自動播放。');
+    expect(result.current).toBe('沒有網路 · 未下載');
     await networkChanges(ONLINE);
     expect(result.current).toBeNull();
     await networkChanges(OFFLINE);
@@ -159,9 +156,9 @@ describe('the listening flag the line depends on', () => {
     expect(bible).toContain('audioOfflineLineHeight - dockLayout.audioTimelineHeight');
   });
 
-  it('shows pause while the line says it will play, and a tap then pauses', () => {
-    // A play button there would look stopped, and its tap would cancel the
-    // retries the line promises, as the persona found (#801).
+  it('shows pause while the line shows, and a tap then pauses', () => {
+    // The player is still trying then. A play button would look stopped, and
+    // its tap would cancel the retries, as the persona found (#801).
     const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(bible).toContain("icon={isPlaying || audioOfflineLine ? 'pause' : 'play'}");
     const toggle = bible.slice(bible.indexOf('const toggleAudio = async () => {'));

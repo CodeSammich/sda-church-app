@@ -4365,8 +4365,8 @@ export default function BibleScreen() {
                     style={ReaderStyles.audioAction}
                   />
                   <IconButton
-                    // While the line for no connection says it will play,
-                    // it's still on, and a tap pauses it (#801).
+                    // While the line for no connection shows, the player is
+                    // still trying, and a tap pauses it (#801).
                     icon={isPlaying || audioOfflineLine ? 'pause' : 'play'}
                     mode="contained"
                     containerColor={theme.colors.tertiary}

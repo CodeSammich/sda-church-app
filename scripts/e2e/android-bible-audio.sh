@@ -276,7 +276,7 @@ scenario_dead_zone_screen_off() {
   tap_play_pause
   sleep 3
   # The player says why nothing plays (#801).
-  ATTR=text TRIES=15 element_bounds 'No connection: [^"]*' >/dev/null ||
+  ATTR=text TRIES=15 element_bounds 'No connection · not downloaded' >/dev/null ||
     { echo 'no line saying there is no connection'; return 1; }
   screen_off
   sleep 90

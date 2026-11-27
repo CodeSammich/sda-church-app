@@ -190,10 +190,11 @@ offline:
 
 When the phone has no connection and the chapter isn't downloaded, the audio bar says
 so while the listener waits
-([#801](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/801)):
-"No connection: this chapter isn't downloaded. It will play once you're back online."
-The line takes the place of the progress bar until audio plays, and wraps when it
-needs more room, with the audio bar growing to fit it. It's text, not a button: a small
+([#801](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/801)),
+in one short line: "No connection · not downloaded" (沒有網路 · 未下載, worded as
+Offline Bible Audio words it). The player keeps trying meanwhile, and plays by itself
+once the connection is back. The line takes the place of the progress bar until audio
+plays, and wraps only if it needs more room, with the audio bar growing to fit it. It's text, not a button: a small
 phone's audio bar has no room for another. While it shows, the play button shows pause,
 since the player is still on, and a tap stops it. It goes as soon as audio plays, the
 connection comes back, or the listener pauses, since nothing plays by itself after a
