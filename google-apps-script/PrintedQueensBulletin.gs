@@ -41,13 +41,11 @@ function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulleti
       appendWorshipPanel_(cell, bulletin, true);
     },
     true,
-    function (leftCell, rightCell, qrCells) {
-      appendGivingFooter_(leftCell, qrCells, 'queens');
+    // The Sabbath School footer and the Tithe & Offering footer (#833).
+    function (sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells) {
+      appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, 'queens');
     },
-    // Put each QR code in its own footer column, as Brooklyn does. A table
-    // nested in a cell keeps a blank line above it, which pushed the QR
-    // captions onto a new page.
-    { ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 },
+    getPrintedFooterOptions_('queens'),
   );
   appendBookletPage_(
     body,
@@ -77,18 +75,6 @@ function appendAnnouncementsPanel_(cell, bulletin, nextBulletin) {
     getPhysicalPrintedAnnouncementEntries_(bulletin, 'queens'),
   );
   appendScheduleTable_(cell, bulletin, nextBulletin);
-}
-
-function appendGivingFooter_(leftCell, qrCells, location) {
-  // clear() leaves an empty default-size paragraph in each footer cell. Reuse
-  // it, as the Brooklyn footer does, so it doesn't open a gap under the
-  // divider and push the QR captions onto a new page.
-  appendGivingText_(leftCell, { reuseLeadingParagraph: true });
-  appendGivingQrPlaceholderCells_(qrCells, {
-    compact: true,
-    location: location || 'queens',
-    reuseLeadingParagraph: true,
-  });
 }
 
 function appendScheduleTable_(cell, bulletin, nextBulletin) {
@@ -183,7 +169,7 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
   appendProgramTable_(cell, worshipRowsAfterSermon, worshipColumns);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
-    // When this column is taller than the study column, the giving footer's
+    // When this column is taller than the study column, the Tithe & Offering footer's
     // divider sits right under the prayer. These spacers only add height in
     // that case; a taller study column already leaves room.
     appendSpacer_(cell);
@@ -253,8 +239,12 @@ function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslat
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study | blank, worship + giving |
-  // foot washing | the complete Holy Communion service.
+  // back/announcements | cover, study | blank, blank | worship,
+  // foot washing | the complete Holy Communion service. The regular
+  // bulletin's footer (#833) is split over two doc pages here, so each half
+  // lands on the right booklet page: the Sabbath School footer under its
+  // verses (page 2), and the Tithe & Offering footer under worship (page 3). The
+  // left half of the worship doc page is the blank page 6.
   appendBookletPage_(
     body,
     function (cell) {
@@ -272,15 +262,22 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     function (cell) {},
     false,
+    function (sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells) {
+      appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, 'queens');
+    },
+    getPrintedFooterOptions_('queens', { titheOffering: false }),
   );
   appendBookletPage_(
     body,
     function (cell) {},
     function (cell) {
       appendWorshipPanel_(cell, bulletin, false);
-      appendCommunionVerticalGivingPanel_(cell);
     },
     false,
+    function (sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells) {
+      appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, 'queens');
+    },
+    getPrintedFooterOptions_('queens', { sabbathSchool: false }),
   );
   appendBookletPage_(
     body,
@@ -292,25 +289,4 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     false,
   );
-}
-
-function appendCommunionVerticalGivingPanel_(cell) {
-  appendSpacer_(cell);
-  // As in the Queens and Brooklyn footers, the giving heading sits right under
-  // the divider.
-  appendCommunionSectionDivider_(cell);
-  appendGivingText_(cell);
-  appendSpacer_(cell);
-  appendGivingQrPlaceholders_(cell, { compact: true });
-}
-
-function appendCommunionSectionDivider_(cell) {
-  var rule = cell.appendHorizontalRule();
-  var ruleParent = rule.getParent();
-  if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
-    ruleParent.asParagraph().setLineSpacing(1);
-    ruleParent.asParagraph().setSpacingBefore(0);
-    ruleParent.asParagraph().setSpacingAfter(0);
-    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
-  }
 }

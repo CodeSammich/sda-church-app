@@ -5,7 +5,6 @@ import { dirname, resolve } from 'node:path';
 import QRCode from 'qrcode';
 import sharp from 'sharp';
 
-const DEFAULT_URL = 'https://adventistgiving.org/donate/AN48CO';
 const QR_WIDTH = 368;
 const QR_MARGIN = 4;
 
@@ -14,7 +13,10 @@ const getOption = (name, fallback) => {
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 };
 
-const url = getOption('--url', DEFAULT_URL);
+const url = getOption('--url');
+if (!url) {
+  throw new Error('A destination is required. Use --url with an HTTPS address.');
+}
 const outputOption = getOption('--output');
 if (!outputOption) {
   throw new Error('An output path is required. Use --output with a .jpg or .jpeg filename.');

@@ -12,6 +12,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import * as BibleService from '@/services/BibleService';
+import { getScreenshotState } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { router, Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
 import {
@@ -40,6 +41,7 @@ import {
   getHymnalLabel,
   getHymnalShortLabel,
   getHymnalTitleParts,
+  getHymnTitle,
   type HymnalBookId,
 } from './HymnalLabels';
 import {
@@ -83,6 +85,8 @@ const copy = {
     pianoOnly: 'Piano only',
     youtubeHint: 'Opens the video on YouTube',
     scriptureHint: 'Opens this passage in the Bible',
+    englishWebPage: 'The sheet music opens on a web page.',
+    chineseWebPage: 'The words open on a web page, in Simplified Chinese.',
   },
   zh: {
     title: '詩歌本',
@@ -107,6 +111,9 @@ const copy = {
     pianoOnly: '鋼琴伴奏',
     youtubeHint: '在 YouTube 開啟影片',
     scriptureHint: '在聖經中開啟這段經文',
+    englishWebPage: '樂譜在網頁上開啟。',
+    // Only a Simplified copy of the words is online.
+    chineseWebPage: '歌詞在網頁上開啟，只有簡體字版。',
   },
   'zh-cn': {
     title: '诗歌本',
@@ -131,6 +138,8 @@ const copy = {
     pianoOnly: '钢琴伴奏',
     youtubeHint: '在 YouTube 打开视频',
     scriptureHint: '在圣经中打开这段经文',
+    englishWebPage: '乐谱在网页上打开。',
+    chineseWebPage: '歌词在网页上打开。',
   },
   es: {
     title: 'Himnarios',
@@ -155,6 +164,8 @@ const copy = {
     pianoOnly: 'Solo piano',
     youtubeHint: 'Abre el video en YouTube',
     scriptureHint: 'Abre este pasaje en la Biblia',
+    englishWebPage: 'La partitura se abre en una página web.',
+    chineseWebPage: 'La letra se abre en una página web, en chino simplificado.',
   },
 } as const;
 
@@ -253,12 +264,17 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
     hymnNum?: string;
     highlight?: string;
     refresh?: string;
+    section?: string;
   }>();
   const backTo = firstParam(params.backTo);
   const hymnalParam = firstParam(params.hymnal);
   const hymnNum = firstParam(params.hymnNum);
   const highlight = firstParam(params.highlight);
   const refresh = firstParam(params.refresh);
+  // A key-screens build's path can ask for the page scrolled to its hymns,
+  // where the header shows the hymnal's name (#797), with `section=hymns`.
+  const paramSection = firstParam(params.section);
+  const screenshotSection = getScreenshotState(paramSection, ['hymns'] as const);
   const routedHymnalId = isHymnalBookId(hymnalParam) ? hymnalParam : defaultHymnalId;
   const route = defaultHymnalId ? HYMNALS[defaultHymnalId].route : HYMNAL_SELECTION_ROUTE;
   const order = useMemo(() => getHymnalOrder(language), [language]);
@@ -387,6 +403,9 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
 
   const rowLabels = useMemo<HymnRowLabels>(
     () => ({
+      hymnTitle: (hymnalId, title) => getHymnTitle(hymnalId, title, language),
+      opensOnWebPage: (hymnalId) =>
+        HYMNALS[hymnalId].language === 'zh' ? labels.chineseWebPage : labels.englishWebPage,
       withSinging: labels.withSinging,
       pianoOnly: labels.pianoOnly,
       youtubeHint: labels.youtubeHint,
@@ -558,7 +577,16 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       </View>
       <View
         onLayout={(event: LayoutChangeEvent) => {
-          searchTop.current = event.nativeEvent.layout.y;
+          const { height, y } = event.nativeEvent.layout;
+          searchTop.current = y;
+          if (screenshotSection === 'hymns') {
+            // The first hymn at the top of the screen, past the carousel.
+            // Android ignores a scroll while the page slides in, so it's
+            // tried again once the page has settled, as the bulletin's is.
+            const scroll = () => listRef.current?.scrollToOffset({ animated: false, offset: y + height });
+            scroll();
+            setTimeout(scroll, 500);
+          }
         }}
         style={styles.searchArea}
       >

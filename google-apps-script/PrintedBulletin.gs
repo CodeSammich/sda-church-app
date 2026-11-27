@@ -7,7 +7,7 @@
  *
  * It holds everything the locations share: the Sheet menu and prompts, the data
  * join, Google Doc creation, page and table primitives, and the shared
- * cover, giving, and announcement blocks. Each location's page layout lives in
+ * cover, Tithe & Offering, and announcement blocks. Each location's page layout lives in
  * its own file (PrintedQueensBulletin.gs, PrintedBrooklynBulletin.gs), and the
  * Communion service content both locations print is in PrintedCommunionBulletin.gs.
  */
@@ -80,7 +80,6 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   churchSketchImageProperty: 'CHURCH_SKETCH_IMAGE_FILE_ID',
   lastSupperImageProperty: 'LAST_SUPPER_IMAGE_FILE_ID',
   sdaLogoImageProperty: 'SDA_LOGO_IMAGE_FILE_ID',
-  adventistGivingQrImageProperty: 'ADVENTIST_GIVING_QR_IMAGE_FILE_ID',
   zelleQrImageProperty: 'ZELLE_QR_IMAGE_FILE_ID',
   mobileAppQrImageProperty: 'MOBILE_APP_QR_IMAGE_FILE_ID',
   // The QR codes live in one folder of a restricted shared drive: admins
@@ -119,6 +118,11 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   bookletHorizontalMargin: 14,
   bookletHalfWidth: 368,
   bookletFoldGutter: 28,
+  // The printed width of the footers' codes (#833), the column a code would
+  // get beside the Tithe & Offering notes, and the notes' inset from each side.
+  footerQrImageMaxWidth: 50,
+  footerQrColumnWidth: 80,
+  footerTextInset: 6,
   // The cover art is a little smaller than before #603 to leave room for the
   // 10-point contact and Zoom lines below it.
   regularCoverImageMaxWidth: 460,
@@ -1368,7 +1372,7 @@ function setPrintedDocxEastAsiaFonts_(xml, chineseFonts) {
  * The Word copy's document.xml: Songti TC for Chinese, no document grid for the
  * lines to snap to, and an exact line height on every paragraph without a
  * picture. The height is `lineHeight` times the paragraph's largest font size,
- * times its own line spacing (0.9 for the giving notes).
+ * times its own line spacing (0.9 for the Tithe & Offering notes).
  */
 function convertPrintedDocxDocumentXml_(xml, options) {
   var lineHeight = options.lineHeight;
@@ -2638,69 +2642,163 @@ function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
   rightRenderer(rightCell);
 }
 
+/**
+ * The two footers under the Sabbath School and worship spread (#833), the same
+ * in every layout.
+ *
+ * - The Sabbath School footer, on the left half: the Download Mobile App code
+ *   on its own, so the app doesn't look like a way to give. It has room for a
+ *   code that could later open the week's verse in the app (#768).
+ * - The Tithe & Offering footer, on the right half: the Tithes & Offerings
+ *   notes, under a rule that spans only that half. Online gifts are made in
+ *   the app, so the bulletin prints no code for them; a code turned on later
+ *   (only Zelle is listed, reserved for #384) gets its own column beside the
+ *   notes.
+ *
+ * Docs keeps a paragraph between two tables. It held the rule when the rule
+ * spanned the page. Now it only spaces the footers from the spread, and the
+ * rule is the first line of each right-half cell. A rule spans its own cell,
+ * and with no cell padding the cells' rules meet in one line.
+ *
+ * Each code has its own column. A table nested in a cell keeps a blank line
+ * above it, which pushed the QR captions onto a new page.
+ *
+ * A layout whose two footers are on different doc pages (Queens Holy
+ * Communion) passes `sabbathSchool: false` or `titheOffering: false` to print
+ * only one.
+ */
 function appendBookletFooter_(container, footerRenderer, footerOptions) {
-  var rule = container.appendHorizontalRule();
-  var ruleParent = rule.getParent();
-  if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
-    ruleParent.asParagraph().setLineSpacing(1);
-    ruleParent.asParagraph().setSpacingBefore(
-      footerOptions && footerOptions.ruleSpacingBefore
-        ? footerOptions.ruleSpacingBefore
-        : 0,
-    );
-    ruleParent.asParagraph().setSpacingAfter(0);
-    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
-  }
-  var qrColumns = footerOptions && footerOptions.qrColumns;
-  var qrCount = qrColumns ? Math.max(1, footerOptions.qrCount || 3) : 0;
-  var qrColumnIndexes = Array(qrCount).fill(0).map(function (_, index) {
-    return index + 2;
-  });
-  var footerTable = container.appendTable(
-    qrColumns ? [Array(qrCount + 2).fill('')] : [['', '', '']],
-  );
+  footerOptions = footerOptions || {};
+  var withSabbathSchool = footerOptions.sabbathSchool !== false;
+  var withTitheOffering = footerOptions.titheOffering !== false;
+  var spacer = container.appendParagraph('');
+  spacer.setAttributes(getCompactParagraphAttributes_());
+  spacer.setSpacingBefore(footerOptions.ruleSpacingBefore || 0);
+
+  var halfWidth = PRINTED_BULLETIN_CONFIG.bookletHalfWidth;
+  var qrWidth = PRINTED_BULLETIN_CONFIG.footerQrColumnWidth;
+  var qrCount = withTitheOffering ? Math.max(0, footerOptions.titheOfferingQrCount || 0) : 0;
+  var footerTable = container.appendTable([Array(qrCount + 3).fill('')]);
   footerTable.setBorderWidth(0);
-  footerTable.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  footerTable.setColumnWidth(0, halfWidth);
   footerTable.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
-  if (qrColumns) {
-    qrColumnIndexes.forEach(function (columnIndex) {
-      footerTable.setColumnWidth(
-        columnIndex,
-        Math.floor((PRINTED_BULLETIN_CONFIG.bookletHalfWidth - 8) / qrCount),
-      );
-    });
-  } else {
-    footerTable.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  footerTable.setColumnWidth(2, halfWidth - qrWidth * qrCount);
+  var cells = [footerTable.getCell(0, 0), footerTable.getCell(0, 1), footerTable.getCell(0, 2)];
+  for (var index = 0; index < qrCount; index += 1) {
+    footerTable.setColumnWidth(index + 3, qrWidth);
+    cells.push(footerTable.getCell(0, index + 3));
   }
-  var footerLeftCell = footerTable.getCell(0, 0);
-  var footerGutterCell = footerTable.getCell(0, 1);
-  var footerRightCell = qrColumns ? null : footerTable.getCell(0, 2);
-  var footerQrCells = qrColumns
-    ? qrColumnIndexes.map(function (columnIndex) {
-        return footerTable.getCell(0, columnIndex);
-      })
-    : [];
-  [footerLeftCell, footerGutterCell].concat(footerRightCell ? [footerRightCell] : footerQrCells)
-    .forEach(function (footerCell) {
-      footerCell.clear();
-      footerCell.setPaddingTop(0);
-      footerCell.setPaddingBottom(0);
-      footerCell.setPaddingLeft(0);
-      footerCell.setPaddingRight(0);
-    });
-  // The giving text's longest lines fill the whole panel, which put them only
-  // about 15pt (5mm) from the sheet edge. Many printers can't print the outer
-  // 4–5mm, so keep them about 20pt in, like the rest of the page.
-  footerLeftCell.setPaddingLeft(6);
-  footerLeftCell.setPaddingRight(6);
-  footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-  if (footerRightCell) {
-    footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-  }
-  footerQrCells.forEach(function (footerCell) {
+  cells.forEach(function (footerCell) {
+    footerCell.clear();
+    footerCell.setPaddingTop(0);
+    footerCell.setPaddingBottom(0);
+    footerCell.setPaddingLeft(0);
+    footerCell.setPaddingRight(0);
     footerCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
   });
-  footerRenderer(footerLeftCell, footerRightCell, footerQrCells);
+  var sabbathSchoolCell = cells[0];
+  var titheOfferingCell = cells[2];
+  var titheOfferingQrCells = cells.slice(3);
+  // The Sabbath School footer's first line is as tall as the rule's, so the
+  // app code lines up with the Tithe & Offering footer's heading.
+  var sabbathSchoolLeadingParagraph = withSabbathSchool
+    ? getLeadingEmptyParagraph_(sabbathSchoolCell)
+    : null;
+  if (sabbathSchoolLeadingParagraph) {
+    sabbathSchoolLeadingParagraph.setLineSpacing(1);
+    sabbathSchoolLeadingParagraph.setSpacingBefore(0);
+    sabbathSchoolLeadingParagraph.setSpacingAfter(0);
+    setPrintedRuleParagraphSize_(sabbathSchoolLeadingParagraph);
+  }
+  if (withTitheOffering) {
+    [titheOfferingCell].concat(titheOfferingQrCells).forEach(appendPrintedFooterRule_);
+  }
+  footerRenderer(
+    withSabbathSchool ? sabbathSchoolCell : null,
+    withTitheOffering ? titheOfferingCell : null,
+    withTitheOffering ? titheOfferingQrCells : [],
+  );
+}
+
+// Puts the rule in the paragraph clear() leaves at the top of a footer cell.
+function appendPrintedFooterRule_(cell) {
+  var paragraph = getLeadingEmptyParagraph_(cell) || cell.insertParagraph(0, '');
+  paragraph.appendHorizontalRule();
+  paragraph.setLineSpacing(1);
+  paragraph.setSpacingBefore(0);
+  paragraph.setSpacingAfter(0);
+  setPrintedRuleParagraphSize_(paragraph);
+}
+
+/**
+ * Fills the footers appendBookletFooter_ made: a footer it leaves out comes as
+ * null. Every layout shares this.
+ */
+function appendPrintedFooters_(sabbathSchoolCell, titheOfferingCell, titheOfferingQrCells, location) {
+  if (sabbathSchoolCell) {
+    appendSabbathSchoolFooter_(sabbathSchoolCell, location);
+  }
+  if (titheOfferingCell) {
+    appendTitheOfferingFooter_(titheOfferingCell, titheOfferingQrCells, location);
+  }
+}
+
+// The Sabbath School footer: the Download Mobile App code and its caption.
+function appendSabbathSchoolFooter_(cell, location) {
+  appendPrintedQrCodeCell_(cell, getPrintedMobileAppQrItem_(), {
+    imageMaxWidth: PRINTED_BULLETIN_CONFIG.footerQrImageMaxWidth,
+    location: location,
+  });
+}
+
+/**
+ * The Tithe & Offering footer: the Tithes & Offerings notes, and any code
+ * turned on beside them. The rule is each cell's first line, so nothing here
+ * reuses or clears it.
+ */
+function appendTitheOfferingFooter_(cell, qrCells, location) {
+  appendTitheOfferingText_(cell);
+  // The notes' longest lines would fill the half, about 15 pt (5 mm) from the
+  // sheet edge, and many printers can't print the outer 4-5 mm. Indent them to
+  // about 20 pt in, like the rest of the page; the rule keeps the whole half.
+  for (var index = 0; index < cell.getNumChildren(); index += 1) {
+    var child = cell.getChild(index);
+    if (child.getType() === DocumentApp.ElementType.PARAGRAPH && child.asParagraph().getText() !== '') {
+      child
+        .asParagraph()
+        .setIndentFirstLine(PRINTED_BULLETIN_CONFIG.footerTextInset)
+        .setIndentStart(PRINTED_BULLETIN_CONFIG.footerTextInset)
+        .setIndentEnd(PRINTED_BULLETIN_CONFIG.footerTextInset);
+    }
+  }
+  getTitheOfferingFooterQrItems_(location).forEach(function (item, index) {
+    if (qrCells[index]) {
+      appendPrintedQrCodeCell_(qrCells[index], item, {
+        imageMaxWidth: PRINTED_BULLETIN_CONFIG.footerQrImageMaxWidth,
+        location: location,
+      });
+    }
+  });
+}
+
+// The footers' options for a location: one column beside the Tithe & Offering
+// notes per code, none while Zelle is reserved. `parts` can leave out the
+// Sabbath School footer ({ sabbathSchool: false }) or the Tithe & Offering
+// footer ({ titheOffering: false }).
+function getPrintedFooterOptions_(location, parts) {
+  parts = parts || {};
+  var options = {
+    ruleSpacingBefore: 4,
+    titheOfferingQrCount: getTitheOfferingFooterQrItems_(location).length,
+  };
+  if (parts.sabbathSchool === false) {
+    options.sabbathSchool = false;
+  }
+  if (parts.titheOffering === false) {
+    options.titheOffering = false;
+    options.titheOfferingQrCount = 0;
+  }
+  return options;
 }
 
 function appendPrintedBulletinLogo_(cell) {
@@ -2898,9 +2996,9 @@ function getFirstPrintedAnnouncementSentenceLength_(text) {
   return match ? match[0].length : value.length;
 }
 
-function appendGivingText_(cell, options) {
+function appendTitheOfferingText_(cell, options) {
   options = options || {};
-  appendGivingHeadingText_(
+  appendTitheOfferingHeadingText_(
     cell,
     'Tithes & Offerings | 什一奉獻與自由奉獻',
     PRINTED_BULLETIN_TYPE.subheadingSize,
@@ -2923,69 +3021,7 @@ function appendGivingText_(cell, options) {
   // here pushed the bulletin onto a second page at the 10-point minimum.
 }
 
-function appendGivingQrPlaceholders_(cell, options) {
-  options = options || {};
-  var compact = Boolean(options.compact);
-  var location = options.location || 'queens';
-  var imageMaxWidth = compact ? 50 : 58;
-  var cellPadding = compact ? 0 : 3;
-  var reuseLeadingParagraph = Boolean(options.reuseLeadingParagraph);
-  // The outer footer cell starts with an empty paragraph after clear(). Keep a
-  // reference and remove it only after inserting the QR table; removing it
-  // first can cause Docs to recreate a new blank paragraph before the table.
-  var leadingParagraph = reuseLeadingParagraph
-    ? getLeadingEmptyParagraph_(cell)
-    : null;
-  var table = cell.appendTable([['', '', '']]);
-  table.setBorderWidth(0);
-  if (leadingParagraph) {
-    leadingParagraph.removeFromParent();
-  }
-  getGivingQrItems_(location).forEach(function (item, index) {
-    var width = 120;
-    table.setColumnWidth(index, width);
-    var tableCell = table.getCell(0, index);
-    tableCell.clear();
-    tableCell.setPaddingTop(cellPadding);
-    tableCell.setPaddingBottom(cellPadding);
-    tableCell.setPaddingLeft(0);
-    tableCell.setPaddingRight(0);
-    tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    // Put each code in the paragraph clear() leaves, so no blank 11-point
-    // line sits above it.
-    appendGivingQrPlaceholderCell_(tableCell, item, {
-      imageMaxWidth: imageMaxWidth,
-      location: location,
-      reuseLeadingParagraph: true,
-    });
-  });
-}
-
-function appendGivingQrPlaceholderCells_(cells, options) {
-  options = options || {};
-  var compact = Boolean(options.compact);
-  var imageMaxWidth = compact ? 50 : 58;
-  var cellPadding = compact ? 0 : 3;
-  getGivingQrItems_(options.location || 'queens').forEach(function (item, index) {
-    var tableCell = cells[index];
-    if (!tableCell) {
-      return;
-    }
-    tableCell.clear();
-    tableCell.setPaddingTop(cellPadding);
-    tableCell.setPaddingBottom(cellPadding);
-    tableCell.setPaddingLeft(0);
-    tableCell.setPaddingRight(0);
-    tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    appendGivingQrPlaceholderCell_(tableCell, item, {
-      imageMaxWidth: imageMaxWidth,
-      location: options.location || 'queens',
-      reuseLeadingParagraph: Boolean(options.reuseLeadingParagraph),
-    });
-  });
-}
-
-function appendGivingQrPlaceholderCell_(tableCell, item, options) {
+function appendPrintedQrCodeCell_(tableCell, item, options) {
   options = options || {};
   if (item && item.reserved) {
     // Keep the reserved slot's dimensions stable while its QR asset is WIP.
@@ -3020,36 +3056,44 @@ function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   appendCompactCenteredText_(tableCell, item.label, PRINTED_BULLETIN_TYPE.bodySize, true);
 }
 
-function getGivingQrItems_(location) {
-  var items = [
-    { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' },
-    {
-      label: printedBilingualText_('ACH or card', 'ACH／信用卡'),
-      kind: 'adventistGiving',
-    },
+// The codes a location could print beside its Tithe & Offering notes. Gifts
+// by bank transfer or card are made in the app's Tithe & Offering page, so the
+// bulletin has no code for them (#833). Brooklyn has no Zelle.
+function getTitheOfferingQrItems_(location) {
+  if (String(location || '').trim().toLowerCase() === 'brooklyn') {
+    return [];
+  }
+  // Queens keeps Zelle reserved until the treasury confirms the address
+  // (#384). Removing the reserved flag turns it on.
+  return [
     {
       label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
       kind: 'zelle',
+      reserved: true,
     },
   ];
-  // A reserved slot prints nothing but keeps its space, so the three-slot
-  // giving layout doesn't shift. The mobile app code points at the store
-  // download page, so deploy this script only once both apps are public (#323).
-  if (String(location || '').trim().toLowerCase() === 'brooklyn') {
-    // Zelle does not exist for Brooklyn.
-    return [items[0], items[1], { kind: 'unused', reserved: true }];
-  }
-  // Queens keeps the Zelle slot reserved until the treasury confirms the
-  // address (#384). Leave its definition above intact so restoring it later
-  // only requires removing its reserved flag.
-  return [items[0], items[1], { kind: 'zelle', reserved: true }];
+}
+
+/**
+ * The codes the Tithe & Offering footer prints beside the notes: none while
+ * Zelle is reserved (#384). Turning Zelle on adds an 80-point column to the
+ * right half and narrows the notes, so check the fit before turning it on.
+ */
+function getTitheOfferingFooterQrItems_(location) {
+  return getTitheOfferingQrItems_(location).filter(function (item) {
+    return !item.reserved;
+  });
+}
+
+function getPrintedMobileAppQrItem_() {
+  return { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' };
 }
 
 function getPrintedMobileAppQrLabel_() {
   return printedBilingualText_('Download Mobile App', '下載 APP');
 }
 
-function appendGivingHeadingText_(cell, text, size, bold, reuseLeadingParagraph) {
+function appendTitheOfferingHeadingText_(cell, text, size, bold, reuseLeadingParagraph) {
   if (!reuseLeadingParagraph) {
     appendCompactCenteredText_(cell, text, size, bold);
     return;
@@ -3088,13 +3132,11 @@ function getPrintedBulletinQrImageFileId_(kind, location) {
   }
 
   var propertyName =
-    kind === 'adventistGiving'
-      ? PRINTED_BULLETIN_CONFIG.adventistGivingQrImageProperty
-      : kind === 'mobileApp'
-        ? PRINTED_BULLETIN_CONFIG.mobileAppQrImageProperty
-        : kind === 'zelle'
-          ? PRINTED_BULLETIN_CONFIG.zelleQrImageProperty
-          : '';
+    kind === 'mobileApp'
+      ? PRINTED_BULLETIN_CONFIG.mobileAppQrImageProperty
+      : kind === 'zelle'
+        ? PRINTED_BULLETIN_CONFIG.zelleQrImageProperty
+        : '';
   var configuredFileId = propertyName
     ? PropertiesService.getScriptProperties().getProperty(propertyName) || ''
     : '';
@@ -3173,9 +3215,6 @@ function getPrintedBulletinQrImageFileName_(kind, location) {
   var normalizedLocation = location === 'brooklyn' ? 'brooklyn' : 'queens';
   if (kind === 'mobileApp') {
     return 'mobile_app_qr_code_368x368.jpg';
-  }
-  if (kind === 'adventistGiving') {
-    return normalizedLocation + '_adventist_giving_qr_code_368x368.jpg';
   }
   if (kind === 'zelle') {
     return normalizedLocation + '_zelle_qr_code_368x368.jpg';

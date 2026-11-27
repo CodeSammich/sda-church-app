@@ -9,10 +9,9 @@ describe('printed bulletin QR codes', () => {
   const bulletin = readFileSync('google-apps-script/PrintedBulletin.gs', 'utf8');
 
   it('points each code at an HTTPS destination', () => {
+    // Gifts by bank transfer or card are made in the app, so the bulletin prints no code for them
+    // (#833). The download page sends phones to their app store (issue #237).
     expect(codes).toEqual({
-      'queens_adventist_giving_qr_code_368x368.jpg': 'https://adventistgiving.org/donate/AN48CO',
-      'brooklyn_adventist_giving_qr_code_368x368.jpg': 'https://adventistgiving.org/donate/AN48CO',
-      // The download page sends phones to their app store (issue #237).
       'mobile_app_qr_code_368x368.jpg': 'https://app.nyccsda.org/download',
     });
     for (const url of Object.values(codes)) expect(new URL(url).protocol).toBe('https:');
@@ -30,9 +29,11 @@ describe('printed bulletin QR codes', () => {
     const start = uploadHelper.indexOf('ALLOWED_BULLETIN_FILE_NAMES');
     const allowed = uploadHelper.slice(start, uploadHelper.indexOf(']);', start));
     for (const file of Object.keys(codes)) expect(allowed).toContain(`'${file}'`);
-    // PrintedBulletin.gs builds the giving names from the bulletin's location.
     expect(bulletin).toContain("return 'mobile_app_qr_code_368x368.jpg';");
-    expect(bulletin).toContain("return normalizedLocation + '_adventist_giving_qr_code_368x368.jpg';");
+    // No ACH/card code is made, uploaded, or looked up any more (#833).
+    for (const source of [bulletin, uploadHelper, readFileSync('scripts/generate-qr.mjs', 'utf8')]) {
+      expect(source).not.toMatch(/adventist_?giving|ACH or card/i);
+    }
   });
 
   it('regenerates the codes when they change on main, and uploads only after approval', () => {

@@ -1,6 +1,13 @@
-import { BIBLE_SECTIONS, BIBLE_TESTAMENT_NAMES, getBibleSectionOfBook } from '@/constants/BibleSections';
+import {
+  BIBLE_SECTIONS,
+  BIBLE_TESTAMENT_NAMES,
+  getBibleSectionOfBook,
+  getBookListRows,
+  isBookListHeading,
+} from '@/constants/BibleSections';
 import { BIBLE_AUDIO_BOOKS } from '@/services/BibleAudioSources';
 import { BIBLE_BOOK_NAMES } from '@/services/BibleService';
+import { readFileSync } from 'node:fs';
 
 // The Bible's sections, as Offline Bible Audio groups its books (#556).
 const LANGUAGES = ['en', 'zh', 'zh-cn', 'es'] as const;
@@ -62,5 +69,75 @@ describe('Bible sections', () => {
       '普通書信',
       '啟示錄',
     ]);
+  });
+
+  // The Bible's book list, under the same headings (#807): reaching John took
+  // five drags through 66 names with none.
+  describe('in the book list', () => {
+    const books = Object.keys(BIBLE_BOOK_NAMES).map((id) => ({ id }));
+    const shown = (rows: ReturnType<typeof getBookListRows<{ id: string }>>) =>
+      rows.map((row) => (isBookListHeading(row) ? `${row.heading}: ${row.name}` : row.id));
+
+    it('put each Testament’s heading, then each section’s, above its books', () => {
+      const rows = shown(getBookListRows(books, 'en'));
+      expect(rows.slice(0, 8)).toEqual(['testament: Old Testament', 'section: Law', 'GEN', 'EXO', 'LEV', 'NUM', 'DEU', 'section: History']);
+      expect(rows.slice(rows.indexOf('MAL'), rows.indexOf('ROM') + 1)).toEqual([
+        'MAL',
+        'testament: New Testament',
+        'section: Gospels',
+        'MAT',
+        'MRK',
+        'LUK',
+        'JHN',
+        // A section of one book is just the book, as in the downloads: a
+        // heading would repeat its name.
+        'ACT',
+        'section: Paul’s Letters',
+        'ROM',
+      ]);
+      expect(rows.slice(-2)).toEqual(['JUD', 'REV']);
+      // Every book once, in order, under 2 Testament and 8 section headings.
+      expect(rows.filter((row) => !row.includes(': '))).toEqual(books.map(({ id }) => id));
+      expect(rows.filter((row) => row.startsWith('testament: '))).toHaveLength(2);
+      expect(rows.filter((row) => row.startsWith('section: '))).toHaveLength(8);
+    });
+
+    it('name them in the app’s language', () => {
+      const headings = (language: 'zh' | 'zh-cn' | 'es') =>
+        shown(getBookListRows(books, language)).filter((row) => row.includes(': ')).slice(0, 3);
+      expect(headings('zh')).toEqual(['testament: 舊約', 'section: 摩西五經', 'section: 歷史書']);
+      expect(headings('zh-cn')).toEqual(['testament: 旧约', 'section: 摩西五经', 'section: 历史书']);
+      expect(headings('es')).toEqual(['testament: Antiguo Testamento', 'section: Pentateuco', 'section: Libros históricos']);
+    });
+
+    it('give each heading a key no book has, and head only the books a translation has', () => {
+      const rows = getBookListRows(books, 'en');
+      const ids = rows.map((row) => row.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      // A New Testament alone starts with its own heading; a book in no
+      // section follows the one before it.
+      expect(shown(getBookListRows([{ id: 'MAT' }, { id: 'XYZ' }, { id: 'MRK' }], 'en'))).toEqual([
+        'testament: New Testament',
+        'section: Gospels',
+        'MAT',
+        'XYZ',
+        'MRK',
+      ]);
+    });
+
+    it('are rows of the book list, small and with no tap target', () => {
+      const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+      expect(bible).toContain('getBookListRows(books, language)');
+      // In the same popup list as the books, so its ⌄ and fades (#521, #794)
+      // cover them too, not a SectionList of its own.
+      expect(bible).not.toMatch(/<SectionList\b/);
+      const heading = bible.slice(bible.indexOf('isBookListHeading(item)'), bible.indexOf('// A book, chapter, or verse'));
+      expect(heading).toContain('accessibilityRole="header"');
+      expect(heading).not.toMatch(/onPress|Touchable|Pressable/);
+      // Smaller than the books' 16-point names; the Testament's a point larger.
+      const fontSize = (style: string) =>
+        Number(bible.match(new RegExp(`${style}: \\{[^}]*fontSize: scaleTypographyMetric\\((\\d+)`))?.[1]);
+      expect([fontSize('bookListTestament'), fontSize('bookListSection'), fontSize('pressRowNamePart')]).toEqual([14, 13, 16]);
+    });
   });
 });

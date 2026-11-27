@@ -1,10 +1,15 @@
 import { getSortedChinese505Hymns } from '@/features/hymnal/Chinese505Hymnal';
 import { PRIMARY_BULLETIN_HYMNALS } from '@/features/hymnal/BulletinHymnalConfig';
 import { SDA_HYMNAL_1985 } from '@/features/hymnal/EnglishHymnal';
-import { getHymnalShortLabel, type HymnalBookId } from '@/features/hymnal/HymnalLabels';
+import {
+  getHymnalShortLabel,
+  getHymnTitle,
+  type HymnalBookId,
+} from '@/features/hymnal/HymnalLabels';
 import { getHymnalCrossReferences } from '@/features/hymnal/HymnalNumberMappings';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { normalizeHymnalSearchText } from '@/features/hymnal/HymnalSearch';
+import { traditionalToSimplified } from '@/services/BiblePinyinService';
 
 export type BulletinHymnText = {
   english: string;
@@ -164,7 +169,8 @@ const normalizeTitle = (value: string) =>
     .replace(/\p{Mark}/gu, '')
     .toLocaleLowerCase()
     .replace(/第\s*\d{1,4}\s*首/gu, ' ')
-    .replace(/\b(?:sdah?|ah|hymnal?|number|no)\b/giu, ' ')
+    // "Hymn" too, or the word alone matched "Hark, the Vesper Hymn Is Stealing" (#831).
+    .replace(/\b(?:sdah?|ah|hymn(?:al)?|number|no)\b/giu, ' ')
     .replace(/\d{1,4}/g, ' ')
     .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
     .trim()
@@ -309,16 +315,80 @@ const getLanguageEvidence = (value: string, hymnalId: HymnalId) => {
   return 0;
 };
 
+type SubmittedNumber = { number: number; marked: boolean };
+
+// Digits, with any thousands separator or decimal point inside them.
+const NUMBER_TOKEN = /\d+(?:[,.]\d+)*/gu;
+// Nothing but a number: "10", "10." or "#10".
+const PLAIN_NUMBER = /^#?\s*(\d{1,4})\s*\.?$/u;
+// A hymnal's name or a word for number just before it: "#10", "No. 10", "AH 73", "SDAH #1".
+const NUMBER_MARK_BEFORE = /(?:#|\b(?:sdah?|ah|hymn(?:al)?|number|no)\b\.?)\s*#?\s*$/iu;
+// A full stop or the like after a number that starts the cell: "10. Title", "10、標題".
+const NUMBER_MARK_AFTER_FIRST = /^\s*[.．、:：)）\-–—]/u;
+const LATIN_LETTER = /\p{Script=Latin}/u;
+
+/**
+ * The numbers typed in a bulletin hymn, each marked when it's clearly a hymn
+ * number: alone, after # or a hymnal's name, as 第10首, or first with a full
+ * stop after it. An unmarked one, as in "286 Wonderful Words of Life", counts
+ * only beside its hymn's title, so "12 Gates to the City" isn't hymn 12. A
+ * number that's part of a figure or a word, as in "10,000 Reasons" or "1st",
+ * is no hymn number (#830).
+ */
+const getSubmittedNumbers = (value: string): SubmittedNumber[] =>
+  Array.from(value.matchAll(NUMBER_TOKEN)).flatMap((match) => {
+    const [token] = match;
+    const start = match.index ?? 0;
+    const end = start + token.length;
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    const markedBefore = NUMBER_MARK_BEFORE.test(before) || /第\s*$/u.test(before);
+    if (
+      /[,.]/u.test(token) ||
+      token.length > 4 ||
+      LATIN_LETTER.test(after.charAt(0)) ||
+      (!markedBefore && LATIN_LETTER.test(before.slice(-1)))
+    ) {
+      return [];
+    }
+    const marked =
+      PLAIN_NUMBER.test(value) ||
+      markedBefore ||
+      (!before.trim() && NUMBER_MARK_AFTER_FIRST.test(after));
+    return [{ number: Number(token), marked }];
+  });
+
+const getTitleMatch = (hymnalId: HymnalId) =>
+  hymnalAdapters[hymnalId].primary ? PRIMARY_TITLE_MATCH : OTHER_TITLE_MATCH;
+
 const createNumberCandidate = (
   value: string,
   hymnNumber: number,
   hymnalId: HymnalId,
   declaredHymnalId: HymnalId,
+  marked = true,
 ): SourceCandidate | undefined => {
   const adapter = hymnalAdapters[hymnalId];
   if (!adapter.includesNumber(hymnNumber)) return undefined;
 
-  const canonicalTitle = adapter.getHymn(hymnNumber)?.title;
+  const hymn = adapter.getHymn(hymnNumber);
+  // A number not marked as a hymn's counts only beside that hymn's title,
+  // matched as strictly as a title alone is.
+  if (
+    !marked &&
+    !(
+      hymn &&
+      getTitleKeySimilarity(
+        toTitleKey(normalizeTitle(value)),
+        getTitleKey(hymn),
+        getTitleMatch(hymnalId),
+      )
+    )
+  ) {
+    return undefined;
+  }
+
+  const canonicalTitle = hymn?.title;
   const titleSimilarity = canonicalTitle ? getTitleSimilarity(value, canonicalTitle) : 0;
 
   return {
@@ -341,20 +411,35 @@ const resolveSourceCandidate = (
   const normalizedValue = value.trim();
   if (!normalizedValue) return undefined;
 
-  const submittedNumbers = Array.from(normalizedValue.matchAll(/\d{1,4}/g))
-    .map(([number]) => Number(number))
-    .filter((number) => number >= 1 && number <= 707);
+  // A plain number in the Chinese cell is the 505's, as 第N首 is, never a
+  // 1985 number mapped across. One the 505 hasn't is a hymn no hymnal has (#834).
+  const plainNumber = normalizedValue.match(PLAIN_NUMBER)?.[1];
+  if (plainNumber && declaredHymnalId === CHINESE_HYMNAL_ID) {
+    return createNumberCandidate(
+      normalizedValue,
+      Number(plainNumber),
+      CHINESE_HYMNAL_ID,
+      declaredHymnalId,
+    );
+  }
+
+  const submittedNumbers = getSubmittedNumbers(normalizedValue).filter(
+    ({ number }) => number >= 1 && number <= 707,
+  );
 
   if (submittedNumbers.length > 0) {
-    const candidates = submittedNumbers.flatMap((hymnNumber) =>
+    const candidates = submittedNumbers.flatMap(({ number, marked }) =>
       activeHymnalIds
         .map((hymnalId) =>
-          createNumberCandidate(normalizedValue, hymnNumber, hymnalId, declaredHymnalId),
+          createNumberCandidate(normalizedValue, number, hymnalId, declaredHymnalId, marked),
         )
         .filter((candidate): candidate is SourceCandidate => Boolean(candidate)),
     );
 
-    return candidates.sort((left, right) => right.score - left.score)[0];
+    // Numbers not marked as a hymn's, with no hymn of that title, leave it to the title.
+    if (candidates.length > 0 || submittedNumbers.some(({ marked }) => marked)) {
+      return candidates.sort((left, right) => right.score - left.score)[0];
+    }
   }
 
   const submittedTitle = toTitleKey(normalizeTitle(normalizedValue));
@@ -364,7 +449,7 @@ const resolveSourceCandidate = (
       const similarity = getTitleKeySimilarity(
         submittedTitle,
         getTitleKey(hymn),
-        hymnalAdapters[hymn.hymnalId].primary ? PRIMARY_TITLE_MATCH : OTHER_TITLE_MATCH,
+        getTitleMatch(hymn.hymnalId),
       );
       return {
         available: true,
@@ -378,11 +463,7 @@ const resolveSourceCandidate = (
         similarity,
       };
     })
-    .filter(
-      ({ hymnalId, similarity }) =>
-        similarity >=
-        (hymnalAdapters[hymnalId].primary ? PRIMARY_TITLE_MATCH : OTHER_TITLE_MATCH),
-    )
+    .filter(({ hymnalId, similarity }) => similarity >= getTitleMatch(hymnalId))
     .sort((left, right) => right.score - left.score);
 
   return titleCandidates[0];
@@ -432,15 +513,31 @@ const getMappedDestination = (
 const prefersChineseHymnal = (preferredLanguage: string) =>
   preferredLanguage === 'zh' || preferredLanguage === 'zh-cn';
 
-// "12. Title", with the hymnal's name after a hymn from outside the church's
-// two hymnals, so no one looks for it in the pew hymnal.
+// Text as the bulletin has it, in the reader's script (#795). Staff type its
+// Chinese in Traditional, as the printed bulletin has it, so a Simplified
+// reader gets it converted.
+const inReaderScript = (text: string, preferredLanguage: string) =>
+  preferredLanguage === 'zh-cn' ? traditionalToSimplified(text) : text;
+
+/**
+ * A fixed Queens hymn as the church words it, in the reader's language and
+ * script: its Chinese, in Simplified for a Simplified reader, or its English.
+ */
+export const getFixedHymnDisplayText = (hymn: BulletinHymnText, preferredLanguage: string) =>
+  prefersChineseHymnal(preferredLanguage)
+    ? inReaderScript(hymn.chinese, preferredLanguage)
+    : hymn.english;
+
+// "12. Title", in the reader's script, with the hymnal's name after a hymn
+// from outside the church's two hymnals, so no one looks for it in the pew
+// hymnal.
 const formatHymn = (
   hymnalId: HymnalId,
   hymnNumber: number,
   title: string,
   preferredLanguage: string,
 ) => {
-  const text = `${hymnNumber}. ${title}`;
+  const text = `${hymnNumber}. ${getHymnTitle(hymnalId, title, preferredLanguage)}`;
   if (hymnalAdapters[hymnalId].primary) return text;
   const label = getHymnalShortLabel(hymnalId, preferredLanguage);
   return prefersChineseHymnal(preferredLanguage) ? `${text}（${label}）` : `${text} (${label})`;
@@ -496,7 +593,12 @@ export const resolveBulletinHymnPresentation = (
     submission.text,
     submission.declaredHymnalId,
   );
-  if (!source) return { displayText: submission.text, youtubeSearchQuery: submission.text };
+  if (!source) {
+    return {
+      displayText: inReaderScript(submission.text, preferredLanguage),
+      youtubeSearchQuery: submission.text,
+    };
+  }
 
   if (source.hymnalId !== preferredHymnalId) {
     const mappedPreferred = getMappedDestination(source, preferredHymnalId);
@@ -506,7 +608,12 @@ export const resolveBulletinHymnPresentation = (
       )?.title;
       if (preferredTitle) {
         return {
-          displayText: `${mappedPreferred.hymnNumber}. ${preferredTitle}`,
+          displayText: formatHymn(
+            preferredHymnalId,
+            mappedPreferred.hymnNumber,
+            preferredTitle,
+            preferredLanguage,
+          ),
           destination: mappedPreferred,
         };
       }
@@ -535,14 +642,14 @@ export const resolveBulletinHymnPresentation = (
     )?.title;
     return {
       displayText: alternateTitle
-        ? `${mappedAlternate.hymnNumber}. ${alternateTitle}`
-        : submission.text,
+        ? formatHymn(alternateHymnalId, mappedAlternate.hymnNumber, alternateTitle, preferredLanguage)
+        : inReaderScript(submission.text, preferredLanguage),
       destination: mappedAlternate,
     };
   }
 
   return {
-    displayText: submission.text,
+    displayText: inReaderScript(submission.text, preferredLanguage),
     destination: {
       hymnalId: source.hymnalId,
       route: getRoute(source.hymnalId),

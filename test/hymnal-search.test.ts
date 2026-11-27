@@ -24,7 +24,12 @@ describe('hymnal search', () => {
       ({ hymnalId }) => hymnalId === 'chinese-hymnal-505',
     );
     const hymn = group?.hymns.find(({ hymnNumber }) => hymnNumber === 473);
-    expect(hymn?.title).toContain('我们');
+    // Shown in the reader's script (#795).
+    expect(hymn?.title).toBe('473. 我們回天家');
+    const simplified = search('我們', 'chinese-hymnal-506', 'zh-cn')
+      .find(({ hymnalId }) => hymnalId === 'chinese-hymnal-505')
+      ?.hymns.find(({ hymnNumber }) => hymnNumber === 473);
+    expect(simplified?.title).toBe('473. 我们回天家');
   });
 
   it('groups the matches by hymnal, the paired hymnal first, each in number order', () => {

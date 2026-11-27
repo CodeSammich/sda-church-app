@@ -2,6 +2,7 @@ import { AppIcon } from '@/components/AppIcon';
 import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { PopupHeader } from '@/components/PopupHeader';
+import { SwitchRow } from '@/components/SwitchRow';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { PopupFlatList, PopupScrollView } from '@/components/PopupScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,7 +34,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Divider, IconButton, Modal, Portal, Switch, Text } from 'react-native-paper';
+import { Divider, IconButton, Modal, Portal, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -42,6 +43,7 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { useBottomTabHeight } from '@/constants/BottomTabHeightContext';
+import { type BookListHeading, getBookListRows, isBookListHeading } from '@/constants/BibleSections';
 import {
   CAPSULE_STACK_GAP,
   getCapsuleBottomGap,
@@ -173,7 +175,7 @@ import {
 } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
-import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
+import { getHymnalShortLabel, getHymnTitle } from '@/features/hymnal/HymnalLabels';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { getPopupSurfaceStyle, getPopupWidthStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
@@ -4172,7 +4174,8 @@ export default function BibleScreen() {
                   opacity: 0.5,
                 }}
               >
-                {chapterData.translation.attribution}
+                {/* In the app's language (#807). */}
+                {BibleService.getTranslationAttribution(chapterData.translation, language)}
               </Text>
             )}
             {/* WordProject asks for a link to its site and app (docs/LEGAL.md). */}
@@ -4992,7 +4995,7 @@ export default function BibleScreen() {
                             { color: theme.colors.onSurface, fontWeight: '700' },
                           ]}
                         >
-                          {hymn.number}. {hymn.title}
+                          {hymn.number}. {getHymnTitle(hymn.hymnalId, hymn.title, language)}
                         </Text>
                         <Text
                           style={[
@@ -5471,7 +5474,7 @@ export default function BibleScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={
                         verseHymns.length === 1
-                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${verseHymns[0].title}`
+                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${getHymnTitle(verseHymns[0].hymnalId, verseHymns[0].title, language)}`
                           : labels.verseHymnsTitle
                       }
                       accessibilityHint={verseHymns.length === 1 ? labels.verseHymnHint : undefined}
@@ -5516,6 +5519,7 @@ export default function BibleScreen() {
                 <PopupFlatList<
                   | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
                   | BibleService.TranslationBook
+                  | BookListHeading
                   | number
                 >
                   data={
@@ -5526,7 +5530,8 @@ export default function BibleScreen() {
                             translation.id !== supportedTranslation.id,
                         )
                       : lastActiveType === 'book'
-                        ? books
+                        ? // Under Testament and section headings (#807).
+                          getBookListRows(books, language)
                         : lastActiveType === 'verse'
                           ? Array.from(
                               { length: chapterData?.numberOfVerses || 0 },
@@ -5616,60 +5621,29 @@ export default function BibleScreen() {
                     lastActiveType === 'translation' ? (
                       <View>
                         <Divider />
-                        <View style={styles.pinyinPreferenceRow}>
-                          <View style={styles.pinyinPreferenceCopy}>
-                            <Text
-                              style={[
-                                styles.pressRowText,
-                                { color: theme.colors.onSurface },
-                              ]}
-                            >
-                              {labels.dualLanguage}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.pinyinPreferenceHelp,
-                                { color: theme.colors.onSurfaceVariant },
-                              ]}
-                            >
-                              {labels.dualLanguageHelp}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={dualLanguageEnabled}
-                            onValueChange={(enabled) => {
-                              setDualLanguageEnabled(enabled);
-                              if (!enabled) setTranslationSelectionRole('primary');
-                            }}
-                            accessibilityLabel={labels.dualLanguage}
-                          />
-                        </View>
+                        {/* A tap on the words turns each on or off too (#798). */}
+                        <SwitchRow
+                          label={labels.dualLanguage}
+                          description={labels.dualLanguageHelp}
+                          value={dualLanguageEnabled}
+                          onValueChange={(enabled) => {
+                            setDualLanguageEnabled(enabled);
+                            if (!enabled) setTranslationSelectionRole('primary');
+                          }}
+                          style={styles.pinyinPreferenceRow}
+                          labelStyle={styles.pressRowText}
+                          descriptionStyle={styles.pinyinPreferenceHelp}
+                        />
                         <Divider />
-                        <View style={styles.pinyinPreferenceRow}>
-                          <View style={styles.pinyinPreferenceCopy}>
-                            <Text
-                              style={[
-                                styles.pressRowText,
-                                { color: theme.colors.onSurface },
-                              ]}
-                            >
-                              {labels.showPinyin}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.pinyinPreferenceHelp,
-                                { color: theme.colors.onSurfaceVariant },
-                              ]}
-                            >
-                              {labels.pinyinHelp}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={showPinyin}
-                            onValueChange={setShowPinyin}
-                            accessibilityLabel={labels.showPinyin}
-                          />
-                        </View>
+                        <SwitchRow
+                          label={labels.showPinyin}
+                          description={labels.pinyinHelp}
+                          value={showPinyin}
+                          onValueChange={setShowPinyin}
+                          style={styles.pinyinPreferenceRow}
+                          labelStyle={styles.pressRowText}
+                          descriptionStyle={styles.pinyinPreferenceHelp}
+                        />
                         <Divider />
                         {/* Requests set which languages come next (#241, #344). */}
                         <TouchableOpacity
@@ -5691,6 +5665,27 @@ export default function BibleScreen() {
                     ) : undefined
                   }
                   renderItem={({ item }) => {
+                    // The book list's headings (#807): small, and no tap
+                    // target, so the list stays quick to scroll. A
+                    // Testament's is a little stronger than its sections'.
+                    if (typeof item === 'object' && isBookListHeading(item)) {
+                      const isTestament = item.heading === 'testament';
+                      return (
+                        <Text
+                          accessibilityRole="header"
+                          style={[
+                            isTestament ? styles.bookListTestament : styles.bookListSection,
+                            {
+                              color: isTestament
+                                ? theme.colors.onSurface
+                                : theme.colors.onSurfaceVariant,
+                            },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                      );
+                    }
                     // A book, chapter, or verse in the translation's language,
                     // then the app's, when they differ (#723).
                     const itemName: TwoLanguageName =
@@ -6008,6 +6003,24 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       fontSize: scaleTypographyMetric(16, uiTextScale),
       lineHeight: scaleTypographyMetric(22, uiTextScale),
     },
+    // The book list's headings (#807), smaller than its 16-point names and
+    // with little space around them. A section's sits close above its first
+    // book; a Testament's, a point larger and bold, has a little more above.
+    bookListTestament: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 2,
+      fontSize: scaleTypographyMetric(14, uiTextScale),
+      lineHeight: scaleTypographyMetric(19, uiTextScale),
+      fontWeight: '700',
+    },
+    bookListSection: {
+      paddingHorizontal: 16,
+      paddingTop: 6,
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+      fontWeight: '600',
+    },
     pressRowTitle: {
       fontSize: scaleTypographyMetric(16, uiTextScale),
       lineHeight: scaleTypographyMetric(22, uiTextScale),
@@ -6028,10 +6041,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-    },
-    pinyinPreferenceCopy: {
-      flex: 1,
-      minWidth: 0,
     },
     pinyinPreferenceHelp: {
       fontSize: scaleTypographyMetric(13, uiTextScale),
