@@ -168,8 +168,10 @@ describe('the pass/fail rules', () => {
 
   it('writes a summary with every half and its base', () => {
     const outcome = evaluate({ q: result([[12, -2]]) }, { q: result([[12, -2]]) });
-    const summary = summaryMarkdown(outcome, { baseLabel: 'release-candidate (1234abcd)' });
+    const summary = summaryMarkdown(outcome, { baseLabel: 'release-candidate (1234abcd)', pageCounts: { q: 1, b: 3 } });
+    expect(summary.split('\n')[0]).toBe('## Printed bulletin preview');
     expect(summary).toContain('**Every page fits.**');
+    expect(summary).toContain('Pages drawn: q (1), b (3).');
     expect(summary).toContain('| q | page 1, left half | +12 | +12 |  |');
     expect(summary).toContain('| q | page 1, right half | −2 | −2 | over on the base too |');
     expect(summaryMarkdown(evaluate({ q: result([[-1, 1]]) }, null))).toContain('**1 problem:**');
@@ -218,8 +220,19 @@ describe('the Printed Bulletin Preview workflow', () => {
     // The bulletin's own Chinese font, pinned and checked.
     expect(workflow).toMatch(/google\/fonts\/[0-9a-f]{40}\/ofl\/uoqmunthenkhung\/UoqMunThenKhung-Regular\.ttf/);
     expect(workflow).toContain('sha256sum -c -');
-    expect(workflow).toMatch(/- name: Upload the pages\n\s+if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(workflow).toMatch(/- name: Upload the pages\n\s+id: upload\n\s+if: \$\{\{ !cancelled\(\) \}\}/);
     expect(workflow).toContain('name: printed-bulletin-preview');
+  });
+
+  it('links the page images at the top of the run summary', () => {
+    const step = workflow.slice(workflow.indexOf('- name: Link the pages in the run summary'));
+    expect(step).toMatch(/if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(step).toContain('ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}');
+    expect(step).toContain('[Download the page images]($ARTIFACT_URL)');
+    // The link goes under the summary's heading, before the table.
+    expect(step.indexOf('head -n 1 "$SUMMARY"')).toBeLessThan(step.indexOf('$ARTIFACT_URL)'));
+    expect(step.indexOf('$ARTIFACT_URL)')).toBeLessThan(step.indexOf('tail -n +2 "$SUMMARY"'));
+    expect(step).toContain('>> "$GITHUB_STEP_SUMMARY"');
   });
 
   it('is in the bulletin docs and the list of checks', () => {

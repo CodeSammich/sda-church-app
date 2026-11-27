@@ -124,10 +124,10 @@ async function main() {
   }
 
   const outcome = evaluate(head, before);
-  const summary = summaryMarkdown(outcome, { baseLabel: base && `${base.label} (${base.sha.slice(0, 8)})` });
+  const pageCounts = Object.fromEntries(Object.keys(head).map((name) => [name, head[name].pages.length]));
+  const summary = summaryMarkdown(outcome, { baseLabel: base && `${base.label} (${base.sha.slice(0, 8)})`, pageCounts });
   fs.writeFileSync(path.join(args.out, 'summary.md'), summary);
   fs.writeFileSync(path.join(args.out, 'summary.json'), JSON.stringify({ base: base && base.sha, head, before, ...outcome }, null, 1));
-  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
   process.stdout.write(summary);
   const own = chinese && chinese.find((family) => family.startsWith('UoqMunThenKhung'));
   const drawnWith = own ? 'UoqMunThenKhung, the bulletin\'s font' : chinese && `stand-ins (${chinese.slice(0, 2).join('; ')})`;

@@ -1313,12 +1313,15 @@ makes Queens Regular, Queens Holy Communion, and Brooklyn Regular, each for an
 ordinary week and a long one (a long sermon title, two singers, a reading of
 several verses, and four announcements).
 
-**Where the pages are.** On the run's page under **Actions**, the
-**printed-bulletin-preview** artifact holds a folder per layout with
-`page-1.png`, `page-2.png`, and so on, and `summary.md`. The run's summary shows
-the same table: the room left in points at the foot of each booklet half, on
-this branch and on the base branch. Each page image is labelled with it, and a
-dashed red line marks the bottom margin.
+**Where the pages are.** On the pull request, open the **Printed bulletin
+preview** check's **Details**, then **Summary**. Its first line, **Download the
+page images**, downloads the **printed-bulletin-preview** zip (kept 14 days):
+a folder per layout with `page-1.png`, `page-2.png`, and so on, and
+`summary.md`. Below it, the summary lists the pages drawn and the room left in
+points at the foot of each booklet half, on this branch and on the base branch.
+Each page image is labelled with its own numbers, and a dashed red line marks
+the bottom margin. A pull request from a fork gets a read-only token, so the
+workflow can't comment on it.
 
 **When it fails.** The run fails if:
 

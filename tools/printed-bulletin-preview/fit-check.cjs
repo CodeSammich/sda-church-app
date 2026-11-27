@@ -71,7 +71,7 @@ function evaluate(head, base) {
   return { failures, notes, rows };
 }
 
-function summaryMarkdown({ failures, notes, rows }, { baseLabel } = {}) {
+function summaryMarkdown({ failures, notes, rows }, { baseLabel, pageCounts } = {}) {
   const lines = ['## Printed bulletin preview', ''];
   lines.push(failures.length ? `**${failures.length} problem${failures.length === 1 ? '' : 's'}:**` : '**Every page fits.**');
   failures.forEach((f) => lines.push(`- ${f}`));
@@ -79,7 +79,10 @@ function summaryMarkdown({ failures, notes, rows }, { baseLabel } = {}) {
   lines.push(baseLabel
     ? `Heights are compared with the base, ${baseLabel}: one already over there fails only if it grows.`
     : 'No base to compare with, so any height over the page fails.');
-  lines.push('Room left in points, + to spare, − over. Page images are in the run\'s **printed-bulletin-preview** artifact.');
+  if (pageCounts) {
+    lines.push(`Pages drawn: ${Object.keys(pageCounts).map((name) => `${name} (${pageCounts[name]})`).join(', ')}. Each layout's folder holds \`page-1.png\`, \`page-2.png\`, and so on.`);
+  }
+  lines.push('Room left at the foot of each booklet half, in points: + to spare, − over.');
   lines.push('');
   lines.push('| Layout | Where | Room left | On the base | |');
   lines.push('| --- | --- | ---: | ---: | --- |');

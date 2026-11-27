@@ -83,6 +83,7 @@ jobs:
         run: node tools/printed-bulletin-preview/preview.cjs --out "$RUNNER_TEMP/printed-bulletin-preview" --base "$PREVIEW_BASE" --fonts "$RUNNER_TEMP/fonts"
 
       - name: Upload the pages
+        id: upload
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -90,3 +91,23 @@ jobs:
           path: ${{ runner.temp }}/printed-bulletin-preview/
           if-no-files-found: warn
           retention-days: 14
+
+      # The run's summary page (the check's Details, then Summary) links the
+      # page images under its heading, then lists every page's room left. A
+      # pull request from a fork gets a read-only token, so no comment.
+      - name: Link the pages in the run summary
+        if: ${{ !cancelled() }}
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          SUMMARY: ${{ runner.temp }}/printed-bulletin-preview/summary.md
+        run: |
+          {
+            if [ -f "$SUMMARY" ]; then head -n 1 "$SUMMARY"; else echo '## Printed bulletin preview'; fi
+            echo
+            if [ -n "$ARTIFACT_URL" ]; then
+              echo "**[Download the page images]($ARTIFACT_URL)**: a zip with a folder per layout and a PNG per page, kept 14 days."
+            else
+              echo 'No page images were uploaded; the step before says why.'
+            fi
+            if [ -f "$SUMMARY" ]; then tail -n +2 "$SUMMARY"; else printf '\nThe preview stopped before its checks; its log says why.\n'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
