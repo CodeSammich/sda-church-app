@@ -155,8 +155,9 @@ describe('key screen list (test/screens/screens.json)', () => {
   it('asks a screen only for a state or section it knows, from its path (#456)', () => {
     const screenFiles: Record<string, string> = {
       'home/bulletin': 'app/(tabs)/home/bulletin.tsx',
-      // The route shows the hymnal page, which reads the path.
+      // The routes show the hymnal page, which reads the path.
       'home/hymnal-selection': 'features/hymnal/HymnalScreen.tsx',
+      'home/english-hymnal': 'features/hymnal/HymnalScreen.tsx',
     };
     const asking = config.screens.filter((screen: { path: string }) => /[?&](state|section)=/.test(screen.path));
     expect(asking.map((screen: { name: string }) => screen.name).sort()).toEqual([
@@ -164,10 +165,13 @@ describe('key screen list (test/screens/screens.json)', () => {
       'bulletin-load-failed',
       'bulletin-program',
       'hymnal-hymns',
+      'hymnal-scrolled',
     ]);
     for (const screen of asking) {
       const [route, query] = screen.path.split('?');
       for (const [key, value] of new URLSearchParams(query)) {
+        // A link's own parameters, such as hymnNum, work in every build.
+        if (key !== 'state' && key !== 'section') continue;
         const reads = new RegExp(`getScreenshotState\\(param${key[0].toUpperCase()}${key.slice(1)}, \\[[^\\]]*'${value}'`);
         expect({ path: screen.path, reads: reads.test(repoFile(screenFiles[route])) }).toEqual({ path: screen.path, reads: true });
       }
@@ -1584,9 +1588,10 @@ describe('Android key screens (#372)', () => {
 
   it('takes the same screens, named android/<screen>-<variant>.png', () => {
     // All but the iPhone's own checks, such as its audio (#551), which
-    // android-audio-e2e.yml covers on Android.
+    // android-audio-e2e.yml covers on Android, and the linked hymn's 505
+    // chip at 200%, which was always the iPhone's check alone (#810).
     const shared = config.screens.filter((screen: { platforms?: string[] }) => !screen.platforms?.length || screen.platforms.includes('android'));
-    expect(shared.length).toBe(config.screens.length - 2);
+    expect(shared.length).toBe(config.screens.length - 3);
     expect(new Set(android.map((shot: { screen: string }) => shot.screen))).toEqual(
       new Set(shared.map((screen: { name: string }) => screen.name)),
     );

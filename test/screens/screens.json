@@ -171,12 +171,12 @@
     {
       "name": "bible-cuv-after-spanish",
       "group": "bible-text",
-      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent. The books sit under Testament and section headings (#807), in the app's language, so Law must show above Genesis. On the iPad, Vision may read the dimmed page beside the popup into a line, so the heading isn't anchored.",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent. The books sit under Testament and section headings (#807), in the app's language, so Law must show above Genesis. On the iPad, Vision may read the dimmed page beside the popup into a line, so the headings aren't anchored, and it missed the short, grey Law there, though it shows (run 46025141242), so there History must show above Joshua instead.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=book",
       "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": [{ "line": "\\bLaw\\b", "above": "[(（]Genesis\\b" }, "[(（]Genesis\\b", "[(（]Exodus\\b", "[(（]Leviticus\\b"],
+      "mustShowLines": [{ "line": "\\bLaw\\b", "above": "[(（]Genesis\\b", "platforms": ["ios", "android"] }, { "line": "\\bHistory\\b", "above": "[(（]Joshua\\b", "platforms": ["ipad"] }, "[(（]Genesis\\b", "[(（]Exodus\\b", "[(（]Leviticus\\b"],
       "mustNotShowLines": ["Salmos", "^[EÉ]xodo\\b", "^Lev[ií]tico\\b", "^N[uú]meros\\b"]
     },
     {
@@ -604,12 +604,11 @@
     {
       "name": "hymnal",
       "group": "worship-and-you",
-      "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, saying under its title that its sheet music opens on a web page (#795), its Chinese 505 number, its With singing and Piano only videos (#424), and Show all hymns. At the app's 200% text size the Chinese 505 · 16 chip must still show its whole number (a long label wraps inside the chip), and the buttons stack, so they and Show all hymns may fall below the shot. The hymnal's name and the hymn's title wrap at 200% too, so there only their first words are required.",
+      "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, saying under its title that its sheet music opens on a web page (#795), its Chinese 505 number, its With singing and Piano only videos (#424), and Show all hymns. At the app's 200% text size the hymnal's name, the hymn's title and the note under it wrap, so there only their first words are required, and the Chinese 505 · 16 chip, the buttons and Show all hymns fall below the tab bar; hymnal-scrolled checks the chip there.",
       "path": "home/english-hymnal?hymnNum=12",
       "checks": ["lightStatusBarIcons"],
       "variants": ["default", "xl"],
       "ipadVariants": ["default", "landscape"],
-      "mustShowLines": [{ "line": "\\b505\\W+16$", "platforms": ["ios"] }],
       "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"],
       "variantRules": {
         "default": {
@@ -617,6 +616,17 @@
         },
         "xl": { "mustShowLines": ["^SDA\\b", "^12\\. Joyful\\b"] }
       }
+    },
+    {
+      "name": "hymnal-scrolled",
+      "group": "worship-and-you",
+      "platforms": ["ios"],
+      "$comment": "The same link to one hymn at the app's 200% text size, scrolled past the carousel to the hymn by section=hymns in a key-screens build. Its Chinese 505 · 16 chip must still show its whole number there (a long label wraps inside the chip). Unscrolled, the hymn's title and the note under it (#810) push the chip below the tab bar on the iPhone (run 46025141242), and on the smaller Android phone it was below it before. The hymn's title may sit under the header, and the buttons stack, so they and Show all hymns may fall below the shot: the chip's number is this hymn's alone. The iPad takes its 200% too, in landscape as every screen is, for a person to look over.",
+      "path": "home/english-hymnal?hymnNum=12&section=hymns",
+      "variants": ["xl"],
+      "ipadVariants": ["landscape-xl"],
+      "mustShowLines": [{ "line": "\\b505\\W+16$", "platforms": ["ios"] }],
+      "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"]
     },
     {
       "name": "hymnal-chinese",
