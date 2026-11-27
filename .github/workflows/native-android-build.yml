@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies
         if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main'
         run: npm ci
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main') && matrix.target.platform == 'android'
         with:
           distribution: temurin

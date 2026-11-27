@@ -109,9 +109,9 @@ down rather than because of your change.
 
 ### Key screens on iPhone and Android
 
-The **iOS key screens** workflow, on the release pull request into `main`, takes 147
-screenshots of the 67 screens listed in `test/screens/screens.json` on a simulated
-iPhone and 94 on a simulated iPad, and the Android key screens 145 on an Android phone
+The **iOS key screens** workflow, on the release pull request into `main`, takes 149
+screenshots of the 69 screens listed in `test/screens/screens.json` on a simulated
+iPhone and 96 on a simulated iPad, and the Android key screens 147 on an Android phone
 emulator, in light and dark, at larger text sizes, and in
 Chinese and Spanish. `scripts/capture-ios-screens.cjs` and
 `scripts/capture-android-screens.cjs` take them, and `scripts/check-screens.cjs` reads

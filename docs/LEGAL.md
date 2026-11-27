@@ -125,7 +125,9 @@ on every test run. The method and results are in
 Verse divisions follow the 1988 text and the BSB (3 John 1:15, Revelation 12:18),
 with the 1919 words unchanged.
 
-The reader credits it as "Public domain (1919). Text adapted from WordProject."
+The reader credits it as "Public domain (1919). Text adapted from WordProject.", in the
+app's language: in Traditional Chinese, "公有領域（1919）。經文取自 WordProject，並經校訂。"
+(`getTranslationAttribution` in `services/BibleService.ts`, #807).
 `scripts/build-cuv-1919.mjs` rebuilds it.
 
 ### Audio Power permission scope

@@ -292,7 +292,10 @@ simple, blended colors.
     page's top matches its bottom. Their icons are grey, like the tab bar's other tabs;
     blue, or gold in the dark theme, marks what opens a list or shows a state: the back
     button, the translation button's names and arrow, like the Bible card's pills, and
-    the saved-verse button once a verse is saved. The translation button has no 文A icon
+    the saved-verse button once a verse is saved. A page's title stays on one line,
+    drawn a little smaller where it must be, down to 80%, and past that wraps only
+    between its words, in Chinese too: at 150%, 中文讚美詩 — 505 版 beside the
+    search button left 版 alone on a line (#797). The translation button has no 文A icon
     (from 1.7.0): each translation's language badge, EN or 繁, about the icon's size and
     in the pills' colors, says which language it is, and leaves room for the names.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
@@ -364,6 +367,13 @@ simple, blended colors.
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`
   (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
+- **Switches:** A setting that's on or off, such as the Bible's Dual-language reading and
+  pinyin, is one row: its name, a line about it, and a switch. A tap anywhere on the row
+  turns it on or off, since older members tap the words, not the small switch (#798). A
+  screen reader hears one switch, with its name, the line as its hint, and whether it's
+  on. Code draws it with `SwitchRow` (`components/SwitchRow.tsx`); Offline Bible Audio's
+  Download notifications row, below, was already one control, with the same switch
+  (`MenuCardSwitchVisual`). `test/switch-row.test.ts` fails on a switch drawn alone.
 - **Notifications:** The app's notifications are few, quiet, and only ones the member asked
   for (Tenet 7). Today there's one kind: a Bible audio download the member started (#610).
   - **What they say, by phone.** None is needed for a download to go on in the
@@ -398,6 +408,18 @@ simple, blended colors.
     posts a notification.
   - **Anything new,** such as announcements (#562) or event reminders (#49), needs its own
     decision, and an update to this policy, first.
+  - **Not one of these: the media controls** the phone shows while Bible audio plays, on
+    the lock screen and in the notification shade. They name the chapter as the recording
+    reads it, as a shared verse does (#723), such as 約翰福音 第 3 章 for the Chinese Union
+    Version or John 3 for the BSB, and under it the narrator in the app's language, as
+    Offline Bible Audio names it, such as 粵語（和合本）, never the host a chapter streams
+    from (#804). On Android, paused controls can't be swiped away until the app is closed from
+    the recent apps screen. Android doesn't let anyone dismiss a media notification while
+    its playback service runs in the foreground
+    ([Android 14 behavior changes](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)),
+    and expo-audio 58 keeps that service in the foreground while paused, where Media3's
+    own service lets it go 10 minutes after a pause
+    ([`DEFAULT_FOREGROUND_SERVICE_TIMEOUT_MS`](https://developer.android.com/reference/androidx/media3/session/MediaSessionService#DEFAULT_FOREGROUND_SERVICE_TIMEOUT_MS())).
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 

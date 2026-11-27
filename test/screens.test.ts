@@ -156,6 +156,8 @@ describe('key screen list (test/screens/screens.json)', () => {
     const screenFiles: Record<string, string> = {
       'home/bulletin': 'app/(tabs)/home/bulletin.tsx',
       'home/discover': 'app/(tabs)/home/discover.tsx',
+      // The route shows the hymnal page, which reads the path.
+      'home/hymnal-selection': 'features/hymnal/HymnalScreen.tsx',
     };
     const asking = config.screens.filter((screen: { path: string }) => /[?&](state|section)=/.test(screen.path));
     expect(asking.map((screen: { name: string }) => screen.name).sort()).toEqual([
@@ -163,6 +165,7 @@ describe('key screen list (test/screens/screens.json)', () => {
       'bulletin-load-failed',
       'bulletin-program',
       'discover-cards',
+      'hymnal-hymns',
     ]);
     for (const screen of asking) {
       const [route, query] = screen.path.split('?');
@@ -1590,7 +1593,7 @@ describe('Android key screens (#372)', () => {
       new Set(shared.map((screen: { name: string }) => screen.name)),
     );
     for (const shot of android) expect(shot.file).toBe(`android/${shot.name}.png`);
-    expect(names(android)).toEqual(expect.arrayContaining(['home-default', 'home-dark', 'home-large', 'bible-dual-xl']));
+    expect(names(android)).toEqual(expect.arrayContaining(['home-default', 'home-dark', 'home-zh-large', 'bible-dual-xl']));
   });
 
   it("leaves each platform's own variants to that platform", () => {

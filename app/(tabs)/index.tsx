@@ -156,8 +156,10 @@ export default function HomeScreen() {
   // card's two buttons each get a full row, so words like "Compartir" are
   // never cut off or broken mid-word (#385). So they do, too, wherever a word
   // of either button's label wouldn't fit beside the other button: on a narrow
-  // phone in Spanish, or in a narrow iPad window (#324). The Sabbath countdown
-  // has its own rule, below.
+  // phone in Spanish, or in a narrow iPad window (#324), or in Chinese at 150%
+  // on most phones, where 分享經文 broke as 分享經 / 文 (#797). The icons
+  // follow the app's text size alone. The Sabbath countdown has its own rule,
+  // below.
   const stackHeroActions =
     effectiveTextScale >= 2 ||
     !labelsFitSideBySide(
@@ -165,6 +167,7 @@ export default function HomeScreen() {
       getHeroActionsRowWidth(windowWidth, effectiveTextScale),
       HERO_ACTIONS_GAP,
       effectiveTextScale,
+      textScale,
     );
 
   const [verseOfTheDay, setVerseOfTheDay] = useState<{

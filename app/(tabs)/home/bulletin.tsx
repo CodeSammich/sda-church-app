@@ -23,6 +23,7 @@ import {
 import {
   BulletinHymnDestination,
   BulletinHymnPresentation,
+  getFixedHymnDisplayText,
   QUEENS_FIXED_HYMNS,
   resolveBulletinHymnPresentation,
   toBulletinHymnText,
@@ -850,7 +851,7 @@ export default function WeeklyBulletinScreen() {
     ): BulletinHymnPresentation => ({
       ...resolveBulletinHymnPresentation(value, language),
       // Preserve the church-approved wording for fixed weekly responses.
-      displayText: getProgramValue(value, language),
+      displayText: getFixedHymnDisplayText(value, language),
     });
     const doxology = getFixedHymnPresentation(QUEENS_FIXED_HYMNS.doxology);
     const pastoralPrayer = getFixedHymnPresentation(QUEENS_FIXED_HYMNS.pastoralPrayer);

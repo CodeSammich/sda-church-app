@@ -80,8 +80,10 @@ export const getScreenshotPopup = <T extends string>(
  * A state or place a key-screen path asks a screen for, other than a popup, if
  * it's one the screen knows: the bulletin's `state=load-failed`, a bulletin
  * that couldn't load, or its `section=program`, scrolled to the worship
- * program (#456), or New Member & Visitor's `section=cards`, scrolled to its
- * cards (#793). No tap can bring these about on a build runner. As with
+ * program (#456), or the hymnal page's `section=hymns`, scrolled to its hymns,
+ * where the header shows the hymnal's name (#797), or New Member & Visitor's
+ * `section=cards`, scrolled to its cards (#793). A capture can't scroll, and
+ * no tap can bring the others about on a build runner. As with
  * `popup=`, it's always null outside a key-screens build.
  */
 export const getScreenshotState: typeof getScreenshotPopup = (value, states) =>

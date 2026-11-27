@@ -18,8 +18,10 @@ jest.mock('@/constants/CantoneseAdventistAudioManifest', () => ({
 
 import {
   buildBibleAudioQueue,
+  getBibleAudioArtist,
   getBibleAudioSourceLabel,
 } from '@/services/BibleAudioService';
+import { formatChapterTitle } from '@/services/BibleNames';
 import {
   CANTONESE_CUV_READER,
   CUV_AUDIO_READERS,
@@ -104,6 +106,27 @@ describe('Cantonese CUV audio from WordProject', () => {
     expect(getAudioReaderPreferenceKey('BSB')).toBe('BSB');
   });
 
+  it("says what plays in the app's language, without a host's English name (#804)", () => {
+    // In a Traditional Chinese app, the notification read 約翰福音 3 · CUV
+    // (HelloAO) above CUV • 粵語 (WordProject): English, and two sources.
+    const queue = buildBibleAudioQueue({
+      albumTitle: '聖經有聲書',
+      artist: getBibleAudioArtist({ id: 'cmn_cuv', name: 'CUV' }, CANTONESE_CUV_READER, 'zh'),
+      books: books.map((book) => ({ ...book, name: book.id === 'MAL' ? '瑪拉基書' : '馬太福音' })),
+      currentBookId: 'MAL',
+      currentChapter: 3,
+      getChapterTitle: (book, chapter) => formatChapterTitle(book.name, chapter, 'zh'),
+      limit: 2,
+      selectedAudioUrls: [],
+      selectedReader: CANTONESE_CUV_READER,
+      translationId: 'cmn_cuv',
+    });
+    const lines = queue.flatMap(({ metadata, fallbacks = [] }) =>
+      [metadata, ...fallbacks.map((fallback) => fallback.metadata)].map(({ title, artist }) => `${title} / ${artist}`));
+    expect(new Set(lines)).toEqual(new Set(['瑪拉基書 第 4 章 / 粵語（和合本）', '馬太福音 第 1 章 / 粵語（和合本）']));
+    expect(lines.join(' ')).not.toMatch(/[A-Za-z]{3,}/);
+  });
+
   it("queues the next Cantonese chapters, across a book boundary, with the church's copy as the fallback", () => {
     const queue = buildBibleAudioQueue({
       albumTitle: 'Bible audio',
@@ -115,7 +138,6 @@ describe('Cantonese CUV audio from WordProject', () => {
       selectedAudioUrls: [],
       selectedReader: CANTONESE_CUV_READER,
       translationId: 'cmn_cuv',
-      translationLabel: 'CUV',
     });
     expect(queue.map(({ bookId, chapter }) => `${bookId} ${chapter}`)).toEqual([
       'MAL 4',

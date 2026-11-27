@@ -1,4 +1,5 @@
-import { getBibleAudioScopeCaption } from '@/components/OfflineBibleAudio';
+import { readFileSync } from 'node:fs';
+import { getBibleAudioScopeCaption, getBookScrollOffset } from '@/components/OfflineBibleAudio';
 import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json';
 import { formatDownloadSize } from '@/constants/DownloadCopy';
 import { customLightTheme } from '@/constants/Themes';
@@ -176,6 +177,20 @@ describe('Offline Bible Audio', () => {
     const fromBible = await renderPage({ narrator: 'cuv-mandarin', bookId: 'LAM' });
     expect(fromBible.getByText('Lamentations')).toBeTruthy();
     expect(fromBible.queryByText('Matthew')).toBeNull();
+  });
+
+  it("scroll, from the Bible, to the book's section, its name where the page's first line would be (#797)", () => {
+    // Psalms, the second of five: the section, Job, then Psalms, in 643 points
+    // between the header and the tab bar at 150%. The section's name sat under
+    // the header's title, with room for one row above the book.
+    expect(getBookScrollOffset({ sectionTop: 1200, bookTop: 1280, bookBottom: 1336, viewport: 643 })).toBe(1200);
+    // Malachi, the last of twelve at 200%, which wouldn't then show: the book.
+    expect(getBookScrollOffset({ sectionTop: 1500, bookTop: 2400, bookBottom: 2480, viewport: 560 })).toBe(2400);
+    // A section of one book, as Acts, is the book.
+    expect(getBookScrollOffset({ sectionTop: 2000, bookTop: 2000, bookBottom: 2080, viewport: 560 })).toBe(2000);
+    expect(getBookScrollOffset({ sectionTop: 0, bookTop: 0, bookBottom: 60, viewport: 0 })).toBe(0);
+    // No room for one row at 100% text, measured from the book.
+    expect(readFileSync('components/OfflineBibleAudio.tsx', 'utf8')).not.toContain('y + 20 - 64');
   });
 
   it('show in Chinese', async () => {

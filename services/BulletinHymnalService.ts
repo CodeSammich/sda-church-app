@@ -1,10 +1,15 @@
 import { getSortedChinese505Hymns } from '@/features/hymnal/Chinese505Hymnal';
 import { PRIMARY_BULLETIN_HYMNALS } from '@/features/hymnal/BulletinHymnalConfig';
 import { SDA_HYMNAL_1985 } from '@/features/hymnal/EnglishHymnal';
-import { getHymnalShortLabel, type HymnalBookId } from '@/features/hymnal/HymnalLabels';
+import {
+  getHymnalShortLabel,
+  getHymnTitle,
+  type HymnalBookId,
+} from '@/features/hymnal/HymnalLabels';
 import { getHymnalCrossReferences } from '@/features/hymnal/HymnalNumberMappings';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { normalizeHymnalSearchText } from '@/features/hymnal/HymnalSearch';
+import { traditionalToSimplified } from '@/services/BiblePinyinService';
 
 export type BulletinHymnText = {
   english: string;
@@ -432,15 +437,31 @@ const getMappedDestination = (
 const prefersChineseHymnal = (preferredLanguage: string) =>
   preferredLanguage === 'zh' || preferredLanguage === 'zh-cn';
 
-// "12. Title", with the hymnal's name after a hymn from outside the church's
-// two hymnals, so no one looks for it in the pew hymnal.
+// Text as the bulletin has it, in the reader's script (#795). Staff type its
+// Chinese in Traditional, as the printed bulletin has it, so a Simplified
+// reader gets it converted.
+const inReaderScript = (text: string, preferredLanguage: string) =>
+  preferredLanguage === 'zh-cn' ? traditionalToSimplified(text) : text;
+
+/**
+ * A fixed Queens hymn as the church words it, in the reader's language and
+ * script: its Chinese, in Simplified for a Simplified reader, or its English.
+ */
+export const getFixedHymnDisplayText = (hymn: BulletinHymnText, preferredLanguage: string) =>
+  prefersChineseHymnal(preferredLanguage)
+    ? inReaderScript(hymn.chinese, preferredLanguage)
+    : hymn.english;
+
+// "12. Title", in the reader's script, with the hymnal's name after a hymn
+// from outside the church's two hymnals, so no one looks for it in the pew
+// hymnal.
 const formatHymn = (
   hymnalId: HymnalId,
   hymnNumber: number,
   title: string,
   preferredLanguage: string,
 ) => {
-  const text = `${hymnNumber}. ${title}`;
+  const text = `${hymnNumber}. ${getHymnTitle(hymnalId, title, preferredLanguage)}`;
   if (hymnalAdapters[hymnalId].primary) return text;
   const label = getHymnalShortLabel(hymnalId, preferredLanguage);
   return prefersChineseHymnal(preferredLanguage) ? `${text}（${label}）` : `${text} (${label})`;
@@ -496,7 +517,12 @@ export const resolveBulletinHymnPresentation = (
     submission.text,
     submission.declaredHymnalId,
   );
-  if (!source) return { displayText: submission.text, youtubeSearchQuery: submission.text };
+  if (!source) {
+    return {
+      displayText: inReaderScript(submission.text, preferredLanguage),
+      youtubeSearchQuery: submission.text,
+    };
+  }
 
   if (source.hymnalId !== preferredHymnalId) {
     const mappedPreferred = getMappedDestination(source, preferredHymnalId);
@@ -506,7 +532,12 @@ export const resolveBulletinHymnPresentation = (
       )?.title;
       if (preferredTitle) {
         return {
-          displayText: `${mappedPreferred.hymnNumber}. ${preferredTitle}`,
+          displayText: formatHymn(
+            preferredHymnalId,
+            mappedPreferred.hymnNumber,
+            preferredTitle,
+            preferredLanguage,
+          ),
           destination: mappedPreferred,
         };
       }
@@ -535,14 +566,14 @@ export const resolveBulletinHymnPresentation = (
     )?.title;
     return {
       displayText: alternateTitle
-        ? `${mappedAlternate.hymnNumber}. ${alternateTitle}`
-        : submission.text,
+        ? formatHymn(alternateHymnalId, mappedAlternate.hymnNumber, alternateTitle, preferredLanguage)
+        : inReaderScript(submission.text, preferredLanguage),
       destination: mappedAlternate,
     };
   }
 
   return {
-    displayText: submission.text,
+    displayText: inReaderScript(submission.text, preferredLanguage),
     destination: {
       hymnalId: source.hymnalId,
       route: getRoute(source.hymnalId),

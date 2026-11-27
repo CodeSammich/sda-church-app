@@ -107,3 +107,49 @@ export const BIBLE_TESTAMENT_NAMES: Readonly<
 /** The section a book is in. */
 export const getBibleSectionOfBook = (bookId: string) =>
   BIBLE_SECTIONS.find((section) => section.books.includes(bookId));
+
+/** A heading in the Bible's book list: a Testament's, or a section's under it. */
+export type BookListHeading = Readonly<{
+  heading: 'testament' | 'section';
+  /** Prefixed, so it can't match a book's id: "section:law". */
+  id: string;
+  name: string;
+}>;
+
+/**
+ * The Bible's book list with headings (#807), so a reader can find John
+ * without dragging through 66 names: each Testament's name, and under it each
+ * section's, as Offline Bible Audio groups its downloads. A section of one
+ * book, as Acts, is just the book there, so it has no heading here either: it
+ * would repeat the name on the row below it. A book in no section follows the
+ * one before it.
+ */
+export function getBookListRows<Book extends Readonly<{ id: string }>>(
+  books: readonly Book[],
+  language: SupportedLanguage,
+): (Book | BookListHeading)[] {
+  const rows: (Book | BookListHeading)[] = [];
+  let testament: BibleTestament | undefined;
+  let sectionId: string | undefined;
+  for (const book of books) {
+    const section = getBibleSectionOfBook(book.id);
+    if (section && section.testament !== testament) {
+      testament = section.testament;
+      rows.push({
+        heading: 'testament',
+        id: `testament:${testament}`,
+        name: BIBLE_TESTAMENT_NAMES[testament].name[language],
+      });
+    }
+    if (section && section.id !== sectionId) {
+      sectionId = section.id;
+      if (section.books.length > 1) {
+        rows.push({ heading: 'section', id: `section:${section.id}`, name: section.name[language] });
+      }
+    }
+    rows.push(book);
+  }
+  return rows;
+}
+
+export const isBookListHeading = (row: object): row is BookListHeading => 'heading' in row;
