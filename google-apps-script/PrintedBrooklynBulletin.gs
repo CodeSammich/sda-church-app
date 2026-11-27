@@ -152,14 +152,12 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
         appendBrooklynWorshipPanel_(cell, bulletin, true);
       },
       false,
-      function (leftCell, rightCell, qrCells) {
-        appendBrooklynGivingFooter_(leftCell, rightCell, qrCells);
+      // The same footer as Queens: the app code under Sabbath School, and
+      // giving under worship (#833). Brooklyn has no Zelle code.
+      function (appCell, givingTextCell, givingQrCells) {
+        appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'brooklyn');
       },
-      // Keep three physical QR positions so the future Mobile App asset stays
-      // in slot 1, ACH/card remains in slot 2, and Brooklyn's unused slot 3
-      // stays empty because Brooklyn has no Zelle QR code. The divider spacing
-      // matches the Queens regular footer.
-      { ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 },
+      getGivingFooterOptions_('brooklyn'),
     );
     appendBrooklynEncouragementPage_(body, bulletin);
   } else {
@@ -349,27 +347,6 @@ function appendBrooklynProgramTable_(cell, rows) {
 
 function printBrooklynPerson_(primary, fallback) {
   return printValue_(hasPrintValue_(primary) ? primary : fallback);
-}
-
-function appendBrooklynGivingFooter_(leftCell, rightCell, qrCells) {
-  leftCell.setPaddingTop(0);
-  leftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-  appendGivingText_(leftCell, { reuseLeadingParagraph: true });
-  if (qrCells && qrCells.length) {
-    appendGivingQrPlaceholderCells_(qrCells, {
-      compact: true,
-      location: 'brooklyn',
-      reuseLeadingParagraph: true,
-    });
-    return;
-  }
-  rightCell.setPaddingTop(0);
-  rightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-  appendGivingQrPlaceholders_(rightCell, {
-    compact: true,
-    location: 'brooklyn',
-    reuseLeadingParagraph: true,
-  });
 }
 
 function appendBrooklynClosingRows_(cell, bulletin) {

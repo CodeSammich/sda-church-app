@@ -81,10 +81,10 @@ the church's Workspace terms during annual maintenance.
 | `google-apps-script/BulletinApi.gs` | Public API, expected sheet columns, data joins, privacy filtering, and metadata translations |
 | `google-apps-script/BulletinScheduleMaintenance.gs` | Background `onOpen` maintenance, header protection, validation, hiding, and quarter expansion |
 | `google-apps-script/ScheduleAssignmentChecks.gs` | Same-day roster conflict highlights and Name Dictionary unknown-name warnings |
-| `google-apps-script/PrintedBulletin.gs` | Shared printed-bulletin code: Sheet menu and prompts, data preparation, Google Doc creation, page and table helpers, and the shared cover, giving, announcement, hymn, Bible, and QR helpers |
+| `google-apps-script/PrintedBulletin.gs` | Shared printed-bulletin code: Sheet menu and prompts, data preparation, Google Doc creation, page and table helpers, the giving footer Queens and Brooklyn share, and the shared cover, giving, announcement, hymn, Bible, and QR helpers |
 | `google-apps-script/PrintedCommunionBulletin.gs` | Communion service content both locations print: fixed Communion/Foot Washing readings, response hymn, and ceremony panels |
 | `google-apps-script/PrintedQueensBulletin.gs` | Queens Regular and Queens Communion page layouts |
-| `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn cover, Zoom, Sabbath School, worship, Communion, and giving footer layouts, and placing the Sabbath Encouragement spread |
+| `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn cover, Zoom, Sabbath School, worship, and Communion layouts, and placing the Sabbath Encouragement spread |
 | `google-apps-script/PrintedHymnLookup.gs` | Fills in a printed hymn's missing language, number and title, from `HymnalData.gs` |
 | `google-apps-script/SabbathEncouragement.gs` | 52-page Brooklyn encouragement rotation containing Ellen White quotations plus Bible/editorial/other source material, machine translation, direct Bible replacement, and the bilingual printed spread |
 | `google-apps-script/appsscript.json` | Apps Script runtime and web-app manifest |
@@ -995,7 +995,8 @@ never solve overflow by clipping the center of either panel.
 
 Queens Regular is two physical pages:
 
-1. left: Church at Study; right: Church at Worship, with the giving footer;
+1. left: Church at Study; right: Church at Worship, with the
+   [giving footer](#the-giving-footer) below them;
 2. left: announcements/schedule; right: shared cover.
 
 Queens Holy Communion is four physical pages in imposed order:
@@ -1016,12 +1017,44 @@ Brooklyn Regular is three physical pages:
 
 1. left: fellowship/service locations; right: shared three-location cover plus
    Mandarin-only Zoom information;
-2. left: Brooklyn Sabbath School; right: Brooklyn Sabbath Worship, with giving;
+2. left: Brooklyn Sabbath School; right: Brooklyn Sabbath Worship, with the
+   same [giving footer](#the-giving-footer) as Queens Regular;
 3. bilingual Sabbath Encouragement spread.
 
 The Brooklyn cover uses Brooklyn as the primary address while still highlighting
 all three locations. The Zoom rows are two on top and one centered below, with
 the topic before the day/time.
+
+### The giving footer
+
+Queens Regular and Brooklyn Regular share one footer under the Sabbath School
+and worship spread (#833):
+
+```text
+          Sabbath School                       Worship
+                                    ───────────────────────────────
+         [app QR code]               Tithes & Offerings  [ACH/card ]
+           下載 APP                  cash-offering notes  [ QR code ]
+      Download Mobile App            (Chinese, English)    ACH／信用卡
+                                                           ACH or card
+```
+
+- **Left half:** the Download Mobile App code on its own. The app isn't only a
+  way to give, so its code sits apart from the giving block. The half also has
+  room for a code that could later open the week's verse in the app (#768).
+- **Right half:** the Tithes & Offerings notes, with every digital giving code
+  beside them, under a rule over that half only. ACH/card goes to
+  AdventistGiving, which the app's Give page also opens.
+
+Each code has its own table column; a table nested in a cell keeps a blank line
+above it, which once pushed the captions onto a new page. The rule is the first
+line of each right-half cell, so it never crosses the fold. Turning Zelle on
+(#384) adds an 80-point column to the right half and narrows the notes, so
+check the fit with a long week before deploying it.
+
+Queens Holy Communion has no footer: its giving section is part of the worship
+page, under its own rule, with the three codes in one row (see
+[Giving QR slots](#giving-qr-slots)).
 
 ### Type
 
@@ -1257,7 +1290,7 @@ matching `SABBATH_BIBLE_BOOKS_`.
 
 ### Giving QR slots
 
-The code keeps three physical slots in stable order:
+The code lists three codes in stable order:
 
 ```text
 1. Mobile App
@@ -1265,15 +1298,17 @@ The code keeps three physical slots in stable order:
 3. Zelle
 ```
 
-A reserved slot prints nothing but keeps its space, so turning a code on or off
-doesn't reflow the bulletin. The same rules apply to Queens Regular, Queens Holy
-Communion, and Brooklyn:
+Queens Holy Communion prints them in one row, where a reserved slot prints
+nothing but keeps its space. The [giving footer](#the-giving-footer) of Queens
+Regular and Brooklyn puts the Mobile App code on the left half and the giving
+codes on the right half, where a reserved slot takes no room. The same rules
+apply to every layout:
 
 - **Mobile App** prints. Unlike the giving codes, it never falls back to the
   placeholder image: if its code isn't found, the slot stays blank.
 - **ACH/card** always prints.
 - **Zelle** stays reserved in Queens until the treasury confirms the address
-  (#384). Brooklyn has no Zelle destination, so its third slot is always empty.
+  (#384). Brooklyn has no Zelle destination, so it never prints one.
 
 Asset file names end in `_368x368.jpg`; the mobile-app caption is
 `Download Mobile App | 下載 APP`. The script finds each code by its exact file name
@@ -1387,7 +1422,7 @@ changes the URL and requires a coordinated mobile-app update.
 | All Chinese, or all English, prints in the wrong font | `PRINTED_BULLETIN_CJK_FONT` or `PRINTED_BULLETIN_LATIN_FONT` names a font Docs doesn't offer, typed by hand | Choose a font in **Printed Bulletin → Fonts…**, or **Default** |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` and `HymnalData.gs` |
-| QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
+| A QR code is missing | The slot is reserved (Zelle in Queens; Brooklyn has none), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
 | A pastor or elder prints without a title, or Communion rows print `TBD` | The name isn't in the `Leadership` tab, is spelled differently from the schedule or the `Name Dictionary`, or the tab or its `Pastors`/`Elders` header was renamed (a header must hold only the title) | Fix the [`Leadership` tab](#the-leadership-tab); **Extensions → Apps Script → Executions** logs a missing tab or column. No deploy is needed |
 | Brooklyn Communion is unavailable | Intentional safety/layout restriction | Use Queens Holy Communion or Brooklyn Regular; do not re-enable without a dedicated layout review |
 | Apps Script deploy fails after working previously | Workspace session-control reauthorization | Verify Trusted Apps and Exempt Trusted apps policy before rotating credentials |

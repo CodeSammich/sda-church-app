@@ -119,6 +119,10 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   bookletHorizontalMargin: 14,
   bookletHalfWidth: 368,
   bookletFoldGutter: 28,
+  // Each giving code's column on the footer's right half (#833), and the
+  // printed width of every footer code.
+  footerQrColumnWidth: 80,
+  footerQrImageMaxWidth: 50,
   // The cover art is a little smaller than before #603 to leave room for the
   // 10-point contact and Zoom lines below it.
   regularCoverImageMaxWidth: 460,
@@ -2638,69 +2642,103 @@ function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
   rightRenderer(rightCell);
 }
 
+/**
+ * The footer under the Sabbath School and worship spread (#833). The Download
+ * Mobile App code is on its own on the left half, so the app doesn't look like
+ * a way to give, and the half has room for a code that could later open the
+ * week's verse in the app (#768). The giving notes and the giving codes are on
+ * the right half, under a rule that spans only that half.
+ *
+ * Docs keeps a paragraph between two tables. It held the rule when the rule
+ * spanned the page. Now it only spaces the footer from the spread, and the
+ * rule is the first line of each right-half cell. A rule spans its own cell,
+ * and with no cell padding the cells' rules meet in one line.
+ *
+ * Each code has its own column. A table nested in a cell keeps a blank line
+ * above it, which pushed the QR captions onto a new page.
+ */
 function appendBookletFooter_(container, footerRenderer, footerOptions) {
-  var rule = container.appendHorizontalRule();
-  var ruleParent = rule.getParent();
-  if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
-    ruleParent.asParagraph().setLineSpacing(1);
-    ruleParent.asParagraph().setSpacingBefore(
-      footerOptions && footerOptions.ruleSpacingBefore
-        ? footerOptions.ruleSpacingBefore
-        : 0,
-    );
-    ruleParent.asParagraph().setSpacingAfter(0);
-    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
-  }
-  var qrColumns = footerOptions && footerOptions.qrColumns;
-  var qrCount = qrColumns ? Math.max(1, footerOptions.qrCount || 3) : 0;
-  var qrColumnIndexes = Array(qrCount).fill(0).map(function (_, index) {
-    return index + 2;
-  });
-  var footerTable = container.appendTable(
-    qrColumns ? [Array(qrCount + 2).fill('')] : [['', '', '']],
-  );
+  footerOptions = footerOptions || {};
+  var spacer = container.appendParagraph('');
+  spacer.setLineSpacing(1);
+  spacer.setSpacingBefore(footerOptions.ruleSpacingBefore || 0);
+  spacer.setSpacingAfter(0);
+  setPrintedRuleParagraphSize_(spacer);
+
+  var halfWidth = PRINTED_BULLETIN_CONFIG.bookletHalfWidth;
+  var qrWidth = PRINTED_BULLETIN_CONFIG.footerQrColumnWidth;
+  var qrCount = Math.max(0, footerOptions.givingQrCount || 0);
+  var footerTable = container.appendTable([Array(qrCount + 3).fill('')]);
   footerTable.setBorderWidth(0);
-  footerTable.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  footerTable.setColumnWidth(0, halfWidth);
   footerTable.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
-  if (qrColumns) {
-    qrColumnIndexes.forEach(function (columnIndex) {
-      footerTable.setColumnWidth(
-        columnIndex,
-        Math.floor((PRINTED_BULLETIN_CONFIG.bookletHalfWidth - 8) / qrCount),
-      );
-    });
-  } else {
-    footerTable.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  footerTable.setColumnWidth(2, halfWidth - qrWidth * qrCount);
+  var cells = [footerTable.getCell(0, 0), footerTable.getCell(0, 1), footerTable.getCell(0, 2)];
+  for (var index = 0; index < qrCount; index += 1) {
+    footerTable.setColumnWidth(index + 3, qrWidth);
+    cells.push(footerTable.getCell(0, index + 3));
   }
-  var footerLeftCell = footerTable.getCell(0, 0);
-  var footerGutterCell = footerTable.getCell(0, 1);
-  var footerRightCell = qrColumns ? null : footerTable.getCell(0, 2);
-  var footerQrCells = qrColumns
-    ? qrColumnIndexes.map(function (columnIndex) {
-        return footerTable.getCell(0, columnIndex);
-      })
-    : [];
-  [footerLeftCell, footerGutterCell].concat(footerRightCell ? [footerRightCell] : footerQrCells)
-    .forEach(function (footerCell) {
-      footerCell.clear();
-      footerCell.setPaddingTop(0);
-      footerCell.setPaddingBottom(0);
-      footerCell.setPaddingLeft(0);
-      footerCell.setPaddingRight(0);
-    });
-  // The giving text's longest lines fill the whole panel, which put them only
-  // about 15pt (5mm) from the sheet edge. Many printers can't print the outer
-  // 4–5mm, so keep them about 20pt in, like the rest of the page.
-  footerLeftCell.setPaddingLeft(6);
-  footerLeftCell.setPaddingRight(6);
-  footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-  if (footerRightCell) {
-    footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-  }
-  footerQrCells.forEach(function (footerCell) {
+  cells.forEach(function (footerCell) {
+    footerCell.clear();
+    footerCell.setPaddingTop(0);
+    footerCell.setPaddingBottom(0);
+    footerCell.setPaddingLeft(0);
+    footerCell.setPaddingRight(0);
     footerCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
   });
-  footerRenderer(footerLeftCell, footerRightCell, footerQrCells);
+  var appCell = cells[0];
+  var givingTextCell = cells[2];
+  var givingQrCells = cells.slice(3);
+  // The app half's first line is as tall as the rule's, so the codes on the
+  // two halves line up.
+  var appLeadingParagraph = getLeadingEmptyParagraph_(appCell);
+  if (appLeadingParagraph) {
+    appLeadingParagraph.setLineSpacing(1);
+    appLeadingParagraph.setSpacingBefore(0);
+    appLeadingParagraph.setSpacingAfter(0);
+    setPrintedRuleParagraphSize_(appLeadingParagraph);
+  }
+  [givingTextCell].concat(givingQrCells).forEach(appendPrintedFooterRule_);
+  footerRenderer(appCell, givingTextCell, givingQrCells);
+}
+
+// Puts the rule in the paragraph clear() leaves at the top of a footer cell.
+function appendPrintedFooterRule_(cell) {
+  var paragraph = getLeadingEmptyParagraph_(cell) || cell.insertParagraph(0, '');
+  paragraph.appendHorizontalRule();
+  paragraph.setLineSpacing(1);
+  paragraph.setSpacingBefore(0);
+  paragraph.setSpacingAfter(0);
+  setPrintedRuleParagraphSize_(paragraph);
+}
+
+/**
+ * Fills the footer: the app code on the left half, and the giving notes and
+ * codes, under the rule, on the right. Queens and Brooklyn share it. The rule
+ * is each right-half cell's first line, so nothing here reuses or clears it.
+ */
+function appendGivingFooter_(appCell, givingTextCell, givingQrCells, location) {
+  appendGivingQrPlaceholderCell_(appCell, getPrintedMobileAppQrItem_(), {
+    imageMaxWidth: PRINTED_BULLETIN_CONFIG.footerQrImageMaxWidth,
+    location: location,
+  });
+  appendGivingText_(givingTextCell);
+  getPrintedFooterGivingQrItems_(location).forEach(function (item, index) {
+    if (givingQrCells[index]) {
+      appendGivingQrPlaceholderCell_(givingQrCells[index], item, {
+        imageMaxWidth: PRINTED_BULLETIN_CONFIG.footerQrImageMaxWidth,
+        location: location,
+      });
+    }
+  });
+}
+
+// The footer's options for a location: one right-half column per giving code.
+function getGivingFooterOptions_(location) {
+  return {
+    ruleSpacingBefore: 4,
+    givingQrCount: getPrintedFooterGivingQrItems_(location).length,
+  };
 }
 
 function appendPrintedBulletinLogo_(cell) {
@@ -2961,30 +2999,6 @@ function appendGivingQrPlaceholders_(cell, options) {
   });
 }
 
-function appendGivingQrPlaceholderCells_(cells, options) {
-  options = options || {};
-  var compact = Boolean(options.compact);
-  var imageMaxWidth = compact ? 50 : 58;
-  var cellPadding = compact ? 0 : 3;
-  getGivingQrItems_(options.location || 'queens').forEach(function (item, index) {
-    var tableCell = cells[index];
-    if (!tableCell) {
-      return;
-    }
-    tableCell.clear();
-    tableCell.setPaddingTop(cellPadding);
-    tableCell.setPaddingBottom(cellPadding);
-    tableCell.setPaddingLeft(0);
-    tableCell.setPaddingRight(0);
-    tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    appendGivingQrPlaceholderCell_(tableCell, item, {
-      imageMaxWidth: imageMaxWidth,
-      location: options.location || 'queens',
-      reuseLeadingParagraph: Boolean(options.reuseLeadingParagraph),
-    });
-  });
-}
-
 function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   options = options || {};
   if (item && item.reserved) {
@@ -3020,9 +3034,12 @@ function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   appendCompactCenteredText_(tableCell, item.label, PRINTED_BULLETIN_TYPE.bodySize, true);
 }
 
+// The three QR slots of the Communion giving panel, in order. The regular
+// footer puts the app code on its own half and only the giving codes under the
+// rule (getPrintedFooterGivingQrItems_).
 function getGivingQrItems_(location) {
   var items = [
-    { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' },
+    getPrintedMobileAppQrItem_(),
     {
       label: printedBilingualText_('ACH or card', 'ACH／信用卡'),
       kind: 'adventistGiving',
@@ -3043,6 +3060,22 @@ function getGivingQrItems_(location) {
   // address (#384). Leave its definition above intact so restoring it later
   // only requires removing its reserved flag.
   return [items[0], items[1], { kind: 'zelle', reserved: true }];
+}
+
+/**
+ * The giving codes on the footer's right half: ACH/card, and Zelle once it's
+ * no longer reserved (#384). A reserved slot takes no room there. Turning
+ * Zelle on adds a column to the right half and narrows the giving notes, so
+ * check the fit before turning it on.
+ */
+function getPrintedFooterGivingQrItems_(location) {
+  return getGivingQrItems_(location).filter(function (item) {
+    return item.kind !== 'mobileApp' && !item.reserved;
+  });
+}
+
+function getPrintedMobileAppQrItem_() {
+  return { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' };
 }
 
 function getPrintedMobileAppQrLabel_() {

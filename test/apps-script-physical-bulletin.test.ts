@@ -1370,6 +1370,15 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(runInContext(`getGivingQrItems_('brooklyn')[0].label`, context)).toBe(
       '下載 APP\nDownload Mobile App',
     );
+    // The footer keeps the app code apart from giving (#833), and a reserved
+    // slot takes no room under the rule.
+    for (const location of ['queens', 'brooklyn']) {
+      expect(JSON.parse(runInContext(
+        `JSON.stringify(getPrintedFooterGivingQrItems_('${location}').map(function (item) { return item.kind; }))`,
+        context,
+      ) as string)).toEqual(['adventistGiving']);
+    }
+    expect(runInContext(`getPrintedMobileAppQrItem_().kind`, context)).toBe('mobileApp');
   });
 
   it('leaves the mobile app slot blank, with no placeholder, when its code is missing', () => {
@@ -1918,11 +1927,42 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(noChair('Invocation')).toBe('孫馬可\nMark Sun');
   });
 
-  it('keeps the giving text in from the sheet edge without padding the QR cells', () => {
-    const makeCell = () => {
+  // The footer under the Sabbath School and worship spread (#833): the app code
+  // alone on the left half, and the giving notes and codes on the right half,
+  // under a rule over that half only.
+  const renderFooter = (givingQrCount: number) => {
+    const makeParagraph = (owner: string) => {
+      const paragraph = {
+        owner,
+        rule: false,
+        size: 0,
+        text: '',
+        getType: () => 'PARAGRAPH',
+        getText: () => paragraph.text,
+        asParagraph: () => paragraph,
+        appendHorizontalRule: () => {
+          paragraph.rule = true;
+          return {};
+        },
+        setLineSpacing: () => undefined,
+        setSpacingBefore: () => undefined,
+        setSpacingAfter: () => undefined,
+        setAttributes: (attributes: Record<string, number>) => {
+          paragraph.size = attributes.FONT_SIZE;
+        },
+      };
+      return paragraph;
+    };
+    const makeCell = (column: number) => {
       const cell = {
+        column,
         padding: {} as Record<string, number>,
-        clear: () => undefined,
+        children: [] as Array<ReturnType<typeof makeParagraph>>,
+        clear: () => {
+          cell.children = [makeParagraph('cell ' + column)];
+        },
+        getNumChildren: () => cell.children.length,
+        getChild: (index: number) => cell.children[index],
         setVerticalAlignment: () => undefined,
         setPaddingTop: (value: number) => (cell.padding.top = value),
         setPaddingBottom: (value: number) => (cell.padding.bottom = value),
@@ -1931,33 +1971,88 @@ describe('printed bulletin Apps Script helpers', () => {
       };
       return cell;
     };
-    const cells = Array.from({ length: 5 }, makeCell);
+    const bodyParagraphs: Array<ReturnType<typeof makeParagraph>> = [];
+    const widths: number[] = [];
+    let tableShape: string[][] = [];
+    let cells: Array<ReturnType<typeof makeCell>> = [];
     const container = {
-      appendHorizontalRule: () => ({ getParent: () => null }),
-      appendTable: () => ({
-        setBorderWidth: () => undefined,
-        setColumnWidth: () => undefined,
-        getCell: (_row: number, column: number) => cells[column],
-      }),
+      appendHorizontalRule: () => {
+        throw new Error('the rule must not span the whole page');
+      },
+      appendParagraph: () => {
+        const paragraph = makeParagraph('body');
+        bodyParagraphs.push(paragraph);
+        return paragraph;
+      },
+      appendTable: (rows: string[][]) => {
+        tableShape = rows;
+        cells = rows[0].map((_value, column) => makeCell(column));
+        return {
+          setBorderWidth: () => undefined,
+          setColumnWidth: (column: number, width: number) => (widths[column] = width),
+          getCell: (_row: number, column: number) => cells[column],
+        };
+      },
     };
+    const rendered: unknown[] = [];
     const context = loadAppsScript({
-      DocumentApp: { VerticalAlignment: { TOP: 'TOP' }, ElementType: { PARAGRAPH: 'PARAGRAPH' } },
+      DocumentApp: {
+        VerticalAlignment: { TOP: 'TOP' },
+        ElementType: { PARAGRAPH: 'PARAGRAPH' },
+        Attribute: { FONT_SIZE: 'FONT_SIZE' },
+      },
     });
-
+    Object.assign(context, {
+      testContainer: container,
+      testRenderer: (appCell: { column: number }, textCell: { column: number }, qrCells: Array<{ column: number }>) =>
+        rendered.push(appCell.column, textCell.column, qrCells.map((cell) => cell.column)),
+    });
     runInContext(
-      `appendBookletFooter_(testContainer, function () {}, { qrColumns: true, qrCount: 3 })`,
-      Object.assign(context, { testContainer: container }),
+      `appendBookletFooter_(testContainer, testRenderer, { ruleSpacingBefore: 4, givingQrCount: ${givingQrCount} })`,
+      context,
     );
+    return { bodyParagraphs, widths, tableShape, cells, rendered };
+  };
 
-    const [left, gutter, ...qr] = cells;
-    expect(left.padding).toEqual({ top: 0, bottom: 0, left: 6, right: 6 });
-    for (const cell of [gutter, ...qr]) {
+  it('puts the app code on the left half and the giving block, under the rule, on the right', () => {
+    const { bodyParagraphs, widths, tableShape, cells, rendered } = renderFooter(1);
+
+    // One row: the app half, the fold, the giving notes, and the ACH/card code.
+    expect(tableShape).toEqual([['', '', '', '']]);
+    expect(widths).toEqual([368, 28, 288, 80]);
+    // Together the giving columns are exactly the right half, so they can't
+    // run past it.
+    expect(widths[2] + widths[3]).toBe(widths[0]);
+    expect(rendered).toEqual([0, 2, [3]]);
+
+    // The paragraph between the spread and the footer only spaces them.
+    expect(bodyParagraphs).toHaveLength(1);
+    expect(bodyParagraphs[0].rule).toBe(false);
+    // The rule is the first line of each right-half cell, and only those.
+    const ruled = cells.map((cell) => cell.children.some((paragraph) => paragraph.rule));
+    expect(ruled).toEqual([false, false, true, true]);
+    for (const cell of [cells[2], cells[3]]) {
+      expect(cell.children[0].rule).toBe(true);
+      expect(cell.children[0].size).toBe(3);
+    }
+    // The app half's first line is as tall as the rule's, so the codes line up.
+    expect(cells[0].children[0].size).toBe(3);
+    // No padding, so the two cells' rules meet in one line.
+    for (const cell of cells) {
       expect(cell.padding).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
     }
   });
 
-  it('gives the Queens and Brooklyn giving dividers the same top spacing', () => {
-    const footerOptions: Record<string, unknown> = {};
+  it('splits the right half among the giving codes when Zelle is turned on', () => {
+    const { widths, rendered } = renderFooter(2);
+
+    expect(widths).toEqual([368, 28, 208, 80, 80]);
+    expect(widths[2] + widths[3] + widths[4]).toBe(widths[0]);
+    expect(rendered).toEqual([0, 2, [3, 4]]);
+  });
+
+  it('gives Queens and Brooklyn the same footer', () => {
+    const footers: Record<string, unknown> = {};
     const context = loadAppsScript({});
     Object.assign(context, {
       appendBookletPage_: (
@@ -1965,12 +2060,20 @@ describe('printed bulletin Apps Script helpers', () => {
         _left: unknown,
         _right: unknown,
         _isFirstPage: boolean,
-        footerRenderer?: unknown,
-        options?: { ruleSpacingBefore?: number },
+        footerRenderer?: (app: unknown, text: unknown, qr: unknown) => void,
+        options?: unknown,
       ) => {
-        if (footerRenderer) footerOptions[context.currentLocation as string] = options;
+        if (!footerRenderer) return;
+        footerRenderer('app cell', 'text cell', ['qr cell']);
+        footers[context.currentLocation as string] = {
+          options,
+          calls: (context.footerCalls as unknown[]).splice(0),
+        };
       },
       appendBrooklynEncouragementPage_: () => undefined,
+      footerCalls: [],
+      appendGivingFooter_: (...args: unknown[]) =>
+        (context.footerCalls as unknown[]).push(args),
     });
 
     Object.assign(context, { currentLocation: 'queens' });
@@ -1978,51 +2081,44 @@ describe('printed bulletin Apps Script helpers', () => {
     Object.assign(context, { currentLocation: 'brooklyn' });
     runInContext(`renderBrooklynPrintedBulletinDocument_({}, {}, {}, 'regular')`, context);
 
-    expect(footerOptions).toEqual({
-      queens: { ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 },
-      brooklyn: { ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 },
-    });
-  });
-
-  it('puts each Queens QR code in its own footer column and reuses leading paragraphs', () => {
-    const calls: Array<[string, unknown, unknown]> = [];
-    const footerOptions: unknown[] = [];
-    const context = loadAppsScript({});
-    Object.assign(context, {
-      appendBookletPage_: (
-        _body: unknown,
-        _left: unknown,
-        _right: unknown,
-        _isFirstPage: boolean,
-        footerRenderer?: (left: unknown, right: unknown, qrCells: unknown) => void,
-        options?: unknown,
-      ) => {
-        if (!footerRenderer) return;
-        footerOptions.push(options);
-        footerRenderer('left cell', null, ['qr 1', 'qr 2', 'qr 3']);
+    // The same rule spacing, and one giving code (ACH/card) on each: Zelle is
+    // reserved in Queens (#384) and Brooklyn has none.
+    expect(footers).toEqual({
+      queens: {
+        options: { ruleSpacingBefore: 4, givingQrCount: 1 },
+        calls: [['app cell', 'text cell', ['qr cell'], 'queens']],
       },
-      appendGivingText_: (cell: unknown, options: unknown) => calls.push(['text', cell, options]),
-      appendGivingQrPlaceholderCells_: (cells: unknown, options: unknown) =>
-        calls.push(['qr', cells, options]),
+      brooklyn: {
+        options: { ruleSpacingBefore: 4, givingQrCount: 1 },
+        calls: [['app cell', 'text cell', ['qr cell'], 'brooklyn']],
+      },
     });
-
-    runInContext(
-      `renderQueensRegularPrintedBulletinDocument_({}, {}, {}, 'regular')`,
-      context,
-    );
-
-    // A table nested in the right footer cell keeps a blank line above it,
-    // which pushed the QR captions onto a new page.
-    expect(footerOptions).toEqual([{ ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 }]);
-    expect(calls).toEqual([
-      ['text', 'left cell', { reuseLeadingParagraph: true }],
-      [
-        'qr',
-        ['qr 1', 'qr 2', 'qr 3'],
-        { compact: true, location: 'queens', reuseLeadingParagraph: true },
-      ],
-    ]);
   });
+
+  it.each(['queens', 'brooklyn'])(
+    'fills the %s footer: the app code on the left, the giving notes and ACH/card on the right',
+    (location) => {
+      const calls: Array<[string, unknown, unknown]> = [];
+      const context = loadAppsScript({});
+      Object.assign(context, {
+        appendGivingText_: (cell: unknown, options: unknown) => calls.push(['text', cell, options]),
+        appendGivingQrPlaceholderCell_: (cell: unknown, item: { kind: string }, options: unknown) =>
+          calls.push(['qr ' + item.kind, cell, options]),
+      });
+
+      runInContext(
+        `appendGivingFooter_('app cell', 'text cell', ['qr cell'], '${location}')`,
+        context,
+      );
+
+      // Nothing reuses a cell's first paragraph: on the right it's the rule.
+      expect(calls).toEqual([
+        ['qr mobileApp', 'app cell', { imageMaxWidth: 50, location }],
+        ['text', 'text cell', undefined],
+        ['qr adventistGiving', 'qr cell', { imageMaxWidth: 50, location }],
+      ]);
+    },
+  );
 
   it('routes Queens regular, Communion, and Brooklyn output through separate renderers', () => {
     const calls: string[] = [];

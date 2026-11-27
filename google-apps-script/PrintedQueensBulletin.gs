@@ -41,13 +41,11 @@ function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulleti
       appendWorshipPanel_(cell, bulletin, true);
     },
     true,
-    function (leftCell, rightCell, qrCells) {
-      appendGivingFooter_(leftCell, qrCells, 'queens');
+    // The app code under Sabbath School, and giving under worship (#833).
+    function (appCell, givingTextCell, givingQrCells) {
+      appendGivingFooter_(appCell, givingTextCell, givingQrCells, 'queens');
     },
-    // Put each QR code in its own footer column, as Brooklyn does. A table
-    // nested in a cell keeps a blank line above it, which pushed the QR
-    // captions onto a new page.
-    { ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 },
+    getGivingFooterOptions_('queens'),
   );
   appendBookletPage_(
     body,
@@ -77,18 +75,6 @@ function appendAnnouncementsPanel_(cell, bulletin, nextBulletin) {
     getPhysicalPrintedAnnouncementEntries_(bulletin, 'queens'),
   );
   appendScheduleTable_(cell, bulletin, nextBulletin);
-}
-
-function appendGivingFooter_(leftCell, qrCells, location) {
-  // clear() leaves an empty default-size paragraph in each footer cell. Reuse
-  // it, as the Brooklyn footer does, so it doesn't open a gap under the
-  // divider and push the QR captions onto a new page.
-  appendGivingText_(leftCell, { reuseLeadingParagraph: true });
-  appendGivingQrPlaceholderCells_(qrCells, {
-    compact: true,
-    location: location || 'queens',
-    reuseLeadingParagraph: true,
-  });
 }
 
 function appendScheduleTable_(cell, bulletin, nextBulletin) {
