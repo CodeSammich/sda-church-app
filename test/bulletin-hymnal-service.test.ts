@@ -199,7 +199,7 @@ describe('bulletin hymnal resolution', () => {
     expect(
       resolveBulletinHymnDisplayText({ english: 'Wonderful Words of Life 286', chinese: '' }, 'en'),
     ).toBe('286. Wonderful Words of Life');
-    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第10首' }, 'zh')).toBe('10. 圣徒崇拜');
+    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第10首' }, 'zh')).toBe('10. 聖徒崇拜');
     expect(resolveBulletinHymnDisplayText({ english: '', chinese: '165 奇哉生命之道' }, 'zh')).toBe(
       '165. 奇哉生命之道',
     );
@@ -215,7 +215,7 @@ describe('bulletin hymnal resolution', () => {
         });
       }
     }
-    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '505' }, 'zh')).toBe('505. 阿门');
+    expect(resolveBulletinHymnDisplayText({ english: '', chinese: '505' }, 'zh')).toBe('505. 阿門');
     // A Sabbath School cell's bare number is a Chinese hymnal number too.
     expect(resolveBulletinHymnPresentation(toBulletinHymnText('520'), 'zh').destination).toBeUndefined();
     // The English cell still reads it as the 1985's.
@@ -465,7 +465,7 @@ describe('bulletin hymnal resolution', () => {
         route: '/home/chinese-506-hymnal',
       });
       expect(service.resolveBulletinHymnDisplayText({ english: '', chinese: '頌主造化' }, 'zh')).toBe(
-        '10. 颂主造化（707 新編簡譜）',
+        '10. 頌主造化（707 新編簡譜）',
       );
     });
 
@@ -488,7 +488,7 @@ describe('bulletin hymnal resolution', () => {
         hymnNumber: 696,
         route: '/home/chinese-707-standard-hymnal',
       });
-      expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第505首' }, 'zh')).toBe('505. 阿门');
+      expect(resolveBulletinHymnDisplayText({ english: '', chinese: '第505首' }, 'zh')).toBe('505. 阿門');
       expect(resolveBulletinHymnDestination({ english: '', chinese: '第506首' }, 'zh')).toEqual({
         hymnalId: 'chinese-hymnal-506',
         hymnNumber: 506,
