@@ -292,7 +292,10 @@ simple, blended colors.
     page's top matches its bottom. Their icons are grey, like the tab bar's other tabs;
     blue, or gold in the dark theme, marks what opens a list or shows a state: the back
     button, the translation button's names and arrow, like the Bible card's pills, and
-    the saved-verse button once a verse is saved. The translation button has no 文A icon
+    the saved-verse button once a verse is saved. A page's title stays on one line,
+    drawn a little smaller where it must be, down to 80%, and past that wraps only
+    between its words, in Chinese too: at 150%, 中文讚美詩 — 505 版 beside the
+    search button left 版 alone on a line (#797). The translation button has no 文A icon
     (from 1.7.0): each translation's language badge, EN or 繁, about the icon's size and
     in the pills' colors, says which language it is, and leaves room for the names.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
@@ -364,6 +367,13 @@ simple, blended colors.
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`
   (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
+- **Switches:** A setting that's on or off, such as the Bible's Dual-language reading and
+  pinyin, is one row: its name, a line about it, and a switch. A tap anywhere on the row
+  turns it on or off, since older members tap the words, not the small switch (#798). A
+  screen reader hears one switch, with its name, the line as its hint, and whether it's
+  on. Code draws it with `SwitchRow` (`components/SwitchRow.tsx`); Offline Bible Audio's
+  Download notifications row, below, was already one control, with the same switch
+  (`MenuCardSwitchVisual`). `test/switch-row.test.ts` fails on a switch drawn alone.
 - **Notifications:** The app's notifications are few, quiet, and only ones the member asked
   for (Tenet 7). Today there's one kind: a Bible audio download the member started (#610).
   - **What they say, by phone.** None is needed for a download to go on in the

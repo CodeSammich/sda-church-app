@@ -163,6 +163,15 @@ English hymns and their 505 equivalents, the 505 first for a Chinese translation
 includes every verse). A hymn's videos open on YouTube (see
 [5.5](#55-videos-with-singing-and-piano-only)); the app stores no third-party media.
 
+The Chinese hymnals' titles are stored in Simplified, as their web pages have them. The
+app shows them in the reader's script (#795): in Traditional in 繁體中文, on the hymnal
+page, in its search results, in a verse's hymns and in the bulletin (`getHymnTitle` in
+`features/hymnal/HymnalLabels.ts`). The conversion is opencc-js's list of characters
+with a few phrases (`services/ChineseScript.ts`), not its whole converter, which is
+[1.1 MB](https://unpkg.com/browse/opencc-js@1.4.2/dist/esm/). A test checks that every
+title comes out as the printed bulletin's converter makes it
+(`scripts/export-hymn-bank.cjs`). Search matches either script, as before.
+
 ### 5.2 External routing
 
 `getEnglishHymnUrl` owns URL construction and is intentionally testable without opening a
@@ -183,7 +192,10 @@ asset.
 
 The hymnal page (`features/hymnal/HymnalScreen.tsx`), which lists the English hymnal
 alongside the Chinese ones, retains each hymnal's search while the user visits the external
-page and returns. The Bible link's way back reopens the page with the same hymn or search.
+page and returns. The one hymn a link opens, such as the bulletin's **Open hymn**, says
+under its title that it opens on a web page, and for a Chinese hymnal that the words there
+are in Simplified, since no Traditional copy is online (#795). Every hymn's title says the
+same to a screen reader. The Bible link's way back reopens the page with the same hymn or search.
 This preserves the user's place without importing the external content into the app.
 
 ### 5.4 Cross-references between hymnals

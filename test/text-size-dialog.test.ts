@@ -1,9 +1,21 @@
-import { TextSizeDialog } from '@/components/TextSizeDialog';
+import { TextSizeDialog, textSizeStepsFitBesideSlider } from '@/components/TextSizeDialog';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { createElement } from 'react';
 import { StyleSheet } from 'react-native';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import { renderWithPreferences } from './helpers/render-preferences';
+
+// React Native's test window, which the other tests here see, until a test
+// sets a phone's.
+const TEST_WINDOW = { fontScale: 2, height: 1334, scale: 2, width: 750 };
+let mockWindow = TEST_WINDOW;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => mockWindow,
+}));
+afterEach(() => {
+  mockWindow = TEST_WINDOW;
+});
 
 const languageCases = [
   {
@@ -14,7 +26,7 @@ const languageCases = [
     increase: 'Increase text size by five percent',
     reset: 'Reset to 125%',
     removedPreviewLabel: 'Live preview',
-    preview: '“I was blind, but now I see.” — John 9:25',
+    preview: '“I was blind, but now I see.” — John\u00a09:25',
   },
   {
     language: 'zh' as const,
@@ -24,7 +36,7 @@ const languageCases = [
     increase: '將字體大小增加百分之五',
     reset: '重設為 125%',
     removedPreviewLabel: '即時預覽',
-    preview: '「我從前是眼瞎的，如今能看見了。」— 約翰福音 9:25',
+    preview: '「我從前是眼瞎的，如今能看見了。」— 約\u2060翰\u2060福\u2060音\u00a09:25',
   },
   {
     language: 'zh-cn' as const,
@@ -34,7 +46,7 @@ const languageCases = [
     increase: '将字体大小增加百分之五',
     reset: '重置为 125%',
     removedPreviewLabel: '实时预览',
-    preview: '“我从前是眼瞎的，如今能看见了。”— 约翰福音 9:25',
+    preview: '“我从前是眼瞎的，如今能看见了。”— 约\u2060翰\u2060福\u2060音\u00a09:25',
   },
   {
     language: 'es' as const,
@@ -45,7 +57,7 @@ const languageCases = [
     increase: 'Aumentar el tamaño del texto en cinco por ciento',
     reset: 'Restablecer al 125%',
     removedPreviewLabel: 'Vista previa en vivo',
-    preview: '“Yo era ciego y ahora veo.” — Juan 9:25',
+    preview: '“Yo era ciego y ahora veo.” — Juan\u00a09:25',
   },
 ];
 
@@ -197,5 +209,37 @@ describe('TextSizeDialog', () => {
     expect(setTextScale).toHaveBeenLastCalledWith(1.35);
     expect(screen.queryByText('无法保存字体大小。请再试一次。')).toBeNull();
     expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('keeps the sample in view at 150% on a phone, with the steps beside the slider (#797)', async () => {
+    // The two rows of steps and 100%/200% below the slider pushed the sample
+    // past the height limit at 150%, cut off at 9:25. The steps sit either
+    // side of the slider wherever it keeps 120 points: a phone at 150%, but not
+    // a 320-point iPad window, nor the 384-point Android phone at 200%.
+    expect(textSizeStepsFitBesideSlider(345.6 - 48, 1.5)).toBe(true);
+    expect(textSizeStepsFitBesideSlider(362 - 48, 1.5)).toBe(true);
+    expect(textSizeStepsFitBesideSlider(288 - 48, 1.5)).toBe(false);
+    expect(textSizeStepsFitBesideSlider(345.6 - 48, 2)).toBe(false);
+    expect(textSizeStepsFitBesideSlider(504 - 48, 2)).toBe(true);
+
+    // The Android phone the key screens use.
+    mockWindow = { fontScale: 1, height: 853, scale: 2, width: 384 };
+    const beside = await renderWithPreferences(
+      createElement(TextSizeDialog, { onDismiss: jest.fn(), visible: true }),
+      { language: 'zh', textScale: 1.5 },
+    );
+    expect(beside.queryByText('100%')).toBeNull();
+    expect(beside.getByLabelText('將字體大小減少百分之五')).toBeTruthy();
+    expect(beside.getByLabelText('將字體大小增加百分之五')).toBeTruthy();
+    // 約翰福音 9:25 moves to the next line whole, never with 9:25 alone.
+    expect(beside.getByText('「我從前是眼瞎的，如今能看見了。」— 約\u2060翰\u2060福\u2060音\u00a09:25')).toBeTruthy();
+    beside.unmount();
+
+    const below = await renderWithPreferences(
+      createElement(TextSizeDialog, { onDismiss: jest.fn(), visible: true }),
+      { textScale: 2 },
+    );
+    expect(below.getByText('100%')).toBeTruthy();
+    expect(below.getByText('200%')).toBeTruthy();
   });
 });

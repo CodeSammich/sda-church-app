@@ -87,6 +87,14 @@ The resolver looks in every hymnal on the hymnal page (`HYMNALS` in
 Only the 1985 and the 505 have a cross-reference table, so a 506 or 707 hymn shows in
 Chinese whatever the app's language.
 
+### The reader's script (#795)
+
+The hymnals keep their Chinese titles in Simplified, and staff type the bulletin's Chinese
+in Traditional, as the printed bulletin has it. `displayText` is in the reader's script
+either way: a hymnal's title in Traditional for 繁體中文 (`getHymnTitle`), and text as
+typed, such as a song no hymnal has, in Simplified for 简体中文.
+`youtubeSearchQuery` stays as typed. The printed bulletin stays in Traditional.
+
 ### One-cell hymns
 
 Each Sabbath School hymn has a single cell in the weekly sheet, typed in either
@@ -126,7 +134,8 @@ in either cell goes out blank, so the app shows its own TBD and no YouTube searc
 
 `Hymn of Praise` and `Hymn of Response` are ordinary examples of this flow. The Queens
 doxology, pastoral prayer, and postlude also use the presentation resolver for routing,
-but deliberately retain their church-approved fixed wording for display.
+but deliberately retain their church-approved fixed wording for display, in Simplified
+for a 简体中文 reader (`getFixedHymnDisplayText`).
 
 ## Changing or adding a primary hymnal
 

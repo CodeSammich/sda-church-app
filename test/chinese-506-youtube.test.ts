@@ -46,6 +46,8 @@ describe('Chinese 506 hymnal recordings', () => {
         hymn,
         highlighted: false,
         labels: {
+          hymnTitle: (_hymnalId, title) => title,
+          opensOnWebPage: () => '',
           withSinging: 'With singing',
           pianoOnly: 'Piano only',
           youtubeHint: '',

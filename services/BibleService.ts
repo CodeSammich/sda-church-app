@@ -711,10 +711,20 @@ interface FetchBibleTranslatedEdition {
   name: string;
   englishName: string;
   language: string;
-  attribution: string;
+  /** The credit at the end of each chapter, in the app's language (#807). */
+  attribution: Readonly<Record<SupportedLanguage, string>>;
   /** The text ships with the app, so it opens with no network. */
   bundled: BundledBibleCollection;
 }
+
+// The 1919 CUV is corrected from WordProject's copy (docs/LEGAL.md), hence
+// "adapted": 校訂, revised against other copies, in Chinese.
+const CUV_1919_ATTRIBUTION = {
+  en: 'Public domain (1919). Text adapted from WordProject.',
+  zh: '公有領域（1919）。經文取自 WordProject，並經校訂。',
+  'zh-cn': '公有领域（1919）。经文取自 WordProject，并经校订。',
+  es: 'Dominio público (1919). Texto adaptado de WordProject.',
+} as const;
 
 /**
  * Translated editions in fetch(bible)'s plain-text book format.
@@ -735,24 +745,39 @@ const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
     name: '和合本（1919）',
     englishName: 'Chinese Union Version, 1919 (traditional)',
     language: 'cmn',
-    attribution: 'Public domain (1919). Text adapted from WordProject.',
+    attribution: CUV_1919_ATTRIBUTION,
     bundled: 'cuv1919/hant',
   },
   cmn_cu1: {
     name: '和合本（1919）',
     englishName: 'Chinese Union Version, 1919 (simplified)',
     language: 'cmn',
-    attribution: 'Public domain (1919). Text adapted from WordProject.',
+    attribution: CUV_1919_ATTRIBUTION,
     bundled: 'cuv1919/hans',
   },
   spa_r09: {
     name: 'Reina Valera',
     englishName: 'Reina-Valera 1909',
     language: 'spa',
-    attribution: 'Public domain. Text provided by fetch(bible).',
+    attribution: {
+      en: 'Public domain. Text provided by fetch(bible).',
+      zh: '公有領域。經文由 fetch(bible) 提供。',
+      'zh-cn': '公有领域。经文由 fetch(bible) 提供。',
+      es: 'Dominio público. Texto proporcionado por fetch(bible).',
+    },
     bundled: 'rv1909',
   },
 };
+
+/**
+ * The credit at the end of a chapter, in the app's language (#807): a
+ * Chinese reader saw it in English. The bundled editions carry it in each
+ * language; a downloaded translation's comes from its source, as it is.
+ */
+export const getTranslationAttribution = (
+  translation: Pick<Translation, 'id' | 'attribution'>,
+  language: SupportedLanguage,
+) => FETCH_BIBLE_TRANSLATED_EDITIONS[translation.id]?.attribution[language] ?? translation.attribution;
 
 /**
  * HelloAO translations that ship with the app, built by
@@ -1319,7 +1344,7 @@ async function fetchChapterFromFetchBible(
     englishName: edition.englishName,
     language: edition.language,
     textDirection: 'ltr',
-    attribution: edition.attribution,
+    attribution: edition.attribution.en,
   };
   const thisChapterLink = `bundled:${edition.bundled}/${bookId.toLowerCase()}`;
   const hasChurchAudio = hasChurchHostedAudio(translationId);
