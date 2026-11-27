@@ -280,6 +280,42 @@ describe('screen rules', () => {
     ]);
   });
 
+  it("checks the iPad's book list by its History heading, since Vision missed the short Law there (#807)", () => {
+    const ipad = planChecks(loadConfig(), 'ipad').find(
+      (candidate: { name: string }) => candidate.name === 'bible-cuv-after-spanish-landscape',
+    );
+    // What Vision read on release PR #861's run 46025141242, in order down the
+    // popup: Law shows in the screenshot, between these two, but wasn't read.
+    const read = ['Old Testament', '(Genesis)', '(Exodus)', '(Leviticus)', '(Numbers)', '(Deuteronomy)', 'History', '(Joshua)'];
+    const list = (names: string[]) => names.map((name, index) => line(name, 0.27 + index * 0.05));
+    expect(checkShot(ipad, list(read))).toEqual([]);
+    // With no section headings, or History below Joshua.
+    expect(checkShot(ipad, list(read.filter((name) => name !== 'History')))).toEqual(['no line matches /\\bHistory\\b/']);
+    expect(checkShot(ipad, list([...read.slice(0, 6), '(Joshua)', 'History']))).toEqual([
+      '/\\bHistory\\b/ is not above /[(（]Joshua\\b/',
+    ]);
+    // The phones still need Law.
+    expect(checkShot(shot('bible-cuv-after-spanish-default'), list(read))).toEqual(['no line matches /\\bLaw\\b/']);
+  });
+
+  it('checks the linked hymn\'s 505 chip at 200% on the page scrolled to it, below the tab bar unscrolled (#810)', () => {
+    // On release PR #861's run 46025141242, the title and the note under it
+    // pushed the chip behind the tab bar, where Vision read its top as this.
+    const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.956));
+    const unscrolled = ['SDA', 'Hymnal', '12. Joyful,', 'Joyful, We', 'Adore Thee', 'The sheet music', 'T. nhina'];
+    const hymnalXl = shot('hymnal-xl');
+    expect(checkShot(hymnalXl, [...tabs, ...unscrolled.map((text, index) => line(text, 0.25 + index * 0.06))])).toEqual([]);
+    const scrolled = shot('hymnal-scrolled-xl');
+    expect(checkShot(scrolled, [...tabs, line('Adore Thee', 0.13), line('文A Chinese 505 · 16', 0.31)])).toEqual([]);
+    // The chip cut short, or a list of every hymn.
+    expect(checkShot(scrolled, [...tabs, line('Adore Thee', 0.13), line('文A Chinese 505 ·', 0.31)])).toEqual([
+      'no line matches /\\b505\\W+16$/',
+    ]);
+    expect(checkShot(scrolled, [...tabs, line('文A Chinese 505 · 16', 0.31), line('13. New Songs of', 0.5)])).toEqual([
+      '"13. New Songs of" matches /\\b13\\. New Songs/, which must not show',
+    ]);
+  });
+
   it("catches the Home verse card's cut-off buttons and broken heading at 3.2× (#385)", () => {
     const tabs = ['Inicio', 'Biblia', 'Explorar', 'Tú'].map((label) => line(label, 0.944));
     const homeEs = shot('home-es-xl-ios-large-text');
