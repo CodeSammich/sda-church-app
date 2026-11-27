@@ -48,6 +48,7 @@ class FakeParagraph {
   }
   editAsText() { return new FakeText(this); }
   appendPageBreak() { return { getParent: () => this }; }
+  appendHorizontalRule() { return { getParent: () => this }; }
   appendInlineImage() { return fakeImage(this); }
   removeFromParent() {
     if (this.parent) this.parent.children.splice(this.parent.children.indexOf(this), 1);
