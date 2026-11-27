@@ -174,7 +174,7 @@ import {
 } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
-import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
+import { getHymnalShortLabel, getHymnTitle } from '@/features/hymnal/HymnalLabels';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { getPopupSurfaceStyle, getPopupWidthStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
@@ -4993,7 +4993,7 @@ export default function BibleScreen() {
                             { color: theme.colors.onSurface, fontWeight: '700' },
                           ]}
                         >
-                          {hymn.number}. {hymn.title}
+                          {hymn.number}. {getHymnTitle(hymn.hymnalId, hymn.title, language)}
                         </Text>
                         <Text
                           style={[
@@ -5472,7 +5472,7 @@ export default function BibleScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={
                         verseHymns.length === 1
-                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${verseHymns[0].title}`
+                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${getHymnTitle(verseHymns[0].hymnalId, verseHymns[0].title, language)}`
                           : labels.verseHymnsTitle
                       }
                       accessibilityHint={verseHymns.length === 1 ? labels.verseHymnHint : undefined}

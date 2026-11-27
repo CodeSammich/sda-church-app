@@ -1,4 +1,5 @@
 import {
+  getFixedHymnDisplayText,
   QUEENS_FIXED_HYMNS,
   resolveBulletinHymnDisplayText,
   resolveBulletinHymnDestination,
@@ -214,7 +215,7 @@ describe('bulletin hymnal resolution', () => {
         { english: '1. Praise to the Lord', chinese: '' },
         'zh',
       ),
-    ).toBe('5. 赞美上主');
+    ).toBe('5. 讚美上主');
   });
 
   it('maps Chinese text put in the English field for an English UI', () => {
@@ -277,7 +278,7 @@ describe('bulletin hymnal resolution', () => {
         { english: 'Prais to the Lord', chinese: '' },
         'zh',
       ),
-    ).toBe('5. 赞美上主');
+    ).toBe('5. 讚美上主');
     expect(
       resolveBulletinHymnDisplayText(
         { english: '讚美上主', chinese: '' },
@@ -320,7 +321,7 @@ describe('bulletin hymnal resolution', () => {
       '108. Amazing Grace',
     );
     expect(resolveBulletinHymnDisplayText({ english: '', chinese: '赞美上猪' }, 'zh')).toBe(
-      '5. 赞美上主',
+      '5. 讚美上主',
     );
   });
 
@@ -358,6 +359,41 @@ describe('bulletin hymnal resolution', () => {
       });
     },
   );
+
+  describe("the reader's script (#795)", () => {
+    // The made-up bulletin's hymns (services/KeyScreensFixtures.ts), typed in
+    // English only, as the 505's 5, 16 and 413.
+    const fixtureHymns = [
+      'AH 1 Praise to the Lord',
+      'AH 12 Joyful, Joyful, We Adore Thee',
+      'AH 348 The Church Has One Foundation',
+    ];
+    const shown = (language: string) =>
+      fixtureHymns.map((english) => resolveBulletinHymnDisplayText({ english, chinese: '' }, language));
+
+    it("shows the hymnal's title in Traditional for a Traditional reader", () => {
+      expect(shown('zh')).toEqual(['5. 讚美上主', '16. 快樂頌', '413. 教會基礎']);
+    });
+
+    it('shows it in Simplified for a Simplified reader', () => {
+      expect(shown('zh-cn')).toEqual(['5. 赞美上主', '16. 快乐颂', '413. 教会基础']);
+    });
+
+    it("shows the fixed Queens hymns in the reader's script, as the church words them", () => {
+      expect(getFixedHymnDisplayText(QUEENS_FIXED_HYMNS.doxology, 'zh')).toBe('497. 讚美上帝');
+      expect(getFixedHymnDisplayText(QUEENS_FIXED_HYMNS.postlude, 'zh-cn')).toBe('504. 散会颂');
+      expect(getFixedHymnDisplayText(QUEENS_FIXED_HYMNS.doxology, 'en')).toBe(
+        '694. Praise God, From Whom All Blessings',
+      );
+    });
+
+    it('converts a song no hymnal has for a Simplified reader, but searches for it as typed', () => {
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '還要等多久' }, 'zh-cn')).toEqual({
+        displayText: '还要等多久',
+        youtubeSearchQuery: '還要等多久',
+      });
+    });
+  });
 
   describe('every hymnal (#558)', () => {
     it('answers from every hymnal in a copy of the service that has looked nothing up yet', () => {
@@ -423,7 +459,7 @@ describe('bulletin hymnal resolution', () => {
 
     it('finds a hymn only another hymnal has, and names that hymnal', () => {
       expect(resolveBulletinHymnPresentation({ english: '', chinese: '奇異恩典' }, 'zh')).toEqual({
-        displayText: '61. 奇异恩典（中文 506）',
+        displayText: '61. 奇異恩典（中文 506）',
         destination: {
           hymnalId: 'chinese-hymnal-506',
           hymnNumber: 61,
@@ -437,7 +473,7 @@ describe('bulletin hymnal resolution', () => {
 
     it('finds a hymn only the 707 hymnals have, in the standard edition first', () => {
       expect(resolveBulletinHymnPresentation({ english: '', chinese: '榮耀歸至高真神' }, 'zh')).toEqual({
-        displayText: '3. 荣耀归至高真神（707 標準版）',
+        displayText: '3. 榮耀歸至高真神（707 標準版）',
         destination: {
           hymnalId: 'chinese-hymnal-707-v3',
           hymnNumber: 3,
@@ -448,7 +484,7 @@ describe('bulletin hymnal resolution', () => {
 
     it("finds a hymn only the 707's four-part or new simplified edition has", () => {
       expect(resolveBulletinHymnPresentation({ english: '', chinese: '有福的確據' }, 'zh')).toEqual({
-        displayText: '156. 有福的确据（707 四聲部）',
+        displayText: '156. 有福的確據（707 四聲部）',
         destination: {
           hymnalId: 'chinese-hymnal-707-v2',
           hymnNumber: 156,
@@ -456,7 +492,7 @@ describe('bulletin hymnal resolution', () => {
         },
       });
       expect(resolveBulletinHymnPresentation({ english: '', chinese: '頌主造化' }, 'zh')).toEqual({
-        displayText: '10. 颂主造化（707 新編簡譜）',
+        displayText: '10. 頌主造化（707 新編簡譜）',
         destination: {
           hymnalId: 'chinese-hymnal-707-v1',
           hymnNumber: 10,

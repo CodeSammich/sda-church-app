@@ -1,4 +1,5 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
+import { simplifiedToTraditional } from '@/services/ChineseScript';
 
 /** Every hymnal the app lists, by the ID its search, routes, and mappings use. */
 export type HymnalBookId =
@@ -93,3 +94,11 @@ const HYMNAL_SHORT_LABELS: Record<HymnalBookId, Record<SupportedLanguage, string
 export const getHymnalShortLabel = (hymnalId: HymnalBookId, language: string) =>
   HYMNAL_SHORT_LABELS[hymnalId][language as SupportedLanguage] ||
   HYMNAL_SHORT_LABELS[hymnalId].en;
+
+/**
+ * A hymn's title in the reader's script (#795). The Chinese hymnals' titles
+ * are kept in Simplified, as their web pages have them, so the 繁體中文 app
+ * shows them in Traditional. Every other language shows them as kept.
+ */
+export const getHymnTitle = (hymnalId: HymnalBookId, title: string, language: string) =>
+  language === 'zh' && hymnalId !== 'sdah-1985-en' ? simplifiedToTraditional(title) : title;

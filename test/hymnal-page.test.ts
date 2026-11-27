@@ -131,7 +131,8 @@ describe('hymnal order', () => {
       '頌讚詩歌 — 707 新編簡譜版，第 5/6 本',
       '英文 SDA 詩歌本 — 1985 年版，第 6/6 本',
     ]);
-    expect(chinese.getByText(hymnTitle('chinese-hymnal-505', 1))).toBeTruthy();
+    // In the reader's script (#795): the 505 keeps it as 在主宝座前.
+    expect(chinese.getByText('1. 在主寶座前')).toBeTruthy();
   });
 });
 
@@ -271,6 +272,29 @@ describe("each hymnal's own route", () => {
     expect(mockPush).toHaveBeenLastCalledWith(
       expect.objectContaining({ params: expect.objectContaining({ translationId: 'cmn_cu1' }) }),
     );
+  });
+
+  it("shows the bulletin's hymn in the reader's script, saying its words open on a web page (#795)", async () => {
+    const view = await renderPage(routes[1][1], { hymnNum: '5', backTo: '/home/bulletin' }, 'zh');
+    expect(view.getByText('5. 讚美上主')).toBeTruthy();
+    expect(view.queryByText('5. 赞美上主')).toBeNull();
+    // No Traditional copy of the words is online.
+    expect(view.getByText('歌詞在網頁上開啟，只有簡體字版。')).toBeTruthy();
+
+    // Every hymn says it to a screen reader, and none shows it once all are listed.
+    await fireEvent.press(view.getByText('顯示全部詩歌'));
+    expect(view.queryByText('歌詞在網頁上開啟，只有簡體字版。')).toBeNull();
+    expect(view.getByText('2. 聖哉真神')).toBeTruthy();
+    expect(view.getAllByA11yHint('歌詞在網頁上開啟，只有簡體字版。').length).toBeGreaterThan(1);
+    await view.unmount();
+
+    const simplified = await renderPage(routes[1][1], { hymnNum: '5' }, 'zh-cn');
+    expect(simplified.getByText('5. 赞美上主')).toBeTruthy();
+    expect(simplified.getByText('歌词在网页上打开。')).toBeTruthy();
+    await simplified.unmount();
+
+    const english = await renderPage(routes[0][1], { hymnNum: '12' });
+    expect(english.getByText('The sheet music opens on a web page.')).toBeTruthy();
   });
 
   it('brings the Bible back to the same hymnal, hymn, and return route', async () => {

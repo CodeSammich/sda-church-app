@@ -21,6 +21,13 @@ import {
 } from './Hymnals';
 
 export type HymnRowLabels = Readonly<{
+  /** The hymn's title in the reader's script: see getHymnTitle. */
+  hymnTitle: (hymnalId: HymnalBookId, title: string) => string;
+  /**
+   * Where the title opens the hymn: a web page, and for a Chinese hymnal that
+   * it's in Simplified, since no Traditional copy is online (#795).
+   */
+  opensOnWebPage: (hymnalId: HymnalBookId) => string;
   /** The recording's label, which tells it apart from a piano accompaniment. */
   withSinging: string;
   pianoOnly: string;
@@ -47,7 +54,9 @@ type HymnRowProps = Readonly<{
 }>;
 
 /**
- * One hymn: its number and title open the sheet music. Chips under the title
+ * One hymn: its number and title open the sheet music, on a web page, which
+ * the hymn a link opened says under its title, and a screen reader hears for
+ * every hymn. Chips under the title
  * open its verse (an English hymn's, or a 505 hymn's 1985 equivalent's; see
  * HymnScripture.ts) and show the same hymn in another hymnal
  * (from the cross-reference tables). Below are its recording and, in a
@@ -93,6 +102,8 @@ export const HymnRow = memo(function HymnRow({
       >
         {/* Top Section: Link to the Sheet Music Website */}
         <TouchableRipple
+          // The marked hymn says it in words, which a screen reader reads.
+          accessibilityHint={highlighted ? undefined : labels.opensOnWebPage(hymnalId)}
           accessibilityState={highlighted ? { selected: true } : undefined}
           onPress={() => hymnal.openHymn(hymn.number)}
           style={styles.topSection}
@@ -106,8 +117,13 @@ export const HymnRow = memo(function HymnRow({
             />
             <View style={styles.textContainer}>
               <Text style={[styles.cardTitle, { color: theme.colors.onSurface }]}>
-                {hymn.number}. {hymn.title}
+                {hymn.number}. {labels.hymnTitle(hymnalId, hymn.title)}
               </Text>
+              {highlighted && (
+                <Text style={[styles.webPageNote, { color: theme.colors.onSurfaceVariant }]}>
+                  {labels.opensOnWebPage(hymnalId)}
+                </Text>
+              )}
             </View>
             <AppIcon
               name="open-in-new"
@@ -272,6 +288,11 @@ export const createHymnRowStyles = (
       fontSize: scaleTypographyMetric(18, textScale),
       lineHeight: scaleTypographyMetric(24, textScale),
       fontWeight: '700',
+    },
+    webPageNote: {
+      fontSize: scaleTypographyMetric(14, textScale),
+      lineHeight: scaleTypographyMetric(20, textScale),
+      marginTop: 2,
     },
     // Lined up with the title, under the treble clef.
     chips: {
