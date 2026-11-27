@@ -78,6 +78,9 @@ export const noteBibleAudioDownloaded = () => {
   if (saved !== 'downloaded') save('downloaded');
 };
 
+/** Whether Bible audio has ever been on the phone, even if it's been deleted since. */
+export const hasHadBibleAudioDownloads = () => saved === 'downloaded';
+
 /** Forgets everything, for tests. */
 export const resetBibleAudioTipForTests = () => {
   saved = undefined;

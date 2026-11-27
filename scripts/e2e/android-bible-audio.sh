@@ -279,6 +279,9 @@ scenario_dead_zone_screen_off() {
   sleep 2
   tap_play_pause
   sleep 3
+  # The player says why nothing plays (#801).
+  ATTR=text TRIES=15 element_bounds 'No connection ·[^"]*' >/dev/null ||
+    { echo 'no line saying there is no connection'; return 1; }
   screen_off
   sleep 90
   is_playing && { echo 'playing while offline'; return 1; }
@@ -298,6 +301,12 @@ scenario_mid_chapter_offline() {
   tap_play_pause
   wait_until 60 'Psalm 78 playing' is_playing || return 1
   network off
+  sleep 2
+  # This is the run's first drop while playing, before any download, so the
+  # one-time tip about listening offline shows (#801). A tap outside closes it.
+  app_log_has 'Bible reader: showing the one-time offline tip' ||
+    { echo 'no one-time offline tip on the first drop'; return 1; }
+  seek_to_fraction 0.75 || { echo 'no seek bar'; return 1; }
   sleep 1
   seek_to_fraction 0.75 || { echo 'no seek bar'; return 1; }
   wait_until 60 'the mid-chapter reload' \

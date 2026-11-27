@@ -91,8 +91,18 @@ import {
   getDownloadableBibleAudioNarrator,
   snapshotDownloadedChapters,
 } from '@/services/BibleAudioDownloads';
-import { useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
+import { useDownloadedBibleAudioBytes, useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
+import { BibleAudioOfflinePopup } from '@/components/BibleAudioOfflinePopup';
+import { getBibleAudioOfflineCopy } from '@/services/BibleAudioOfflineLine';
+import {
+  loadBibleAudioOfflineTip,
+  noteBibleAudioOfflineTipShown,
+  shouldShowBibleAudioOfflineTip,
+} from '@/services/BibleAudioOfflineTip';
+import { hasHadBibleAudioDownloads } from '@/services/BibleAudioDownloadTip';
 import { useBibleAudioDownloadTip } from '@/hooks/useBibleAudioDownloadTip';
+import { useBibleAudioOfflineLine } from '@/hooks/useBibleAudioOfflineLine';
+import { useRenderingRef } from '@/hooks/useRenderingRef';
 import {
   BibleAudioOfflineSection,
   getBibleAudioDownloadTipLine,
@@ -1172,7 +1182,9 @@ export default function BibleScreen() {
   const audioSourceReadyRef = useRef(false);
   const pendingNativeAutoplayRef = useRef(false);
   const lastNativeAutoplayAttemptRef = useRef(0);
-  const nativePlaybackIntentRef = useRef(false);
+  // Whether the listener is listening: set by the play button and the audio
+  // source controller, and shown by the player's line for no connection (#801).
+  const nativePlaybackIntentRef = useRenderingRef(false);
   const nativeAutoplayRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nativeRecoveryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preserveAudioOnNextRouteChangeRef = useRef(false);
@@ -1369,6 +1381,47 @@ export default function BibleScreen() {
       };
     },
   );
+  // While the phone has no connection and the chapter isn't downloaded, the
+  // player says so in place of its progress bar (#801).
+  const hasDownloadedBibleAudio = useDownloadedBibleAudioBytes() > 0;
+  useEffect(() => {
+    void loadBibleAudioOfflineTip();
+  }, []);
+  const [audioOfflinePopupVisible, setAudioOfflinePopupVisible] = useState(false);
+  const audioOfflineCopy = getBibleAudioOfflineCopy(language);
+  const audioOfflineLine = useBibleAudioOfflineLine({
+    enabled: Platform.OS !== 'web',
+    language,
+    listening: nativePlaybackIntentRef.current,
+    audible: audioStatus.playing && !audioStatus.isBuffering,
+    downloaded: !!downloadedAudioUri,
+    // The first drop shows the line's popup once by itself, for someone who
+    // has never downloaded Bible audio (services/BibleAudioOfflineTip.ts).
+    onDrop: () => {
+      if (
+        !audioDownloadNarrator ||
+        !shouldShowBibleAudioOfflineTip({
+          appActive: AppState.currentState === 'active',
+          chapterDownloaded: !!downloadedAudioUriRef.current,
+          hasEverDownloaded: hasDownloadedBibleAudio || hasHadBibleAudioDownloads(),
+        })
+      ) {
+        return;
+      }
+      noteBibleAudioOfflineTipShown();
+      logForAudioE2e('showing the one-time offline tip');
+      setAudioOfflinePopupVisible(true);
+    },
+  });
+  // Offline Bible Audio, showing the book being read, as Listen offline opens it.
+  const openOfflineBibleAudio = () => {
+    setAudioOfflinePopupVisible(false);
+    router.push({
+      pathname: '/you/audio-downloads',
+      params: { backTo: '/bible', narrator: audioDownloadNarrator ?? '', bookId: book?.id ?? '' },
+    } as any);
+  };
+  const [audioOfflineLineHeight, setAudioOfflineLineHeight] = useState(0);
   const audioSettingsScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const scrolledToDownloadTipRef = useRef(false);
   // The queue's chapters downloaded when playback started, so that a chapter
@@ -1942,6 +1995,8 @@ export default function BibleScreen() {
   const toggleAudio = async () => {
     if (
       isPlaying ||
+      // The button shows pause while the line for no connection does (#801).
+      !!audioOfflineLine ||
       (Platform.OS !== 'web' &&
         (pendingNativeAutoplayRef.current || audioSources.isResumePending))
     ) {
@@ -3850,6 +3905,10 @@ export default function BibleScreen() {
   const hasChapterAudio = audioReaderEntries.length > 0;
   const dockExtraHeight =
     (hasChapterAudio ? dockLayout.audioDockHeight : 0) +
+    // The line for no connection can wrap past the progress bar's height.
+    (hasChapterAudio && audioOfflineLine
+      ? Math.max(0, audioOfflineLineHeight - dockLayout.audioTimelineHeight)
+      : 0) +
     (isSelectionActive ? dockLayout.selectionBarHeight : 0);
   const fullDockContentHeight = dockLayout.chapterDockHeight + dockExtraHeight;
   const dockViewportLayout = getBibleDockViewportLayout({
@@ -4392,7 +4451,9 @@ export default function BibleScreen() {
                     style={ReaderStyles.audioAction}
                   />
                   <IconButton
-                    icon={isPlaying ? 'pause' : 'play'}
+                    // While the line for no connection shows, the player is
+                    // still trying, and a tap pauses it (#801).
+                    icon={isPlaying || audioOfflineLine ? 'pause' : 'play'}
                     mode="contained"
                     containerColor={theme.colors.tertiary}
                     iconColor={theme.colors.onPrimary}
@@ -4446,9 +4507,56 @@ export default function BibleScreen() {
                 </TouchableOpacity>
               </View>
 
+              {audioOfflineLine && (
+                // In the progress bar's place until audio plays (#801). Its
+                // "not downloaded" opens a popup about listening offline, as a
+                // link with a 44-point target that stays clear of the buttons.
+                <View
+                  accessibilityLiveRegion="polite"
+                  onLayout={(event) => setAudioOfflineLineHeight(event.nativeEvent.layout.height)}
+                  style={[
+                    styles.audioOfflineLineRow,
+                    { minHeight: Math.max(dockLayout.audioTimelineHeight, MIN_TAP_TARGET) },
+                  ]}
+                >
+                  <Text
+                    maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                    numberOfLines={1}
+                    style={[styles.audioOfflineLine, { color: theme.colors.onSurface }]}
+                  >
+                    {`${audioOfflineCopy.connection} · `}
+                  </Text>
+                  {audioDownloadNarrator ? (
+                    <TouchableOpacity
+                      accessibilityRole="link"
+                      accessibilityLabel={audioOfflineCopy.linkLabel}
+                      onPress={() => setAudioOfflinePopupVisible(true)}
+                      style={styles.audioOfflineLink}
+                    >
+                      <Text
+                        maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                        numberOfLines={1}
+                        style={[styles.audioOfflineLine, styles.audioOfflineLinkText, { color: theme.colors.primary }]}
+                      >
+                        {audioOfflineCopy.notDownloaded}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text
+                      maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                      numberOfLines={1}
+                      style={[styles.audioOfflineLine, { color: theme.colors.onSurface }]}
+                    >
+                      {audioOfflineCopy.notDownloaded}
+                    </Text>
+                  )}
+                </View>
+              )}
               <View
                 style={[
                   ReaderStyles.audioTimelineRow,
+                  // The line for no connection shows instead (#801).
+                  !!audioOfflineLine && styles.hiddenAudioTimelineRow,
                 ]}
               >
                 <Text
@@ -4540,7 +4648,9 @@ export default function BibleScreen() {
                     />
                   </View>
                 </View>
-                {isAudioLoading ? (
+                {/* No spinner behind the line for no connection: a hidden
+                    one could still animate. */}
+                {isAudioLoading && !audioOfflineLine ? (
                   <ActivityIndicator size={12} color={theme.colors.tertiary} />
                 ) : (
                   <Text
@@ -4563,6 +4673,12 @@ export default function BibleScreen() {
         {/* Below the card, the capsule's room while it shows. */}
         <Animated.View style={{ height: animatedDockBottomClearance }} />
       </Animated.View>
+
+      <BibleAudioOfflinePopup
+        visible={audioOfflinePopupVisible}
+        onClose={() => setAudioOfflinePopupVisible(false)}
+        onOpen={openOfflineBibleAudio}
+      />
 
       <Portal>
         <Modal
@@ -6028,6 +6144,27 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     pressRowCaption: {
       fontSize: scaleTypographyMetric(13, uiTextScale),
       lineHeight: scaleTypographyMetric(18, uiTextScale),
+    },
+    audioOfflineLineRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      paddingBottom: 2,
+    },
+    audioOfflineLink: {
+      justifyContent: 'center',
+      minHeight: MIN_TAP_TARGET,
+    },
+    audioOfflineLinkText: {
+      textDecorationLine: 'underline',
+    },
+    audioOfflineLine: {
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+      textAlign: 'center',
+    },
+    hiddenAudioTimelineRow: {
+      display: 'none',
     },
     audioLanguageMark: {
       fontSize: scaleTypographyMetric(16, uiTextScale),

@@ -142,8 +142,9 @@ describe('Bible reader text scaling', () => {
     // content column's on a wide screen (#324).
     expect(source).toContain('() => getBibleDockLayout(dockCardWidth, dockTextScale),');
     // The book, chapter, and Verse labels, the selection count, the audio
-    // language mark, both audio times, and the hidden copy that measures pills.
-    expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(8);
+    // language mark, both audio times, the line for no connection and its link (#801), and
+    // the hidden copy that measures pills.
+    expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(11);
   });
 
   it('shortens the Verse label before the book name is cut short (#376)', () => {
@@ -479,7 +480,7 @@ describe("the Bible's dock follows the tab bar's system (#589)", () => {
       /name="timer-outline"[\s\S]{0,200}sleepTimerSetting !== null\s*\? theme\.colors\.onPrimary\s*: getDockControlContentColor\(theme\)/,
     );
     expect(bible).toMatch(
-      /icon=\{isPlaying \? 'pause' : 'play'\}[\s\S]{0,120}containerColor=\{theme\.colors\.tertiary\}\s*iconColor=\{theme\.colors\.onPrimary\}/,
+      /icon=\{isPlaying \|\| audioOfflineLine \? 'pause' : 'play'\}[\s\S]{0,120}containerColor=\{theme\.colors\.tertiary\}\s*iconColor=\{theme\.colors\.onPrimary\}/,
     );
   });
 
