@@ -300,8 +300,9 @@ GitHub's code scanning default setup and have no workflow file.
 ### `Printed Bulletin Songti Preview` (`.github/workflows/printed-bulletin-songti-preview.yml`)
 
 - Checks: `Wait for the iOS key screens` and `Printed bulletin preview in Songti TC`. Runs
-  on the release PR into `main`, and by hand. Not a required check, and it never fails on
-  the layout: problems are warnings.
+  on the release PR into `main`, and by hand. Not a required check. After uploading the
+  pages, it fails on a half that no longer fits (the Linux preview's rules), or when
+  Songti TC isn't on the runner.
 - Waits on Linux for the iOS key screens' join, then draws the printed bulletin's Word
   copy in Songti TC on a macOS runner, and uploads the pages as PNGs. The font never
   leaves the Mac. See

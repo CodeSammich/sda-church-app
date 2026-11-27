@@ -75,7 +75,8 @@ function evaluate(head, base, { realCheck = 'a real Doc' } = {}) {
 }
 
 function summaryMarkdown({ failures, notes, rows }, { baseLabel, pageCounts, wordCopy } = {}) {
-  const lines = [wordCopy ? '## Printed bulletin preview in Songti TC' : '## Printed bulletin preview', ''];
+  // `wordCopy` names the Word copy's Chinese font when it's drawn.
+  const lines = [wordCopy ? `## Printed bulletin preview in ${wordCopy}` : '## Printed bulletin preview', ''];
   lines.push(failures.length ? `**${failures.length} problem${failures.length === 1 ? '' : 's'}:**` : '**Every page fits.**');
   failures.forEach((f) => lines.push(`- ${f}`));
   lines.push('');
@@ -97,7 +98,7 @@ function summaryMarkdown({ failures, notes, rows }, { baseLabel, pageCounts, wor
     notes.forEach((n) => lines.push(`- ${n}`));
   }
   lines.push('', wordCopy
-    ? 'This draws the Word copy printed on a Mac: Chinese in Songti TC, at the copy\'s exact line heights. Chrome lays it out, not Word, with grey boxes for the QR codes and pictures, so the final check is a real print.'
+    ? `This draws the Word copy printed on a Mac: Chinese in ${wordCopy}, at the copy's exact line heights. Chrome lays it out, not Word, with grey boxes for the QR codes and pictures, so the final check is a real print.`
     : 'The preview imitates Google Docs: stand-in fonts, grey boxes for the QR codes and pictures, and approximate line heights. Check a real Doc after the deploy.');
   return lines.join('\n') + '\n';
 }

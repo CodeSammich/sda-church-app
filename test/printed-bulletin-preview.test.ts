@@ -195,6 +195,7 @@ describe('the pass/fail rules', () => {
     expect(summary.split('\n')[0]).toBe('## Printed bulletin preview');
     expect(summary).toContain('**Every page fits.**');
     expect(summary).toContain('Pages drawn: q (1), b (3).');
+    expect(summaryMarkdown(outcome, { wordCopy: 'Songti TC' })).toMatch(/^## Printed bulletin preview in Songti TC\n[\s\S]*Chinese in Songti TC, at the copy's exact line heights/);
     expect(summary).toContain('| q | page 1, left half | +12 | +12 |  |');
     expect(summary).toContain('| q | page 1, right half | −2 | −2 | over on the base too |');
     expect(summaryMarkdown(evaluate({ q: result([[-1, 1]]) }, null))).toContain('**1 problem:**');
@@ -206,6 +207,7 @@ describe('the pass/fail rules', () => {
 
   it('reads its options', () => {
     expect(parseArgs(['--out', '/tmp/x', '--base=none', '--only', 'a,b'])).toMatchObject({ out: '/tmp/x', base: 'none', only: ['a', 'b'] });
+    expect(parseArgs(['--word-copy', '--word-font', 'Songti SC'])).toMatchObject({ wordCopy: true, wordFont: 'Songti SC' });
     expect(() => parseArgs(['--bogus'])).toThrow(/Unknown option/);
   });
 });
@@ -309,16 +311,33 @@ describe('the Printed Bulletin Songti Preview workflow', () => {
     });
   });
 
-  it('never blocks a release, and uploads only the drawn pages', () => {
-    // No font: a warning and a summary line, and the job passes.
-    expect(workflow).toContain("Songti TC isn'\"'\"'t on this macOS image");
-    expect(workflow).toContain('|| status=$?');
-    expect(workflow).toContain('::warning::The Songti TC preview found layout problems');
+  it('uploads what it drew, then fails on a missing font or a layout problem', () => {
+    const preview = workflow.slice(workflow.indexOf('\n  preview:\n'));
+    const step = (name: string) => preview.indexOf(`- name: ${name}\n`);
+    // Every step runs with or without the font, so the pages are drawn in the fallback.
+    expect(preview).not.toContain('steps.font.outputs.have ==');
+    expect(preview).toContain('--word-copy --word-font "$WORD_FONT"');
+    expect(preview).toContain('|| status=$?');
+    // The job fails in its last step, after the upload and the summary.
+    const fail = preview.slice(step('Fail on a missing font or a layout problem'));
+    expect(step('Upload the pages')).toBeLessThan(step('Link the pages in the run summary'));
+    expect(step('Link the pages in the run summary')).toBeLessThan(step('Fail on a missing font or a layout problem'));
+    expect(fail).toMatch(/^- name: Fail on a missing font or a layout problem\n\s+if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(fail).toContain('::error::$WORD_FONT not found on this runner; pages drawn with $FALLBACK. Fix the job.');
+    expect(fail).toContain('::error::The $WORD_FONT preview found layout problems');
+    expect(fail).toContain('exit "$failed"');
+    expect(preview).toContain('**$WORD_FONT not found on this runner; pages drawn with $FALLBACK. Fix the job.**');
+    expect(preview).toContain('[Download the $WORD_FONT page images]($ARTIFACT_URL)');
     expect(workflow).toContain('name: printed-bulletin-preview-songti-tc');
     expect(workflow.match(/^\s+path: .*/gm)).toEqual(['          path: ${{ runner.temp }}/printed-bulletin-songti-tc/']);
     // Apple's font stays on the Mac: nothing copies a font file anywhere.
     expect(workflow).not.toMatch(/\b(cp|mv|ditto|tar|zip)\b[^\n]*(Fonts|\.tt[cf]|\.otf)/);
-    expect(workflow).toContain('[Download the Songti TC page images]($ARTIFACT_URL)');
+  });
+
+  it('checks for the Word copy’s own Chinese font', () => {
+    const source = readAppsScript(join(__dirname, '..', 'google-apps-script'));
+    const font = /^\s+WORD_FONT: (.+)$/m.exec(workflow)![1];
+    expect(font).toBe(buildVariant(source, VARIANTS[0]).wordCopy.chineseFont);
   });
 
   it('is in the bulletin docs and the list of checks', () => {

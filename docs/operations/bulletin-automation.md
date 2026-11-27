@@ -1429,12 +1429,21 @@ from **Actions**. Its run summary opens with **Download the Songti TC page
 images** (the **printed-bulletin-preview-songti-tc** zip), then the same table
 as the Linux preview.
 
-It never blocks a release: layout problems are warnings, and if an image ever
-lacks Songti TC, the summary says so and the job passes. The
-[Linux preview](#printed-bulletin-preview) is the check that fails. Apple's
-license allows its fonts only on Apple hardware, so the font stays inside the
-macOS job: it's never copied into the repository, an artifact, or another job.
-Only the drawn pages leave.
+It isn't a required check, but it fails, after uploading the pages and the
+summary, when:
+
+- a booklet half no longer fits, by the same rules as the
+  [Linux preview](#printed-bulletin-preview): one that fit on the base branch
+  and no longer does, or one already over that grows. A half over on the base
+  too is a note, not a failure; or
+- Songti TC isn't on the runner. The type changes the layout too much to pass
+  on another font, so the pages are still drawn, in the font macOS falls back
+  to, and the summary and the error say "Songti TC not found on this runner;
+  pages drawn with" that font, "Fix the job."
+
+Apple's license allows its fonts only on Apple hardware, so the font stays
+inside the macOS job: it's never copied into the repository, an artifact, or
+another job. Only the drawn pages leave.
 
 It's still the preview's own layout in Chrome, not Word's, so it's an
 approximation; a real print of the Word copy is the final check. Run locally
