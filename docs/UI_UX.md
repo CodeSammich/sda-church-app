@@ -398,6 +398,18 @@ simple, blended colors.
     posts a notification.
   - **Anything new,** such as announcements (#562) or event reminders (#49), needs its own
     decision, and an update to this policy, first.
+  - **Not one of these: the media controls** the phone shows while Bible audio plays, on
+    the lock screen and in the notification shade. They name the chapter as the recording
+    reads it, as a shared verse does (#723), such as 約翰福音 第 3 章 for the Chinese Union
+    Version or John 3 for the BSB, and under it the narrator in the app's language, as
+    Offline Bible Audio names it, such as 粵語（和合本）, never the host a chapter streams
+    from (#804). On Android, paused controls can't be swiped away until the app is closed from
+    the recent apps screen. Android doesn't let anyone dismiss a media notification while
+    its playback service runs in the foreground
+    ([Android 14 behavior changes](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)),
+    and expo-audio 58 keeps that service in the foreground while paused, where Media3's
+    own service lets it go 10 minutes after a pause
+    ([`DEFAULT_FOREGROUND_SERVICE_TIMEOUT_MS`](https://developer.android.com/reference/androidx/media3/session/MediaSessionService#DEFAULT_FOREGROUND_SERVICE_TIMEOUT_MS())).
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 

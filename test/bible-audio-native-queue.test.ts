@@ -33,6 +33,7 @@ function setup() {
     }),
     remove: jest.fn((index: number) => sources.splice(index, 1)),
     play: jest.fn(), pause: jest.fn(), updateLockScreenMetadata: jest.fn(),
+    setActiveForLockScreen: jest.fn(), clearLockScreenControls: jest.fn(),
   };
   const queue = new BibleAudioNativeQueue(() => playlist as unknown as AudioPlaylist);
   queue.mount();
@@ -200,6 +201,96 @@ it('identifies the first chapter when native Previous returns to it', () => {
   expect(queue.currentStatus.activeChapter).toMatchObject({ chapter: 1 });
   queue.updateMetadata();
   expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(1).metadata);
+});
+
+describe("the notification's progress bar after a chapter change (#804)", () => {
+  const OPTIONS = { showSeekBackward: true, showSeekForward: true };
+  // Lock-screen controls on, as initializeBibleAudioPlayback leaves them.
+  const listening = () => {
+    const context = setup();
+    context.queue.setActiveForLockScreen(true, chapter(1).metadata, OPTIONS);
+    context.playlist.setActiveForLockScreen.mockClear();
+    return context;
+  };
+
+  it('publishes the controls again when the playlist moves on by itself, so the bar starts the new chapter', () => {
+    const { playlist, emit } = listening();
+    emit({ currentIndex: 0, playing: true, currentTime: 290 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+    emit({ currentIndex: 1, playing: true, currentTime: 0, duration: 483 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+    expect(playlist.setActiveForLockScreen).toHaveBeenLastCalledWith(true, chapter(2).metadata, OPTIONS);
+    // Once a chapter: not on every status update.
+    emit({ currentIndex: 1, playing: true, currentTime: 1, duration: 483 });
+    emit({ currentIndex: 1, playing: false, currentTime: 2, duration: 483 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+    // The notification's or earbuds' previous moves the playlist too.
+    emit({ currentIndex: 0, playing: true, currentTime: 0, duration: 300 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenLastCalledWith(true, chapter(1).metadata, OPTIONS);
+  });
+
+  it("waits for the new chapter's length, which the bar needs", () => {
+    const { playlist, status, emit } = listening();
+    status.currentIndex = 1;
+    emit({ playing: false, isBuffering: true, duration: 0 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+    // Its title changes at once.
+    expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(2).metadata);
+    emit({ currentIndex: 1, playing: true, duration: 483 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the controls alone for the chapter they were turned on with, or once they are off', () => {
+    const { queue, playlist, emit } = listening();
+    emit({ currentIndex: 0, playing: true, duration: 300 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+    queue.clearLockScreenControls();
+    emit({ currentIndex: 1, playing: true, duration: 483 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+  });
+
+  it('leaves a new recording to publish its own controls', () => {
+    const { queue, playlist, emit } = listening();
+    queue.replace(chapter(8).source);
+    queue.setCurrentChapter(chapter(8));
+    emit({ currentIndex: 0, playing: true, duration: 300 });
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+  });
+
+  it('keeps playing when the native refresh fails', () => {
+    const { playlist, emit } = listening();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    playlist.setActiveForLockScreen.mockImplementation(() => { throw new Error('bridge failed'); });
+    expect(() => emit({ currentIndex: 1, playing: true, duration: 483 })).not.toThrow();
+    expect(warn).toHaveBeenCalledWith('Bible audio lock-screen refresh failed', expect.any(Error));
+    warn.mockRestore();
+  });
+});
+
+it("logs each host that plays in the audio e2e build, since the lock screen doesn't name it (#804)", () => {
+  const previous = process.env.EXPO_PUBLIC_AUDIO_E2E;
+  process.env.EXPO_PUBLIC_AUDIO_E2E = '1';
+  const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+  try {
+    const { queue, emit } = setup();
+    emit();
+    emit();
+    queue.replace({ uri: 'https://archive.org/download/a/2.mp3' });
+    queue.setCurrentChapter({ ...chapter(2), source: { uri: 'https://archive.org/download/a/2.mp3' } });
+    emit();
+    queue.replace({ uri: 'file:///data/bible-audio/2.mp3' });
+    queue.setCurrentChapter({ ...chapter(2), source: { uri: 'file:///data/bible-audio/2.mp3' } });
+    emit();
+    expect(log.mock.calls.map(([line]) => line)).toEqual([
+      'Bible reader: audio from example.com',
+      'Bible reader: audio from archive.org',
+      'Bible reader: audio from the phone',
+    ]);
+  } finally {
+    log.mockRestore();
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_AUDIO_E2E;
+    else process.env.EXPO_PUBLIC_AUDIO_E2E = previous;
+  }
 });
 
 it('discards the previous queue and chapter identity when the user selects a new recording', () => {

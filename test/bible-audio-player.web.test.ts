@@ -227,7 +227,7 @@ describe('Bible audio web player', () => {
         })),
         currentBookId: 'GEN', currentChapter: 1, sleepTimer: 'book',
         selectedAudioUrls: ['https://bible.helloao.org/api/BSB/GEN/1/audio/souer.mp3'],
-        translationId: 'BSB', translationLabel: 'BSB',
+        translationId: 'BSB',
       }));
       result.current.player.play();
     });

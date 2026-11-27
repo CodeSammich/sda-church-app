@@ -79,7 +79,6 @@ describe('Reina-Valera 1909 audio from WordProject', () => {
       selectedAudioUrls: [],
       selectedReader: RV1909_READER,
       translationId: 'spa_r09',
-      translationLabel: 'RVR09',
     });
     expect(queue.map(({ bookId, chapter }) => `${bookId} ${chapter}`)).toEqual([
       'JHN 4',

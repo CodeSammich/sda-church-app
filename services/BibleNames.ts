@@ -145,3 +145,16 @@ export const getPickerItemName = (
     ? { name: appName }
     : twoLanguageName(readingName, appName);
 };
+
+/**
+ * A chapter as the lock screen and the media notification name it while its
+ * audio plays. It names the recording, so it's in the translation's language,
+ * with the translation's own name for the book, as a shared verse is (#723):
+ * 約翰福音 第 3 章 for the CUV, as its chapter list says 第 3 章, and John 3
+ * or Juan 3 (#804). The narrator under it is in the app's language
+ * (getBibleAudioArtist).
+ */
+export const formatChapterTitle = (bookName: string, chapter: number, translationLanguage: string) =>
+  languageOf(translationLanguage) === 'zh'
+    ? `${bookName} ${pickerItemLabel('chapter', chapter, translationLanguage)}`
+    : `${bookName} ${chapter}`;

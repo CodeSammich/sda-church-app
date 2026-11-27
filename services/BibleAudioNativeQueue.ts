@@ -1,4 +1,11 @@
-import type { AudioPlayer, AudioPlaylist, AudioPlaylistStatus, AudioSource } from 'expo-audio';
+import type {
+  AudioLockScreenOptions,
+  AudioPlayer,
+  AudioPlaylist,
+  AudioPlaylistStatus,
+  AudioSource,
+} from 'expo-audio';
+import { logForAudioE2e } from './AudioE2eLog';
 import type {
   BibleAudioQueueItem,
   BibleAudioSourceError,
@@ -75,6 +82,9 @@ export class BibleAudioNativeQueue {
   // with every insert since.
   private frontInsertCounts: number[] = [];
   private pendingIndexShift = 0;
+  // While lock-screen controls are on: their options, and the chapter the
+  // media session was last published with. See refreshLockScreenSession.
+  private lockScreen?: { options?: AudioLockScreenOptions; track?: BibleAudioQueueItem };
 
   constructor(private readonly createPlaylist: () => AudioPlaylist) {}
 
@@ -87,6 +97,7 @@ export class BibleAudioNativeQueue {
       if (this.playlist !== playlist) return;
       const index = this.eventTrackIndex(status);
       this.publish(this.status(status, index));
+      this.logSource(this.snapshot.activeSourceUrl);
       const track = this.tracks[index];
       if (track && track !== this.lastMetadataTrack) {
         try {
@@ -97,6 +108,7 @@ export class BibleAudioNativeQueue {
           console.warn('Bible audio lock-screen metadata update failed', error);
         }
       }
+      this.refreshLockScreenSession(track, status);
       if (status.playing && !status.isBuffering && this.retiredPlaylists.length) {
         // A playing playlist has taken over the lock screen by now.
         this.destroyRetiredPlaylists();
@@ -145,6 +157,21 @@ export class BibleAudioNativeQueue {
   addSourceErrorListener(listener: (event: BibleAudioSourceError) => void) {
     this.sourceErrorListeners.add(listener);
     return { remove: () => { this.sourceErrorListeners.delete(listener); } };
+  }
+
+  // The audio e2e's failure details name the host that was playing, which
+  // the lock screen's title no longer does (#804).
+  private loggedSourceUrl?: string;
+  private logSource(url: string | undefined) {
+    if (!url || url === this.loggedSourceUrl) return;
+    this.loggedSourceUrl = url;
+    let host = '';
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      // Not a URL the e2e needs to name.
+    }
+    logForAudioE2e(`audio from ${host || 'the phone'}`);
   }
 
   private destroyRetiredPlaylists() {
@@ -210,6 +237,8 @@ export class BibleAudioNativeQueue {
     this.pendingIndexShift = 0;
     this.frontInsertCounts = [];
     this.lastMetadataTrack = undefined;
+    // The controls were published for those tracks; the next ones publish their own.
+    this.lockScreen = undefined;
   }
 
   private callNative<T>(operation: string, call: (playlist: AudioPlaylist) => T): T | undefined {
@@ -274,6 +303,9 @@ export class BibleAudioNativeQueue {
       this.retirePlaylist();
       this.mount();
     }
+    // A new recording publishes its own lock-screen controls once it's queued
+    // (initializeBibleAudioPlayback); until then there's none to refresh.
+    this.lockScreen = undefined;
     this.callNative('replace', playlist => {
       this.forgetTracks();
       playlist.clear();
@@ -356,12 +388,47 @@ export class BibleAudioNativeQueue {
     }
   }
   setActiveForLockScreen(...args: Parameters<AudioPlayer['setActiveForLockScreen']>) {
-    this.callNative('setActiveForLockScreen', playlist => playlist.setActiveForLockScreen(...args));
+    const [active, , options] = args;
+    this.callNative('setActiveForLockScreen', playlist => {
+      playlist.setActiveForLockScreen(...args);
+      this.lockScreen = active
+        ? { options, track: this.tracks[playlist.currentIndex] }
+        : undefined;
+    });
   }
   clearLockScreenControls() {
+    this.lockScreen = undefined;
     // A retired playlist can still own the lock-screen session.
     this.destroyRetiredPlaylists();
     this.callNative('clearLockScreenControls', playlist => playlist.clearLockScreenControls());
+  }
+
+  // Publishes the lock-screen controls again once the playlist has moved to
+  // another chapter by itself, or by the notification's or earbuds' next or
+  // previous, so the notification's progress bar starts that chapter (#804).
+  // expo-audio 58's media session never hears that the track changed: it
+  // wraps the player for its metadata in a Kotlin `Player.Listener by
+  // listener`, which doesn't forward Media3's default methods, so only metadata
+  // changes reach the session. Its playback state, which the bar is drawn
+  // from, can stay as it was when playback last started or paused, and the bar
+  // ran on from there into the next chapter: about three quarters along when
+  // the reader said 0:50 of 8:03. Publishing again builds a new session, which
+  // reads the position and the chapter's length, so it waits until the length
+  // is known.
+  private refreshLockScreenSession(
+    track: BibleAudioQueueItem | undefined,
+    status: AudioPlaylistStatus,
+  ) {
+    const lockScreen = this.lockScreen;
+    if (!lockScreen || !track || track === lockScreen.track || !(status.duration > 0)) return;
+    lockScreen.track = track;
+    try {
+      this.callNative('refresh lock screen', playlist =>
+        playlist.setActiveForLockScreen(true, track.metadata, lockScreen.options));
+    } catch (error) {
+      // As with the metadata, the controls are auxiliary to playback.
+      console.warn('Bible audio lock-screen refresh failed', error);
+    }
   }
 
   private lastMetadataTrack?: BibleAudioQueueItem;
