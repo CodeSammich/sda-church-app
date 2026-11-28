@@ -242,6 +242,23 @@ export function RevealIfSelected({ children, selected }: Readonly<{ children: Re
   );
 }
 
+/** The ⌄'s height, and the fade's: what the hint covers at a list's foot. */
+const HINT_CLEARANCE = Math.max(FADE_HEIGHT, MIN_TAP_TARGET);
+
+/**
+ * In a sheet, room at the foot of the content for the ⌄ (#867): a sheet's
+ * last row can then always scroll clear of it. At half height the bottom
+ * row showing often sat under the ⌄, whose tap scrolls rather than opening
+ * the row (Audio settings' Offline Bible Audio).
+ */
+const useSheetFootRoom = (contentContainerStyle: StyleProp<ViewStyle>) => {
+  const inSheet = Boolean(useContext(SheetContext).reportScroll);
+  if (!inSheet) return contentContainerStyle;
+  const base = StyleSheet.flatten(contentContainerStyle) ?? {};
+  const own = base.paddingBottom ?? base.paddingVertical ?? base.padding ?? 0;
+  return [contentContainerStyle, { paddingBottom: (typeof own === 'number' ? own : 0) + HINT_CLEARANCE }];
+};
+
 // Around a popup's ScrollView or FlatList and its hints: it shrinks to the
 // popup's height limit as the list alone did, and minHeight 0 lets it shrink
 // below its content on the web too.
@@ -269,37 +286,59 @@ export const PopupScrollView = forwardRef<ScrollViewRef, ScrollViewProps & { fra
   const { nestedScrollEnabled } = useContext(SheetContext);
 
   // The current choice, once the layout has settled, scrolled into view.
+  // Again each time the view settles at a new height, as a sheet does while
+  // it opens, until the member scrolls it.
   const selected = useRef<HostView | null>(null);
-  const revealed = useRef(false);
+  const memberScrolled = useRef(false);
+  const revealedFor = useRef('');
   const [selectedTick, setSelectedTick] = useState(0);
   const reveal = useCallback((view: HostView | null) => {
-    if (revealed.current || !view) return;
+    if (memberScrolled.current || !view) return;
     selected.current = view;
     setSelectedTick((tick) => tick + 1);
   }, []);
+  const { viewport: revealViewport, content: revealContent } = metrics;
   useEffect(() => {
     const view = selected.current;
     const inner = scrollRef.current?.getInnerViewRef?.();
-    if (revealed.current || !view || !inner || !(metrics.viewport > 0) || !(metrics.content > 0)) return;
-    const { viewport, content } = metrics;
+    const key = `${revealViewport}:${revealContent}:${selectedTick}`;
+    if (memberScrolled.current || revealedFor.current === key) return;
+    if (!view || !inner || !(revealViewport > 0) || !(revealContent > 0)) return;
     const timer = setTimeout(() => {
       view.measureLayout(
         inner as unknown as HostView,
         (_x, top, _width, height) => {
-          revealed.current = true;
-          const y = getRevealOffset({ top, height, viewport, content });
+          if (memberScrolled.current) return;
+          revealedFor.current = key;
+          const y = getRevealOffset({ top, height, viewport: revealViewport, content: revealContent });
           if (y > 0) scrollRef.current?.scrollTo({ y, animated: false });
         },
         () => undefined,
       );
     }, REVEAL_SETTLE_MS);
     return () => clearTimeout(timer);
-  }, [metrics, selectedTick]);
+  }, [revealContent, revealViewport, selectedTick]);
+  const { onScrollBeginDrag } = props;
+  const onMemberScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      memberScrolled.current = true;
+      onScrollBeginDrag?.(event);
+    },
+    [onScrollBeginDrag],
+  );
+  const footRoom = useSheetFootRoom(props.contentContainerStyle);
 
   return (
     <PopupRevealContext.Provider value={reveal}>
       <View style={[popupFrameStyle, frameStyle]}>
-        <ScrollView ref={scrollRef} nestedScrollEnabled={nestedScrollEnabled} {...props} {...scrollProps} />
+        <ScrollView
+          ref={scrollRef}
+          nestedScrollEnabled={nestedScrollEnabled}
+          {...props}
+          {...scrollProps}
+          contentContainerStyle={footRoom}
+          onScrollBeginDrag={onMemberScroll}
+        />
         <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
       </View>
     </PopupRevealContext.Provider>
@@ -329,17 +368,32 @@ export function PopupFlatList<ItemT>({
     listRef.current?.scrollToOffset({ offset: getScrollDownOffset(metrics), animated: true });
   const { nestedScrollEnabled } = useContext(SheetContext);
 
-  // The current choice, once the layout has settled, in the middle of the list.
-  const revealed = useRef(false);
+  // The current choice, once the layout has settled, in the middle of the
+  // list: again each time the list settles at a new height, as a sheet does
+  // while it opens (iOS stopped short at chapter 9 of 23 when it scrolled
+  // once, before the sheet had its height), until the member scrolls it.
+  const memberScrolled = useRef(false);
+  const revealedFor = useRef('');
   useEffect(() => {
-    if (revealed.current || selectedIndex === undefined || selectedIndex < 1) return;
+    if (memberScrolled.current || selectedIndex === undefined || selectedIndex < 1) return;
     if (!(metrics.viewport > 0) || !(metrics.content > 0)) return;
+    const key = `${metrics.viewport}:${selectedIndex}`;
+    if (revealedFor.current === key) return;
     const timer = setTimeout(() => {
-      revealed.current = true;
+      if (memberScrolled.current) return;
+      revealedFor.current = key;
       listRef.current?.scrollToIndex({ animated: false, index: selectedIndex, viewPosition: 0.5 });
     }, REVEAL_SETTLE_MS);
     return () => clearTimeout(timer);
   }, [metrics.content, metrics.viewport, selectedIndex]);
+  const { onScrollBeginDrag } = props;
+  const onMemberScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      memberScrolled.current = true;
+      onScrollBeginDrag?.(event);
+    },
+    [onScrollBeginDrag],
+  );
   // A row not drawn yet: scroll near it, by the rows' average height, then to it.
   const onScrollToIndexFailed = useCallback(
     ({ averageItemLength, index }: { averageItemLength: number; index: number }) => {
@@ -351,6 +405,7 @@ export function PopupFlatList<ItemT>({
     },
     [],
   );
+  const footRoom = useSheetFootRoom(props.contentContainerStyle);
 
   return (
     <View style={popupFrameStyle}>
@@ -365,6 +420,8 @@ export function PopupFlatList<ItemT>({
         initialNumToRender={selectedIndex !== undefined && selectedIndex > 0 ? selectedIndex + 15 : undefined}
         {...props}
         {...scrollProps}
+        contentContainerStyle={footRoom}
+        onScrollBeginDrag={onMemberScroll}
       />
       <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
     </View>

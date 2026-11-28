@@ -154,9 +154,9 @@ export function ContrastChoice({
       {([CONTRAST_HIGH, CONTRAST_STANDARD] as const).map((mode) => {
         const selected = mode === value;
         const option = copy.options[mode];
-        return (
-          <RevealIfSelected key={mode} selected={reveal && selected}>
+        const card = (
           <Pressable
+            key={mode}
             accessibilityLabel={`${option.label}, ${option.description}`}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
@@ -194,7 +194,14 @@ export function ContrastChoice({
               </View>
             </View>
           </Pressable>
+        );
+        // Only in the Contrast sheet: setup lays the cards out side by side.
+        return reveal ? (
+          <RevealIfSelected key={mode} selected={selected}>
+            {card}
           </RevealIfSelected>
+        ) : (
+          card
         );
       })}
     </View>

@@ -458,7 +458,10 @@ scenario_downloaded_book_offline() {
     # Already downloaded: the X, or back, closes the popup.
     sh_ input keyevent KEYCODE_BACK >/dev/null
   else
-    point=$(element_center 'Offline Bible Audio, [^"]*') || { echo 'no Listen offline row'; return 1; }
+    # A quarter of the way across: the scroll hint's ⌄ sits centred over a
+    # list's bottom row, and a tap on it scrolls rather than opening the row.
+    # In the half-height Audio settings sheet (#867), this row can be that one.
+    point=$(element_center 'Offline Bible Audio, [^"]*' 0.25) || { echo 'no Listen offline row'; return 1; }
     # shellcheck disable=SC2086
     sh_ input tap $point >/dev/null
     point=$(element_center 'Download 2 Thessalonians, [^"]*') || { echo 'no Download button for the book'; return 1; }
