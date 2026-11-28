@@ -260,8 +260,10 @@ describe('menu card press surfaces', () => {
     const card = view.getByLabelText(
       'Watch Livestream. Livestream status remains fully announced',
     );
-    // The title stops at 1.25× (#387), so the card grows only that far too.
-    expect(StyleSheet.flatten(card.props.style).minHeight).toBe(164);
+    // The title follows both text sizes in full, 2× each here, and the card
+    // grows with it: 64 points for each 100% past 100%. (It stopped at 1.25×
+    // until 1.9.2, which left the titles small beside the icons, #387.)
+    expect(StyleSheet.flatten(card.props.style).minHeight).toBe(148 + 3 * 64);
     expect(view.getByText('Watch Livestream').props.numberOfLines).toBeUndefined();
   });
 });

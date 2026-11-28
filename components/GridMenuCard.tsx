@@ -83,7 +83,7 @@ const TITLE_LINE_HEIGHT = 20;
 // Two points spare, since a word exactly as wide as its line broke on Android.
 const SPARE = 2;
 // Where a line of a title may break: a space, or a zero-width space, which
-// marks the words of a long Chinese title, such as 本週\u200b安息日學\u200b課程, since
+// marks the words of a long Chinese title, such as 本週 / 安息日學 / 課程, since
 // Chinese has no spaces between its words. keepWordsWhole holds the rest of
 // the Chinese together, and keeps its no-break spaces.
 const LINE_BREAK = /[^\S\u00a0]+|\u200b/u;
