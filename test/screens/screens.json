@@ -1007,7 +1007,7 @@
     {
       "name": "theme",
       "group": "worship-and-you",
-      "$comment": "The Theme dialog, opened by popup=theme: each theme a card with a picture of a page and its tab bar in it, light and dark side by side for System and Sunrise/Sunset (#681), with an X beside its title. Its title is also on the You screen behind it, so the rules require System's description, which only the dialog shows. xl-dark is the dark theme at 200% text: the sheet opens with Dark, the last option and the current one, scrolled into view with its description, which shows that a full-height sheet scrolls (#867). Before that fix it didn't, and Dark was cut off.",
+      "$comment": "The Theme dialog, opened by popup=theme: each theme a card with a picture of a page and its tab bar in it, light and dark side by side for System and Sunrise/Sunset (#681), with an X beside its title. Its title is also on the You screen behind it, so the rules require System's description, which only the dialog shows. xl-dark is the dark theme at 200% text: the sheet opens with Dark, the last option and the current one, scrolled into view with its description, which shows that a full-height sheet scrolls (#867). Before that fix it didn't, and Dark was cut off. On the iPhone the sheet doesn't scroll to its current choice yet (#876), as with the Bible's lists, so there xl-dark checks the options that show at its top, down to Light.",
       "path": "you?popup=theme",
       "variants": [
         "default",
@@ -1032,8 +1032,10 @@
         },
         "xl-dark": {
           "mustShowLines": [
-            "^Dark$",
-            "^Always use the\\b"
+            { "line": "^Dark$", "platforms": ["android"] },
+            { "line": "^Always use the dark\\b", "platforms": ["android"] },
+            { "line": "^Light$", "platforms": ["ios"] },
+            { "line": "^Always use the light\\b", "platforms": ["ios"] }
           ]
         }
       }
