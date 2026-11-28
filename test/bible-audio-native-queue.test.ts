@@ -203,66 +203,74 @@ it('identifies the first chapter when native Previous returns to it', () => {
   expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(1).metadata);
 });
 
-describe("the notification's progress bar after a chapter change (#804)", () => {
+describe('the notification after a chapter change (#804)', () => {
   const OPTIONS = { showSeekBackward: true, showSeekForward: true };
   // Lock-screen controls on, as initializeBibleAudioPlayback leaves them.
   const listening = () => {
     const context = setup();
     context.queue.setActiveForLockScreen(true, chapter(1).metadata, OPTIONS);
     context.playlist.setActiveForLockScreen.mockClear();
+    context.playlist.updateLockScreenMetadata.mockClear();
     return context;
   };
 
-  it('publishes the controls again when the playlist moves on by itself, so the bar starts the new chapter', () => {
-    const { playlist, emit } = listening();
-    emit({ currentIndex: 0, playing: true, currentTime: 290 });
-    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
-    emit({ currentIndex: 1, playing: true, currentTime: 0, duration: 483 });
-    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
-    expect(playlist.setActiveForLockScreen).toHaveBeenLastCalledWith(true, chapter(2).metadata, OPTIONS);
-    // Once a chapter: not on every status update.
-    emit({ currentIndex: 1, playing: true, currentTime: 1, duration: 483 });
-    emit({ currentIndex: 1, playing: false, currentTime: 2, duration: 483 });
-    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+  // Publishing the controls again builds a new media session. When the old
+  // one is released, Android's shade drops the player though audio plays on:
+  // no progress bar, and later its play button stopped working. The session
+  // hears the track change and the position itself (scripts/patch-expo-audio.cjs).
+  it('names the next chapter on the same media session, without publishing the controls again', () => {
+    const { playlist, status, emit } = listening();
+    emit({ playing: true, currentTime: 290 });
+    emit({ playing: true, currentTime: 291 });
+    expect(playlist.updateLockScreenMetadata).toHaveBeenCalledTimes(1);
+    expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(1).metadata);
+    playlist.updateLockScreenMetadata.mockClear();
+    status.currentIndex = 1;
+    emit({ playing: true, currentTime: 0, duration: 483 });
+    expect(playlist.updateLockScreenMetadata).toHaveBeenCalledTimes(1);
+    expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(2).metadata);
+    // Once a chapter: not on every status update, or on a pause and play.
+    emit({ playing: true, currentTime: 1, duration: 483 });
+    emit({ playing: false, currentTime: 2, duration: 483 });
+    emit({ playing: true, currentTime: 2, duration: 483 });
+    expect(playlist.updateLockScreenMetadata).toHaveBeenCalledTimes(1);
     // The notification's or earbuds' previous moves the playlist too.
-    emit({ currentIndex: 0, playing: true, currentTime: 0, duration: 300 });
-    expect(playlist.setActiveForLockScreen).toHaveBeenLastCalledWith(true, chapter(1).metadata, OPTIONS);
+    status.currentIndex = 0;
+    emit({ playing: true, currentTime: 0, duration: 300 });
+    expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(1).metadata);
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
   });
 
-  it("waits for the new chapter's length, which the bar needs", () => {
+  it("names it at once, before the chapter's length is known", () => {
     const { playlist, status, emit } = listening();
     status.currentIndex = 1;
     emit({ playing: false, isBuffering: true, duration: 0 });
-    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
-    // Its title changes at once.
     expect(playlist.updateLockScreenMetadata).toHaveBeenLastCalledWith(chapter(2).metadata);
     emit({ currentIndex: 1, playing: true, duration: 483 });
-    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
-  });
-
-  it('leaves the controls alone for the chapter they were turned on with, or once they are off', () => {
-    const { queue, playlist, emit } = listening();
-    emit({ currentIndex: 0, playing: true, duration: 300 });
-    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
-    queue.clearLockScreenControls();
-    emit({ currentIndex: 1, playing: true, duration: 483 });
+    expect(playlist.updateLockScreenMetadata).toHaveBeenCalledTimes(1);
     expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
   });
 
-  it('leaves a new recording to publish its own controls', () => {
+  it('publishes the controls only when asked, for a new recording', () => {
     const { queue, playlist, emit } = listening();
     queue.replace(chapter(8).source);
     queue.setCurrentChapter(chapter(8));
-    emit({ currentIndex: 0, playing: true, duration: 300 });
+    emit({ currentIndex: 0, playing: false, duration: 0 });
     expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
+    queue.setActiveForLockScreen(true, chapter(8).metadata, OPTIONS);
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+    expect(playlist.setActiveForLockScreen).toHaveBeenLastCalledWith(true, chapter(8).metadata, OPTIONS);
+    emit({ currentIndex: 0, playing: true, duration: 300 });
+    expect(playlist.setActiveForLockScreen).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps playing when the native refresh fails', () => {
+  it('keeps playing when the metadata update fails', () => {
     const { playlist, emit } = listening();
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    playlist.setActiveForLockScreen.mockImplementation(() => { throw new Error('bridge failed'); });
+    playlist.updateLockScreenMetadata.mockImplementation(() => { throw new Error('bridge failed'); });
     expect(() => emit({ currentIndex: 1, playing: true, duration: 483 })).not.toThrow();
-    expect(warn).toHaveBeenCalledWith('Bible audio lock-screen refresh failed', expect.any(Error));
+    expect(warn).toHaveBeenCalledWith('Bible audio lock-screen metadata update failed', expect.any(Error));
+    expect(playlist.setActiveForLockScreen).not.toHaveBeenCalled();
     warn.mockRestore();
   });
 });

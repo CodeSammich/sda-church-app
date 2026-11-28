@@ -453,8 +453,11 @@ simple, blended colors.
     reads it, as a shared verse does (#723), such as 約翰福音 第 3 章 for the Chinese Union
     Version or John 3 for the BSB, and under it the narrator in the app's language, as
     Offline Bible Audio names it, such as 粵語（和合本）, never the host a chapter streams
-    from (#804). On Android, paused controls can't be swiped away until the app is closed from
-    the recent apps screen. Android doesn't let anyone dismiss a media notification while
+    from (#804). When the next chapter starts, the same controls change their words and
+    their progress bar starts again. The app doesn't publish them again mid-playback:
+    that makes a new media session, and Android's shade drops its player when the old
+    one goes. On Android, paused controls can't be swiped away until the app is closed
+    from the recent apps screen. Android doesn't let anyone dismiss a media notification while
     its playback service runs in the foreground
     ([Android 14 behavior changes](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)),
     and expo-audio 58 keeps that service in the foreground while paused, where Media3's

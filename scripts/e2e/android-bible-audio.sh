@@ -184,7 +184,8 @@ seek_to_fraction() {
   sh_ input tap $(point_in "$SEEK_BOUNDS" "$1") >/dev/null
 }
 
-# This app's media session: its playback state, position in ms, and title.
+# This app's media session: its playback state, position in ms, when it last
+# reported that position (ms since boot), and title.
 # The title line is the chapter, the narrator and the album, joined by ", ".
 # The chapter is named in the recording's words (#804), and every scenario
 # plays the CUV, so it reads "詩篇 第 118 章, Mandarin (Chinese Union Version),
@@ -197,7 +198,8 @@ session() {
     ours && /state=PlaybackState/ {
       match($0, /\{state=[A-Z_]+/); state = substr($0, RSTART + 7, RLENGTH - 7)
       match($0, /position=[0-9]+/); position = substr($0, RSTART + 9, RLENGTH - 9)
-      if (state != "NONE") { print "state=" state; print "position=" position }
+      match($0, /updated=[0-9]+/); updated = substr($0, RSTART + 8, RLENGTH - 8)
+      if (state != "NONE") { print "state=" state; print "position=" position; print "updated=" updated }
     }
     ours && /description=/ { sub(/.*description=/, ""); print "title=" $0 }'
 }
@@ -380,11 +382,68 @@ scenario_previous_before_start() {
   wait_until 20 'Leviticus 2 after next' title_has '利未記 第 2 章,' || return 1
 }
 
+# The media notification after a chapter change (#804). 1.9.2's first builds
+# published the controls again at each change, which builds a new media
+# session: Android's shade dropped the player when the old one was released,
+# though audio played on, and its play button later stopped working. Each
+# chapter now plays on the same session, which hears the player through
+# scripts/patch-expo-audio.cjs.
+#
+# The shade's play and pause buttons call the session's transport controls, as
+# `cmd media_session monitor` does; uiautomator can't read the shade while its
+# progress bar moves. Once the session hears that playback resumed, Media3
+# reports the position every 3 seconds while it plays, which the shade's bar
+# follows. Before the patch, it never did again after a pause. The shade logs
+# when it drops a player.
+session_tag() {
+  sh_ cmd media_session list-sessions | sed -n "s/.*tag=\([^,]*\), package=$PKG\$/\1/p" | head -1
+}
+notification_press() { # play|pause
+  local tag
+  tag=$(session_tag)
+  [ -n "$tag" ] || { echo 'no media session'; return 1; }
+  { sleep 2; echo "$1"; sleep 2; echo q; } | adb_ shell cmd media_session monitor "$tag" >/dev/null 2>&1
+}
+session_count() { sh_ dumpsys media_session | grep -c -x "      package=$PKG"; }
+reported_since() { [ "$(session_field updated)" != "$1" ]; }
+shade_dropped_player() {
+  adb_ logcat -d | tr -d '\r' |
+    grep -E "MediaDataManager.*(session destroyed for|Removing still-active player) 0\|$PKG\|" >/dev/null
+}
+notification_follows() { # title
+  local count updated
+  count=$(session_count)
+  [ "$count" = 1 ] || { echo "$count media sessions after the chapter change"; return 1; }
+  notification_press pause || return 1
+  wait_until 20 'paused from the notification' paused_with_title "$1" || return 1
+  notification_press play || return 1
+  wait_until 20 'playing from the notification' playing_with_title "$1" || return 1
+  sleep 2
+  updated=$(session_field updated)
+  wait_until 10 'the session reporting its position while it plays' reported_since "$updated" || return 1
+  media_key KEYCODE_MEDIA_PAUSE
+  wait_until 20 'paused by the pause key' is_paused || return 1
+  media_key KEYCODE_MEDIA_PLAY
+  wait_until 20 'playing by the play key' playing_with_title "$1" || return 1
+  # A pause in the app gives the audio focus back. The notification's play
+  # still works after it; expo-audio refused it while audio was off.
+  tap_play_pause
+  wait_until 20 'paused in the app' is_paused || return 1
+  notification_press play || return 1
+  wait_until 20 'playing from the notification after a pause in the app' playing_with_title "$1" || return 1
+  if shade_dropped_player; then
+    echo "the shade dropped the media player, though audio played on"
+    return 1
+  fi
+}
+
 # Bible audio downloaded to listen offline (#556): download 2 Thessalonians,
 # three short chapters (1.2 MB in Mandarin), in Offline Bible Audio, which the
 # audio settings popup's Listen offline row opens at the book's section, then
 # play it with no connection, and move to the next chapter and back with the
-# media keys. The popup's row says "Offline Bible Audio, 帖撒羅尼迦後書
+# media keys. After the first move, the media notification follows (see
+# notification_follows above): with every chapter on the phone, no failover
+# makes a new player there. The popup's row says "Offline Bible Audio, 帖撒羅尼迦後書
 # downloaded" once it's there; on the page, the book's row is "2 Thessalonians,
 # Downloaded · 1.2 MB", and its button "Download 2 Thessalonians, 1.2 MB".
 book_in_popup() { ui_dump | grep -E 'content-desc="Offline Bible Audio, 帖撒羅尼迦後書 downloaded' >/dev/null; }
@@ -421,6 +480,7 @@ scenario_downloaded_book_offline() {
   wait_until 30 '2 Thessalonians 1 playing offline' playing_with_title '帖撒羅尼迦後書 第 1 章,' || return 1
   media_key KEYCODE_MEDIA_NEXT
   wait_until 20 '2 Thessalonians 2 playing offline' playing_with_title '帖撒羅尼迦後書 第 2 章,' || return 1
+  notification_follows '帖撒羅尼迦後書 第 2 章,' || return 1
   # Previous goes back a chapter in a chapter's first seconds, and restarts it after.
   media_key KEYCODE_MEDIA_PREVIOUS
   sleep 1
