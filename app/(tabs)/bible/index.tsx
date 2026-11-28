@@ -5,7 +5,7 @@ import { PopupHeader } from '@/components/PopupHeader';
 import { SwitchRow } from '@/components/SwitchRow';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { AppSheet } from '@/components/AppSheet';
-import { PopupFlatList, PopupScrollView } from '@/components/PopupScrollView';
+import { PopupFlatList, PopupScrollView, RevealIfSelected } from '@/components/PopupScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIsAudioActiveAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -3831,6 +3831,35 @@ export default function BibleScreen() {
 
   const closeModal = () => setModalType(null);
 
+  // The selection sheet's list, and which row is the current choice, which
+  // shows when it opens (#867).
+  const selectionRows: (
+    | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
+    | BibleService.TranslationBook
+    | BookListHeading
+    | number
+  )[] =
+    sheetType === 'translation'
+      ? BibleService.SUPPORTED_TRANSLATIONS.filter(
+          (translation) =>
+            translationSelectionRole === 'primary' || translation.id !== supportedTranslation.id,
+        )
+      : sheetType === 'book'
+        ? // Under Testament and section headings (#807).
+          getBookListRows(books, language)
+        : sheetType === 'verse'
+          ? Array.from({ length: chapterData?.numberOfVerses || 0 }, (_, i) => i + 1)
+          : Array.from({ length: book?.numberOfChapters || 0 }, (_, i) => i + 1);
+  const isCurrentSelection = (item: (typeof selectionRows)[number]) =>
+    (sheetType === 'translation' &&
+      typeof item === 'object' &&
+      item.id ===
+        (translationSelectionRole === 'primary'
+          ? supportedTranslation.id
+          : selectedSupportingTranslation.id)) ||
+    (sheetType === 'book' && typeof item === 'object' && item.id === book?.id) ||
+    (sheetType === 'chapter' && item === chapterNum);
+
   // Every Bible sheet's title row: centred, at the Bible's own text size.
   const bibleSheetHeader = {
     centeredTitle: true,
@@ -5006,8 +5035,8 @@ export default function BibleScreen() {
               { value: 'book', label: labels.endOfBook },
             ] as { value: SleepTimerSetting; label: string }[]
           ).map((option) => (
+            <RevealIfSelected key={option.value ?? 'off'} selected={option.value === sleepTimerSetting}>
             <TouchableOpacity
-              key={option.value ?? 'off'}
               accessibilityRole="button"
               accessibilityLabel={option.label}
               accessibilityState={{
@@ -5045,6 +5074,7 @@ export default function BibleScreen() {
                 />
               )}
             </TouchableOpacity>
+            </RevealIfSelected>
           ))}
         </PopupScrollView>
       </AppSheet>
@@ -5055,6 +5085,10 @@ export default function BibleScreen() {
         testID="bible-selection-sheet"
         visible={!!modalType && modalType !== 'saved'}
         onDismiss={closeModal}
+        // Reader languages: a choice made by comparing them all, with its
+        // switches at the foot, so full height (#867). The lists and a
+        // verse's details open at half, with the current one in view.
+        height={sheetType === 'translation' ? 'large' : 'auto'}
         title={
           sheetType === 'verse-hymns'
             ? labels.verseHymnsTitle
@@ -5469,26 +5503,8 @@ export default function BibleScreen() {
               | BookListHeading
               | number
             >
-              data={
-                sheetType === 'translation'
-                  ? BibleService.SUPPORTED_TRANSLATIONS.filter(
-                      (translation) =>
-                        translationSelectionRole === 'primary' ||
-                        translation.id !== supportedTranslation.id,
-                    )
-                  : sheetType === 'book'
-                    ? // Under Testament and section headings (#807).
-                      getBookListRows(books, language)
-                    : sheetType === 'verse'
-                      ? Array.from(
-                          { length: chapterData?.numberOfVerses || 0 },
-                          (_, i) => i + 1,
-                        )
-                      : Array.from(
-                          { length: book?.numberOfChapters || 0 },
-                          (_, i) => i + 1,
-                        )
-              }
+              data={selectionRows}
+              selectedIndex={selectionRows.findIndex(isCurrentSelection)}
               keyExtractor={(item) =>
                 typeof item === 'object' ? item.id : item.toString()
               }
@@ -5647,17 +5663,7 @@ export default function BibleScreen() {
                         language,
                       );
                 const itemLabel = formatTwoLanguageName(itemName);
-                const isSelectedItem =
-                  (sheetType === 'translation' &&
-                    typeof item === 'object' &&
-                    item.id ===
-                      (translationSelectionRole === 'primary'
-                        ? supportedTranslation.id
-                        : selectedSupportingTranslation.id)) ||
-                  (sheetType === 'book' &&
-                    typeof item === 'object' &&
-                    item.id === book?.id) ||
-                  (sheetType === 'chapter' && item === chapterNum);
+                const isSelectedItem = isCurrentSelection(item);
 
                 return (
                   <TouchableOpacity

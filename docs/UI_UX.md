@@ -385,10 +385,12 @@ simple, blended colors.
     - the text size step shows John 3:16 at the chosen size, above the four sizes. Sizes
       between them are under You → Text size, which the step says.
   - The language and theme cards sit one a row, so their pictures have room.
-  - The You tab's Language and Theme popups show the same cards, with each choice's
-    description under its name (`components/SettingChoices.tsx`), as its Contrast sheet
-    shows the contrast pictures. Each stays a sheet, not a page of its own: one choice
-    doesn't need a page.
+  - The You tab's Language and Theme sheets show the same cards
+    (`components/SettingChoices.tsx`), as its Contrast sheet shows the contrast
+    pictures: Theme's with each choice's description under its name, and Language's
+    with each language named only in its own language, as setup does (#867), since a
+    second line in English filled half of each card. Each stays a sheet, not a page of
+    its own: one choice doesn't need a page.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.
@@ -418,25 +420,62 @@ simple, blended colors.
     connection" (#801), the web's install prompt and interrupted-audio note. **Full
     screens stay** where chosen: saved verses, so more of them show at once (#750),
     first-launch setup, and the contrast question after an update (#708).
-  - **Size:** a sheet is its content's height, up to about half the screen. Taller
-    content opens at half and expands to its own height, or to full height, where it
-    scrolls (`components/SheetDetents.ts`). The height is a share of the screen, so it
-    doesn't grow with the text size; the content scrolls instead. Text size opens at
-    its whole height, so the whole preview shows, and keeps that height while it's open,
-    so its preview and buttons don't move as the text grows. Share the App opens at its
-    whole height too, so the whole code shows.
+  - **How tall a sheet opens** (`height` on `AppSheet`, `components/SheetDetents.ts`):
+    - **Fit to content** for a short sheet: it's the height of what's in it, up to
+      about half the screen. Material's sheets fit their content by default
+      (`behavior_fitToContents` is true), and a sheet resting lower "should have enough
+      height to indicate there is extra content"
+      ([Material Components: Bottom sheet](https://github.com/material-components/material-components-android/blob/master/docs/components/BottomSheet.md)).
+    - **Half height (the medium detent)** only when the top part is useful by itself
+      and the rest is more of the same. Apple's example is the share sheet, with "the
+      most relevant items within the medium detent… To view more items, people can
+      scroll or expand the sheet"
+      ([Apple: Sheets](https://developer.apple.com/design/human-interface-guidelines/sheets)).
+      The sheet expands to its content's height, or full height.
+    - **Full height (the large detent)** when the content is more useful whole: a
+      choice made by comparing every option, a form, anything you'd otherwise scroll to
+      understand. Apple: "you might not want to support the medium detent if a sheet's
+      content is more useful when it displays at full height" (Sheets).
+    - **The current choice shows when a sheet opens, always.** A list that scrolls
+      scrolls to it (`useRevealWhenSelected`, `RevealIfSelected`, and `PopupFlatList`'s
+      `selectedIndex` in `components/PopupScrollView.tsx`).
+    - **Scrolling a half-height sheet expands it first**, then scrolls its content:
+      each platform's default. Apple: "A resizable sheet expands when people scroll its
+      contents or drag the grabber" (Sheets); Material's nested scrolling
+      (`behavior_draggableOnNestedScroll`, true by default) does the same.
+    - The height is a share of the screen, so it doesn't grow with the text size; the
+      content scrolls instead.
+    - Each sheet's height, and why:
+      - Language, Theme, Contrast: full height. A choice made by comparing the
+        pictures; the current one shows.
+      - Reader languages: full height. Comparing translations, with its switches at
+        the foot.
+      - Text size: its whole content's height, up to full, held while it's open, so the
+        preview and buttons don't move as the text grows.
+      - Share the App: its whole height, so the whole code shows to scan.
+      - Offline Bible Audio's narrators: their whole height, to compare what's on the
+        phone.
+      - The Bible's book, chapter and verse lists: half height, the current one in the
+        middle; the rest is more of the same.
+      - A verse's details and its hymns: fit, or half height when long; the verse and
+        its buttons first, its original language and notes below.
+      - Audio settings: fit, or half height when long; the narrators first, Listen
+        offline and the source below.
+      - Sleep timer, Other Sponsors, a children's lesson's download: fit; they're short.
   - **Closing and resizing:** an X in the title row, a tap on the dimmed page above,
     a swipe down, and Android's Back. A grabber at the top also expands the sheet on a
     tap, so dragging is never needed; on Android, a double tap on it closes the sheet,
     as Material's does. Scrolling up a half-height sheet expands it first.
   - **Where the X goes:** where each platform puts a sheet's close button. On the
-    iPhone and iPad, the leading (left) edge, with the title centred: "the Cancel
-    button belongs on the leading edge of the top toolbar" (Apple's Sheets). On
-    Android, the trailing (right) edge. Material's bottom sheets have no close button,
-    only the drag handle, a tap outside, a swipe and Back
-    ([Material Components: Bottom sheet](https://github.com/material-components/material-components-android/blob/master/docs/components/BottomSheet.md)),
-    so the app keeps an X for older members, where Material's modal side sheet puts its
-    close button: at the title row's trailing end
+    iPhone and iPad, the leading (left) edge, with the title centred. Apple's Sheets,
+    updated 2026-03-24: "for sheets with a single view, the Cancel button belongs on the
+    leading edge of the top toolbar." On Android, the trailing (right) edge. Material's
+    bottom sheet has no close button: its parts are a container, an optional drag handle
+    and the scrim, and it closes by a tap outside, a swipe or Back
+    ([Material Components: Bottom sheet](https://github.com/material-components/material-components-android/blob/master/docs/components/BottomSheet.md)).
+    So the app keeps an X for older members where Material's modal side sheet, its sheet
+    with a title row, puts its close icon button: at the title row's trailing end,
+    opposite an optional back button
     ([Side sheet](https://github.com/material-components/material-components-android/blob/master/docs/components/SideSheet.md)).
     The web's popups keep theirs at the end too (`PopupHeader`).
   - **Look:** the platform's own corners, and the colour of the floating bars

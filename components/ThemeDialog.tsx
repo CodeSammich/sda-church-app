@@ -101,6 +101,8 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
       onDismiss={onDismiss}
       closeLabel={labels.close}
       title={labels.title}
+      // A choice made by comparing the pictures: full height (#867).
+      height="large"
     >
       <PopupScrollView contentContainerStyle={styles.scrollContent}>
         <Text

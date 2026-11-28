@@ -64,7 +64,7 @@ export function ShareAppDialog({ onDismiss, visible }: ShareAppDialogProps) {
       onDismiss={onDismiss}
       closeLabel={labels.close}
       title={labels.title}
-      openFull
+      height="content"
     >
       <PopupScrollView contentContainerStyle={styles.scrollContent}>
         <Text

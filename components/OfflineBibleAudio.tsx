@@ -2,7 +2,7 @@ import { showAppAlert } from '@/components/AppAlert';
 import { AppIcon } from '@/components/AppIcon';
 import { MenuCardSwitchVisual } from '@/components/MenuCard';
 import { AppSheet } from '@/components/AppSheet';
-import { PopupScrollView } from '@/components/PopupScrollView';
+import { PopupScrollView, RevealIfSelected } from '@/components/PopupScrollView';
 import { getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
 import {
   BIBLE_SECTIONS,
@@ -458,6 +458,8 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
       onDismiss={onDismiss}
       closeLabel={labels.close}
       title={labels.narrator}
+      // Every narrator at once, to compare what's on the phone (#867).
+      height="content"
     >
       <PopupScrollView contentContainerStyle={styles.dialogContent}>
         <View accessibilityRole="radiogroup" style={styles.options}>
@@ -467,8 +469,8 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
             const total = narratorTotal(option);
             const caption = total ? labels.downloaded(formatDownloadSize(total, language)) : labels.nothing;
             return (
+              <RevealIfSelected key={option} selected={selected}>
               <Pressable
-                key={option}
                 accessibilityLabel={`${name}, ${caption}`}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
@@ -499,6 +501,7 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
                   />
                 </View>
               </Pressable>
+              </RevealIfSelected>
             );
           })}
         </View>

@@ -27,7 +27,8 @@ type PopupHeaderProps = Readonly<{
  * The X sits where each platform puts a sheet's close button (#867):
  * - iOS and iPadOS: the leading (left) edge, with the title centred. Apple's
  *   Human Interface Guidelines, Sheets → Platform considerations → iOS,
- *   iPadOS: "the Cancel button belongs on the leading edge of the top
+ *   iPadOS (updated 2026-03-24): "for sheets with a single view, the Cancel
+ *   button belongs on the leading edge of the top
  *   toolbar" (https://developer.apple.com/design/human-interface-guidelines/sheets).
  * - Android: the trailing (right) edge. A Material 3 bottom sheet has no
  *   close button: its anatomy is a container, an optional drag handle, and

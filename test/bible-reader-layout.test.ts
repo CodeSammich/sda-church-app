@@ -390,7 +390,7 @@ describe('Bible reader text scaling', () => {
     const sheets = bible.split('<AppSheet').slice(1);
     expect(sheets).toHaveLength(3);
     for (const sheet of sheets) {
-      expect(sheet).toMatch(/^\s+testID="[^"]+"\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}\s+title=/);
+      expect(sheet).toMatch(/^\s+testID="[^"]+"\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}/);
       expect(sheet.slice(0, sheet.indexOf('>\n'))).toContain('{...bibleSheetHeader}');
     }
     // The question about interrupted audio, and the saved verses (#750).

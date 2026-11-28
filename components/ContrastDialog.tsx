@@ -26,6 +26,8 @@ export function ContrastDialog({ onDismiss, visible }: Readonly<{ onDismiss: () 
       onDismiss={onDismiss}
       closeLabel={copy.close}
       title={copy.title}
+      // A choice made by comparing the pictures: full height (#867).
+      height="large"
     >
       <PopupScrollView contentContainerStyle={styles.scrollContent}>
         <Text variant="bodyMedium" style={[styles.help, { color: theme.colors.onSurfaceVariant }]}>

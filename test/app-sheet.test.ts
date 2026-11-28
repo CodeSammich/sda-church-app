@@ -1,12 +1,15 @@
 import { AppSheet } from '@/components/AppSheet';
+import { getRevealOffset } from '@/components/PopupScrollView';
 import {
+  ANDROID_DRAG_HANDLE_HEIGHT,
   DEFAULT_SHEET_DETENTS,
+  getAndroidSheetFrame,
+  getIosSheetFrame,
   getSheetDetents,
   getSheetFraction,
-  getSheetLargeHeight,
   getVisibleSheetHeight,
   sameSheetDetents,
-  type SheetFrame,
+  SHORT_SHEET_SECOND_DETENT,
 } from '@/components/SheetDetents';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import { fireEvent } from '@testing-library/react-native';
@@ -17,18 +20,34 @@ import { Platform, Text } from 'react-native';
 import { renderWithPreferences } from './helpers/render-preferences';
 import { getSheetHosts } from './helpers/sheets';
 
-// An iPhone's sheet: 780 points of content at the large detent. An Android
-// phone's: 800 at the large detent, in an 853-point window (status bar,
-// navigation bar and drag handle take the rest).
-const IPHONE: SheetFrame = { platform: 'ios', largeHeight: 780, windowHeight: 844 };
-const ANDROID: SheetFrame = { platform: 'android', largeHeight: 760, windowHeight: 853 };
+// An iPhone's sheet: 780 points at the large detent. The Android phone the
+// key screens use: a 923-point screen, a 24-point status bar and navigation
+// bar, and the drag handle's 48-point row.
+const IPHONE = getIosSheetFrame(780);
+const ANDROID = getAndroidSheetFrame(923, { top: 24, bottom: 24 });
 
 describe('sheet detents (#867)', () => {
+  it("knows each platform's room", () => {
+    expect(ANDROID).toEqual({ largeHeight: 923 - 24 - 24 - ANDROID_DRAG_HANDLE_HEIGHT, windowHeight: 923, chrome: 72 });
+    // iOS sizes the content to the detent; Android shows a detent's height
+    // less its handle and the navigation bar.
+    expect(getVisibleSheetHeight(IPHONE, 0.5)).toBe(390);
+    expect(getVisibleSheetHeight(ANDROID, 0.5)).toBeCloseTo(923 / 2 - 72);
+    expect(getVisibleSheetHeight(ANDROID, 1)).toBe(ANDROID.largeHeight);
+    expect(getSheetFraction(ANDROID, getVisibleSheetHeight(ANDROID, 0.7))).toBeCloseTo(0.7);
+  });
+
   it('sizes a short sheet to its content', () => {
-    expect(getSheetDetents(300, IPHONE)).toBe('fitToContents');
-    expect(getSheetDetents(300, ANDROID)).toBe('fitToContents');
-    // A little over half still fits in one detent.
-    expect(getSheetDetents(0.55 * 780, IPHONE)).toBe('fitToContents');
+    // Two detents a hair apart, which rest at the content's height.
+    const [iphone, iphoneSecond] = getSheetDetents(300, IPHONE) as number[];
+    expect(getVisibleSheetHeight(IPHONE, iphone)).toBeGreaterThanOrEqual(300);
+    expect(getVisibleSheetHeight(IPHONE, iphone)).toBeLessThan(301);
+    expect(iphoneSecond - iphone).toBeCloseTo(SHORT_SHEET_SECOND_DETENT, 3);
+    const [android] = getSheetDetents(300, ANDROID) as number[];
+    expect(getVisibleSheetHeight(ANDROID, android)).toBeGreaterThanOrEqual(300);
+    expect(getVisibleSheetHeight(ANDROID, android)).toBeLessThan(301);
+    // A little over half still rests at its own height, not at half.
+    expect((getSheetDetents(0.55 * 780, IPHONE) as number[])[0]).toBeGreaterThan(0.54);
   });
 
   it('opens taller content at half, expandable to its own height', () => {
@@ -56,25 +75,9 @@ describe('sheet detents (#867)', () => {
     expect(DEFAULT_SHEET_DETENTS).toEqual([0.5, 1]);
   });
 
-  it('gives Text size numbers, so it keeps its height as its text grows', () => {
-    const [short] = getSheetDetents(300, IPHONE, { fixed: true }) as number[];
-    expect(getVisibleSheetHeight(IPHONE, short)).toBeGreaterThanOrEqual(300);
-    expect(getSheetDetents(600, IPHONE, { fixed: true })).toEqual([0.5, expect.any(Number)]);
-  });
-
-  it('opens Share the App at its whole height', () => {
+  it('opens Share the App, Text size and the narrators at their whole height', () => {
     expect(getSheetDetents(600, IPHONE, { full: true })).toBe('fitToContents');
-  });
-
-  it("works out the room from the sheet's own content", () => {
-    // iOS: the content is the detent's height.
-    expect(getSheetLargeHeight('ios', 390, 0.5, 844)).toBe(780);
-    // Android: the content keeps the largest detent's height.
-    expect(getSheetLargeHeight('android', 760, 1, 853)).toBe(760);
-    expect(getSheetLargeHeight('android', 760 - 0.2 * 853, 0.8, 853)).toBeCloseTo(760);
-    // At half, Android shows less of it by half the window.
-    expect(getVisibleSheetHeight(ANDROID, 0.5)).toBeCloseTo(760 - 853 / 2);
-    expect(getSheetFraction(ANDROID, getVisibleSheetHeight(ANDROID, 0.7))).toBeCloseTo(0.7);
+    expect(getSheetDetents(0, null, { full: true })).toBe('fitToContents');
   });
 
   it('compares detents by value', () => {
@@ -82,6 +85,31 @@ describe('sheet detents (#867)', () => {
     expect(sameSheetDetents([0.5, 0.8], [0.5, 1])).toBe(false);
     expect(sameSheetDetents('fitToContents', 'fitToContents')).toBe(true);
     expect(sameSheetDetents('fitToContents', [0.5, 1])).toBe(false);
+  });
+});
+
+describe('the current choice shows when a sheet opens (#867)', () => {
+  it("doesn't scroll when it already shows", () => {
+    expect(getRevealOffset({ top: 100, height: 120, viewport: 400, content: 900 })).toBe(0);
+  });
+
+  it('scrolls one below the fold to the middle', () => {
+    // Español, the fourth card, below a 400-point view: its middle at 200.
+    expect(getRevealOffset({ top: 600, height: 120, viewport: 400, content: 900 })).toBe(460);
+  });
+
+  it('never scrolls past the end', () => {
+    expect(getRevealOffset({ top: 840, height: 60, viewport: 400, content: 900 })).toBe(500);
+  });
+
+  it('marks the current choice in every pick-one sheet', () => {
+    // Language and Theme cards, the narrators, the sleep timer, and the
+    // Bible's translation, book and chapter lists.
+    expect(readFileSync('components/SettingChoices.tsx', 'utf8')).toContain('useRevealWhenSelected(selected)');
+    expect(readFileSync('components/OfflineBibleAudio.tsx', 'utf8')).toContain('<RevealIfSelected key={option} selected={selected}>');
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(bible).toContain('selected={option.value === sleepTimerSetting}');
+    expect(bible).toContain('selectedIndex={selectionRows.findIndex(isCurrentSelection)}');
   });
 });
 

@@ -356,8 +356,8 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
       onDismiss={onDismiss}
       closeLabel={labels.close}
       title={labels.title}
+      height="content"
       holdHeight
-      openFull
       footer={
         <View style={styles.actions}>
           <TextDialogAction

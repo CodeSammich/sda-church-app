@@ -966,12 +966,12 @@
     {
       "name": "language",
       "group": "worship-and-you",
-      "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464), and each language a card with a picture of the tab bar in it (#681). Its title is also on the You screen behind it, so the rules require an option's description, which only the dialog shows. The pictures leave Simplified Chinese below the fold on a phone.",
+      "$comment": "The Language sheet, opened by popup=language (#372): an X beside its title and no Close button (#464), and each language a card with a picture of the tab bar in it (#681), named only in its own language (#867), so no English name such as Traditional Chinese under it. It opens at its whole height, so all four show at once. Its title is also on the You screen behind it, and English is the language the You screen names, so the rules require Español, which only the sheet shows.",
       "path": "you?popup=language",
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Traditional Chinese"],
-      "mustNotShowLines": ["^Close$"]
+      "mustShowLines": ["^Español$"],
+      "mustNotShowLines": ["^Close$", "^Traditional Chinese", "^Simplified Chinese", "^Spanish$"]
     },
     {
       "name": "theme",

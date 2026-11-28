@@ -5,6 +5,8 @@ import { MIN_TAP_TARGET } from '@/styles/ReaderStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   type ComponentRef,
+  createContext,
+  type ReactNode,
   forwardRef,
   useCallback,
   useContext,
@@ -192,6 +194,54 @@ export function PopupScrollHints({
   );
 }
 
+/**
+ * Where to scroll so a popup's current choice shows when it opens (#867):
+ * nowhere if it already shows from the top; otherwise with it in the middle,
+ * as far as the content goes.
+ */
+export const getRevealOffset = ({
+  top,
+  height,
+  viewport,
+  content,
+}: Readonly<{ top: number; height: number; viewport: number; content: number }>) => {
+  if (top + height <= viewport) return 0;
+  return Math.max(0, Math.min(top - (viewport - height) / 2, content - viewport));
+};
+
+// How long a popup's layout must stay still before its current choice is
+// scrolled into view: a sheet settles at its height after it opens.
+const REVEAL_SETTLE_MS = 150;
+
+type HostView = ComponentRef<typeof View>;
+
+/** A popup's ScrollView takes its current choice's view, to scroll it into view. */
+const PopupRevealContext = createContext<((view: HostView | null) => void) | null>(null);
+
+/**
+ * For a choice in a popup's list: when it's the current one, the popup
+ * scrolls it into view as it opens, so the current choice always shows
+ * (#867). Spread on the choice's own view.
+ */
+export function useRevealWhenSelected(selected: boolean) {
+  const reveal = useContext(PopupRevealContext);
+  const ref = useRef<HostView>(null);
+  const onLayout = useCallback(() => {
+    if (selected) reveal?.(ref.current);
+  }, [reveal, selected]);
+  return { ref, onLayout };
+}
+
+/** A row of a popup's list, scrolled into view as the popup opens when it's the current choice. */
+export function RevealIfSelected({ children, selected }: Readonly<{ children: ReactNode; selected: boolean }>) {
+  const { ref, onLayout } = useRevealWhenSelected(selected);
+  return (
+    <View ref={ref} onLayout={onLayout} collapsable={false}>
+      {children}
+    </View>
+  );
+}
+
 // Around a popup's ScrollView or FlatList and its hints: it shrinks to the
 // popup's height limit as the list alone did, and minHeight 0 lets it shrink
 // below its content on the web too.
@@ -218,22 +268,57 @@ export const PopupScrollView = forwardRef<ScrollViewRef, ScrollViewProps & { fra
   const scrollDown = () => scrollRef.current?.scrollTo({ y: getScrollDownOffset(metrics), animated: true });
   const { nestedScrollEnabled } = useContext(SheetContext);
 
+  // The current choice, once the layout has settled, scrolled into view.
+  const selected = useRef<HostView | null>(null);
+  const revealed = useRef(false);
+  const [selectedTick, setSelectedTick] = useState(0);
+  const reveal = useCallback((view: HostView | null) => {
+    if (revealed.current || !view) return;
+    selected.current = view;
+    setSelectedTick((tick) => tick + 1);
+  }, []);
+  useEffect(() => {
+    const view = selected.current;
+    const inner = scrollRef.current?.getInnerViewRef?.();
+    if (revealed.current || !view || !inner || !(metrics.viewport > 0) || !(metrics.content > 0)) return;
+    const { viewport, content } = metrics;
+    const timer = setTimeout(() => {
+      view.measureLayout(
+        inner as unknown as HostView,
+        (_x, top, _width, height) => {
+          revealed.current = true;
+          const y = getRevealOffset({ top, height, viewport, content });
+          if (y > 0) scrollRef.current?.scrollTo({ y, animated: false });
+        },
+        () => undefined,
+      );
+    }, REVEAL_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [metrics, selectedTick]);
+
   return (
-    <View style={[popupFrameStyle, frameStyle]}>
-      <ScrollView ref={scrollRef} nestedScrollEnabled={nestedScrollEnabled} {...props} {...scrollProps} />
-      <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
-    </View>
+    <PopupRevealContext.Provider value={reveal}>
+      <View style={[popupFrameStyle, frameStyle]}>
+        <ScrollView ref={scrollRef} nestedScrollEnabled={nestedScrollEnabled} {...props} {...scrollProps} />
+        <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
+      </View>
+    </PopupRevealContext.Provider>
   );
 });
 
-/** A popup's FlatList, with the hints, as PopupScrollView is for a ScrollView. */
+/**
+ * A popup's FlatList, with the hints, as PopupScrollView is for a ScrollView.
+ * selectedIndex is the current choice's row, scrolled into view as the popup
+ * opens (#867).
+ */
 export function PopupFlatList<ItemT>({
   onLayout,
   onContentSizeChange,
   onScroll,
   scrollEventThrottle,
+  selectedIndex,
   ...props
-}: FlatListProps<ItemT>) {
+}: FlatListProps<ItemT> & { selectedIndex?: number }) {
   const listRef = useRef<FlatList<ItemT>>(null);
   const flash = useCallback(() => listRef.current?.flashScrollIndicators(), []);
   const { hints, metrics, scrollProps } = usePopupScrollHints(
@@ -244,9 +329,38 @@ export function PopupFlatList<ItemT>({
     listRef.current?.scrollToOffset({ offset: getScrollDownOffset(metrics), animated: true });
   const { nestedScrollEnabled } = useContext(SheetContext);
 
+  // The current choice, once the layout has settled, in the middle of the list.
+  const revealed = useRef(false);
+  useEffect(() => {
+    if (revealed.current || selectedIndex === undefined || selectedIndex < 1) return;
+    if (!(metrics.viewport > 0) || !(metrics.content > 0)) return;
+    const timer = setTimeout(() => {
+      revealed.current = true;
+      listRef.current?.scrollToIndex({ animated: false, index: selectedIndex, viewPosition: 0.5 });
+    }, REVEAL_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [metrics.content, metrics.viewport, selectedIndex]);
+  // A row not drawn yet: scroll near it, by the rows' average height, then to it.
+  const onScrollToIndexFailed = useCallback(
+    ({ averageItemLength, index }: { averageItemLength: number; index: number }) => {
+      listRef.current?.scrollToOffset({ animated: false, offset: averageItemLength * index });
+      setTimeout(
+        () => listRef.current?.scrollToIndex({ animated: false, index, viewPosition: 0.5 }),
+        REVEAL_SETTLE_MS,
+      );
+    },
+    [],
+  );
+
   return (
     <View style={popupFrameStyle}>
-      <FlatList ref={listRef} nestedScrollEnabled={nestedScrollEnabled} {...props} {...scrollProps} />
+      <FlatList
+        ref={listRef}
+        nestedScrollEnabled={nestedScrollEnabled}
+        onScrollToIndexFailed={onScrollToIndexFailed}
+        {...props}
+        {...scrollProps}
+      />
       <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
     </View>
   );
