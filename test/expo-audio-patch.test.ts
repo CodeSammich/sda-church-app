@@ -93,6 +93,15 @@ describe("expo-audio's media session hears the player (#804)", () => {
     expect(gradle).toMatch(/androidxMedia3Version = "1\.9\.1"/);
   });
 
+  it('builds expo-audio from its patched source on Android, not from its prebuilt library', () => {
+    // Expo 58 links a prebuilt copy of each module from its local-maven-repo,
+    // which the patch can't reach.
+    const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    expect(packageJson.expo.autolinking.android.buildFromSource).toContain('expo-audio');
+    expect(packageJson.expo.autolinking.buildFromSource).toBeUndefined();
+    expect(packageJson.expo.autolinking.ios?.buildFromSource).toBeUndefined();
+  });
+
   it('runs before each Android build, before Gradle', () => {
     const build = fs.readFileSync(path.join(root, 'scripts', 'build-android-native.mjs'), 'utf8');
     const patch = build.indexOf('ensureExpoAudioPatched();');

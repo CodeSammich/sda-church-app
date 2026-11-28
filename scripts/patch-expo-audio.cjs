@@ -13,7 +13,9 @@
  * and play/pause button from what the session last heard.
  *
  * This adds the missing overrides, each passing the call straight on, to the
- * installed expo-audio. Every Android build runs it first
+ * installed expo-audio's source. Expo 58 links a prebuilt copy of the module
+ * by default, so `package.json` has Android build expo-audio from source
+ * (`expo.autolinking.android.buildFromSource`). Every Android build runs it first
  * (scripts/build-android-native.mjs), and stops if it doesn't fit the
  * installed expo-audio; once applied, it changes nothing.
  * `test/expo-audio-patch.test.ts` fails if it no longer fits. When expo-audio

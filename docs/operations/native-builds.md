@@ -1721,7 +1721,10 @@ two of the player's events, so the session never heard that the next chapter sta
 that a seek moved the position, or that playback resumed. The notification's progress
 bar and play button are drawn from what the session last heard.
 `scripts/patch-expo-audio.cjs` adds the missing calls to expo-audio's Kotlin source in
-`node_modules`. `scripts/build-android-native.mjs` runs it before every Android build,
+`node_modules`. Expo 58 links a prebuilt copy of each module by default, which the patch
+can't reach, so `package.json` has Android build expo-audio from source
+(`expo.autolinking.android.buildFromSource`).
+`scripts/build-android-native.mjs` runs the patch before every Android build,
 and stops if it no longer fits the installed expo-audio. `test/expo-audio-patch.test.ts`
 fails when an expo-audio or Media3 update needs the patch checked again. Delete the
 patch once expo-audio passes every call on itself. A build started another way, such as

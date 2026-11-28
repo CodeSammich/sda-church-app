@@ -89,6 +89,11 @@
   },
   "expo": {
     "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-audio"
+        ]
+      },
       "ios": {
         "exclude": [
           "expo-widgets",
