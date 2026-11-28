@@ -1,45 +1,45 @@
-import { PopupHeader } from '@/components/PopupHeader';
+import { AppSheet } from '@/components/AppSheet';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import { ChoiceCard, TabBarPreview } from '@/components/SettingChoices';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
-import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Dialog, Portal, Text } from 'react-native-paper';
 
 type LanguageDialogProps = Readonly<{ onDismiss: () => void; visible: boolean }>;
 
+/**
+ * Each language by its own name only (maintainer, #867): a second line in
+ * English filled half of each card with words a reader of that language may
+ * not read, and pushed the languages below the sheet's fold. A screen reader
+ * reads each name in its own language.
+ */
 const OPTIONS: readonly {
   value: SupportedLanguage;
   label: string;
-  description: string;
+  /** The name's language, for VoiceOver (BCP 47). */
+  locale: string;
 }[] = [
-  { value: 'en', label: 'English', description: 'English' },
-  { value: 'zh', label: '繁體中文', description: 'Traditional Chinese' },
-  { value: 'zh-cn', label: '简体中文', description: 'Simplified Chinese' },
-  { value: 'es', label: 'Español', description: 'Spanish' },
+  { value: 'en', label: 'English', locale: 'en' },
+  { value: 'zh', label: '繁體中文', locale: 'zh-Hant' },
+  { value: 'zh-cn', label: '简体中文', locale: 'zh-Hans' },
+  { value: 'es', label: 'Español', locale: 'es' },
 ];
 
 const copy = {
   en: {
     title: 'Language',
-    description: 'Choose the language used throughout the app.',
     close: 'Close',
   },
   zh: {
     title: '語言',
-    description: '選擇整個應用程式使用的語言。',
     close: '關閉',
   },
   'zh-cn': {
     title: '语言',
-    description: '选择整个应用使用的语言。',
     close: '关闭',
   },
   es: {
     title: 'Idioma',
-    description: 'Elige el idioma que se usará en toda la aplicación.',
     close: 'Cerrar',
   },
 } as const;
@@ -47,88 +47,49 @@ const copy = {
 export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
   const { language, setLanguage } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
-  const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight();
-  const popupWidthStyle = usePopupWidthStyle();
 
   return (
-    <Portal>
-      <Dialog
-        testID="language-dialog"
-        visible={visible}
-        onDismiss={onDismiss}
-        style={[
-          popupWidthStyle,
-          { maxHeight: popupMaxHeight },
-          getPopupSurfaceStyle(theme),
-        ]}
-      >
-        <PopupHeader
-          closeLabel={labels.close}
-          onClose={onDismiss}
-          style={styles.header}
-          title={labels.title}
-          variant="headlineSmall"
-        />
-        <Dialog.ScrollArea
-          style={styles.scrollArea}
-          testID="language-dialog-scroll-area"
-        >
-          <PopupScrollView contentContainerStyle={styles.scrollContent}>
-            <Text
-              variant="bodyMedium"
-              style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
+    <AppSheet
+      testID="language-dialog"
+      visible={visible}
+      onDismiss={onDismiss}
+      closeLabel={labels.close}
+      title={labels.title}
+      // A choice made by comparing them all: full height (#867).
+      height="large"
+    >
+      {/* No line under the title, which says what the sheet is: without it,
+          the four languages show at once at 200% text on a phone (#867). */}
+      <PopupScrollView testID="language-dialog-scroll" contentContainerStyle={styles.scrollContent}>
+        {/* Each a picture of the tab bar in it, one above another (#681). */}
+        <View accessibilityRole="radiogroup" style={styles.options}>
+          {OPTIONS.map((option) => (
+            <ChoiceCard
+              key={option.value}
+              accessibilityLanguage={option.locale}
+              label={option.label}
+              onPress={() => {
+                setLanguage(option.value);
+                onDismiss();
+              }}
+              selected={option.value === language}
             >
-              {labels.description}
-            </Text>
-            {/* Each a picture of the tab bar in it, one above another (#681). */}
-            <View accessibilityRole="radiogroup" style={styles.options}>
-              {OPTIONS.map((option) => (
-                <ChoiceCard
-                  key={option.value}
-                  accessibilityLabel={`${option.label}, ${option.description}`}
-                  description={option.description}
-                  label={option.label}
-                  onPress={() => {
-                    setLanguage(option.value);
-                    onDismiss();
-                  }}
-                  selected={option.value === language}
-                >
-                  <TabBarPreview language={option.value} />
-                </ChoiceCard>
-              ))}
-            </View>
-          </PopupScrollView>
-        </Dialog.ScrollArea>
-      </Dialog>
-    </Portal>
+              <TabBarPreview language={option.value} />
+            </ChoiceCard>
+          ))}
+        </View>
+      </PopupScrollView>
+    </AppSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  description: {
-    marginBottom: 16,
-  },
-  // Paper gives a dialog's first child a 24-point top margin; with the X's
-  // 48-point row, 16 keeps the title where Paper's own title sits.
-  header: {
-    marginBottom: 8,
-    marginTop: 16,
-    paddingLeft: 24,
-    paddingRight: 12,
-  },
   options: {
-    gap: 10,
-  },
-  scrollArea: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingHorizontal: 0,
+    gap: 8,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 16,
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 4,
   },
 });

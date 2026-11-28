@@ -127,6 +127,11 @@ mkdirSync(resolve(projectRoot, 'build'), { recursive: true });
 const { ensureExpoAudioPatched } = require('./patch-expo-audio.cjs');
 ensureExpoAudioPatched();
 
+// react-native-screens' Android sheet stayed below the screen with animations
+// off, leaving only its dim (#867). Gradle builds it from node_modules too.
+const { ensureReactNativeScreensPatched } = require('./patch-react-native-screens.cjs');
+ensureReactNativeScreensPatched();
+
 // Expo prebuild only needs the signing mode, not the production keystore or
 // passwords. Keep those values out of config plugins and npm child processes;
 // expose them only to the Gradle invocation that actually signs the binary.

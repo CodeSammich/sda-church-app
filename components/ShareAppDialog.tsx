@@ -1,12 +1,11 @@
-import { PopupHeader } from '@/components/PopupHeader';
+import { AppSheet } from '@/components/AppSheet';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import { APP_DOWNLOAD_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { Image, Share, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Text } from 'react-native-paper';
+import { Button, Text } from 'react-native-paper';
 
 type ShareAppDialogProps = Readonly<{ onDismiss: () => void; visible: boolean }>;
 
@@ -50,8 +49,6 @@ export function ShareAppDialog({ onDismiss, visible }: ShareAppDialogProps) {
   const { language } = useContext(LanguageContext);
   const labels = copy[language as keyof typeof copy] || copy.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight();
-  const popupWidthStyle = usePopupWidthStyle();
 
   const shareLink = async () => {
     try {
@@ -62,50 +59,41 @@ export function ShareAppDialog({ onDismiss, visible }: ShareAppDialogProps) {
   };
 
   return (
-    <Portal>
-      <Dialog
-        visible={visible}
-        onDismiss={onDismiss}
-        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
-      >
-        <PopupHeader
-          closeLabel={labels.close}
-          onClose={onDismiss}
-          style={styles.header}
-          title={labels.title}
-          variant="headlineSmall"
-        />
-        <Dialog.ScrollArea style={styles.scrollArea}>
-          <PopupScrollView contentContainerStyle={styles.scrollContent}>
-            <Text
-              variant="bodyMedium"
-              style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
-            >
-              {labels.description}
-            </Text>
-            {/* A white square, so the code scans in the dark theme too. */}
-            <View style={styles.qrFrame}>
-              <Image
-                source={QR_IMAGE}
-                style={styles.qr}
-                accessibilityLabel={labels.qrLabel}
-                accessibilityRole="image"
-              />
-            </View>
-            <Text
-              variant="bodyMedium"
-              selectable
-              style={[styles.link, { color: theme.colors.primary }]}
-            >
-              {APP_DOWNLOAD_URL.replace(/^https:\/\//, '')}
-            </Text>
-            <Button mode="contained" icon="share-variant" onPress={shareLink} style={styles.share}>
-              {labels.share}
-            </Button>
-          </PopupScrollView>
-        </Dialog.ScrollArea>
-      </Dialog>
-    </Portal>
+    <AppSheet
+      visible={visible}
+      onDismiss={onDismiss}
+      closeLabel={labels.close}
+      title={labels.title}
+      height="content"
+    >
+      <PopupScrollView contentContainerStyle={styles.scrollContent}>
+        <Text
+          variant="bodyMedium"
+          style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {labels.description}
+        </Text>
+        {/* A white square, so the code scans in the dark theme too. */}
+        <View style={styles.qrFrame}>
+          <Image
+            source={QR_IMAGE}
+            style={styles.qr}
+            accessibilityLabel={labels.qrLabel}
+            accessibilityRole="image"
+          />
+        </View>
+        <Text
+          variant="bodyMedium"
+          selectable
+          style={[styles.link, { color: theme.colors.primary }]}
+        >
+          {APP_DOWNLOAD_URL.replace(/^https:\/\//, '')}
+        </Text>
+        <Button mode="contained" icon="share-variant" onPress={shareLink} style={styles.share}>
+          {labels.share}
+        </Button>
+      </PopupScrollView>
+    </AppSheet>
   );
 }
 
@@ -113,14 +101,6 @@ const styles = StyleSheet.create({
   description: {
     alignSelf: 'stretch',
     marginBottom: 16,
-  },
-  // As in ThemeDialog: with the X's 48-point row, 16 keeps the title where
-  // Paper's own title sits.
-  header: {
-    marginBottom: 8,
-    marginTop: 16,
-    paddingLeft: 24,
-    paddingRight: 12,
   },
   link: {
     marginTop: 12,
@@ -134,11 +114,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 8,
-  },
-  scrollArea: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingHorizontal: 0,
   },
   scrollContent: {
     alignItems: 'center',

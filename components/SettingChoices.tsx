@@ -1,3 +1,4 @@
+import { useRevealWhenSelected } from '@/components/PopupScrollView';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { getFloatingSurfaceStyle } from '@/components/CapsuleTabBar';
 import { scaleTypographyMetric, TEXT_SCALE_MIN } from '@/constants/AppPreferences';
@@ -56,6 +57,7 @@ export const THEME_ICONS: Record<ThemeMode, MaterialCommunityIconName> = {
  */
 export function ChoiceCard({
   accessibilityLabel,
+  accessibilityLanguage,
   children,
   description,
   disabled = false,
@@ -67,6 +69,8 @@ export function ChoiceCard({
   testID,
 }: Readonly<{
   accessibilityLabel?: string;
+  /** The label's language, where it isn't the app's, such as a language's own name. */
+  accessibilityLanguage?: string;
   children: ReactNode;
   description?: string;
   disabled?: boolean;
@@ -78,9 +82,14 @@ export function ChoiceCard({
   testID?: string;
 }>) {
   const theme = useAppTheme();
+  // The current choice shows when a sheet of them opens (#867).
+  const reveal = useRevealWhenSelected(selected);
   return (
     <Pressable
+      ref={reveal.ref}
+      onLayout={reveal.onLayout}
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLanguage={accessibilityLanguage}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected, disabled }}
       disabled={disabled}

@@ -15,10 +15,11 @@
  *   of some line, which catches a verse number split across two lines (a rule
  *   with `minLeft` also needs the line to start that far across, for
  *   right-aligned text, one with `maxTop` no farther down than that, such
- *   as a popup's title, one with `above` higher up than the first line
- *   another pattern matches, such as a verse's footnote above its Greek, and
- *   one with `minWidth` at least that much of the screen's width wide, such
- *   as a word that must grow with the text size), and its
+ *   as a full-screen popup's title, one with `minTop` at least that far down,
+ *   such as a bottom sheet's title (#867), one with `above` higher up than the
+ *   first line another pattern matches, such as a verse's footnote above its
+ *   Greek, and one with `minWidth` at least that much of the screen's width
+ *   wide, such as a word that must grow with the text size), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
  *   such as the Bible header's names, required on the Android phone at 100% only;
  * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
@@ -267,16 +268,18 @@ const checkShot = (shot, lines) => {
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {
-    // A rule is a regular expression, or { line, minLeft, maxTop, above,
-    // minWidth } for a line that must also start at least minLeft of the way
-    // across, such as right-aligned text, or have its top no more than maxTop
-    // of the way down, such as a popup's title, which sits high when the popup
-    // is centred, or sit higher than the first line matching `above`, which
+    // A rule is a regular expression, or { line, minLeft, maxTop, minTop,
+    // above, minWidth } for a line that must also start at least minLeft of
+    // the way across, such as right-aligned text, or have its top no more than
+    // maxTop of the way down, such as the title of saved verses, which fill
+    // the screen, or at least minTop, such as a bottom sheet's title, low on a
+    // phone (#867), or sit higher than the first line matching `above`, which
     // must show too, such as a verse's footnote above its Greek (#745), or be
     // at least minWidth of the screen's width wide, such as a card's title
     // that must grow with the text size, as the cards' titles on Home and New
     // Member & Visitor didn't until 1.9.2.
-    const { line: pattern, minLeft, maxTop, above, minWidth } = typeof rule === 'string' ? { line: rule } : rule;
+    const { line: pattern, minLeft, maxTop, minTop, above, minWidth } =
+      typeof rule === 'string' ? { line: rule } : rule;
     const matches = lines.filter((line) => new RegExp(pattern, 'u').test(line.text.trim()));
     if (!matches.length) {
       problems.push(`no line matches /${pattern}/`);
@@ -292,6 +295,11 @@ const checkShot = (shot, lines) => {
       const highest = Math.min(...matches.map((line) => line.box[1]));
       problems.push(
         `/${pattern}/ is ${Math.round(highest * 100)}% of the way down, not at most ${Math.round(maxTop * 100)}%`,
+      );
+    } else if (minTop !== undefined && !matches.some((line) => line.box[1] >= minTop)) {
+      const lowest = Math.max(...matches.map((line) => line.box[1]));
+      problems.push(
+        `/${pattern}/ is ${Math.round(lowest * 100)}% of the way down, not at least ${Math.round(minTop * 100)}%`,
       );
     } else if (above !== undefined) {
       const lower = lines.filter((line) => new RegExp(above, 'u').test(line.text.trim()));
@@ -370,8 +378,8 @@ const EDGE = 0.004;
 // Below the status bar, whose clock sits near the left edge.
 const BELOW_STATUS_BAR = 0.025;
 
-// A popup's surface, the light theme's canvas (constants/Themes.ts), which
-// the dimmed page behind it never matches.
+// A centred dialog's surface, the light theme's canvas (constants/Themes.ts),
+// which the dimmed page behind it never matches.
 const POPUP_SURFACE = [0xf2, 0xe6, 0xdf];
 
 const percent = (fraction) => `${Math.round(fraction * 100)}%`;
@@ -475,10 +483,12 @@ const surfaceWidth = async (file, color = POPUP_SURFACE, { tolerance = 10, gap =
 };
 
 /**
- * Whether an iPad popup is at most POPUP_MAX_WIDTH wide (#324). On iOS, a
+ * Whether an iPad dialog is at most POPUP_MAX_WIDTH wide (#324). On iOS, a
  * popup given a percentage width filled 90% of the iPad with its text in only
  * the middle, so its text alone can't tell. Light theme only: in dark mode the
- * dimmed page is too close to the surface's colour.
+ * dimmed page is too close to the surface's colour. Only the centred dialogs
+ * have the canvas's colour: a bottom sheet has the floating bars' (#867), and
+ * the system sizes it, so this finds no surface on one, and passes it.
  */
 const checkPopupWidth = async (shot, file) => {
   // A popup marked fullScreenPopup fills the screen on purpose, as the saved

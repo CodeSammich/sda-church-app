@@ -383,33 +383,40 @@ describe('Bible reader text scaling', () => {
     expect(audioDock).not.toHaveProperty('paddingBottom');
   });
 
-  it('centres every Bible popup the same way, the audio settings included', () => {
-    // Until 1.3.2 the audio settings popup sat at the bottom of the screen.
+  it('shows the Bible popups as sheets, and only its question as a centred dialog (#867)', () => {
     const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
-    const modals = bible.split('<Modal').slice(1);
-    expect(modals).toHaveLength(4);
-    const centred = /contentContainerStyle=\{[^]*?\[\s+ReaderStyles\.modalContent,\s+popupWidthStyle,\s+\{ maxHeight: popupMaxHeight \},/;
-    for (const modal of modals) {
-      // Each is as wide as the You tab's dialogs at most, on a wide screen (#324).
-      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}/);
-      expect(modal.slice(0, modal.indexOf('getPopupSurfaceStyle(theme)'))).toMatch(centred);
+    // Audio settings, the sleep timer, and the selection sheet: the pickers,
+    // a verse's details and its hymns.
+    const sheets = bible.split('<AppSheet').slice(1);
+    expect(sheets).toHaveLength(3);
+    for (const sheet of sheets) {
+      expect(sheet).toMatch(/^\s+testID="[^"]+"\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}/);
+      expect(sheet.slice(0, sheet.indexOf('>\n'))).toContain('{...bibleSheetHeader}');
     }
+    // The question about interrupted audio, and the saved verses (#750).
+    const modals = bible.split('<Modal').slice(1);
+    expect(modals).toHaveLength(2);
+    const question = bible.slice(bible.indexOf('visible={backgroundAudioGuidanceVisible}'));
+    expect(question.slice(0, question.indexOf('getPopupSurfaceStyle(theme)'))).toMatch(
+      /\[\s+ReaderStyles\.modalContent,\s+popupWidthStyle,\s+\{ maxHeight: popupMaxHeight \},/,
+    );
     expect(createReaderStyles(2)).not.toHaveProperty('audioSettingsContent');
   });
 
-  it('fills the screen with the saved verses only, the one popup past the height limit (#750)', () => {
+  it('fills the screen with the saved verses only, not a sheet (#750)', () => {
     const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
-    expect(bible).toContain("const savedVersesFullScreen = lastActiveType === 'saved';");
-    // The selection popups share one Modal; only saved verses take its full-screen shape.
-    const selection = bible.slice(bible.indexOf('{/* Selection Modals */}'));
-    expect(selection).toMatch(/style=\{savedVersesFullScreen \? styles\.fullScreenPopupWrapper : undefined\}\s+contentContainerStyle=\{\s+savedVersesFullScreen\s+\? \[\s+styles\.fullScreenPopup,/);
+    const saved = bible.slice(bible.indexOf("visible={modalType === 'saved'}"));
+    expect(saved).toMatch(/^visible=\{modalType === 'saved'\}\s+onDismiss=\{closeModal\}\s+style=\{styles\.fullScreenPopupWrapper\}\s+contentContainerStyle=\{\[\s+styles\.fullScreenPopup,/);
+    // The sheet never shows them.
+    expect(bible).toContain("visible={!!modalType && modalType !== 'saved'}");
     // A height, not flex: on iOS, Paper's Modal passes flex only to its
     // Surface's outer view, and the list inside shrank to nothing.
-    expect(selection).toMatch(/width: viewportWidth,\s+height: viewportHeight,/);
+    expect(saved).toMatch(/width: viewportWidth,\s+height: viewportHeight,/);
     const fullScreen = bible.slice(bible.indexOf('    fullScreenPopup: {'), bible.indexOf('    fullScreenPopupInner: {'));
     expect(fullScreen).not.toMatch(/\bflex: 1/);
     // Each passage shows in full, no longer cut off after three lines.
-    const savedList = bible.slice(bible.indexOf("lastActiveType === 'saved' ?"), bible.indexOf("lastActiveType === 'verse-detail' ?"));
+    const savedList = saved.slice(0, saved.indexOf('</Modal>'));
+    expect(savedList).toContain('renderPopupHeader(labels.savedVerses, closeModal)');
     expect(savedList).not.toContain('numberOfLines');
   });
 

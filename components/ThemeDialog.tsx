@@ -1,4 +1,4 @@
-import { PopupHeader } from '@/components/PopupHeader';
+import { AppSheet } from '@/components/AppSheet';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import { ChoiceCard, THEME_ICONS, THEME_PREVIEW_KINDS, ThemePreview } from '@/components/SettingChoices';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -11,10 +11,9 @@ import {
   useAppTheme,
   type ThemeMode,
 } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Dialog, Portal, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 
 type ThemeDialogProps = Readonly<{ onDismiss: () => void; visible: boolean }>;
 
@@ -94,58 +93,48 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
   const { contrastModes, themeMode, setThemeMode } = useContext(ThemeContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight();
-  const popupWidthStyle = usePopupWidthStyle();
   const optionLanguage = language in copy ? language : 'en';
 
   return (
-    <Portal>
-      <Dialog
-        visible={visible}
-        onDismiss={onDismiss}
-        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
-      >
-        <PopupHeader
-          closeLabel={labels.close}
-          onClose={onDismiss}
-          style={styles.header}
-          title={labels.title}
-          variant="headlineSmall"
-        />
-        <Dialog.ScrollArea style={styles.scrollArea}>
-          <PopupScrollView contentContainerStyle={styles.scrollContent}>
-            <Text
-              variant="bodyMedium"
-              style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
-            >
-              {labels.description}
-            </Text>
-            {/* Each a picture of the theme, one above another (#681). */}
-            <View accessibilityRole="radiogroup" style={styles.options}>
-              {OPTIONS.map((option) => {
-                const optionLabels = option.labels[optionLanguage as keyof typeof option.labels];
-                return (
-                  <ChoiceCard
-                    key={option.value}
-                    accessibilityLabel={`${optionLabels.label}, ${optionLabels.description}`}
-                    description={optionLabels.description}
-                    icon={THEME_ICONS[option.value]}
-                    label={optionLabels.label}
-                    onPress={() => {
-                      void setThemeMode(option.value);
-                      onDismiss();
-                    }}
-                    selected={option.value === themeMode}
-                  >
-                    <ThemePreview contrastModes={contrastModes} kinds={THEME_PREVIEW_KINDS[option.value]} />
-                  </ChoiceCard>
-                );
-              })}
-            </View>
-          </PopupScrollView>
-        </Dialog.ScrollArea>
-      </Dialog>
-    </Portal>
+    <AppSheet
+      visible={visible}
+      onDismiss={onDismiss}
+      closeLabel={labels.close}
+      title={labels.title}
+      // A choice made by comparing the pictures: full height (#867).
+      height="large"
+    >
+      <PopupScrollView contentContainerStyle={styles.scrollContent}>
+        <Text
+          variant="bodyMedium"
+          style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {labels.description}
+        </Text>
+        {/* Each a picture of the theme, one above another (#681). */}
+        <View accessibilityRole="radiogroup" style={styles.options}>
+          {OPTIONS.map((option) => {
+            const optionLabels = option.labels[optionLanguage as keyof typeof option.labels];
+            return (
+              <ChoiceCard
+                key={option.value}
+                accessibilityLabel={`${optionLabels.label}, ${optionLabels.description}`}
+                description={optionLabels.description}
+                icon={THEME_ICONS[option.value]}
+                label={optionLabels.label}
+                onPress={() => {
+                  void setThemeMode(option.value);
+                  onDismiss();
+                }}
+                selected={option.value === themeMode}
+              >
+                <ThemePreview contrastModes={contrastModes} kinds={THEME_PREVIEW_KINDS[option.value]} />
+              </ChoiceCard>
+            );
+          })}
+        </View>
+      </PopupScrollView>
+    </AppSheet>
   );
 }
 
@@ -153,21 +142,8 @@ const styles = StyleSheet.create({
   description: {
     marginBottom: 16,
   },
-  // Paper gives a dialog's first child a 24-point top margin; with the X's
-  // 48-point row, 16 keeps the title where Paper's own title sits.
-  header: {
-    marginBottom: 8,
-    marginTop: 16,
-    paddingLeft: 24,
-    paddingRight: 12,
-  },
   options: {
     gap: 10,
-  },
-  scrollArea: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingHorizontal: 0,
   },
   scrollContent: {
     paddingBottom: 24,

@@ -4,7 +4,8 @@ import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { PopupHeader } from '@/components/PopupHeader';
 import { SwitchRow } from '@/components/SwitchRow';
 import { WrappingButton as Button } from '@/components/WrappingButton';
-import { PopupFlatList, PopupScrollView } from '@/components/PopupScrollView';
+import { AppSheet } from '@/components/AppSheet';
+import { PopupFlatList, PopupScrollView, RevealIfSelected } from '@/components/PopupScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIsAudioActiveAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -874,8 +875,10 @@ export default function BibleScreen() {
 
   // To prevent the "content flash" during modal dismissal
   const [lastActiveType, setLastActiveType] = useState<typeof modalType>(null);
-  // Saved verses fill the screen (#750); see the Selection Modals.
-  const savedVersesFullScreen = lastActiveType === 'saved';
+  // The selection sheet's content, kept while it closes (#867). Saved verses
+  // fill the screen instead (#750).
+  const [lastSheetType, setLastSheetType] = useState<Exclude<typeof modalType, 'saved'>>(null);
+  const sheetType = modalType && modalType !== 'saved' ? modalType : lastSheetType;
 
   // Multi-selection state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
@@ -2259,6 +2262,9 @@ export default function BibleScreen() {
   useEffect(() => {
     if (modalType) {
       setLastActiveType(modalType);
+    }
+    if (modalType && modalType !== 'saved') {
+      setLastSheetType(modalType);
     }
   }, [modalType]);
 
@@ -3825,6 +3831,44 @@ export default function BibleScreen() {
 
   const closeModal = () => setModalType(null);
 
+  // The selection sheet's list, and which row is the current choice, which
+  // shows when it opens (#867).
+  const selectionRows: (
+    | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
+    | BibleService.TranslationBook
+    | BookListHeading
+    | number
+  )[] =
+    sheetType === 'translation'
+      ? BibleService.SUPPORTED_TRANSLATIONS.filter(
+          (translation) =>
+            translationSelectionRole === 'primary' || translation.id !== supportedTranslation.id,
+        )
+      : sheetType === 'book'
+        ? // Under Testament and section headings (#807).
+          getBookListRows(books, language)
+        : sheetType === 'verse'
+          ? Array.from({ length: chapterData?.numberOfVerses || 0 }, (_, i) => i + 1)
+          : Array.from({ length: book?.numberOfChapters || 0 }, (_, i) => i + 1);
+  const isCurrentSelection = (item: (typeof selectionRows)[number]) =>
+    (sheetType === 'translation' &&
+      typeof item === 'object' &&
+      item.id ===
+        (translationSelectionRole === 'primary'
+          ? supportedTranslation.id
+          : selectedSupportingTranslation.id)) ||
+    (sheetType === 'book' && typeof item === 'object' && item.id === book?.id) ||
+    (sheetType === 'chapter' && item === chapterNum);
+
+  // Every Bible sheet's title row: centred, at the Bible's own text size.
+  const bibleSheetHeader = {
+    centeredTitle: true,
+    closeLabel: labels.closeAction,
+    headerTextScale: bibleUiTextScale,
+    headerVariant: 'titleLarge' as const,
+  };
+
+  // Saved verses' title row, in its full-screen popup.
   const renderPopupHeader = (title: string, onClose: () => void) => (
     <PopupHeader
       centered
@@ -4681,21 +4725,130 @@ export default function BibleScreen() {
         onOpen={openOfflineBibleAudio}
       />
 
-      <Portal>
-        <Modal
-          visible={audioSettingsVisible}
-          onDismiss={() => setAudioSettingsVisible(false)}
-          contentContainerStyle={[
-            ReaderStyles.modalContent,
-            popupWidthStyle,
-            { maxHeight: popupMaxHeight },
-            getPopupSurfaceStyle(theme),
-          ]}
-        >
-          <View style={ReaderStyles.modalInner}>
-            {renderPopupHeader(labels.audioSettings, () => setAudioSettingsVisible(false))}
-            <Divider />
-            <PopupScrollView ref={audioSettingsScrollRef}>
+      <AppSheet
+        testID="bible-audio-settings"
+        visible={audioSettingsVisible}
+        onDismiss={() => setAudioSettingsVisible(false)}
+        title={labels.audioSettings}
+        {...bibleSheetHeader}
+      >
+        <Divider />
+        <PopupScrollView ref={audioSettingsScrollRef}>
+          <Text
+            variant="titleMedium"
+            style={[
+              styles.audioSettingsSectionTitle,
+              { color: theme.colors.onSurface },
+            ]}
+          >
+            {offersAudioLanguages ? labels.audioLanguage : labels.narrator}
+          </Text>
+          {audioReaderEntries.map(([reader]) => {
+            const isSelected = reader === selectedAudioReader;
+            const audioLanguage = CUV_AUDIO_READERS[reader];
+            // Chinese interfaces show the mark alone; others add the name.
+            // Others lead with their language, as Offline Bible Audio
+            // names them: "English – Souer (BSB)" (#556).
+            const readerLabel = audioLanguage
+              ? language === 'zh' || language === 'zh-cn'
+                ? getAudioLanguageMark(audioLanguage)
+                : `${getAudioLanguageMark(audioLanguage)} ${labels[audioLanguage.language]}`
+              : getBibleAudioNarratorName(getBibleAudioNarrator(supportedTranslation.id, reader), language) ??
+                getAudioReaderLabel(reader);
+            const readerCredit = audioLanguage?.credit;
+            return (
+              <TouchableOpacity
+                key={reader}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  readerCredit ? `${readerLabel}, ${readerCredit}` : readerLabel
+                }
+                accessibilityState={{ selected: isSelected }}
+                onPress={() => selectAudioReader(reader)}
+                style={styles.pressRow}
+              >
+                <AppIcon
+                  pointerEvents="none"
+                  name="account-voice"
+                  size={24}
+                  textScale={bibleUiTextScale}
+                  color={theme.colors.onSurface}
+                />
+                <View style={styles.pressRowLabel}>
+                  <Text
+                    style={[
+                      styles.pressRowTitle,
+                      isSelected
+                        ? { color: theme.colors.primary, fontWeight: '700' }
+                        : { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {readerLabel}
+                  </Text>
+                  {readerCredit && (
+                    <Text
+                      style={[
+                        styles.pressRowCaption,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {readerCredit}
+                    </Text>
+                  )}
+                </View>
+                {isSelected && (
+                  <AppIcon
+                    pointerEvents="none"
+                    name="check"
+                    size={24}
+                    textScale={bibleUiTextScale}
+                    color={theme.colors.primary}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+
+{/* Opened by the tip, the popup scrolls to Listen offline, below
+              however many narrators there are. */}
+          <View
+            onLayout={(event) => {
+              if (!downloadTip.showsLine || scrolledToDownloadTipRef.current) return;
+              scrolledToDownloadTipRef.current = true;
+              audioSettingsScrollRef.current?.scrollTo({
+                y: event.nativeEvent.layout.y,
+                animated: false,
+              });
+            }}
+          >
+            <BibleAudioOfflineSection
+              book={book ? { id: book.id, name: bookName } : undefined}
+              onOpen={(narrator) => {
+                setAudioSettingsVisible(false);
+                router.push({
+                  pathname: '/you/audio-downloads',
+                  params: { backTo: '/bible', narrator, bookId: book?.id ?? '' },
+                } as any);
+              }}
+              reader={selectedAudioReader}
+              showsTip={downloadTip.showsLine}
+              styles={{
+                divider: styles.audioSettingsDivider,
+                helper: styles.audioSettingsHelper,
+                row: styles.pressRow,
+                rowCaption: styles.pressRowCaption,
+                rowLabel: styles.pressRowLabel,
+                rowTitle: styles.pressRowTitle,
+                sectionTitle: styles.audioSettingsSectionTitle,
+              }}
+              textScale={bibleUiTextScale}
+              translationId={supportedTranslation.id}
+            />
+          </View>
+
+          {availableAudioSources.length > 0 && (
+            <>
+              <Divider style={styles.audioSettingsDivider} />
               <Text
                 variant="titleMedium"
                 style={[
@@ -4703,61 +4856,37 @@ export default function BibleScreen() {
                   { color: theme.colors.onSurface },
                 ]}
               >
-                {offersAudioLanguages ? labels.audioLanguage : labels.narrator}
+                {labels.audioSource}
               </Text>
-              {audioReaderEntries.map(([reader]) => {
-                const isSelected = reader === selectedAudioReader;
-                const audioLanguage = CUV_AUDIO_READERS[reader];
-                // Chinese interfaces show the mark alone; others add the name.
-                // Others lead with their language, as Offline Bible Audio
-                // names them: "English – Souer (BSB)" (#556).
-                const readerLabel = audioLanguage
-                  ? language === 'zh' || language === 'zh-cn'
-                    ? getAudioLanguageMark(audioLanguage)
-                    : `${getAudioLanguageMark(audioLanguage)} ${labels[audioLanguage.language]}`
-                  : getBibleAudioNarratorName(getBibleAudioNarrator(supportedTranslation.id, reader), language) ??
-                    getAudioReaderLabel(reader);
-                const readerCredit = audioLanguage?.credit;
+              {availableAudioSources.map((sourceUrl) => {
+                const sourceId = getBibleAudioSourceId(sourceUrl);
+                const isSelected = sourceId === selectedAudioSourceId;
                 return (
                   <TouchableOpacity
-                    key={reader}
+                    key={sourceId}
                     accessibilityRole="button"
-                    accessibilityLabel={
-                      readerCredit ? `${readerLabel}, ${readerCredit}` : readerLabel
-                    }
+                    accessibilityLabel={getBibleAudioSourceLabel(sourceUrl)}
                     accessibilityState={{ selected: isSelected }}
-                    onPress={() => selectAudioReader(reader)}
+                    onPress={() => selectAudioSource(sourceUrl)}
                     style={styles.pressRow}
                   >
                     <AppIcon
                       pointerEvents="none"
-                      name="account-voice"
+                      name="server-network"
                       size={24}
                       textScale={bibleUiTextScale}
                       color={theme.colors.onSurface}
                     />
-                    <View style={styles.pressRowLabel}>
-                      <Text
-                        style={[
-                          styles.pressRowTitle,
-                          isSelected
-                            ? { color: theme.colors.primary, fontWeight: '700' }
-                            : { color: theme.colors.onSurface },
-                        ]}
-                      >
-                        {readerLabel}
-                      </Text>
-                      {readerCredit && (
-                        <Text
-                          style={[
-                            styles.pressRowCaption,
-                            { color: theme.colors.onSurfaceVariant },
-                          ]}
-                        >
-                          {readerCredit}
-                        </Text>
-                      )}
-                    </View>
+                    <Text
+                      style={[
+                        styles.pressRowText,
+                        isSelected
+                          ? { color: theme.colors.primary, fontWeight: '700' }
+                          : { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {getBibleAudioSourceLabel(sourceUrl)}
+                    </Text>
                     {isSelected && (
                       <AppIcon
                         pointerEvents="none"
@@ -4770,143 +4899,50 @@ export default function BibleScreen() {
                   </TouchableOpacity>
                 );
               })}
-
-{/* Opened by the tip, the popup scrolls to Listen offline, below
-                  however many narrators there are. */}
-              <View
-                onLayout={(event) => {
-                  if (!downloadTip.showsLine || scrolledToDownloadTipRef.current) return;
-                  scrolledToDownloadTipRef.current = true;
-                  audioSettingsScrollRef.current?.scrollTo({
-                    y: event.nativeEvent.layout.y,
-                    animated: false,
-                  });
-                }}
+            </>
+          )}
+          {androidAudioBrowserName && (
+            <>
+              <Divider style={styles.audioSettingsDivider} />
+              <Text
+                variant="titleMedium"
+                style={[
+                  styles.audioSettingsSectionTitle,
+                  { color: theme.colors.onSurface },
+                ]}
               >
-                <BibleAudioOfflineSection
-                  book={book ? { id: book.id, name: bookName } : undefined}
-                  onOpen={(narrator) => {
-                    setAudioSettingsVisible(false);
-                    router.push({
-                      pathname: '/you/audio-downloads',
-                      params: { backTo: '/bible', narrator, bookId: book?.id ?? '' },
-                    } as any);
-                  }}
-                  reader={selectedAudioReader}
-                  showsTip={downloadTip.showsLine}
-                  styles={{
-                    divider: styles.audioSettingsDivider,
-                    helper: styles.audioSettingsHelper,
-                    row: styles.pressRow,
-                    rowCaption: styles.pressRowCaption,
-                    rowLabel: styles.pressRowLabel,
-                    rowTitle: styles.pressRowTitle,
-                    sectionTitle: styles.audioSettingsSectionTitle,
-                  }}
+                {labels.backgroundPlayback}
+              </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={labels.backgroundPlaybackHelp}
+                onPress={openBackgroundAudioGuidance}
+                style={styles.pressRow}
+              >
+                <AppIcon
+                  pointerEvents="none"
+                  name="battery-lock-open"
+                  size={24}
                   textScale={bibleUiTextScale}
-                  translationId={supportedTranslation.id}
+                  color={theme.colors.onSurface}
                 />
-              </View>
-
-              {availableAudioSources.length > 0 && (
-                <>
-                  <Divider style={styles.audioSettingsDivider} />
-                  <Text
-                    variant="titleMedium"
-                    style={[
-                      styles.audioSettingsSectionTitle,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    {labels.audioSource}
-                  </Text>
-                  {availableAudioSources.map((sourceUrl) => {
-                    const sourceId = getBibleAudioSourceId(sourceUrl);
-                    const isSelected = sourceId === selectedAudioSourceId;
-                    return (
-                      <TouchableOpacity
-                        key={sourceId}
-                        accessibilityRole="button"
-                        accessibilityLabel={getBibleAudioSourceLabel(sourceUrl)}
-                        accessibilityState={{ selected: isSelected }}
-                        onPress={() => selectAudioSource(sourceUrl)}
-                        style={styles.pressRow}
-                      >
-                        <AppIcon
-                          pointerEvents="none"
-                          name="server-network"
-                          size={24}
-                          textScale={bibleUiTextScale}
-                          color={theme.colors.onSurface}
-                        />
-                        <Text
-                          style={[
-                            styles.pressRowText,
-                            isSelected
-                              ? { color: theme.colors.primary, fontWeight: '700' }
-                              : { color: theme.colors.onSurface },
-                          ]}
-                        >
-                          {getBibleAudioSourceLabel(sourceUrl)}
-                        </Text>
-                        {isSelected && (
-                          <AppIcon
-                            pointerEvents="none"
-                            name="check"
-                            size={24}
-                            textScale={bibleUiTextScale}
-                            color={theme.colors.primary}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </>
-              )}
-              {androidAudioBrowserName && (
-                <>
-                  <Divider style={styles.audioSettingsDivider} />
-                  <Text
-                    variant="titleMedium"
-                    style={[
-                      styles.audioSettingsSectionTitle,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    {labels.backgroundPlayback}
-                  </Text>
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel={labels.backgroundPlaybackHelp}
-                    onPress={openBackgroundAudioGuidance}
-                    style={styles.pressRow}
-                  >
-                    <AppIcon
-                      pointerEvents="none"
-                      name="battery-lock-open"
-                      size={24}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.onSurface}
-                    />
-                    <Text
-                      style={[styles.pressRowText, { color: theme.colors.onSurface }]}
-                    >
-                      {labels.backgroundPlaybackHelp}
-                    </Text>
-                    <AppIcon
-                      pointerEvents="none"
-                      name="chevron-right"
-                      size={24}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.primary}
-                    />
-                  </TouchableOpacity>
-                </>
-              )}
-            </PopupScrollView>
-          </View>
-        </Modal>
-      </Portal>
+                <Text
+                  style={[styles.pressRowText, { color: theme.colors.onSurface }]}
+                >
+                  {labels.backgroundPlaybackHelp}
+                </Text>
+                <AppIcon
+                  pointerEvents="none"
+                  name="chevron-right"
+                  size={24}
+                  textScale={bibleUiTextScale}
+                  color={theme.colors.primary}
+                />
+              </TouchableOpacity>
+            </>
+          )}
+        </PopupScrollView>
+      </AppSheet>
 
       <Portal>
         <Modal
@@ -4977,163 +5013,800 @@ export default function BibleScreen() {
         </Modal>
       </Portal>
 
-      <Portal>
-        <Modal
-          visible={sleepTimerVisible}
-          onDismiss={() => setSleepTimerVisible(false)}
-          contentContainerStyle={[
-            ReaderStyles.modalContent,
-            popupWidthStyle,
-            { maxHeight: popupMaxHeight },
-            getPopupSurfaceStyle(theme),
-          ]}
-        >
-          <View style={ReaderStyles.modalInner}>
-            {renderPopupHeader(labels.sleepTimer, () => setSleepTimerVisible(false))}
+      <AppSheet
+        testID="bible-sleep-timer"
+        visible={sleepTimerVisible}
+        onDismiss={() => setSleepTimerVisible(false)}
+        title={labels.sleepTimer}
+        {...bibleSheetHeader}
+      >
+        <Divider />
+        <PopupScrollView>
+          {(
+            [
+              { value: null, label: labels.timerOff },
+              { value: 5, label: labels.minutes.replace('{n}', '5') },
+              { value: 10, label: labels.minutes.replace('{n}', '10') },
+              { value: 15, label: labels.minutes.replace('{n}', '15') },
+              { value: 30, label: labels.minutes.replace('{n}', '30') },
+              { value: 60, label: labels.oneHour },
+              { value: 120, label: labels.twoHours },
+              { value: 'chapter', label: labels.endOfChapter },
+              { value: 'book', label: labels.endOfBook },
+            ] as { value: SleepTimerSetting; label: string }[]
+          ).map((option) => (
+            <RevealIfSelected key={option.value ?? 'off'} selected={option.value === sleepTimerSetting}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+              accessibilityState={{
+                selected: option.value === sleepTimerSetting,
+              }}
+              onPress={() => selectSleepTimer(option.value)}
+              style={styles.pressRow}
+            >
+              <AppIcon
+                pointerEvents="none"
+                name={
+                  option.value === 'chapter' ? 'book-clock-outline' : 'timer-outline'
+                }
+                size={24}
+                textScale={bibleUiTextScale}
+                color={theme.colors.onSurface}
+              />
+              <Text
+                style={[
+                  styles.pressRowText,
+                  option.value === sleepTimerSetting
+                    ? { color: theme.colors.primary, fontWeight: '700' }
+                    : { color: theme.colors.onSurface },
+                ]}
+              >
+                {option.label}
+              </Text>
+              {option.value === sleepTimerSetting && (
+                <AppIcon
+                  pointerEvents="none"
+                  name="check"
+                  size={24}
+                  textScale={bibleUiTextScale}
+                  color={theme.colors.primary}
+                />
+              )}
+            </TouchableOpacity>
+            </RevealIfSelected>
+          ))}
+        </PopupScrollView>
+      </AppSheet>
+
+      {/* The sheets for picking a translation, book, chapter or verse, and a
+          verse's details and its hymns, which take turns in one sheet. */}
+      <AppSheet
+        testID="bible-selection-sheet"
+        visible={!!modalType && modalType !== 'saved'}
+        onDismiss={closeModal}
+        // Reader languages: a choice made by comparing them all, with its
+        // switches at the foot, so full height (#867). The lists and a
+        // verse's details open at half, with the current one in view.
+        height={sheetType === 'translation' ? 'large' : 'auto'}
+        title={
+          sheetType === 'verse-hymns'
+            ? labels.verseHymnsTitle
+            : sheetType === 'verse-detail'
+              ? book
+                ? formatBookReference(book, supportedTranslation.lang, language, `${chapterNum}:${selectedVerseNum}`)
+                : `${chapterNum}:${selectedVerseNum}`
+              : sheetType === 'translation'
+                ? labels.translation
+                : sheetType === 'book'
+                  ? labels.book
+                  : sheetType === 'verse'
+                    ? labels.verse
+                    : labels.chapter
+        }
+        {...bibleSheetHeader}
+      >
+        {sheetType === 'verse-hymns' ? (
+          <>
             <Divider />
-            <PopupScrollView>
-              {(
-                [
-                  { value: null, label: labels.timerOff },
-                  { value: 5, label: labels.minutes.replace('{n}', '5') },
-                  { value: 10, label: labels.minutes.replace('{n}', '10') },
-                  { value: 15, label: labels.minutes.replace('{n}', '15') },
-                  { value: 30, label: labels.minutes.replace('{n}', '30') },
-                  { value: 60, label: labels.oneHour },
-                  { value: 120, label: labels.twoHours },
-                  { value: 'chapter', label: labels.endOfChapter },
-                  { value: 'book', label: labels.endOfBook },
-                ] as { value: SleepTimerSetting; label: string }[]
-              ).map((option) => (
+            <PopupScrollView contentContainerStyle={{ paddingVertical: 4 }}>
+              {verseHymns.map((hymn) => (
                 <TouchableOpacity
-                  key={option.value ?? 'off'}
+                  key={`${hymn.hymnalId}:${hymn.number}`}
+                  accessibilityHint={labels.verseHymnHint}
                   accessibilityRole="button"
-                  accessibilityLabel={option.label}
-                  accessibilityState={{
-                    selected: option.value === sleepTimerSetting,
-                  }}
-                  onPress={() => selectSleepTimer(option.value)}
-                  style={styles.pressRow}
+                  onPress={() => openVerseHymn(hymn)}
+                  style={styles.savedVerseMainAction}
                 >
                   <AppIcon
                     pointerEvents="none"
-                    name={
-                      option.value === 'chapter' ? 'book-clock-outline' : 'timer-outline'
-                    }
+                    name="music-clef-treble"
                     size={24}
                     textScale={bibleUiTextScale}
-                    color={theme.colors.onSurface}
+                    color={theme.colors.primary}
                   />
-                  <Text
-                    style={[
-                      styles.pressRowText,
-                      option.value === sleepTimerSetting
-                        ? { color: theme.colors.primary, fontWeight: '700' }
-                        : { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  {option.value === sleepTimerSetting && (
-                    <AppIcon
-                      pointerEvents="none"
-                      name="check"
-                      size={24}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.primary}
-                    />
-                  )}
+                  <View pointerEvents="none" style={styles.savedVerseText}>
+                    <Text
+                      style={[
+                        styles.pressRowText,
+                        { color: theme.colors.onSurface, fontWeight: '700' },
+                      ]}
+                    >
+                      {hymn.number}. {getHymnTitle(hymn.hymnalId, hymn.title, language)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.savedVerseDescription,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {formatHymnScriptureReference(
+                        hymn.hymnalId,
+                        hymn.scriptureReference,
+                        language,
+                      )}
+                      {' · '}
+                      {getHymnalShortLabel(hymn.hymnalId, language)}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </PopupScrollView>
-          </View>
-        </Modal>
-      </Portal>
-
-      {/* Selection Modals */}
-      <Portal>
-        <Modal
-          visible={!!modalType}
-          onDismiss={closeModal}
-          // Saved verses fill the screen, so more of them, each in full, show
-          // at once (#750): the one popup past the 65% height limit, on
-          // purpose. Its X stays in the title row, and Back closes it.
-          style={savedVersesFullScreen ? styles.fullScreenPopupWrapper : undefined}
-          contentContainerStyle={
-            savedVersesFullScreen
-              ? [
-                  styles.fullScreenPopup,
-                  {
-                    width: viewportWidth,
-                    height: viewportHeight,
-                    paddingTop: insets.top,
-                    paddingBottom: insets.bottom,
-                    backgroundColor: theme.colors.background,
-                  },
-                ]
-              : [
-                  ReaderStyles.modalContent,
-                  popupWidthStyle,
-                  { maxHeight: popupMaxHeight },
-                  getPopupSurfaceStyle(theme),
-                ]
-          }
-        >
-          <View
-            style={[
-              ReaderStyles.modalInner,
-              savedVersesFullScreen && [styles.fullScreenPopupInner, readingColumnStyle],
-            ]}
-          >
-            {lastActiveType === 'verse-hymns' ? (
-              <>
-                {renderPopupHeader(labels.verseHymnsTitle, closeModal)}
-                <Divider />
-                <PopupScrollView contentContainerStyle={{ paddingVertical: 4 }}>
-                  {verseHymns.map((hymn) => (
-                    <TouchableOpacity
-                      key={`${hymn.hymnalId}:${hymn.number}`}
-                      accessibilityHint={labels.verseHymnHint}
-                      accessibilityRole="button"
-                      onPress={() => openVerseHymn(hymn)}
-                      style={styles.savedVerseMainAction}
+          </>
+        ) : sheetType === 'verse-detail' ? (
+          <>
+            <Divider />
+            <PopupScrollView style={ReaderStyles.modalScroll}>
+              <View style={ReaderStyles.detailSection}>
+                {supportingTranslation && selectedVerseTexts?.supportingText && (
+                  <Text
+                    variant="labelSmall"
+                    style={{ color: theme.colors.primary, marginBottom: 4 }}
+                  >
+                    {labels.primaryTranslation}:{' '}
+                    {getTranslationLabel(supportedTranslation)}
+                  </Text>
+                )}
+                {showSelectedPrimaryPinyin ? (
+                  <PinyinRubyText
+                    numberColor={theme.colors.onSurface}
+                    pinyinColor={theme.colors.tertiary}
+                    rightAlignedLines={selectedPrimaryVerseText
+                      .split('\n')
+                      .map((line) =>
+                        BibleService.isSelahMarker(supportedTranslation.id, line),
+                      )}
+                    text={selectedPrimaryVerseText}
+                    textColor={theme.colors.onSurface}
+                    textScale={textScale}
+                    footnoteColor={theme.colors.primary}
+                  />
+                ) : (
+                  <Text style={[ReaderStyles.detailText, { fontWeight: '500' }]}>
+                    {renderPopupVerseText(selectedPrimaryVerseText)}
+                  </Text>
+                )}
+                {supportingTranslation && selectedVerseTexts?.supportingText && (
+                  <View style={ReaderStyles.supportingDetailSection}>
+                    <Text
+                      variant="labelSmall"
+                      style={{ color: theme.colors.tertiary, marginBottom: 4 }}
                     >
+                      {labels.supportingTranslation}:{' '}
+                      {getTranslationLabel(supportingTranslation)}
+                    </Text>
+                    {showSelectedSupportingPinyin ? (
+                      <PinyinRubyText
+                        numberColor={theme.colors.onSurfaceVariant}
+                        pinyinColor={theme.colors.tertiary}
+                        rightAlignedLines={selectedVerseTexts.supportingText
+                          .split('\n')
+                          .map((line) =>
+                            BibleService.isSelahMarker(
+                              supportingTranslation.id,
+                              line,
+                            ),
+                          )}
+                        text={selectedVerseTexts.supportingText}
+                        textColor={theme.colors.onSurfaceVariant}
+                        textScale={textScale}
+                        footnoteColor={theme.colors.primary}
+                        variant="supporting"
+                      />
+                    ) : (
+                      <Text
+                        style={[
+                          ReaderStyles.supportingDetailText,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {renderPopupVerseText(selectedVerseTexts.supportingText)}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+              <Divider style={{ marginBottom: 16 }} />
+              {/*
+                  The verse's notes come before its original-language text
+                  (#745): the Hebrew title, then the footnotes. The title is
+                  worked out first, to drop footnotes that only repeat it.
+              */}
+              {(() => {
+                const subtitle = getAssociatedSubtitle(selectedVerseNum || 0);
+                const subtitleText = subtitle
+                  ? subtitle.content
+                      .map((item) =>
+                        typeof item === 'string' ? item : (item as any).text || '',
+                      )
+                      .join('')
+                      .trim()
+                  : '';
+
+                // Hardcode exception: Subtitles for Psalms Verse 1 are already visible in-line.
+                const isPsalmVerseOne = book?.id === 'PSA' && selectedVerseNum === 1;
+                const showSubtitle = !!subtitle && !isPsalmVerseOne;
+
+                /*
+                  Both translations' footnotes, so a note marked in the
+                  supporting text (such as the 1919 CUV's) opens here too,
+                  as the main translation's do. With two, each names its
+                  translation, since both number theirs from 1.
+                */
+                const footnotes = [
+                  { translation: supportedTranslation, data: chapterData },
+                  ...(supportingTranslation && selectedVerseTexts?.supportingText
+                    ? [{ translation: supportingTranslation, data: supportingChapterData }]
+                    : []),
+                ].flatMap(({ translation, data }, source, sources) =>
+                  (data?.chapter.footnotes ?? [])
+                    .filter((f) => {
+                      if (f.reference?.verse !== selectedVerseNum) return false;
+                      // Filter duplicates
+                      if (subtitleText && f.text.trim() === subtitleText)
+                        return false;
+                      return true;
+                    })
+                    .map((f, i) => (
+                      <View key={`fn-${source}-${i}`} style={ReaderStyles.detailSection}>
+                        <Text
+                          variant="labelSmall"
+                          style={{ color: theme.colors.primary, marginBottom: 4 }}
+                        >
+                          {labels.footnote}{' '}
+                          {BibleService.toSuperscript(
+                            BibleService.getChapterFootnoteNumber(
+                              data?.chapter.footnotes ?? [],
+                              f.noteId,
+                            ),
+                          )}
+                          {sources.length > 1 ? ` · ${getTranslationLabel(translation)}` : ''}
+                        </Text>
+                        <Text style={ReaderStyles.detailText}>{f.text}</Text>
+                      </View>
+                    )),
+                );
+
+                if (!showSubtitle && footnotes.length === 0) return null;
+                return (
+                  <>
+                    {showSubtitle && (
+                      <View style={ReaderStyles.detailSection}>
+                        <Text
+                          variant="labelSmall"
+                          style={{ color: theme.colors.tertiary, marginBottom: 4 }}
+                        >
+                          {labels.hebrewSubtitle}
+                        </Text>
+                        <Text
+                          style={[ReaderStyles.detailText, { fontStyle: 'italic' }]}
+                        >
+                          {subtitleText}
+                        </Text>
+                      </View>
+                    )}
+
+                    {footnotes}
+                    <Divider style={{ marginBottom: 16 }} />
+                  </>
+                );
+              })()}
+              {originalVerseLoading ? (
+                <View style={styles.originalVerseStatus}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                    {labels.loadingOriginal}
+                  </Text>
+                </View>
+              ) : originalVerse ? (
+                <View style={ReaderStyles.detailSection}>
+                  <Text
+                    variant="labelSmall"
+                    style={{ color: theme.colors.tertiary, marginBottom: 6 }}
+                  >
+                    {originalVerse.textDirection === 'rtl'
+                      ? labels.hebrewAramaicOriginal
+                      : labels.greekOriginal}
+                    {/* Where the original numbers the verse differently. */}
+                    {originalVerse.reference ? ` · ${originalVerse.reference}` : ''}
+                  </Text>
+                  <Text
+                    selectable
+                    style={[
+                      styles.originalVerseText,
+                      {
+                        color: theme.colors.onSurface,
+                        textAlign:
+                          originalVerse.textDirection === 'rtl' ? 'right' : 'left',
+                        writingDirection: originalVerse.textDirection,
+                        fontFamily:
+                          originalVerse.textDirection === 'rtl'
+                            ? SCRIPTURE_FONT_FAMILIES.hebrew
+                            : SCRIPTURE_FONT_FAMILIES.greek,
+                      },
+                    ]}
+                  >
+                    {originalVerse.text}
+                  </Text>
+                  {/*
+                    Required CC BY 4.0 attribution for the original-language
+                    edition, which ships with the app: the edition, its
+                    editor, and links to its source and the license. Do not
+                    remove this notice when changing the popup; see
+                    docs/LEGAL.md and the Bible design doc.
+                  */}
+                  <Text
+                    variant="labelSmall"
+                    style={[
+                      styles.originalVerseAttribution,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {labels.source}:{' '}
+                    <Text
+                      accessibilityRole="link"
+                      onPress={() => openURL(originalVerse.sourceUrl)}
+                      style={styles.originalVerseLink}
+                    >
+                      {originalVerse.edition}
+                    </Text>
+                    . {originalVerse.attribution} Licensed{' '}
+                    <Text
+                      accessibilityRole="link"
+                      onPress={() => openURL(originalVerse.licenseUrl)}
+                      style={styles.originalVerseLink}
+                    >
+                      {originalVerse.license}
+                    </Text>
+                    .
+                  </Text>
+                </View>
+              ) : originalVerseError ? (
+                <View style={ReaderStyles.detailSection}>
+                  <Text style={{ color: theme.colors.error }}>
+                    {labels.originalUnavailable}
+                  </Text>
+                </View>
+              ) : null}
+            </PopupScrollView>
+            <View
+              style={[
+                styles.detailActions,
+              ]}
+            >
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isVerseSaved(selectedVerseNum || 0)
+                    ? labels.removeAction
+                    : labels.saveAction
+                }
+                onPress={() => toggleSavedVerses([selectedVerseNum || 0])}
+                style={[
+                  styles.detailActionButton,
+                  styles.detailOutlinedAction,
+                  { borderColor: theme.colors.outline },
+                ]}
+              >
+                <AppIcon
+                  pointerEvents="none"
+                  name={
+                    isVerseSaved(selectedVerseNum || 0)
+                      ? 'bookmark-remove'
+                      : 'bookmark-plus'
+                  }
+                  size={22}
+                  textScale={bibleUiTextScale}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[styles.detailActionText, { color: theme.colors.primary }]}
+                >
+                  {isVerseSaved(selectedVerseNum || 0)
+                    ? labels.removeAction
+                    : labels.saveAction}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={labels.share}
+                onPress={handleShare}
+                style={[
+                  styles.detailActionButton,
+                  theme.dark ? null : { backgroundColor: theme.colors.primary },
+                ]}
+              >
+                {theme.dark ? (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={theme.gradients.metallicGold}
+                    locations={[0, 0.38, 0.62, 1]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                ) : null}
+                <AppIcon
+                  pointerEvents="none"
+                  name="share-variant"
+                  size={22}
+                  textScale={bibleUiTextScale}
+                  color={theme.colors.onPrimary}
+                />
+                <Text
+                  style={[styles.detailActionText, { color: theme.colors.onPrimary }]}
+                >
+                  {labels.share}
+                </Text>
+              </TouchableOpacity>
+              {/* One hymn opens on the hymnal page; several open a list. */}
+              {verseHymns.length > 0 && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    verseHymns.length === 1
+                      ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${getHymnTitle(verseHymns[0].hymnalId, verseHymns[0].title, language)}`
+                      : labels.verseHymnsTitle
+                  }
+                  accessibilityHint={verseHymns.length === 1 ? labels.verseHymnHint : undefined}
+                  onPress={() =>
+                    verseHymns.length === 1
+                      ? openVerseHymn(verseHymns[0])
+                      : setModalType('verse-hymns')
+                  }
+                  style={[
+                    styles.detailActionButton,
+                    styles.detailOutlinedAction,
+                    { borderColor: theme.colors.outline },
+                  ]}
+                >
+                  <AppIcon
+                    pointerEvents="none"
+                    name="music-clef-treble"
+                    size={22}
+                    textScale={bibleUiTextScale}
+                    color={theme.colors.primary}
+                  />
+                  <Text style={[styles.detailActionText, { color: theme.colors.primary }]}>
+                    {labels.hymnsAction(verseHymns.length)}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        ) : sheetType ? (
+          <>
+            <Divider />
+            <PopupFlatList<
+              | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
+              | BibleService.TranslationBook
+              | BookListHeading
+              | number
+            >
+              data={selectionRows}
+              selectedIndex={selectionRows.findIndex(isCurrentSelection)}
+              keyExtractor={(item) =>
+                typeof item === 'object' ? item.id : item.toString()
+              }
+              ListHeaderComponent={
+                sheetType === 'translation' ? (
+                  <View>
+                    <View style={styles.translationRoleRow}>
+                      {(['primary', 'supporting'] as const).map((role) => {
+                        const isPrimary = role === 'primary';
+                        const isActive = translationSelectionRole === role;
+                        const disabled = !isPrimary && !dualLanguageEnabled;
+                        const roleTranslation = isPrimary
+                          ? supportedTranslation
+                          : selectedSupportingTranslation;
+                        return (
+                          <TouchableOpacity
+                            key={role}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isActive, disabled }}
+                            disabled={disabled}
+                            onPress={() => setTranslationSelectionRole(role)}
+                            style={[
+                              styles.translationRoleButton,
+                              {
+                                borderColor: isActive
+                                  ? theme.colors.primary
+                                  : theme.colors.outline,
+                                backgroundColor: isActive
+                                  ? theme.colors.primaryContainer
+                                  : theme.colors.surface,
+                              },
+                              disabled && styles.disabledTranslationRole,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.translationRoleTitle,
+                                {
+                                  color: isActive
+                                    ? theme.colors.onPrimaryContainer
+                                    : theme.colors.onSurface,
+                                },
+                              ]}
+                            >
+                              {isPrimary
+                                ? labels.primaryTranslation
+                                : labels.supportingTranslation}
+                            </Text>
+                            <Text
+                              numberOfLines={1}
+                              style={[
+                                styles.translationRoleValue,
+                                { color: theme.colors.onSurfaceVariant },
+                              ]}
+                            >
+                              {roleTranslation.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <Text
+                      style={[
+                        styles.translationRoleHelp,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {translationSelectionRole === 'primary'
+                        ? labels.primaryTranslationHelp
+                        : labels.supportingTranslationHelp}
+                    </Text>
+                    <Divider />
+                  </View>
+                ) : undefined
+              }
+              ListFooterComponent={
+                sheetType === 'translation' ? (
+                  <View>
+                    <Divider />
+                    {/* A tap on the words turns each on or off too (#798). */}
+                    <SwitchRow
+                      label={labels.dualLanguage}
+                      description={labels.dualLanguageHelp}
+                      value={dualLanguageEnabled}
+                      onValueChange={(enabled) => {
+                        setDualLanguageEnabled(enabled);
+                        if (!enabled) setTranslationSelectionRole('primary');
+                      }}
+                      style={styles.pinyinPreferenceRow}
+                      labelStyle={styles.pressRowText}
+                      descriptionStyle={styles.pinyinPreferenceHelp}
+                    />
+                    <Divider />
+                    <SwitchRow
+                      label={labels.showPinyin}
+                      description={labels.pinyinHelp}
+                      value={showPinyin}
+                      onValueChange={setShowPinyin}
+                      style={styles.pinyinPreferenceRow}
+                      labelStyle={styles.pressRowText}
+                      descriptionStyle={styles.pinyinPreferenceHelp}
+                    />
+                    <Divider />
+                    {/* Requests set which languages come next (#241, #344). */}
+                    <TouchableOpacity
+                      accessibilityRole="link"
+                      onPress={() => openBibleRequestEmail(labels.requestTranslationPrompt)}
+                      style={styles.pinyinPreferenceRow}
+                    >
+                      <Text
+                        style={[
+                          styles.pinyinPreferenceHelp,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {labels.requestTranslation}{' '}
+                        <Text style={{ color: theme.colors.primary }}>{TECHNOLOGY_EMAIL}</Text>
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : undefined
+              }
+              renderItem={({ item }) => {
+                // The book list's headings (#807): small, and no tap
+                // target, so the list stays quick to scroll. A
+                // Testament's is a little stronger than its sections'.
+                if (typeof item === 'object' && isBookListHeading(item)) {
+                  const isTestament = item.heading === 'testament';
+                  return (
+                    <Text
+                      accessibilityRole="header"
+                      style={[
+                        isTestament ? styles.bookListTestament : styles.bookListSection,
+                        {
+                          color: isTestament
+                            ? theme.colors.onSurface
+                            : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      {item.name}
+                    </Text>
+                  );
+                }
+                // A book, chapter, or verse in the translation's language,
+                // then the app's, when they differ (#723).
+                const itemName: TwoLanguageName =
+                  typeof item === 'object'
+                    ? 'lang' in item
+                      ? { name: getTranslationLabel(item) }
+                      : getBookListName(item, supportedTranslation.lang, language)
+                    : getPickerItemName(
+                        sheetType === 'verse' ? 'verse' : 'chapter',
+                        item,
+                        supportedTranslation.lang,
+                        language,
+                      );
+                const itemLabel = formatTwoLanguageName(itemName);
+                const isSelectedItem = isCurrentSelection(item);
+
+                return (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={itemLabel}
+                    accessibilityState={{ selected: isSelectedItem }}
+                    onPress={() => {
+                      const changesChapter =
+                        sheetType === 'book' ||
+                        sheetType === 'chapter' ||
+                        (sheetType === 'translation' &&
+                          translationSelectionRole === 'primary');
+                      // Keep audio playing only when the selection loads a new chapter.
+                      if (isPlaying && changesChapter) {
+                        setShouldAutoPlay(true);
+                      }
+                      if (sheetType === 'translation') {
+                        pendingScriptureRange.current = null;
+                        const translation =
+                          item as (typeof BibleService.SUPPORTED_TRANSLATIONS)[number];
+                        if (translationSelectionRole === 'primary') {
+                          handledTranslationParamSignature.current =
+                            translationParamSignature;
+                          if (book && translation.id !== supportedTranslation.id) {
+                            pendingTranslationSwitchPosition.current =
+                              getTranslationSwitchPosition(
+                                translation.id,
+                                { bookId: book.id, chapter: chapterNum },
+                                getTopVisibleVerse(
+                                  versePositions.current,
+                                  readerScrollY.current + VERSE_SCROLL_TOP_OFFSET,
+                                ),
+                                pendingTranslationSwitchPosition.current,
+                                !!chapterData && !loading,
+                              );
+                          }
+                          if (
+                            translation.id === selectedSupportingTranslation.id &&
+                            translation.id !== supportedTranslation.id
+                          ) {
+                            setSelectedSupportingTranslation(supportedTranslation);
+                          }
+                          setSupportedTranslation(translation);
+                          if (dualLanguageEnabled) {
+                            setTranslationSelectionRole('supporting');
+                            return;
+                          }
+                        } else {
+                          setSelectedSupportingTranslation(translation);
+                        }
+                      } else if (sheetType === 'book') {
+                        forgetPendingScrolls();
+                        setBook(item as any);
+                        setChapterNum(1);
+                      } else if (sheetType === 'chapter') {
+                        forgetPendingScrolls();
+                        setChapterNum(item as any);
+                      } else if (sheetType === 'verse') {
+                        forgetPendingScrolls();
+                        const verseNumber = item as number;
+                        setTimeout(() => {
+                          const verseY = versePositions.current[verseNumber];
+                          if (verseY !== undefined) {
+                            scrollRef.current?.scrollTo({
+                              y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET),
+                              animated: true,
+                            });
+                          }
+                        }, 250);
+                      }
+                      closeModal();
+                    }}
+                    style={styles.pressRow}
+                  >
+                    {itemName.appName ? (
+                      // The app's name in parentheses moves whole to a
+                      // second line when both don't fit on one, rather than
+                      // breaking inside it: 帖撒羅尼迦前書, then
+                      // (1 Thessalonians), at the largest text sizes.
+                      <View style={styles.pressRowNames}>
+                        {[itemName.name, `(${itemName.appName})`].map((part) => (
+                          <Text
+                            key={part}
+                            style={[
+                              styles.pressRowNamePart,
+                              isSelectedItem
+                                ? { color: theme.colors.primary, fontWeight: '700' }
+                                : { color: theme.colors.onSurface },
+                            ]}
+                          >
+                            {part}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.pressRowText,
+                          isSelectedItem
+                            ? { color: theme.colors.primary, fontWeight: '700' }
+                            : { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        {itemLabel}
+                      </Text>
+                    )}
+                    {isSelectedItem && (
                       <AppIcon
                         pointerEvents="none"
-                        name="music-clef-treble"
+                        name="check"
                         size={24}
                         textScale={bibleUiTextScale}
                         color={theme.colors.primary}
                       />
-                      <View pointerEvents="none" style={styles.savedVerseText}>
-                        <Text
-                          style={[
-                            styles.pressRowText,
-                            { color: theme.colors.onSurface, fontWeight: '700' },
-                          ]}
-                        >
-                          {hymn.number}. {getHymnTitle(hymn.hymnalId, hymn.title, language)}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.savedVerseDescription,
-                            { color: theme.colors.onSurfaceVariant },
-                          ]}
-                        >
-                          {formatHymnScriptureReference(
-                            hymn.hymnalId,
-                            hymn.scriptureReference,
-                            language,
-                          )}
-                          {' · '}
-                          {getHymnalShortLabel(hymn.hymnalId, language)}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </PopupScrollView>
-              </>
-            ) : lastActiveType === 'saved' ? (
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </>
+        ) : null}
+      </AppSheet>
+
+      {/* Saved verses fill the screen, so more of them, each in full, show at
+          once (#750): a full-screen popup, not a sheet. Its X stays in the
+          title row, and Back closes it. */}
+      <Portal>
+        <Modal
+          visible={modalType === 'saved'}
+          onDismiss={closeModal}
+          style={styles.fullScreenPopupWrapper}
+          contentContainerStyle={[
+            styles.fullScreenPopup,
+            {
+              width: viewportWidth,
+              height: viewportHeight,
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+              backgroundColor: theme.colors.background,
+            },
+          ]}
+        >
+          <View style={[ReaderStyles.modalInner, styles.fullScreenPopupInner, readingColumnStyle]}>
               <>
                 {renderPopupHeader(labels.savedVerses, closeModal)}
                 <Text
@@ -5273,682 +5946,6 @@ export default function BibleScreen() {
                   />
                 )}
               </>
-            ) : lastActiveType === 'verse-detail' ? (
-              <>
-                {renderPopupHeader(
-                  book
-                    ? formatBookReference(book, supportedTranslation.lang, language, `${chapterNum}:${selectedVerseNum}`)
-                    : `${chapterNum}:${selectedVerseNum}`,
-                  closeModal,
-                )}
-                <Divider />
-                <PopupScrollView style={ReaderStyles.modalScroll}>
-                  <View style={ReaderStyles.detailSection}>
-                    {supportingTranslation && selectedVerseTexts?.supportingText && (
-                      <Text
-                        variant="labelSmall"
-                        style={{ color: theme.colors.primary, marginBottom: 4 }}
-                      >
-                        {labels.primaryTranslation}:{' '}
-                        {getTranslationLabel(supportedTranslation)}
-                      </Text>
-                    )}
-                    {showSelectedPrimaryPinyin ? (
-                      <PinyinRubyText
-                        numberColor={theme.colors.onSurface}
-                        pinyinColor={theme.colors.tertiary}
-                        rightAlignedLines={selectedPrimaryVerseText
-                          .split('\n')
-                          .map((line) =>
-                            BibleService.isSelahMarker(supportedTranslation.id, line),
-                          )}
-                        text={selectedPrimaryVerseText}
-                        textColor={theme.colors.onSurface}
-                        textScale={textScale}
-                        footnoteColor={theme.colors.primary}
-                      />
-                    ) : (
-                      <Text style={[ReaderStyles.detailText, { fontWeight: '500' }]}>
-                        {renderPopupVerseText(selectedPrimaryVerseText)}
-                      </Text>
-                    )}
-                    {supportingTranslation && selectedVerseTexts?.supportingText && (
-                      <View style={ReaderStyles.supportingDetailSection}>
-                        <Text
-                          variant="labelSmall"
-                          style={{ color: theme.colors.tertiary, marginBottom: 4 }}
-                        >
-                          {labels.supportingTranslation}:{' '}
-                          {getTranslationLabel(supportingTranslation)}
-                        </Text>
-                        {showSelectedSupportingPinyin ? (
-                          <PinyinRubyText
-                            numberColor={theme.colors.onSurfaceVariant}
-                            pinyinColor={theme.colors.tertiary}
-                            rightAlignedLines={selectedVerseTexts.supportingText
-                              .split('\n')
-                              .map((line) =>
-                                BibleService.isSelahMarker(
-                                  supportingTranslation.id,
-                                  line,
-                                ),
-                              )}
-                            text={selectedVerseTexts.supportingText}
-                            textColor={theme.colors.onSurfaceVariant}
-                            textScale={textScale}
-                            footnoteColor={theme.colors.primary}
-                            variant="supporting"
-                          />
-                        ) : (
-                          <Text
-                            style={[
-                              ReaderStyles.supportingDetailText,
-                              { color: theme.colors.onSurfaceVariant },
-                            ]}
-                          >
-                            {renderPopupVerseText(selectedVerseTexts.supportingText)}
-                          </Text>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                  <Divider style={{ marginBottom: 16 }} />
-                  {/*
-                      The verse's notes come before its original-language text
-                      (#745): the Hebrew title, then the footnotes. The title is
-                      worked out first, to drop footnotes that only repeat it.
-                  */}
-                  {(() => {
-                    const subtitle = getAssociatedSubtitle(selectedVerseNum || 0);
-                    const subtitleText = subtitle
-                      ? subtitle.content
-                          .map((item) =>
-                            typeof item === 'string' ? item : (item as any).text || '',
-                          )
-                          .join('')
-                          .trim()
-                      : '';
-
-                    // Hardcode exception: Subtitles for Psalms Verse 1 are already visible in-line.
-                    const isPsalmVerseOne = book?.id === 'PSA' && selectedVerseNum === 1;
-                    const showSubtitle = !!subtitle && !isPsalmVerseOne;
-
-                    /*
-                      Both translations' footnotes, so a note marked in the
-                      supporting text (such as the 1919 CUV's) opens here too,
-                      as the main translation's do. With two, each names its
-                      translation, since both number theirs from 1.
-                    */
-                    const footnotes = [
-                      { translation: supportedTranslation, data: chapterData },
-                      ...(supportingTranslation && selectedVerseTexts?.supportingText
-                        ? [{ translation: supportingTranslation, data: supportingChapterData }]
-                        : []),
-                    ].flatMap(({ translation, data }, source, sources) =>
-                      (data?.chapter.footnotes ?? [])
-                        .filter((f) => {
-                          if (f.reference?.verse !== selectedVerseNum) return false;
-                          // Filter duplicates
-                          if (subtitleText && f.text.trim() === subtitleText)
-                            return false;
-                          return true;
-                        })
-                        .map((f, i) => (
-                          <View key={`fn-${source}-${i}`} style={ReaderStyles.detailSection}>
-                            <Text
-                              variant="labelSmall"
-                              style={{ color: theme.colors.primary, marginBottom: 4 }}
-                            >
-                              {labels.footnote}{' '}
-                              {BibleService.toSuperscript(
-                                BibleService.getChapterFootnoteNumber(
-                                  data?.chapter.footnotes ?? [],
-                                  f.noteId,
-                                ),
-                              )}
-                              {sources.length > 1 ? ` · ${getTranslationLabel(translation)}` : ''}
-                            </Text>
-                            <Text style={ReaderStyles.detailText}>{f.text}</Text>
-                          </View>
-                        )),
-                    );
-
-                    if (!showSubtitle && footnotes.length === 0) return null;
-                    return (
-                      <>
-                        {showSubtitle && (
-                          <View style={ReaderStyles.detailSection}>
-                            <Text
-                              variant="labelSmall"
-                              style={{ color: theme.colors.tertiary, marginBottom: 4 }}
-                            >
-                              {labels.hebrewSubtitle}
-                            </Text>
-                            <Text
-                              style={[ReaderStyles.detailText, { fontStyle: 'italic' }]}
-                            >
-                              {subtitleText}
-                            </Text>
-                          </View>
-                        )}
-
-                        {footnotes}
-                        <Divider style={{ marginBottom: 16 }} />
-                      </>
-                    );
-                  })()}
-                  {originalVerseLoading ? (
-                    <View style={styles.originalVerseStatus}>
-                      <ActivityIndicator size="small" color={theme.colors.primary} />
-                      <Text style={{ color: theme.colors.onSurfaceVariant }}>
-                        {labels.loadingOriginal}
-                      </Text>
-                    </View>
-                  ) : originalVerse ? (
-                    <View style={ReaderStyles.detailSection}>
-                      <Text
-                        variant="labelSmall"
-                        style={{ color: theme.colors.tertiary, marginBottom: 6 }}
-                      >
-                        {originalVerse.textDirection === 'rtl'
-                          ? labels.hebrewAramaicOriginal
-                          : labels.greekOriginal}
-                        {/* Where the original numbers the verse differently. */}
-                        {originalVerse.reference ? ` · ${originalVerse.reference}` : ''}
-                      </Text>
-                      <Text
-                        selectable
-                        style={[
-                          styles.originalVerseText,
-                          {
-                            color: theme.colors.onSurface,
-                            textAlign:
-                              originalVerse.textDirection === 'rtl' ? 'right' : 'left',
-                            writingDirection: originalVerse.textDirection,
-                            fontFamily:
-                              originalVerse.textDirection === 'rtl'
-                                ? SCRIPTURE_FONT_FAMILIES.hebrew
-                                : SCRIPTURE_FONT_FAMILIES.greek,
-                          },
-                        ]}
-                      >
-                        {originalVerse.text}
-                      </Text>
-                      {/*
-                        Required CC BY 4.0 attribution for the original-language
-                        edition, which ships with the app: the edition, its
-                        editor, and links to its source and the license. Do not
-                        remove this notice when changing the popup; see
-                        docs/LEGAL.md and the Bible design doc.
-                      */}
-                      <Text
-                        variant="labelSmall"
-                        style={[
-                          styles.originalVerseAttribution,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        {labels.source}:{' '}
-                        <Text
-                          accessibilityRole="link"
-                          onPress={() => openURL(originalVerse.sourceUrl)}
-                          style={styles.originalVerseLink}
-                        >
-                          {originalVerse.edition}
-                        </Text>
-                        . {originalVerse.attribution} Licensed{' '}
-                        <Text
-                          accessibilityRole="link"
-                          onPress={() => openURL(originalVerse.licenseUrl)}
-                          style={styles.originalVerseLink}
-                        >
-                          {originalVerse.license}
-                        </Text>
-                        .
-                      </Text>
-                    </View>
-                  ) : originalVerseError ? (
-                    <View style={ReaderStyles.detailSection}>
-                      <Text style={{ color: theme.colors.error }}>
-                        {labels.originalUnavailable}
-                      </Text>
-                    </View>
-                  ) : null}
-                </PopupScrollView>
-                <View
-                  style={[
-                    styles.detailActions,
-                  ]}
-                >
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      isVerseSaved(selectedVerseNum || 0)
-                        ? labels.removeAction
-                        : labels.saveAction
-                    }
-                    onPress={() => toggleSavedVerses([selectedVerseNum || 0])}
-                    style={[
-                      styles.detailActionButton,
-                      styles.detailOutlinedAction,
-                      { borderColor: theme.colors.outline },
-                    ]}
-                  >
-                    <AppIcon
-                      pointerEvents="none"
-                      name={
-                        isVerseSaved(selectedVerseNum || 0)
-                          ? 'bookmark-remove'
-                          : 'bookmark-plus'
-                      }
-                      size={22}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.primary}
-                    />
-                    <Text
-                      style={[styles.detailActionText, { color: theme.colors.primary }]}
-                    >
-                      {isVerseSaved(selectedVerseNum || 0)
-                        ? labels.removeAction
-                        : labels.saveAction}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel={labels.share}
-                    onPress={handleShare}
-                    style={[
-                      styles.detailActionButton,
-                      theme.dark ? null : { backgroundColor: theme.colors.primary },
-                    ]}
-                  >
-                    {theme.dark ? (
-                      <LinearGradient
-                        pointerEvents="none"
-                        colors={theme.gradients.metallicGold}
-                        locations={[0, 0.38, 0.62, 1]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={StyleSheet.absoluteFill}
-                      />
-                    ) : null}
-                    <AppIcon
-                      pointerEvents="none"
-                      name="share-variant"
-                      size={22}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.onPrimary}
-                    />
-                    <Text
-                      style={[styles.detailActionText, { color: theme.colors.onPrimary }]}
-                    >
-                      {labels.share}
-                    </Text>
-                  </TouchableOpacity>
-                  {/* One hymn opens on the hymnal page; several open a list. */}
-                  {verseHymns.length > 0 && (
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        verseHymns.length === 1
-                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${getHymnTitle(verseHymns[0].hymnalId, verseHymns[0].title, language)}`
-                          : labels.verseHymnsTitle
-                      }
-                      accessibilityHint={verseHymns.length === 1 ? labels.verseHymnHint : undefined}
-                      onPress={() =>
-                        verseHymns.length === 1
-                          ? openVerseHymn(verseHymns[0])
-                          : setModalType('verse-hymns')
-                      }
-                      style={[
-                        styles.detailActionButton,
-                        styles.detailOutlinedAction,
-                        { borderColor: theme.colors.outline },
-                      ]}
-                    >
-                      <AppIcon
-                        pointerEvents="none"
-                        name="music-clef-treble"
-                        size={22}
-                        textScale={bibleUiTextScale}
-                        color={theme.colors.primary}
-                      />
-                      <Text style={[styles.detailActionText, { color: theme.colors.primary }]}>
-                        {labels.hymnsAction(verseHymns.length)}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </>
-            ) : (
-              <>
-                {renderPopupHeader(
-                  lastActiveType === 'translation'
-                    ? labels.translation
-                    : lastActiveType === 'book'
-                      ? labels.book
-                      : lastActiveType === 'verse'
-                        ? labels.verse
-                        : labels.chapter,
-                  closeModal,
-                )}
-                <Divider />
-                <PopupFlatList<
-                  | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
-                  | BibleService.TranslationBook
-                  | BookListHeading
-                  | number
-                >
-                  data={
-                    lastActiveType === 'translation'
-                      ? BibleService.SUPPORTED_TRANSLATIONS.filter(
-                          (translation) =>
-                            translationSelectionRole === 'primary' ||
-                            translation.id !== supportedTranslation.id,
-                        )
-                      : lastActiveType === 'book'
-                        ? // Under Testament and section headings (#807).
-                          getBookListRows(books, language)
-                        : lastActiveType === 'verse'
-                          ? Array.from(
-                              { length: chapterData?.numberOfVerses || 0 },
-                              (_, i) => i + 1,
-                            )
-                          : Array.from(
-                              { length: book?.numberOfChapters || 0 },
-                              (_, i) => i + 1,
-                            )
-                  }
-                  keyExtractor={(item) =>
-                    typeof item === 'object' ? item.id : item.toString()
-                  }
-                  ListHeaderComponent={
-                    lastActiveType === 'translation' ? (
-                      <View>
-                        <View style={styles.translationRoleRow}>
-                          {(['primary', 'supporting'] as const).map((role) => {
-                            const isPrimary = role === 'primary';
-                            const isActive = translationSelectionRole === role;
-                            const disabled = !isPrimary && !dualLanguageEnabled;
-                            const roleTranslation = isPrimary
-                              ? supportedTranslation
-                              : selectedSupportingTranslation;
-                            return (
-                              <TouchableOpacity
-                                key={role}
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: isActive, disabled }}
-                                disabled={disabled}
-                                onPress={() => setTranslationSelectionRole(role)}
-                                style={[
-                                  styles.translationRoleButton,
-                                  {
-                                    borderColor: isActive
-                                      ? theme.colors.primary
-                                      : theme.colors.outline,
-                                    backgroundColor: isActive
-                                      ? theme.colors.primaryContainer
-                                      : theme.colors.surface,
-                                  },
-                                  disabled && styles.disabledTranslationRole,
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.translationRoleTitle,
-                                    {
-                                      color: isActive
-                                        ? theme.colors.onPrimaryContainer
-                                        : theme.colors.onSurface,
-                                    },
-                                  ]}
-                                >
-                                  {isPrimary
-                                    ? labels.primaryTranslation
-                                    : labels.supportingTranslation}
-                                </Text>
-                                <Text
-                                  numberOfLines={1}
-                                  style={[
-                                    styles.translationRoleValue,
-                                    { color: theme.colors.onSurfaceVariant },
-                                  ]}
-                                >
-                                  {roleTranslation.name}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                        <Text
-                          style={[
-                            styles.translationRoleHelp,
-                            { color: theme.colors.onSurfaceVariant },
-                          ]}
-                        >
-                          {translationSelectionRole === 'primary'
-                            ? labels.primaryTranslationHelp
-                            : labels.supportingTranslationHelp}
-                        </Text>
-                        <Divider />
-                      </View>
-                    ) : undefined
-                  }
-                  ListFooterComponent={
-                    lastActiveType === 'translation' ? (
-                      <View>
-                        <Divider />
-                        {/* A tap on the words turns each on or off too (#798). */}
-                        <SwitchRow
-                          label={labels.dualLanguage}
-                          description={labels.dualLanguageHelp}
-                          value={dualLanguageEnabled}
-                          onValueChange={(enabled) => {
-                            setDualLanguageEnabled(enabled);
-                            if (!enabled) setTranslationSelectionRole('primary');
-                          }}
-                          style={styles.pinyinPreferenceRow}
-                          labelStyle={styles.pressRowText}
-                          descriptionStyle={styles.pinyinPreferenceHelp}
-                        />
-                        <Divider />
-                        <SwitchRow
-                          label={labels.showPinyin}
-                          description={labels.pinyinHelp}
-                          value={showPinyin}
-                          onValueChange={setShowPinyin}
-                          style={styles.pinyinPreferenceRow}
-                          labelStyle={styles.pressRowText}
-                          descriptionStyle={styles.pinyinPreferenceHelp}
-                        />
-                        <Divider />
-                        {/* Requests set which languages come next (#241, #344). */}
-                        <TouchableOpacity
-                          accessibilityRole="link"
-                          onPress={() => openBibleRequestEmail(labels.requestTranslationPrompt)}
-                          style={styles.pinyinPreferenceRow}
-                        >
-                          <Text
-                            style={[
-                              styles.pinyinPreferenceHelp,
-                              { color: theme.colors.onSurfaceVariant },
-                            ]}
-                          >
-                            {labels.requestTranslation}{' '}
-                            <Text style={{ color: theme.colors.primary }}>{TECHNOLOGY_EMAIL}</Text>
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : undefined
-                  }
-                  renderItem={({ item }) => {
-                    // The book list's headings (#807): small, and no tap
-                    // target, so the list stays quick to scroll. A
-                    // Testament's is a little stronger than its sections'.
-                    if (typeof item === 'object' && isBookListHeading(item)) {
-                      const isTestament = item.heading === 'testament';
-                      return (
-                        <Text
-                          accessibilityRole="header"
-                          style={[
-                            isTestament ? styles.bookListTestament : styles.bookListSection,
-                            {
-                              color: isTestament
-                                ? theme.colors.onSurface
-                                : theme.colors.onSurfaceVariant,
-                            },
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      );
-                    }
-                    // A book, chapter, or verse in the translation's language,
-                    // then the app's, when they differ (#723).
-                    const itemName: TwoLanguageName =
-                      typeof item === 'object'
-                        ? 'lang' in item
-                          ? { name: getTranslationLabel(item) }
-                          : getBookListName(item, supportedTranslation.lang, language)
-                        : getPickerItemName(
-                            lastActiveType === 'verse' ? 'verse' : 'chapter',
-                            item,
-                            supportedTranslation.lang,
-                            language,
-                          );
-                    const itemLabel = formatTwoLanguageName(itemName);
-                    const isSelectedItem =
-                      (lastActiveType === 'translation' &&
-                        typeof item === 'object' &&
-                        item.id ===
-                          (translationSelectionRole === 'primary'
-                            ? supportedTranslation.id
-                            : selectedSupportingTranslation.id)) ||
-                      (lastActiveType === 'book' &&
-                        typeof item === 'object' &&
-                        item.id === book?.id) ||
-                      (lastActiveType === 'chapter' && item === chapterNum);
-
-                    return (
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        accessibilityLabel={itemLabel}
-                        accessibilityState={{ selected: isSelectedItem }}
-                        onPress={() => {
-                          const changesChapter =
-                            lastActiveType === 'book' ||
-                            lastActiveType === 'chapter' ||
-                            (lastActiveType === 'translation' &&
-                              translationSelectionRole === 'primary');
-                          // Keep audio playing only when the selection loads a new chapter.
-                          if (isPlaying && changesChapter) {
-                            setShouldAutoPlay(true);
-                          }
-                          if (lastActiveType === 'translation') {
-                            pendingScriptureRange.current = null;
-                            const translation =
-                              item as (typeof BibleService.SUPPORTED_TRANSLATIONS)[number];
-                            if (translationSelectionRole === 'primary') {
-                              handledTranslationParamSignature.current =
-                                translationParamSignature;
-                              if (book && translation.id !== supportedTranslation.id) {
-                                pendingTranslationSwitchPosition.current =
-                                  getTranslationSwitchPosition(
-                                    translation.id,
-                                    { bookId: book.id, chapter: chapterNum },
-                                    getTopVisibleVerse(
-                                      versePositions.current,
-                                      readerScrollY.current + VERSE_SCROLL_TOP_OFFSET,
-                                    ),
-                                    pendingTranslationSwitchPosition.current,
-                                    !!chapterData && !loading,
-                                  );
-                              }
-                              if (
-                                translation.id === selectedSupportingTranslation.id &&
-                                translation.id !== supportedTranslation.id
-                              ) {
-                                setSelectedSupportingTranslation(supportedTranslation);
-                              }
-                              setSupportedTranslation(translation);
-                              if (dualLanguageEnabled) {
-                                setTranslationSelectionRole('supporting');
-                                return;
-                              }
-                            } else {
-                              setSelectedSupportingTranslation(translation);
-                            }
-                          } else if (lastActiveType === 'book') {
-                            forgetPendingScrolls();
-                            setBook(item as any);
-                            setChapterNum(1);
-                          } else if (lastActiveType === 'chapter') {
-                            forgetPendingScrolls();
-                            setChapterNum(item as any);
-                          } else if (lastActiveType === 'verse') {
-                            forgetPendingScrolls();
-                            const verseNumber = item as number;
-                            setTimeout(() => {
-                              const verseY = versePositions.current[verseNumber];
-                              if (verseY !== undefined) {
-                                scrollRef.current?.scrollTo({
-                                  y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET),
-                                  animated: true,
-                                });
-                              }
-                            }, 250);
-                          }
-                          closeModal();
-                        }}
-                        style={styles.pressRow}
-                      >
-                        {itemName.appName ? (
-                          // The app's name in parentheses moves whole to a
-                          // second line when both don't fit on one, rather than
-                          // breaking inside it: 帖撒羅尼迦前書, then
-                          // (1 Thessalonians), at the largest text sizes.
-                          <View style={styles.pressRowNames}>
-                            {[itemName.name, `(${itemName.appName})`].map((part) => (
-                              <Text
-                                key={part}
-                                style={[
-                                  styles.pressRowNamePart,
-                                  isSelectedItem
-                                    ? { color: theme.colors.primary, fontWeight: '700' }
-                                    : { color: theme.colors.onSurface },
-                                ]}
-                              >
-                                {part}
-                              </Text>
-                            ))}
-                          </View>
-                        ) : (
-                          <Text
-                            style={[
-                              styles.pressRowText,
-                              isSelectedItem
-                                ? { color: theme.colors.primary, fontWeight: '700' }
-                                : { color: theme.colors.onSurface },
-                            ]}
-                          >
-                            {itemLabel}
-                          </Text>
-                        )}
-                        {isSelectedItem && (
-                          <AppIcon
-                            pointerEvents="none"
-                            name="check"
-                            size={24}
-                            textScale={bibleUiTextScale}
-                            color={theme.colors.primary}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              </>
-            )}
           </View>
         </Modal>
       </Portal>

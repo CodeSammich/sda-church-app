@@ -1,9 +1,9 @@
 import { TextSizeDialog, textSizeStepsFitBesideSlider } from '@/components/TextSizeDialog';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { createElement } from 'react';
-import { StyleSheet } from 'react-native';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import { renderWithPreferences } from './helpers/render-preferences';
+import { getSheetColor } from './helpers/sheets';
 
 // React Native's test window, which the other tests here see, until a test
 // sets a phone's.
@@ -63,7 +63,7 @@ const languageCases = [
 
 describe('TextSizeDialog', () => {
   it.each([customLightTheme, customDarkTheme])(
-    'uses the $dark app canvas as its dialog background',
+    'is a sheet the colour of the $dark theme\'s floating bars (#867)',
     async (theme) => {
       const screen = await renderWithPreferences(
         createElement(TextSizeDialog, {
@@ -73,18 +73,8 @@ describe('TextSizeDialog', () => {
         { theme },
       );
 
-      expect(
-        StyleSheet.flatten(screen.getByTestId('text-size-dialog-surface').props.style)
-          .backgroundColor,
-      ).toBe(theme.colors.background);
-      expect(
-        StyleSheet.flatten(screen.getByTestId('text-size-dialog-scroll-area').props.style)
-          .borderBottomWidth,
-      ).toBe(0);
-      expect(
-        StyleSheet.flatten(screen.getByTestId('text-size-dialog-scroll-area').props.style)
-          .marginBottom,
-      ).toBe(0);
+      expect(getSheetColor(screen)).toBe(theme.colors.floatingSurface);
+      expect(screen.getByTestId('text-size-dialog-scroll')).toBeTruthy();
     },
   );
 
@@ -214,12 +204,15 @@ describe('TextSizeDialog', () => {
   it('keeps the sample in view at 150% on a phone, with the steps beside the slider (#797)', async () => {
     // The two rows of steps and 100%/200% below the slider pushed the sample
     // past the height limit at 150%, cut off at 9:25. The steps sit either
-    // side of the slider wherever it keeps 120 points: a phone at 150%, but not
-    // a 320-point iPad window, nor the 384-point Android phone at 200%.
+    // side of the slider wherever it keeps 120 points: a phone at 150%, and
+    // the 384-point Android phone's full-width sheet at 200% (#867), but not
+    // a 320-point iPad window at 200%.
     expect(textSizeStepsFitBesideSlider(345.6 - 48, 1.5)).toBe(true);
     expect(textSizeStepsFitBesideSlider(362 - 48, 1.5)).toBe(true);
     expect(textSizeStepsFitBesideSlider(288 - 48, 1.5)).toBe(false);
     expect(textSizeStepsFitBesideSlider(345.6 - 48, 2)).toBe(false);
+    expect(textSizeStepsFitBesideSlider(384 - 48, 2)).toBe(true);
+    expect(textSizeStepsFitBesideSlider(320 - 48, 2)).toBe(false);
     expect(textSizeStepsFitBesideSlider(504 - 48, 2)).toBe(true);
 
     // The Android phone the key screens use.
@@ -235,6 +228,8 @@ describe('TextSizeDialog', () => {
     expect(beside.getByText('「我從前是眼瞎的，如今能看見了。」— 約\u2060翰\u2060福\u2060音\u00a09:25')).toBeTruthy();
     beside.unmount();
 
+    // A 320-point iPad window (Slide Over).
+    mockWindow = { fontScale: 1, height: 853, scale: 2, width: 320 };
     const below = await renderWithPreferences(
       createElement(TextSizeDialog, { onDismiss: jest.fn(), visible: true }),
       { textScale: 2 },
