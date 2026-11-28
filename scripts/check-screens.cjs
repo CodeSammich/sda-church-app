@@ -15,8 +15,10 @@
  *   of some line, which catches a verse number split across two lines (a rule
  *   with `minLeft` also needs the line to start that far across, for
  *   right-aligned text, one with `maxTop` no farther down than that, such
- *   as a popup's title, and one with `above` higher up than the first line
- *   another pattern matches, such as a verse's footnote above its Greek), and its
+ *   as a popup's title, one with `above` higher up than the first line
+ *   another pattern matches, such as a verse's footnote above its Greek, and
+ *   one with `minWidth` at least that much of the screen's width wide, such
+ *   as a word that must grow with the text size), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
  *   such as the Bible header's names, required on the Android phone at 100% only;
  * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
@@ -265,16 +267,22 @@ const checkShot = (shot, lines) => {
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {
-    // A rule is a regular expression, or { line, minLeft, maxTop, above } for a
-    // line that must also start at least minLeft of the way across, such as
-    // right-aligned text, or have its top no more than maxTop of the way down,
-    // such as a popup's title, which sits high when the popup is centred, or
-    // sit higher than the first line matching `above`, which must show too,
-    // such as a verse's footnote above its Greek (#745).
-    const { line: pattern, minLeft, maxTop, above } = typeof rule === 'string' ? { line: rule } : rule;
+    // A rule is a regular expression, or { line, minLeft, maxTop, above,
+    // minWidth } for a line that must also start at least minLeft of the way
+    // across, such as right-aligned text, or have its top no more than maxTop
+    // of the way down, such as a popup's title, which sits high when the popup
+    // is centred, or sit higher than the first line matching `above`, which
+    // must show too, such as a verse's footnote above its Greek (#745), or be
+    // at least minWidth of the screen's width wide, such as a card's title
+    // that must grow with the text size, as the cards' titles on Home and New
+    // Member & Visitor didn't until 1.9.2.
+    const { line: pattern, minLeft, maxTop, above, minWidth } = typeof rule === 'string' ? { line: rule } : rule;
     const matches = lines.filter((line) => new RegExp(pattern, 'u').test(line.text.trim()));
     if (!matches.length) {
       problems.push(`no line matches /${pattern}/`);
+    } else if (minWidth !== undefined && !matches.some((line) => line.box[2] >= minWidth)) {
+      const widest = Math.max(...matches.map((line) => line.box[2]));
+      problems.push(`/${pattern}/ is ${Math.round(widest * 100)}% of the width wide, not at least ${Math.round(minWidth * 100)}%`);
     } else if (minLeft !== undefined && !matches.some((line) => line.box[0] >= minLeft)) {
       const farthest = Math.max(...matches.map((line) => line.box[0]));
       problems.push(

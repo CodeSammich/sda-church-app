@@ -42,8 +42,10 @@ export default function DiscoverScreen() {
     zh: {
       title: '新會友／訪客',
       aboutSDA: '關於教派',
-      aboutHistory: '地點與歷史',
-      meetTeam: '認識我們的團隊',
+      // A zero-width space (\u200b) marks where a card's title may break,
+      // between its words, as on Home.
+      aboutHistory: '地點\u200b與歷史',
+      meetTeam: '認識\u200b我們的\u200b團隊',
       fellowship: '團契',
       bible: '聖經',
       join: '加入教會',
@@ -51,8 +53,8 @@ export default function DiscoverScreen() {
     'zh-cn': {
       title: '新会友／访客',
       aboutSDA: '关于教派',
-      aboutHistory: '地点与历史',
-      meetTeam: '认识我们的团队',
+      aboutHistory: '地点\u200b与历史',
+      meetTeam: '认识\u200b我们的\u200b团队',
       fellowship: '团契',
       bible: '圣经',
       join: '加入教会',
@@ -69,7 +71,8 @@ export default function DiscoverScreen() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
-  // One size for every card's text, which keeps each title's words whole.
+  // One size for every card's text: the largest, up to the reader's, at which
+  // the widest word of these titles fits a card, so no word breaks.
   const gridTitles = useMemo(
     () => [labels.aboutSDA, labels.aboutHistory, labels.meetTeam, labels.join, labels.fellowship, labels.bible],
     [labels],

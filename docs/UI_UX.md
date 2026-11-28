@@ -99,6 +99,25 @@ the component.
 | **Arrow Border** | #374151 | #EBCD78 | Highlight boundary around the metallic affordance. |
 | **Arrow Foreground** | #374151 | #181202 | Dark icon over the metallic fill. |
 
+### Grid Menu Card Text Size
+
+**Rule:** grid cards (Home, New Member & Visitor) stay two a row at every text size. The
+title, the icon and the card grow with the text size until the longest word of the
+grid's titles no longer fits a half-width card, then stop there, together. Never stack
+the cards one per row, never break a word, and never let the icon outgrow the title.
+
+- `components/GridMenuCard.tsx` enforces it (`fitGridMenuCardTextScale`). It measures
+  the grid's words on the device, at the app's text size times the phone's.
+  `test/grid-menu-card-text-scale.test.ts` and the Discover and Home key screens check
+  it.
+- Long Chinese titles mark their words with a zero-width space, as 本週 / 安息日學 /
+  課程, so they break only between words and grow further before they stop (#797).
+- Why: two cards a row is the church's choice for these pages (#387). Until 1.9.2 the
+  title stopped at 1.25× while the icon and card grew on, so at 200% the icons were big
+  and the titles small.
+- The same rule is in [Home](#1-home-the-pulse) and in
+  [Text size](accessibility/README.md#text-size). Change all three together.
+
 ### External Service Links
 
 Links to YouTube, Spotify, Zoom, and other external services use the provider's
@@ -519,7 +538,8 @@ shows the phone's pages larger and roomier, not more on each page:
   tab bar would sit at the top, over the header, so the app draws its own at the bottom.
 - **A third column of book covers** in a library shelf's grid once the column is 600
   points wide (`getLibraryGridColumns`), so covers stay a sensible size. Other grids,
-  such as Home's cards, keep two columns, which the column keeps a phone-like shape.
+  such as Home's cards, keep two columns, which the column keeps a phone-like shape,
+  at every text size ([Grid Menu Card Text Size](#grid-menu-card-text-size)).
 - **Popups at most 560 points wide** (`POPUP_MAX_WIDTH` in `styles/PopupStyles.ts`),
   centered as on a phone (`usePopupWidthStyle`, or `getPopupWidthStyle` for a popup with
   side margins). Give a popup that number, never a percentage width with a `maxWidth`:
@@ -550,6 +570,13 @@ of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **
 **This Week's Lesson** (Sabbath School lessons for adults and children), and **New Member
 & Visitor**. Giving, the hymnals, and the staff list (**Meet Our Team**, under New Member &
 Visitor) live here.
+
+**Cards at large text sizes:** the cards stay two a row at every text size. Their
+title, icon and card grow with the text size and stop together where the longest word
+of their titles fills a half-width card. They never stack one per row, and no word
+breaks. This is a design rule: see
+[Grid Menu Card Text Size](#grid-menu-card-text-size), enforced in
+`components/GridMenuCard.tsx`.
 
 **Android home screen widget (#235):** **Today's Verse** can also sit on an Android
 phone's home screen, laid out like YouVersion's Verse of the Day widget: the heading, the
