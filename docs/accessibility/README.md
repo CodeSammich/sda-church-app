@@ -45,6 +45,8 @@ also follows the phone's text size. The two multiply:
   and the title stays in proportion to the icon. Titles wrap between words. Until
   1.9.2 the titles stopped at the default 1.25× while the icons and cards grew on
   with the app's text size, so at 200% the icons were big and the titles small.
+  This is a design rule, [Grid Menu Card Text Size](../UI_UX.md#grid-menu-card-text-size):
+  never stack the cards one per row, and never break a word.
 - Words stay whole at every size, in Chinese too (#797). Chinese has no spaces
   between its words, so a phone may break a line between any two characters: at
   150%, Home's 分享經文 broke as 分享經 / 文, and the hymnal page's 中文讚美詩 — 505 版
