@@ -512,6 +512,10 @@ simple, blended colors.
   - **The web has no native sheets**, so its popups stay centred, with the shared
     corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall
     (`POPUP_MAX_HEIGHT_FRACTION`).
+  - **With animations off** (Android's Remove animations, iOS's Reduce Motion), a sheet
+    appears in place at once. react-native-screens' Android sheet stayed below the
+    screen then, with only its dim showing, so the app patches it before each Android
+    build (`scripts/patch-react-native-screens.cjs`).
   - **One component:** `AppSheet` (`components/AppSheet.tsx`) draws every sheet, with
     react-native-screens' `FormSheet`. It's from that package's experimental API
     (`react-native-screens/experimental`), its only native sheet that isn't a route:
