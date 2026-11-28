@@ -171,13 +171,13 @@
     {
       "name": "bible-cuv-after-spanish",
       "group": "bible-text",
-      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent. The books sit under Testament and section headings (#807), in the app's language, so Law must show above Genesis. On the iPad, Vision may read the dimmed page beside the popup into a line, so the headings aren't anchored, and it missed the short, grey Law there, though it shows (run 46025141242), so there History must show above Joshua instead.",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed. The book pill names the book in the app's language since #723, Psalms whichever translation's names are loaded, so the shot opens the book list instead, by popup=book in the preview build, where the CUV's names show with the app's in parentheses: 創世記 (Genesis). A stale list would read Génesis (Genesis), Éxodo (Exodus). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis, which the list showed none of before #723; the text readers may drop an accent. The books sit under Testament and section headings (#807), in the app's language, so Law must show above Genesis. On the iPad, Vision may read the dimmed page beside the popup into a line, so the headings aren't anchored, and it missed the short, grey Law there, though it shows (run 46025141242), so there History must show above Joshua instead. Since #867 the book list is a sheet that opens at half height with the current book, Psalms, in the middle, so the rules check the books around it, with Poetry and Wisdom above Job, and that no Spanish name shows there (Proverbios, Eclesiastés, Ester).",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=book",
       "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": [{ "line": "\\bLaw\\b", "above": "[(（]Genesis\\b", "platforms": ["ios", "android"] }, { "line": "\\bHistory\\b", "above": "[(（]Joshua\\b", "platforms": ["ipad"] }, "[(（]Genesis\\b", "[(（]Exodus\\b", "[(（]Leviticus\\b"],
-      "mustNotShowLines": ["Salmos", "^[EÉ]xodo\\b", "^Lev[ií]tico\\b", "^N[uú]meros\\b"]
+      "mustShowLines": [{ "line": "\\bWisdom\\b", "above": "[(（]Job\\b", "platforms": ["ios", "android"] }, "[(（]Job\\b", "[(（]Psalms\\b", "[(（]Proverbs\\b"],
+      "mustNotShowLines": ["Salmos", "^[EÉ]xodo\\b", "^Lev[ií]tico\\b", "^N[uú]meros\\b", "^Proverbios\\b", "^Eclesiast[eé]s\\b", "^Ester\\b"]
     },
     {
       "name": "bible-cuvs",
@@ -222,18 +222,18 @@
     {
       "name": "bible-verse-popup",
       "group": "bible-reading",
-      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Luke 2:14, not John 3:16, which no hymn names: eight hymns are on this verse, so the popup's Hymns button must show beside Share Verse (#456). With Save, the three buttons share the iPad's 560-point popup at 150%, so Share Verse wraps inside its button there, onto two lines. Vision reads the share icon before Share Verse as <. standard-contrast-dark shows a sheet in the dark theme at standard contrast, the near-black of the floating bars (#867).",
+      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Luke 2:14, not John 3:16, which no hymn names: eight hymns are on this verse, so the popup's Hymns button must show beside Share Verse (#456). With Save, the three buttons share the iPad's 560-point popup at 150%, so Share Verse wraps inside its button there, onto two lines. Vision reads the share icon before Share Verse as <. standard-contrast-dark shows a sheet in the dark theme at standard contrast, the near-black of the floating bars (#867). Since #867 it's a sheet that opens at half height on a phone, where the Greek's source and license are below the fold, a scroll away; the phones check its Koine Greek label, and the iPad's form sheet, which shows it all, the credit.",
       "path": "bible?bookId=LUK&chapter=2&translationId=BSB&verseStart=14&verseEnd=14&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default", "standard-contrast-dark"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Luke 2:14$", { "line": "\\bShare Verse$", "platforms": ["ios", "android"] }, { "line": "\\bShare$", "platforms": ["ipad"] }, { "line": "^Verse$", "platforms": ["ipad"] }, "\\bHymns$", "^Source: Statistical Restoration Greek\\b", "\\bCC BY 4\\.0\\b"],
+      "mustShowLines": ["^Luke 2:14$", { "line": "\\bShare Verse$", "platforms": ["ios", "android"] }, { "line": "\\bShare$", "platforms": ["ipad"] }, { "line": "^Verse$", "platforms": ["ipad"] }, "\\bHymns$", { "line": "^Koine Greek\\b", "platforms": ["ios", "android"] }, { "line": "^Source: Statistical Restoration Greek\\b", "platforms": ["ipad"] }, { "line": "\\bCC BY 4\\.0\\b", "platforms": ["ipad"] }],
       "mustNotShowLines": ["^Close$"]
     },
     {
       "name": "bible-verse-footnote",
       "group": "bible-reading",
-      "$comment": "A verse with a footnote in the popup a tapped verse opens, opened by popup=verse (#745): the footnote comes before the Greek. 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), and no hymn names it, so with no Hymns button the Greek's credit still shows below the footnote on the iPhone, the iPad and the Android phone. bible-verse-popup checks the Hymns button on Luke 2:14, which has no footnote: one verse with both, John 20:16, filled the popup to its height limit on every device, with the credit below the fold (fork runs 45110485284 and 45110488597). The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813), and on the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <.",
+      "$comment": "A verse with a footnote in the popup a tapped verse opens, opened by popup=verse (#745): the footnote comes before the Greek. 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), and no hymn names it, so with no Hymns button the Greek's credit still shows below the footnote on the iPhone, the iPad and the Android phone. bible-verse-popup checks the Hymns button on Luke 2:14, which has no footnote: one verse with both, John 20:16, filled the popup to its height limit on every device, with the credit below the fold (fork runs 45110485284 and 45110488597). The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813), and on the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <. Since #867, on a phone the half-height sheet keeps the Greek's credit a scroll away, so only the iPad checks it.",
       "path": "bible?bookId=1CO&chapter=15&translationId=BSB&verseStart=5&verseEnd=5&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
@@ -242,20 +242,20 @@
         "^1 ?Corinthians 15:5$",
         { "line": "^Footnote", "above": "\\bKoine Greek \\(Original\\)" },
         "\\bShare Verse$",
-        "^Source: Statistical Restoration\\b",
-        "\\bCC BY 4\\.0\\b"
+        { "line": "^Source: Statistical Restoration\\b", "platforms": ["ipad"] },
+        { "line": "\\bCC BY 4\\.0\\b", "platforms": ["ipad"] }
       ],
       "mustNotShowLines": ["^Close$"]
     },
     {
       "name": "bible-chapter-picker",
       "group": "bible-reading",
-      "$comment": "The chapter list, opened by popup=chapter, as the chapter pill would (#456): its title beside an X, then a row for each chapter. It's a bottom sheet (#867) that opens at half the screen, so on the iPhone and the Android phone its title must be at least 40% of the way down; the iPad shows a centred form sheet. An English app reading the CUV names each chapter in both, 第 1 章 (Chapter 1) (#723). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis.",
+      "$comment": "The chapter list, opened by popup=chapter, as the chapter pill would (#456): its title beside an X, then a row for each chapter. It's a bottom sheet (#867) that opens at half the screen, so on the iPhone and the Android phone its title must be at least 40% of the way down; the iPad shows a centred form sheet. An English app reading the CUV names each chapter in both, 第 1 章 (Chapter 1) (#723). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis. It opens with the current chapter, Psalm 23, in the middle (#867), so chapters 22 and 23 must show.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=chapter",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": [{ "line": "^Chapter$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Chapter$", "platforms": ["ipad"] }, "[(（]Chapter 1[)）]$", "[(（]Chapter 2[)）]$"],
+      "mustShowLines": [{ "line": "^Chapter$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Chapter$", "platforms": ["ipad"] }, "[(（]Chapter 22[)）]$", "[(（]Chapter 23[)）]$"],
       "mustNotShowLines": ["^Close$"]
     },
     {
@@ -305,7 +305,7 @@
       "mustShowLines": ["^WordProject$"],
       "variantRules": {
         "default": { "mustShowLines": [{ "line": "^Audio settings$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Audio settings$", "platforms": ["ipad"] }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
-        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^有聲書設定$", "platforms": ["ipad"] }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] },
+        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^有聲書設定$", "platforms": ["ipad"] }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$"] },
         "es": { "mustShowLines": [{ "line": "^Ajustes de audio$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Ajustes de audio$", "platforms": ["ipad"] }, "^Idioma del audio$", "^Escuchar sin conexi.n$"], "mustNotShowLines": ["^Cerrar$", "^Toda la Biblia$"] }
       }
     },

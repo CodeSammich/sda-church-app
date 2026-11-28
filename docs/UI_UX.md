@@ -474,13 +474,15 @@ simple, blended colors.
       - Share the App: its whole height, so the whole code shows to scan.
       - Offline Bible Audio's narrators: their whole height, to compare what's on the
         phone.
+      - Give's Other Sponsors: its whole height, so the church's EIN at its foot, which
+        a grant needs, shows.
       - The Bible's book, chapter and verse lists: half height, the current one in the
         middle; the rest is more of the same.
       - A verse's details and its hymns: fit, or half height when long; the verse and
         its buttons first, its original language and notes below.
       - Audio settings: fit, or half height when long; the narrators first, Listen
         offline and the source below.
-      - Sleep timer, Other Sponsors, a children's lesson's download: fit; they're short.
+      - Sleep timer, a children's lesson's download: fit; they're short.
   - **Closing and resizing:** an X in the title row, a tap on the dimmed page above,
     a swipe down, and Android's Back. A grabber at the top also expands the sheet on a
     tap, so dragging is never needed; on Android, a double tap on it closes the sheet,

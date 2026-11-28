@@ -44,10 +44,11 @@ import { FormSheet } from 'react-native-screens/experimental';
  *   centred popup, changes only this file.
  * - **Height** (`height`, and the rule in docs/UI_UX.md): `auto` is the
  *   content's height up to about half the screen, and taller content opens at
- *   half (medium) and expands to its own height or full height (large)
- *   (components/SheetDetents.ts); `content` is the content's whole height, up
- *   to large; `large` is full height only. Scrolling up a half-height sheet
- *   expands it first, each platform's default.
+ *   half (medium) and expands to its own height or full height (large);
+ *   `content` is the content's whole height, up to large; `large` is full
+ *   height only. Each is worked out from the content's measured height, in
+ *   fractions of the screen (components/SheetDetents.ts). Scrolling up a
+ *   half-height sheet expands it first, each platform's default.
  * - **Closing:** the X in the title row (PopupHeader: leading on iOS, trailing
  *   on Android), a tap on the dim, a swipe down, Android's Back. The grabber
  *   (iOS's own, Android's Material drag handle) also expands the sheet on a
@@ -157,16 +158,12 @@ function NativeSheet(props: AppSheetProps) {
   );
 
   const initialDetents = (): SheetDetents =>
-    formSheet || height === 'large'
-      ? LARGE_ONLY
-      : height === 'content'
-        ? 'fitToContents'
-        : (lastDetents.get(detentKey) ?? DEFAULT_SHEET_DETENTS);
+    formSheet || height === 'large' ? LARGE_ONLY : (lastDetents.get(detentKey) ?? DEFAULT_SHEET_DETENTS);
 
   const [mounted, setMounted] = useState(visible);
   const [detents, setDetents] = useState<SheetDetents>(initialDetents);
   const [detentIndex, setDetentIndex] = useState(0);
-  const [heldHeight, setHeldHeight] = useState<number | null>(null);
+  const held = useRef(false);
   const measured = useRef({ ...NOTHING_MEASURED });
   const [measureTick, setMeasureTick] = useState(0);
 
@@ -175,7 +172,7 @@ function NativeSheet(props: AppSheetProps) {
     if (!visible) return;
     setMounted(true);
     setDetentIndex(0);
-    setHeldHeight(null);
+    held.current = false;
     measured.current = { ...NOTHING_MEASURED };
     setDetents(initialDetents());
     // Only on opening, or at a new size: initialDetents reads these.
@@ -188,15 +185,14 @@ function NativeSheet(props: AppSheetProps) {
     return () => clearTimeout(timer);
   }, [mounted, visible]);
 
-  const fitted = detents === 'fitToContents';
-  const fractions = fitted ? null : (detents as readonly number[]);
+  const fractions = detents;
 
   // iOS: the large detent's height, from the sheet's height at a detent. A
   // layout from before the sheet has its height, or from between two
   // detents, gives one out of range, which is left out.
   const onContainerLayout = useCallback(
     (event: LayoutChangeEvent) => {
-      if (android || !fractions || formSheet) return;
+      if (android || formSheet) return;
       const layoutHeight = event.nativeEvent.layout.height;
       const largeHeight = layoutHeight / fractions[Math.min(detentIndex, fractions.length - 1)];
       const most = windowHeight - insets.top;
@@ -228,22 +224,21 @@ function NativeSheet(props: AppSheetProps) {
   // The content's own height, once a layout has settled (the parts' heights
   // arrive one by one): the title row and footer, around the body; and in
   // the body, what doesn't scroll, plus all of what does. The body may be
-  // taller than what's in it, so what's in it is measured on its own.
+  // taller than what's in it, so what's in it is measured on its own. Text
+  // size measures once, and keeps that height while it's open.
   useEffect(() => {
-    if (!visible || formSheet) return;
-    if (height !== 'auto' && !(holdHeight && heldHeight === null)) return;
+    if (!visible || formSheet || height === 'large' || held.current) return;
     const timer = setTimeout(() => {
       const { root, body, inner, viewport, content } = measured.current;
       if (!(root > 0) || !(inner > 0) || !(content > 0)) return;
       const contentHeight = root - body + (inner - viewport + content);
-      if (holdHeight) setHeldHeight(Math.min(contentHeight, frame.largeHeight));
-      if (height !== 'auto') return;
-      const next = getSheetDetents(contentHeight, frame);
+      const next = getSheetDetents(contentHeight, frame, { full: height === 'content' });
+      if (holdHeight) held.current = true;
       lastDetents.set(detentKey, next);
       setDetents((current) => (sameSheetDetents(current, next) ? current : next));
     }, SETTLE_MS);
     return () => clearTimeout(timer);
-  }, [detentKey, formSheet, frame, height, heldHeight, holdHeight, measureTick, visible]);
+  }, [detentKey, formSheet, frame, height, holdHeight, measureTick, visible]);
 
   const sheetContext = useMemo<SheetContextValue>(
     () => ({
@@ -260,7 +255,7 @@ function NativeSheet(props: AppSheetProps) {
   // down to rest, so at half height its foot would be off the screen: the
   // content takes the height that shows. iOS sizes it to the detent.
   const restingHeight =
-    android && fractions && fractions.length > 1
+    android && fractions.length > 1
       ? getVisibleSheetHeight(frame, fractions[Math.min(detentIndex, fractions.length - 1)])
       : undefined;
 
@@ -270,20 +265,14 @@ function NativeSheet(props: AppSheetProps) {
       onLayout={measure('root')}
       style={[
         styles.root,
-        fitted
-          ? heldHeight !== null
-            ? { height: heldHeight }
-            : { maxHeight: frame.largeHeight }
-          : restingHeight !== undefined
-            ? { height: restingHeight }
-            : styles.fill,
+        restingHeight !== undefined ? { height: restingHeight } : styles.fill,
         // iOS's sheet runs under the home indicator; Android's stops above
         // the navigation bar.
         !android && { paddingBottom: insets.bottom },
       ]}
     >
       <SheetHeader {...props} />
-      <View onLayout={measure('body')} style={fitted ? styles.bodyFitted : styles.body}>
+      <View onLayout={measure('body')} style={styles.body}>
         <View onLayout={measure('inner')} style={styles.bodyFitted}>
           {children}
         </View>
@@ -295,7 +284,7 @@ function NativeSheet(props: AppSheetProps) {
   return (
     <FormSheet
       isOpen={visible}
-      detents={fitted ? 'fitToContents' : [...(fractions ?? DEFAULT_SHEET_DETENTS)]}
+      detents={[...fractions]}
       prefersGrabberVisible
       preferredCornerRadius="systemDefault"
       nativeContainerStyle={{ backgroundColor: theme.colors.floatingSurface }}
@@ -306,13 +295,9 @@ function NativeSheet(props: AppSheetProps) {
       }}
     >
       <SheetContext.Provider value={sheetContext}>
-        {fitted ? (
-          content
-        ) : (
-          <View onLayout={onContainerLayout} style={styles.fill}>
-            {content}
-          </View>
-        )}
+        <View onLayout={onContainerLayout} style={styles.fill}>
+          {content}
+        </View>
       </SheetContext.Provider>
     </FormSheet>
   );

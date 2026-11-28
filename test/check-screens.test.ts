@@ -250,52 +250,47 @@ describe('screen rules', () => {
   it("catches the previous Bible's book names after a link opens the CUV (#373)", () => {
     // The book list, which names the CUV's books with the app's English in
     // parentheses since #723; the pill names the book in English whichever
-    // names are loaded.
+    // names are loaded. Since #867 it's a sheet that opens with the current
+    // book, Psalms, in the middle, under its section heading (#807).
     const after = shot('bible-cuv-after-spanish-default');
-    // Its books sit under Testament and section headings since #807.
-    const headings = ['Old Testament', 'Law'];
-    const list = (names: string[]) => [...headings, ...names].map((name, index) => line(name, 0.3 + index * 0.06));
-    expect(checkShot(after, list(['創世記 (Genesis)', '出埃及記 (Exodus)', '利未記 (Leviticus)']))).toEqual([]);
+    const list = (names: string[]) => names.map((name, index) => line(name, 0.6 + index * 0.05));
+    const cuv = ['以斯帖記 (Esther)', 'Poetry and Wisdom', '約伯記 (Job)', '詩篇 (Psalms)', '箴言 (Proverbs)'];
+    expect(checkShot(after, list(cuv))).toEqual([]);
     // Vision, reading English first, may miss the Chinese.
-    expect(checkShot(after, list(['(Genesis)', '(Exodus)', '(Leviticus)', '(Numbers)']))).toEqual([]);
+    expect(checkShot(after, list(['(Esther)', 'Poetry and Wisdom', '(Job)', '(Psalms)', '(Proverbs)']))).toEqual([]);
     // The Spanish names, kept after the link.
-    expect(checkShot(after, list(['Génesis (Genesis)', 'Éxodo (Exodus)', 'Levítico (Leviticus)']))).toEqual([
-      '"Éxodo (Exodus)" matches /^[EÉ]xodo\\b/, which must not show',
-      '"Levítico (Leviticus)" matches /^Lev[ií]tico\\b/, which must not show',
+    expect(checkShot(after, list(['Ester (Esther)', 'Poetry and Wisdom', 'Job (Job)', 'Salmos (Psalms)', 'Proverbios (Proverbs)']))).toEqual([
+      '"Salmos (Psalms)" matches /Salmos/, which must not show',
+      '"Proverbios (Proverbs)" matches /^Proverbios\\b/, which must not show',
+      '"Ester (Esther)" matches /^Ester\\b/, which must not show',
     ]);
-    // The list before #723, with no English. Law's rule misses Genesis too.
-    expect(checkShot(after, list(['創世記', '出埃及記', '利未記']))).toEqual([
-      'no line matches /[(（]Genesis\\b/',
-      'no line matches /[(（]Genesis\\b/',
-      'no line matches /[(（]Exodus\\b/',
-      'no line matches /[(（]Leviticus\\b/',
+    // The list before #723, with no English.
+    expect(checkShot(after, list(['以斯帖記', 'Poetry and Wisdom', '約伯記', '詩篇', '箴言']))).toEqual([
+      'no line matches /[(（]Job\\b/',
+      'no line matches /[(（]Job\\b/',
+      'no line matches /[(（]Psalms\\b/',
+      'no line matches /[(（]Proverbs\\b/',
     ]);
-    // The list before #807, with no headings, and one with Law below Genesis.
-    const books = ['創世記 (Genesis)', '出埃及記 (Exodus)', '利未記 (Leviticus)'];
-    expect(checkShot(after, books.map((name, index) => line(name, 0.3 + index * 0.06)))).toEqual([
-      'no line matches /\\bLaw\\b/',
+    // The list before #807, with no headings, and one with the heading below Job.
+    expect(checkShot(after, list(cuv.filter((name) => name !== 'Poetry and Wisdom')))).toEqual([
+      'no line matches /\\bWisdom\\b/',
     ]);
-    expect(checkShot(after, [...books, 'Law'].map((name, index) => line(name, 0.3 + index * 0.06)))).toEqual([
-      '/\\bLaw\\b/ is not above /[(（]Genesis\\b/',
+    expect(checkShot(after, list(['約伯記 (Job)', 'Poetry and Wisdom', '詩篇 (Psalms)', '箴言 (Proverbs)']))).toEqual([
+      '/\\bWisdom\\b/ is not above /[(（]Job\\b/',
     ]);
   });
 
-  it("checks the iPad's book list by its History heading, since Vision missed the short Law there (#807)", () => {
+  it("checks the iPad's book list by its books alone, since Vision misses short grey headings there (#807)", () => {
     const ipad = planChecks(loadConfig(), 'ipad').find(
       (candidate: { name: string }) => candidate.name === 'bible-cuv-after-spanish-landscape',
     );
-    // What Vision read on release PR #861's run 46025141242, in order down the
-    // popup: Law shows in the screenshot, between these two, but wasn't read.
-    const read = ['Old Testament', '(Genesis)', '(Exodus)', '(Leviticus)', '(Numbers)', '(Deuteronomy)', 'History', '(Joshua)'];
+    // On release PR #861's run 46025141242, Vision read History but missed the
+    // short, grey Law; the iPad's form sheet needs no heading.
+    const read = ['(Esther)', '(Job)', '(Psalms)', '(Proverbs)', '(Ecclesiastes)'];
     const list = (names: string[]) => names.map((name, index) => line(name, 0.27 + index * 0.05));
     expect(checkShot(ipad, list(read))).toEqual([]);
-    // With no section headings, or History below Joshua.
-    expect(checkShot(ipad, list(read.filter((name) => name !== 'History')))).toEqual(['no line matches /\\bHistory\\b/']);
-    expect(checkShot(ipad, list([...read.slice(0, 6), '(Joshua)', 'History']))).toEqual([
-      '/\\bHistory\\b/ is not above /[(（]Joshua\\b/',
-    ]);
-    // The phones still need Law.
-    expect(checkShot(shot('bible-cuv-after-spanish-default'), list(read))).toEqual(['no line matches /\\bLaw\\b/']);
+    // The phones still need the heading.
+    expect(checkShot(shot('bible-cuv-after-spanish-default'), list(read))).toEqual(['no line matches /\\bWisdom\\b/']);
   });
 
   it('checks the linked hymn\'s 505 chip at 200% on the page scrolled to it, below the tab bar unscrolled (#810)', () => {

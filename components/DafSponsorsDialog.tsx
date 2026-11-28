@@ -77,6 +77,8 @@ export function DafSponsorsDialog({ onDismiss, title, visible }: DafSponsorsDial
       onDismiss={onDismiss}
       closeLabel={labels.close}
       title={title}
+      // Whole, so the EIN at its foot shows: it's what a grant needs (#867).
+      height="content"
     >
       <PopupScrollView contentContainerStyle={styles.scrollContent}>
         <Text

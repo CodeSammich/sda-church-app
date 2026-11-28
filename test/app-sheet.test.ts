@@ -75,16 +75,19 @@ describe('sheet detents (#867)', () => {
     expect(DEFAULT_SHEET_DETENTS).toEqual([0.5, 1]);
   });
 
-  it('opens Share the App, Text size and the narrators at their whole height', () => {
-    expect(getSheetDetents(600, IPHONE, { full: true })).toBe('fitToContents');
-    expect(getSheetDetents(0, null, { full: true })).toBe('fitToContents');
+  it('opens Share the App, Text size, the narrators and Other Sponsors at their whole height', () => {
+    // Taller than half, yet one resting height, the content's.
+    const [whole, second] = getSheetDetents(600, IPHONE, { full: true }) as number[];
+    expect(getVisibleSheetHeight(IPHONE, whole)).toBeGreaterThanOrEqual(600);
+    expect(second - whole).toBeCloseTo(SHORT_SHEET_SECOND_DETENT, 3);
+    // Taller than the screen: full height, where it scrolls.
+    expect(getSheetDetents(2000, ANDROID, { full: true })).toEqual([1]);
   });
 
   it('compares detents by value', () => {
     expect(sameSheetDetents([0.5, 0.8], [0.5, 0.8])).toBe(true);
     expect(sameSheetDetents([0.5, 0.8], [0.5, 1])).toBe(false);
-    expect(sameSheetDetents('fitToContents', 'fitToContents')).toBe(true);
-    expect(sameSheetDetents('fitToContents', [0.5, 1])).toBe(false);
+    expect(sameSheetDetents([1], [0.5, 1])).toBe(false);
   });
 });
 

@@ -43,8 +43,8 @@ export type SheetFrame = Readonly<{
   chrome: number;
 }>;
 
-/** One detent sized to the content, or fractions of the screen. */
-export type SheetDetents = 'fitToContents' | readonly number[];
+/** Fractions of the screen, ascending. */
+export type SheetDetents = readonly number[];
 
 /** The detents before anything is measured: medium, expandable to large. */
 export const DEFAULT_SHEET_DETENTS: readonly number[] = [SHEET_MEDIUM, 1];
@@ -83,18 +83,18 @@ export const getSheetFraction = (frame: SheetFrame, height: number) =>
 const roundUp = (fraction: number) => Math.ceil(fraction * 1000) / 1000;
 
 /**
- * A short sheet's second detent, a hair above its first. A sheet that opens
- * at medium and turns out short moves to its content's height; going from two
- * detents to `fitToContents` while open left Android's sheet shorter than its
- * content, so it keeps two, which rest at the same height.
+ * A sheet that rests at its content's height has a second detent a hair
+ * above it, so it takes the same path as a sheet that opens at half and
+ * expands. The native `fitToContents` left Android's sheet shorter than its
+ * content when the content grew after opening (Share the App's code, Text
+ * size's held height), cutting off the buttons at its foot.
  */
 export const SHORT_SHEET_SECOND_DETENT = 0.002;
 
 /**
  * The detents for content `contentHeight` points tall.
- * - With `full` (Share the App, Text size, the narrators): `fitToContents`,
- *   the content's whole height, up to large, from the start.
- * - Up to about half the screen: the content's height.
+ * - Up to about half the screen, or always with `full` (Share the App, Text
+ *   size, the narrators, Other Sponsors): the content's height, up to large.
  * - Taller: medium, then the content's height, or large.
  */
 export function getSheetDetents(
@@ -102,21 +102,17 @@ export function getSheetDetents(
   frame: SheetFrame | null,
   { full = false }: Readonly<{ full?: boolean }> = {},
 ): SheetDetents {
-  if (full) return 'fitToContents';
   if (!frame || !(contentHeight > 0) || !(frame.largeHeight > 0) || !(frame.windowHeight > 0)) {
     return DEFAULT_SHEET_DETENTS;
   }
-  const fraction = Math.min(1, roundUp(getSheetFraction(frame, contentHeight)));
-  if (contentHeight <= getVisibleSheetHeight(frame, SHEET_FIT_LIMIT)) {
-    return [fraction, roundUp(fraction + SHORT_SHEET_SECOND_DETENT)];
+  const fraction = Math.min(1, roundUp(getSheetFraction(frame, Math.min(contentHeight, frame.largeHeight))));
+  const top = fraction >= FULL_HEIGHT_SNAP ? 1 : fraction;
+  if (full || contentHeight <= getVisibleSheetHeight(frame, SHEET_FIT_LIMIT)) {
+    return top >= 1 ? [1] : [top, roundUp(top + SHORT_SHEET_SECOND_DETENT)];
   }
-  return [SHEET_MEDIUM, fraction >= FULL_HEIGHT_SNAP ? 1 : fraction];
+  return [SHEET_MEDIUM, top];
 }
 
 /** Whether two sets of detents are the same. */
 export const sameSheetDetents = (a: SheetDetents, b: SheetDetents) =>
-  a === b ||
-  (Array.isArray(a) &&
-    Array.isArray(b) &&
-    a.length === b.length &&
-    a.every((value, index) => Math.abs(value - b[index]) < 0.001));
+  a === b || (a.length === b.length && a.every((value, index) => Math.abs(value - b[index]) < 0.0005));
