@@ -517,9 +517,9 @@ shows the phone's pages larger and roomier, not more on each page:
 - **A third column of book covers** in a library shelf's grid once the column is 600
   points wide (`getLibraryGridColumns`), so covers stay a sensible size. Other grids,
   such as Home's cards, keep two columns, which the column keeps a phone-like shape,
-  except where a word of their titles wouldn't fit beside another card at the
-  reader's text size: then each card takes a row (see
-  [Text size](accessibility/README.md#text-size)).
+  at every text size. Their titles, icons and heights grow with the text up to the
+  largest size at which the widest word of their titles still fits a card, and stop
+  there (see [Text size](accessibility/README.md#text-size)).
 - **Popups at most 560 points wide** (`POPUP_MAX_WIDTH` in `styles/PopupStyles.ts`),
   centered as on a phone (`usePopupWidthStyle`, or `getPopupWidthStyle` for a popup with
   side margins). Give a popup that number, never a percentage width with a `maxWidth`:

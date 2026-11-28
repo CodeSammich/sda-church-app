@@ -3,7 +3,7 @@ import { scaleTypographyMetric, type TextScale } from '@/constants/AppPreference
 import { useTextSize } from '@/constants/TextSizeContext';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { keepWordsWhole } from '@/constants/LineBreaks';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Animated,
@@ -37,13 +37,12 @@ interface GridMenuCardProps {
   titleBlockLines?: 2 | 3;
   showArrow?: boolean;
   /**
-   * Every title in the card's grid, measured word by word, so the grid can
-   * give each card a row of its own where a word wouldn't fit beside another
-   * card (useGridMenuCardColumns). Without it, the card's own title.
+   * Every title in the card's grid. A card's text grows with the text size
+   * until the widest word of any of them fills a line of its title, so cards
+   * that share a grid keep one size (fitGridMenuCardTextScale). Without it, the
+   * card's own title.
    */
   fitTitles?: string[];
-  /** Called with the widest word of fitTitles, in points, once it's measured. */
-  onWidestWord?: (width: number) => void;
 }
 
 export const getGridMenuCardTitleBlockMinHeight = (
@@ -61,12 +60,12 @@ export const getGridMenuCardTitleBlockMinHeight = (
 };
 
 /**
- * The card text's scale: the app's text size times the phone's, in full, as
- * the rest of the page and the card's own icon grow. The card applies it
- * itself, with the phone's scaling turned off on its Text, so it measures its
- * words at the size they're drawn. Until 1.9.2 it stopped at the default
- * 1.25×, and shrank from there to keep a word whole beside another card, so at
- * 200% the cards and their icons grew but the titles never did (#387, #324).
+ * The card's scale before it's fitted: the app's text size times the phone's,
+ * in full. The card applies it itself, with the phone's scaling turned off on
+ * its Text, so it measures its words at the size they're drawn. Until 1.9.2
+ * the text stopped at the default 1.25× (#387) while the card's icon and
+ * height grew with the app's text size, so at 200% the icons were big and the
+ * titles small.
  */
 export const getGridMenuCardTextScale = (textScale: TextScale, fontScale: number) => {
   const phoneScale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
@@ -74,8 +73,7 @@ export const getGridMenuCardTextScale = (textScale: TextScale, fontScale: number
 };
 
 // The card's padding and border on each side. The title has all the width
-// between them: it had 90% of it, which left a long word less room beside
-// another card.
+// between them: with 90% of it, as until 1.9.2, it stopped growing sooner.
 const CARD_PADDING = 18;
 const CARD_BORDER = 1;
 const TITLE_FONT_SIZE = 15;
@@ -89,8 +87,8 @@ const SPARE = 2;
 const LINE_BREAK = /[^\S\u00a0]+|\u200b/u;
 
 /**
- * The smallest the card text gets to keep a word whole that's wider than a
- * card a whole row wide: 80% of its size at 100%.
+ * The smallest the card gets to keep a word whole, as in a narrow iPad
+ * window: 80% of its size at 100%.
  */
 export const GRID_MENU_CARD_TEXT_MIN_SCALE = 0.8;
 
@@ -102,31 +100,14 @@ export const getGridMenuCardTitleWords = (title: string) =>
   keepWordsWhole(title).split(LINE_BREAK).filter(Boolean);
 
 /**
- * How many cards share a row of a grid `rowWidth` points wide, with `gap`
- * between them: two while `widestWord`, the widest word of the grid's titles
- * at their size, in points, fits on a line of a card half the row, or else
- * one, so the titles keep the size the reader chose and no word breaks. Two
- * until the word is measured.
- */
-export const getGridMenuCardColumns = (rowWidth: number, gap: number, widestWord: number): 1 | 2 =>
-  rowWidth > 0 && widestWord > getGridMenuCardTitleWidth((rowWidth - gap) / 2) - SPARE ? 1 : 2;
-
-/**
- * The columns of a grid of cards in a row `rowWidth` points wide, from the
- * widest word its cards measure: give each card `onWidestWord`.
- */
-export const useGridMenuCardColumns = (rowWidth: number, gap: number) => {
-  const [widestWord, setWidestWord] = useState(0);
-  return { columns: getGridMenuCardColumns(rowWidth, gap, widestWord), onWidestWord: setWidestWord };
-};
-
-/**
- * The card text's scale, given `widestWord`, the widest word of the grid's
- * titles, in points, at `scale`: smaller in proportion only where that word
- * wouldn't fit on one line of the card's title, which would break it mid-word.
- * The grid gives each card a row of its own first (getGridMenuCardColumns), so
- * only a word wider than a whole row shrinks, at the largest sizes together
- * on a narrow phone, and only as far as it must.
+ * The card's scale, for its title, its icon and its height alike, given
+ * `widestWord`, the widest word of the grid's titles, in points, at `scale`:
+ * the reader's text size, up to the largest at which that word still fits on
+ * one line of the card's title. Home's and New Member & Visitor's cards stay
+ * two a row at every size, by design (#387), so past that size a word would
+ * break mid-word, as "Compañerismo" and "Denomination" did (#324). The icon and
+ * the card stop growing there too, so the title stays in proportion to them;
+ * until 1.9.2 they grew on with the text size while the title stayed at 1.25×.
  */
 export const fitGridMenuCardTextScale = (
   scale: TextScale,
@@ -166,15 +147,14 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   titleBlockLines = 2,
   showArrow = true,
   fitTitles,
-  onWidestWord,
 }) => {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
   const scale = getGridMenuCardTextScale(textScale, fontScale);
-  // The grid's words, each measured on a line of its own at the card's size,
-  // so the grid can tell whether two cards fit a row, and the card's width, so
-  // a word wider than even a whole row can shrink to stay whole.
+  // The grid's words, each measured on a line of its own at the reader's
+  // size, and the card's width, so the card stops growing where the widest
+  // word fills its title's line.
   const fitWords = useMemo(
     () => [...new Set((fitTitles ?? [title]).flatMap(getGridMenuCardTitleWords))],
     [fitTitles, title],
@@ -182,9 +162,6 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   const [cardWidth, setCardWidth] = useState(0);
   const [measuredWord, setMeasuredWord] = useState(0);
   const widestWord = measuredWord || measureWebWords(fitWords, scale);
-  useEffect(() => {
-    if (widestWord > 0) onWidestWord?.(widestWord);
-  }, [onWidestWord, widestWord]);
   const cardTextScale = fitGridMenuCardTextScale(scale, cardWidth, widestWord);
   const styles = useMemo(
     () => createStyles(textScale, cardTextScale, titleBlockLines),
@@ -277,6 +254,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
 
         {/* Illustration + arrow row — bottom */}
         <View pointerEvents="none" style={styles.bottomRow}>
+          {/* The icon grows with the title, and stops where it does. */}
           <View style={styles.decorIconContainer}>
             {imageSource ? (
               <ExternalBrandIcon
@@ -285,6 +263,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
                 size={68}
                 contentScale={imageContentScale}
                 style={styles.decorIcon}
+                textScale={cardTextScale}
               />
             ) : icon ? (
               <AppIcon
@@ -292,6 +271,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
                 size={68}
                 color={resolvedIconColor}
                 style={styles.decorIcon}
+                textScale={cardTextScale}
               />
             ) : null}
           </View>

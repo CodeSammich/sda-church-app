@@ -758,21 +758,40 @@ describe('card titles that grow with the text size (1.9.2)', () => {
   ];
   const widen = (lines: Line[], text: string, width: number) =>
     lines.map((each) => (each.text === text ? { ...each, box: [each.box[0], each.box[1], width, each.box[3]] } : each));
+  const moveLeft = (lines: Line[], text: string, left: number) =>
+    lines.map((each) => (each.text === text ? { ...each, box: [left, each.box[1], each.box[2], each.box[3]] } : each));
+  // What it read with the titles growing to the largest size that fits two
+  // cards a row (https://github.com/CodeSammich/sda-church-app/actions/runs/46087123574).
+  const grown = widen(discoverAt3x, 'Denomination', 0.364);
 
   it('catch a title that stayed small at 3.2× text', () => {
     expect(checkShot(androidShot('discover-xl-android-font-max'), discoverAt3x)).toEqual([
-      '/\\bDenomination$/ is 32% of the width wide, not at least 50%',
+      '/\\bDenomination$/ is 32% of the width wide, not at least 34%',
     ]);
-    // About 48 points a letter's height on the 384-point phone.
-    expect(checkShot(androidShot('discover-xl-android-font-max'), widen(discoverAt3x, 'Denomination', 0.78))).toEqual([]);
+    expect(checkShot(androidShot('discover-xl-android-font-max'), grown)).toEqual([]);
   });
 
-  it("catch Home's Chinese card titles held small at 150% on the Android phone", () => {
+  it('catch the cards no longer two a row at 3.2× text', () => {
+    // A card a row puts "Locations" at the left, under "Denomination".
+    expect(checkShot(androidShot('discover-xl-android-font-max'), moveLeft(grown, 'Locations &', 0.085))).toEqual([
+      '/^Locations\\b/ starts 9% of the way across, not at least 50%',
+    ]);
+    expect(checkShot(shot('discover-xl-ios-large-text'), moveLeft(grown, 'Locations &', 0.085))).toEqual([
+      '/^Locations\\b/ starts 9% of the way across, not at least 50%',
+    ]);
+    expect(checkShot(shot('discover-xl-ios-large-text'), grown)).toEqual([]);
+  });
+
+  it("catch Home's Chinese card titles held small, or no longer two a row, at 150% on the Android phone", () => {
     expect(checkShot(androidShot('home-zh-large'), homeZhAt150)).toEqual([
       '/^觀看直播$/ is 16% of the width wide, not at least 20%',
     ]);
-    // 4 characters of 22.5 points, on the 384-point phone.
-    expect(checkShot(androidShot('home-zh-large'), widen(homeZhAt150, '觀看直播', 0.24))).toEqual([]);
+    // 4 characters of 22.5 points, on the 384-point phone: 25%.
+    const grownZh = widen(homeZhAt150, '觀看直播', 0.253);
+    expect(checkShot(androidShot('home-zh-large'), grownZh)).toEqual([]);
+    expect(checkShot(androidShot('home-zh-large'), moveLeft(grownZh, '每週週報', 0.094))).toEqual([
+      '/^每週週報$/ starts 9% of the way across, not at least 50%',
+    ]);
     // The iPhone's wider screen leaves less of a margin, so it isn't checked there.
     expect(checkShot(shot('home-zh-large'), homeZhAt150)).toEqual([]);
   });

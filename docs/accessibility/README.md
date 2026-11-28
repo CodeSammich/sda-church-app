@@ -37,15 +37,14 @@ also follows the phone's text size. The two multiply:
   sizes enlarge page content but not these bars. The app's own setting still applies
   to them: in full to the header, and up to 130% to the tab bar and the Bible
   reader's controls.
-- The titles of the cards on Home and New Member & Visitor follow both settings in
-  full, as their icons do. Two cards share a row while the widest word of their
-  titles fits on a line of a card half the row's width; where it wouldn't, each
-  card takes a row of its own (`getGridMenuCardColumns` in
-  `components/GridMenuCard.tsx`), so a word neither breaks nor shrinks. Only a word
-  wider than a whole row, at the largest sizes together on a narrow phone, shrinks,
-  just enough to stay whole. Until 1.9.2 the titles stopped at the default 1.25×
-  (#387) and shrank from there to fit two cards a row (#324), so at 200% the cards
-  and their icons grew but the titles never did.
+- The cards on Home and New Member & Visitor stay two a row at every size (#387).
+  Their titles, icons and heights grow together with both settings, up to the
+  largest size at which the widest word of the grid's titles, measured on the
+  device, still fits on a line of a card, and stop there
+  (`fitGridMenuCardTextScale` in `components/GridMenuCard.tsx`), so no word breaks
+  and the title stays in proportion to the icon. Titles wrap between words. Until
+  1.9.2 the titles stopped at the default 1.25× while the icons and cards grew on
+  with the app's text size, so at 200% the icons were big and the titles small.
 - Words stay whole at every size, in Chinese too (#797). Chinese has no spaces
   between its words, so a phone may break a line between any two characters: at
   150%, Home's 分享經文 broke as 分享經 / 文, and the hymnal page's 中文讚美詩 — 505 版
@@ -60,18 +59,19 @@ also follows the phone's text size. The two multiply:
   - A reference such as 約翰福音 9:25 moves to the next line whole (`unbroken`).
   - A card's title on Home and New Member & Visitor breaks only at its spaces, and
     in Chinese at the zero-width spaces (U+200B) that mark the words of a long
-    title, such as 本週 / 安息日學 / 課程, so no Chinese word of theirs is over four
-    characters, and the cards fit two a row in Chinese up to 200% on a phone 375
+    title, such as 本週 / 安息日學 / 課程. No Chinese word of theirs is over four
+    characters, so in Chinese the cards grow all the way to 200% on a phone 375
     points wide or wider.
 - `npm run check:text-scale` (`scripts/check-text-scale-coverage.mjs`) fails on raw
   `fontSize` or `lineHeight` numbers in `app/`, `components/`, `features/`, and
   `styles/`, except the Android home screen widget's, which Android draws at the
   phone's own text size; on any `maxFontSizeMultiplier` cap other than the
   header's; on `allowFontScaling` outside the grid cards, which apply the
-  phone's text size themselves; and on a new limit on the text size, a constant
-  named with `TEXT` or `FONT` and `MAX` or `CAP`, in those folders: the limits
-  above live in `constants/AppPreferences.ts` and `hooks/useGlobalHeaderHeight.ts`.
-  The **PR Unit Tests** workflow runs it.
+  phone's text size themselves; and on a new fixed limit on the text size, a
+  constant named with `TEXT` or `FONT` and `MAX` or `CAP`, in those folders: the
+  fixed limits above live in `constants/AppPreferences.ts` and
+  `hooks/useGlobalHeaderHeight.ts`. A limit worked out from what fits, as the
+  cards' is, isn't a constant, and passes. The **PR Unit Tests** workflow runs it.
 
 ## Screen readers (VoiceOver and TalkBack)
 
