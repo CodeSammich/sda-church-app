@@ -126,8 +126,8 @@ the in-app browser. There, a phone can show a blank page until the whole file ha
 which can take a minute on a slow connection. On iOS and Android, the app downloads
 them itself instead:
 
-- a popup appears as soon as the person taps, and shows the download's progress
-  ("Downloading · 5.1 of 14.2 MB"), with an X that stops it;
+- a sheet appears as soon as the person taps, and shows the download's progress
+  ("Downloading · 5.1 of 14.2 MB"), with an X that stops it (#867);
 - the file is kept in the cache directory while it's current, so it opens at once the
   next time, even offline. Nothing downloads without a tap, so people who don't use
   a feature never download its files;
@@ -136,7 +136,7 @@ them itself instead:
   downloaded copy, not a link, so it's outside `constants/ExternalLinks.ts`.
 
 If the phone has no viewer, or the download fails, the file's address opens in the
-in-app browser as before; if it fails because the phone is offline, the popup says
+in-app browser as before; if it fails because the phone is offline, the sheet says
 there's no connection instead. The web keeps opening files in a new tab. Anything new that
 opens a big file should work the same way. The children's Sabbath School lessons came
 first ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529));
@@ -386,8 +386,8 @@ simple, blended colors.
       between them are under You → Text size, which the step says.
   - The language and theme cards sit one a row, so their pictures have room.
   - The You tab's Language and Theme popups show the same cards, with each choice's
-    description under its name (`components/SettingChoices.tsx`), as its Contrast popup
-    shows the contrast pictures. Each stays a popup, not a page of its own: one choice
+    description under its name (`components/SettingChoices.tsx`), as its Contrast sheet
+    shows the contrast pictures. Each stays a sheet, not a page of its own: one choice
     doesn't need a page.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
@@ -398,12 +398,75 @@ simple, blended colors.
   header's buttons) takes only a hairline in the theme's subtle outline token and one soft
   shadow (`getFloatingSurfaceStyle`). Do not add strong dividers or decorative glass
   effects.
-- **Popups:** Every popup is the app's own, never the system's alert (`Alert.alert`),
-  which on Android looks unlike the rest of the app. A popup is centred, with the shared
+- **Popups are bottom sheets** ([#867](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/867)),
+  following Apple's and Google's guidance. Both platforms use a sheet for
+  supplementary content such as settings, pickers and details, and a centred dialog
+  only for short alerts and questions
+  ([Apple: Sheets](https://developer.apple.com/design/human-interface-guidelines/sheets);
+  [Material: Bottom sheets](https://m3.material.io/components/bottom-sheets/overview)).
+  A sheet comes up from the bottom, where a thumb reaches, and is the platform's own:
+  iOS's sheet and Android's Material bottom sheet, which VoiceOver and TalkBack know.
+  - **Which popups are sheets:** every popup that shows settings, a list to pick from or
+    details: the Bible's Reader languages, book, chapter and verse lists, a verse's
+    details and its hymns, Audio settings and the sleep timer; You's Text size,
+    Language, Theme, Contrast and Share the App; Offline Bible Audio's narrators; Give's
+    Other Sponsors; and a children's lesson's download, which shows a task's progress,
+    and Android's guidance is not to block the app with a progress dialog
+    ([Android: Dialogs](https://developer.android.com/develop/ui/views/components/dialogs)).
+  - **Centred dialogs stay** for questions and alerts: `showAppAlert`'s (Use mobile
+    data?, deleting a download, Not enough space, and the like), the Bible's "No
+    connection" (#801), the web's install prompt and interrupted-audio note. **Full
+    screens stay** where chosen: saved verses, so more of them show at once (#750),
+    first-launch setup, and the contrast question after an update (#708).
+  - **Size:** a sheet is its content's height, up to about half the screen. Taller
+    content opens at half and expands to its own height, or to full height, where it
+    scrolls (`components/SheetDetents.ts`). The height is a share of the screen, so it
+    doesn't grow with the text size; the content scrolls instead. Text size opens at
+    its whole height, so the whole preview shows, and keeps that height while it's open,
+    so its preview and buttons don't move as the text grows. Share the App opens at its
+    whole height too, so the whole code shows.
+  - **Closing and resizing:** an X in the title row, a tap on the dimmed page above,
+    a swipe down, and Android's Back. A grabber at the top also expands the sheet on a
+    tap, so dragging is never needed; on Android, a double tap on it closes the sheet,
+    as Material's does. Scrolling up a half-height sheet expands it first.
+  - **Where the X goes:** where each platform puts a sheet's close button. On the
+    iPhone and iPad, the leading (left) edge, with the title centred: "the Cancel
+    button belongs on the leading edge of the top toolbar" (Apple's Sheets). On
+    Android, the trailing (right) edge. Material's bottom sheets have no close button,
+    only the drag handle, a tap outside, a swipe and Back
+    ([Material Components: Bottom sheet](https://github.com/material-components/material-components-android/blob/master/docs/components/BottomSheet.md)),
+    so the app keeps an X for older members, where Material's modal side sheet puts its
+    close button: at the title row's trailing end
+    ([Side sheet](https://github.com/material-components/material-components-android/blob/master/docs/components/SideSheet.md)).
+    The web's popups keep theirs at the end too (`PopupHeader`).
+  - **Look:** the platform's own corners, and the colour of the floating bars
+    (`floatingSurface`): white, or the warm off-white in standard contrast, in the
+    light theme; the brand's night blue, or near-black in standard contrast, in the
+    dark. So a sheet stands out from the dimmed page as the tab bar does from the page,
+    with no outline of its own. The grabber and the dim follow the app's theme, not
+    only the phone's, as the keyboard and the system's pickers do: the app tells the
+    system its light or dark (`Appearance.setColorScheme`), or leaves it to the phone
+    under System.
+  - **iPad and tablets:** the iPad shows Apple's centred form sheet, which the system
+    sizes, as Apple's guidance prefers for iPadOS; the detents and grabber apply only
+    at a narrow width, such as Slide Over. An Android tablet shows a bottom sheet at
+    most 640 dp wide, Material's default.
+  - **The web has no native sheets**, so its popups stay centred, with the shared
+    corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall
+    (`POPUP_MAX_HEIGHT_FRACTION`).
+  - **One component:** `AppSheet` (`components/AppSheet.tsx`) draws every sheet, with
+    react-native-screens' `FormSheet`. It's from that package's experimental API
+    (`react-native-screens/experimental`), its only native sheet that isn't a route:
+    the stable one, Expo Router's `presentation: 'formSheet'`, would make every popup a
+    route, and draws no grabber on Android. Only `AppSheet` imports it
+    (`test/app-sheet.test.ts`), so moving to the stable API later changes one file.
+  - Show one sheet at a time, and close a sheet before showing an alert: a centred
+    dialog draws in the app's own window, under a native sheet.
+- **Dialogs:** Every popup is the app's own, never the system's alert (`Alert.alert`),
+  which on Android looks unlike the rest of the app. A dialog is centred, with the shared
   corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall at any
-  text size, scrolling beyond that. First-launch setup and the contrast question after an
-  update are full-screen steps, not popups, so the limit doesn't apply to them. One that only says something has an X in its title row
-  and no Close button. One that asks a question has its answers as buttons, stacked so
+  text size, scrolling beyond that. One that only says something has an X in its title
+  row and no Close button. One that asks a question has its answers as buttons, stacked so
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`
   (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
@@ -517,11 +580,13 @@ shows the phone's pages larger and roomier, not more on each page:
 - **A third column of book covers** in a library shelf's grid once the column is 600
   points wide (`getLibraryGridColumns`), so covers stay a sensible size. Other grids,
   such as Home's cards, keep two columns, which the column keeps a phone-like shape.
-- **Popups at most 560 points wide** (`POPUP_MAX_WIDTH` in `styles/PopupStyles.ts`),
-  centered as on a phone (`usePopupWidthStyle`, or `getPopupWidthStyle` for a popup with
-  side margins). Give a popup that number, never a percentage width with a `maxWidth`:
-  on iOS, Paper splits the two between its views, and an iPad popup filled 90% of the
-  screen with its content in part of it.
+- **Sheets the system's size:** the iPad's centred form sheet, and an Android tablet's
+  bottom sheet at most 640 dp wide (#867). **Dialogs at most 560 points wide**
+  (`POPUP_MAX_WIDTH` in `styles/PopupStyles.ts`), centered as on a phone
+  (`usePopupWidthStyle`, or `getPopupWidthStyle` for a dialog with side margins). Give a
+  dialog that number, never a percentage width with a `maxWidth`: on iOS, Paper splits
+  the two between its views, and an iPad popup filled 90% of the screen with its content
+  in part of it.
 - **Tab labels under their icons**, as on a phone. React Navigation's default puts each
   label beside its icon on a wide screen, far from it on a tablet.
 - **Every way up on a large screen, portrait on phones.** The iPad turns to any

@@ -58,21 +58,21 @@ describe('popup shots (#372)', () => {
     expect(checkShot(shot('text-size-xl'), textSize)).toEqual([]);
   });
 
-  it('catch the audio settings popup back at the bottom of the screen', () => {
-    // What Vision read on the 1.3.2 release PR, where the popup still sat at
-    // the bottom, its title 47% of the way down, and the Listen offline
-    // row added since (#556).
+  it('catch the audio settings back in the middle of the screen, since it is a bottom sheet (#867)', () => {
+    // What Vision read on the 1.3.2 release PR, where the popup sat at the
+    // bottom, its title 47% of the way down, and the Listen offline row
+    // added since (#556): a bottom sheet's place again since #867.
     const atBottom = [
       ...(samples.bottomSheet['bible-audio-settings-zh'] as Line[]),
       line('離線收聽', 0.9),
       line('離線聖經音訊', 0.94),
     ];
-    expect(checkShot(shot('bible-audio-settings-zh'), atBottom)).toEqual([
-      '/^有聲書設定$/ is 47% of the way down, not at most 40%',
-    ]);
-    // Centred like the others: everything about 20% higher.
+    expect(checkShot(shot('bible-audio-settings-zh'), atBottom)).toEqual([]);
+    // Centred, as from 1.3.2 to #867: everything about 20% higher.
     const centred = atBottom.map(({ text, box }) => ({ text, box: [box[0], box[1] - 0.2, box[2], box[3]] }));
-    expect(checkShot(shot('bible-audio-settings-zh'), centred)).toEqual([]);
+    expect(checkShot(shot('bible-audio-settings-zh'), centred)).toEqual([
+      '/^有聲書設定$/ is 27% of the way down, not at least 40%',
+    ]);
   });
 
   it("catch the verse's footnote back below its Greek (#745)", () => {

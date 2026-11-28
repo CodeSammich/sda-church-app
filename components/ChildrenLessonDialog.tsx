@@ -1,12 +1,12 @@
-import { PopupHeader } from '@/components/PopupHeader';
+import { AppSheet } from '@/components/AppSheet';
+import { PopupScrollView } from '@/components/PopupScrollView';
 import { getDownloadProgressStatus } from '@/constants/DownloadCopy';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import type { LessonDownloadProgress } from '@/features/sabbath-school/LessonDownloads';
-import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { StyleSheet } from 'react-native';
-import { Dialog, Portal, ProgressBar, Text } from 'react-native-paper';
+import { ProgressBar, Text } from 'react-native-paper';
 
 const copy = {
   en: {
@@ -65,51 +65,48 @@ export function ChildrenLessonDialog({ offline = false, onCancel, progress, titl
   const { language } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight();
-  const popupWidthStyle = usePopupWidthStyle();
   const status = getChildrenLessonStatus(progress, language);
 
   return (
-    <Portal>
-      <Dialog
-        testID="children-lesson-dialog"
-        visible={visible}
-        onDismiss={onCancel}
-        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
-      >
-        <PopupHeader closeLabel={labels.close} onClose={onCancel} style={styles.header} title={title} />
-        <Dialog.Content style={styles.content}>
-          {offline ? (
+    // A sheet, sized to what it says, rather than a dialog: it shows a task's
+    // progress, and Android's guidance is not to block the app with a progress
+    // dialog (#867).
+    <AppSheet
+      testID="children-lesson-dialog"
+      visible={visible}
+      onDismiss={onCancel}
+      closeLabel={labels.close}
+      title={title}
+      headerVariant="titleLarge"
+    >
+      <PopupScrollView contentContainerStyle={styles.content}>
+        {offline ? (
+          <Text accessibilityLiveRegion="polite" variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+            {labels.offline}
+          </Text>
+        ) : (
+          <>
             <Text accessibilityLiveRegion="polite" variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
-              {labels.offline}
+              {status.text}
             </Text>
-          ) : (
-            <>
-              <Text accessibilityLiveRegion="polite" variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
-                {status.text}
-              </Text>
-              <ProgressBar
-                accessibilityLabel={status.text}
-                color={theme.colors.primary}
-                indeterminate={status.fraction === null}
-                progress={status.fraction ?? 0}
-                style={styles.progress}
-              />
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                {labels.note}
-              </Text>
-            </>
-          )}
-        </Dialog.Content>
-      </Dialog>
-    </Portal>
+            <ProgressBar
+              accessibilityLabel={status.text}
+              color={theme.colors.primary}
+              indeterminate={status.fraction === null}
+              progress={status.fraction ?? 0}
+              style={styles.progress}
+            />
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              {labels.note}
+            </Text>
+          </>
+        )}
+      </PopupScrollView>
+    </AppSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 16, paddingBottom: 24 },
-  // As in the other popups: with the X's 48-point row, 16 keeps the title where
-  // Paper's own title sits.
-  header: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },
+  content: { gap: 16, paddingBottom: 24, paddingHorizontal: 24 },
   progress: { borderRadius: 2, height: 4 },
 });

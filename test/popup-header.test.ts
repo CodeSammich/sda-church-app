@@ -2,10 +2,12 @@ import { LanguageDialog } from '@/components/LanguageDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
 import { ContrastDialog } from '@/components/ContrastDialog';
+import { getPopupClosePlacement, PopupHeader } from '@/components/PopupHeader';
 import { fireEvent } from '@testing-library/react-native';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderWithPreferences } from './helpers/render-preferences';
+import { getRenderedNodes } from './helpers/sheets';
 
 describe('popup close buttons', () => {
   it.each([
@@ -28,17 +30,38 @@ describe('popup close buttons', () => {
 
   it('gives every Bible popup without its own buttons the X', () => {
     const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
-    for (const title of [
-      'labels.audioSettings',
-      'labels.sleepTimer',
-      'labels.verseHymnsTitle',
-      'labels.savedVerses',
-    ]) {
-      expect(source).toContain(`{renderPopupHeader(${title}, `);
+    // Audio settings, the sleep timer, and the selection sheet (the pickers,
+    // a verse's details and its hymns) are sheets, whose X AppSheet draws.
+    for (const title of ['labels.audioSettings', 'labels.sleepTimer', 'labels.verseHymnsTitle']) {
+      expect(source).toMatch(new RegExp(`title=\\{\\s*(sheetType === 'verse-hymns'\\s*\\? )?${title.replace('.', '\\.')}`));
     }
-    // The verse popup and the book, chapter, verse, and translation pickers.
-    expect(source.match(/\{renderPopupHeader\(\n/g)).toHaveLength(2);
+    expect(source.match(/\{\.\.\.bibleSheetHeader\}/g)).toHaveLength(3);
+    // Saved verses fill the screen, with the X in their own title row (#750).
+    expect(source.match(/\{renderPopupHeader\(/g)).toHaveLength(1);
+    expect(source).toContain('{renderPopupHeader(labels.savedVerses, closeModal)}');
     // Only the background-audio note, which asks a question, keeps a plain title.
     expect(source.match(/ReaderStyles\.modalTitle/g)).toHaveLength(1);
+  });
+
+  it.each([
+    { os: 'ios', placement: 'leading' },
+    { os: 'android', placement: 'trailing' },
+    { os: 'web', placement: 'trailing' },
+  ])('puts the X at the $placement edge on $os (#867)', ({ os, placement }) => {
+    // Apple puts a sheet's Close on the leading edge; Material 3's side sheet
+    // puts its close button at the trailing end of its title row.
+    expect(getPopupClosePlacement(os)).toBe(placement);
+  });
+
+  it('puts the X before the title on iOS, and centres the title', async () => {
+    const screen = await renderWithPreferences(
+      createElement(PopupHeader, { closeLabel: 'Close', onClose: jest.fn(), title: 'Text size' }),
+    );
+    const nodes = getRenderedNodes(screen);
+    const close = nodes.findIndex((node) => node.props.accessibilityLabel === 'Close');
+    const title = nodes.findIndex((node) => node.props.accessibilityRole === 'header');
+    expect(close).toBeGreaterThanOrEqual(0);
+    expect(close).toBeLessThan(title);
+    expect(screen.getByText('Text size')).toHaveStyle({ textAlign: 'center' });
   });
 });

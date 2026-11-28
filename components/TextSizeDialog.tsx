@@ -8,13 +8,12 @@ import {
   TEXT_SCALE_STEP,
   type TextScale,
 } from '@/constants/AppPreferences';
-import { PopupHeader } from '@/components/PopupHeader';
+import { AppSheet } from '@/components/AppSheet';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { unbroken } from '@/constants/LineBreaks';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { createElement, useContext, useEffect, useRef, useState } from 'react';
 import {
   type GestureResponderEvent,
@@ -27,7 +26,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import { Dialog, Portal, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 
 interface TextSizeDialogProps {
   onDismiss: () => void;
@@ -229,11 +228,12 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   } = useTextSize();
   const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight();
-  const popupWidthStyle = usePopupWidthStyle();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
+  // The sheet's width, measured; until then, the screen's, up to a centred
+  // popup's on the web.
+  const [contentWidth, setContentWidth] = useState(0);
   const stepsBesideSlider = textSizeStepsFitBesideSlider(
-    popupWidthStyle.width - 2 * CONTENT_PADDING,
+    (contentWidth || Math.min(windowWidth, 560)) - 2 * CONTENT_PADDING,
     Math.max(1, drawnTextScale * fontScale),
   );
   const labels = labelsByLanguage[language] ?? labelsByLanguage.en;
@@ -347,182 +347,18 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   );
 
   return (
-    <Portal>
-      <Dialog
-        testID="text-size-dialog"
-        visible={visible}
-        onDismiss={onDismiss}
-        style={[
-          popupWidthStyle,
-          { maxHeight: popupMaxHeight },
-          getPopupSurfaceStyle(theme),
-        ]}
-      >
-        <PopupHeader
-          closeLabel={labels.close}
-          onClose={onDismiss}
-          style={styles.header}
-          title={labels.title}
-          variant="headlineSmall"
-        />
-        <Dialog.ScrollArea
-          style={styles.scrollArea}
-          testID="text-size-dialog-scroll-area"
-        >
-          <PopupScrollView contentContainerStyle={styles.scrollContent}>
-            <Text variant="bodyMedium">{labels.description}</Text>
-            <Text
-              variant="titleMedium"
-              accessibilityLiveRegion="polite"
-              style={styles.currentValue}
-            >
-              {labels.current(currentPercent)}
-            </Text>
-
-            <View style={[styles.nativeSliderRow, stepsBesideSlider && styles.sliderRowWithSteps]}>
-              {stepsBesideSlider && decreaseStep}
-              {Platform.OS === 'web' ? (
-                <View style={styles.webSlider}>
-                  {createElement('input', {
-                    'aria-label': labels.slider,
-                    'aria-valuemax': TEXT_SCALE_MAX * 100,
-                    'aria-valuemin': TEXT_SCALE_MIN * 100,
-                    'aria-valuenow': currentPercent,
-                    'aria-valuetext': labels.percent(currentPercent),
-                    max: TEXT_SCALE_MAX * 100,
-                    min: TEXT_SCALE_MIN * 100,
-                    onInput: (event: { currentTarget: { value: string } }) =>
-                      setPercent(Number(event.currentTarget.value)),
-                    onKeyDown: handleWebSliderKeyDown,
-                    step: stepPercent,
-                    style: {
-                      accentColor: theme.colors.primary,
-                      cursor: 'pointer',
-                      height: 44,
-                      width: '100%',
-                    },
-                    type: 'range',
-                    value: currentPercent,
-                  })}
-                </View>
-              ) : (
-                <View
-                  accessible
-                  accessibilityActions={[
-                    { name: 'increment', label: labels.increase },
-                    { name: 'decrement', label: labels.decrease },
-                  ]}
-                  accessibilityLabel={labels.slider}
-                  accessibilityRole="adjustable"
-                  accessibilityValue={{
-                    max: TEXT_SCALE_MAX * 100,
-                    min: TEXT_SCALE_MIN * 100,
-                    now: currentPercent,
-                    text: labels.percent(currentPercent),
-                  }}
-                  focusable
-                  onAccessibilityAction={(event) => {
-                    if (event.nativeEvent.actionName === 'increment') {
-                      adjustBySteps(1);
-                    } else if (event.nativeEvent.actionName === 'decrement') {
-                      adjustBySteps(-1);
-                    }
-                  }}
-                  onLayout={handleTrackLayout}
-                  onMoveShouldSetResponder={() => true}
-                  onResponderGrant={(event) => updateFromTouch(event)}
-                  onResponderMove={(event) => updateFromTouch(event)}
-                  onResponderRelease={(event) => updateFromTouch(event, true)}
-                  // Keep the drag from the dialog's scrolling, and apply the
-                  // size if the system takes the touch anyway.
-                  onResponderTerminationRequest={() => false}
-                  onResponderTerminate={() => applyScale(draftScale)}
-                  onStartShouldSetResponder={() => true}
-                  style={styles.nativeSlider}
-                >
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.nativeTrack,
-                      { backgroundColor: theme.colors.surfaceVariant },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.nativeTrackFill,
-                        {
-                          backgroundColor: theme.colors.primary,
-                          width: `${progress * 100}%`,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.nativeThumb,
-                      {
-                        backgroundColor: theme.colors.primary,
-                        left: clamp(
-                          trackWidth * progress - 10,
-                          0,
-                          Math.max(0, trackWidth - 20),
-                        ),
-                      },
-                    ]}
-                  />
-                </View>
-              )}
-              {stepsBesideSlider && increaseStep}
-            </View>
-
-            {!stepsBesideSlider && (
-              <>
-                <View style={styles.rangeLabels} accessible={false}>
-                  <Text variant="labelMedium">100%</Text>
-                  <Text variant="labelMedium">200%</Text>
-                </View>
-                <View style={styles.stepActionsRow}>
-                  {decreaseStep}
-                  {increaseStep}
-                </View>
-              </>
-            )}
-            <View
-              accessibilityLabel={labels.previewAt(currentPercent)}
-              style={[
-                styles.preview,
-                {
-                  backgroundColor: theme.colors.surfaceVariant,
-                  borderColor: theme.colors.outlineVariant,
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: 'PlusJakartaSans-Regular',
-                  fontSize: scaleTypographyMetric(16, draftScale),
-                  lineHeight: scaleTypographyMetric(24, draftScale),
-                }}
-              >
-                {/* The reference moves to the next line whole, never as
-                    約翰福音 with 9:25 alone below it (#797). */}
-                {`${labels.previewQuote} ${unbroken(labels.previewReference)}`}
-              </Text>
-            </View>
-            {applyError && (
-              <Text
-                accessibilityLiveRegion="assertive"
-                role="alert"
-                style={[styles.errorText, { color: theme.colors.error }]}
-                variant="bodyMedium"
-              >
-                {applyError}
-              </Text>
-            )}
-          </PopupScrollView>
-        </Dialog.ScrollArea>
+    // It opens at its content's height, so the whole preview shows, and keeps
+    // that height, so the preview and the buttons don't move under the finger
+    // as the app's text grows (#867).
+    <AppSheet
+      testID="text-size-dialog"
+      visible={visible}
+      onDismiss={onDismiss}
+      closeLabel={labels.close}
+      title={labels.title}
+      holdHeight
+      openFull
+      footer={
         <View style={styles.actions}>
           <TextDialogAction
             disabled={draftScale === defaultTextScale}
@@ -530,8 +366,166 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
             onPress={() => applyScale(defaultTextScale)}
           />
         </View>
-      </Dialog>
-    </Portal>
+      }
+    >
+      <PopupScrollView
+        testID="text-size-dialog-scroll"
+        contentContainerStyle={styles.scrollContent}
+        onLayout={(event) => setContentWidth(event.nativeEvent.layout.width)}
+      >
+        <Text variant="bodyMedium">{labels.description}</Text>
+        <Text
+          variant="titleMedium"
+          accessibilityLiveRegion="polite"
+          style={styles.currentValue}
+        >
+          {labels.current(currentPercent)}
+        </Text>
+
+        <View style={[styles.nativeSliderRow, stepsBesideSlider && styles.sliderRowWithSteps]}>
+          {stepsBesideSlider && decreaseStep}
+          {Platform.OS === 'web' ? (
+            <View style={styles.webSlider}>
+              {createElement('input', {
+                'aria-label': labels.slider,
+                'aria-valuemax': TEXT_SCALE_MAX * 100,
+                'aria-valuemin': TEXT_SCALE_MIN * 100,
+                'aria-valuenow': currentPercent,
+                'aria-valuetext': labels.percent(currentPercent),
+                max: TEXT_SCALE_MAX * 100,
+                min: TEXT_SCALE_MIN * 100,
+                onInput: (event: { currentTarget: { value: string } }) =>
+                  setPercent(Number(event.currentTarget.value)),
+                onKeyDown: handleWebSliderKeyDown,
+                step: stepPercent,
+                style: {
+                  accentColor: theme.colors.primary,
+                  cursor: 'pointer',
+                  height: 44,
+                  width: '100%',
+                },
+                type: 'range',
+                value: currentPercent,
+              })}
+            </View>
+          ) : (
+            <View
+              accessible
+              accessibilityActions={[
+                { name: 'increment', label: labels.increase },
+                { name: 'decrement', label: labels.decrease },
+              ]}
+              accessibilityLabel={labels.slider}
+              accessibilityRole="adjustable"
+              accessibilityValue={{
+                max: TEXT_SCALE_MAX * 100,
+                min: TEXT_SCALE_MIN * 100,
+                now: currentPercent,
+                text: labels.percent(currentPercent),
+              }}
+              focusable
+              onAccessibilityAction={(event) => {
+                if (event.nativeEvent.actionName === 'increment') {
+                  adjustBySteps(1);
+                } else if (event.nativeEvent.actionName === 'decrement') {
+                  adjustBySteps(-1);
+                }
+              }}
+              onLayout={handleTrackLayout}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={(event) => updateFromTouch(event)}
+              onResponderMove={(event) => updateFromTouch(event)}
+              onResponderRelease={(event) => updateFromTouch(event, true)}
+              // Keep the drag from the dialog's scrolling, and apply the
+              // size if the system takes the touch anyway.
+              onResponderTerminationRequest={() => false}
+              onResponderTerminate={() => applyScale(draftScale)}
+              onStartShouldSetResponder={() => true}
+              style={styles.nativeSlider}
+            >
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.nativeTrack,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.nativeTrackFill,
+                    {
+                      backgroundColor: theme.colors.primary,
+                      width: `${progress * 100}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.nativeThumb,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    left: clamp(
+                      trackWidth * progress - 10,
+                      0,
+                      Math.max(0, trackWidth - 20),
+                    ),
+                  },
+                ]}
+              />
+            </View>
+          )}
+          {stepsBesideSlider && increaseStep}
+        </View>
+
+        {!stepsBesideSlider && (
+          <>
+            <View style={styles.rangeLabels} accessible={false}>
+              <Text variant="labelMedium">100%</Text>
+              <Text variant="labelMedium">200%</Text>
+            </View>
+            <View style={styles.stepActionsRow}>
+              {decreaseStep}
+              {increaseStep}
+            </View>
+          </>
+        )}
+        <View
+          accessibilityLabel={labels.previewAt(currentPercent)}
+          style={[
+            styles.preview,
+            {
+              backgroundColor: theme.colors.surfaceVariant,
+              borderColor: theme.colors.outlineVariant,
+            },
+          ]}
+        >
+          <Text
+            style={{
+              color: theme.colors.onSurface,
+              fontFamily: 'PlusJakartaSans-Regular',
+              fontSize: scaleTypographyMetric(16, draftScale),
+              lineHeight: scaleTypographyMetric(24, draftScale),
+            }}
+          >
+            {/* The reference moves to the next line whole, never as
+                約翰福音 with 9:25 alone below it (#797). */}
+            {`${labels.previewQuote} ${unbroken(labels.previewReference)}`}
+          </Text>
+        </View>
+        {applyError && (
+          <Text
+            accessibilityLiveRegion="assertive"
+            role="alert"
+            style={[styles.errorText, { color: theme.colors.error }]}
+            variant="bodyMedium"
+          >
+            {applyError}
+          </Text>
+        )}
+      </PopupScrollView>
+    </AppSheet>
   );
 };
 
@@ -561,14 +555,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     marginTop: 12,
-  },
-  // Paper gives a dialog's first child a 24-point top margin; with the X's
-  // 48-point row, 16 keeps the title where Paper's own title sits.
-  header: {
-    marginBottom: 8,
-    marginTop: 16,
-    paddingLeft: 24,
-    paddingRight: 12,
   },
   nativeSlider: {
     flex: 1,
@@ -638,11 +624,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
-  },
-  scrollArea: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingHorizontal: 0,
   },
   scrollContent: {
     paddingBottom: 4,

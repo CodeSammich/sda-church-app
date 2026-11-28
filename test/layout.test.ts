@@ -185,7 +185,9 @@ describe('popup width on wide screens (#324)', () => {
         .map((style) => `${file}: ${style.replace(/\s+/g, ' ')}`),
     );
     expect(offenders).toEqual([]);
-    expect(popups.length).toBeGreaterThanOrEqual(8);
+    // The alerts, the Bible's question and saved verses, setup, the web's
+    // install prompt, and the web's popups in place of sheets (#867).
+    expect(popups.length).toBeGreaterThanOrEqual(5);
   });
 });
 

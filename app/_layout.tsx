@@ -85,6 +85,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
+  Appearance,
   BackHandler,
   Dimensions,
   LogBox,
@@ -750,6 +751,15 @@ export default function RootLayout() {
         (sunTimes ? now < sunTimes.sunrise || now >= sunTimes.sunset : now.getHours() < 7 || now.getHours() >= 19));
     setTheme(getAppTheme(isDark, needsCjkSystemFont(language), effectiveTextScale, contrasts[isDark ? 'dark' : 'light']));
   }, [colorScheme, contrasts, effectiveTextScale, isReady, language, sunTimes, themeMode]);
+
+  // What the system draws in the app follows the app's theme, not only the
+  // phone's setting: a sheet's grabber and dim (#867), the keyboard, and the
+  // system's pickers. System hands them back to the phone, so that
+  // useColorScheme reads the phone's own setting again.
+  useEffect(() => {
+    if (!isReady || Platform.OS === 'web') return;
+    Appearance.setColorScheme(themeMode === THEME_SYSTEM ? 'auto' : theme.dark ? 'dark' : 'light');
+  }, [isReady, theme.dark, themeMode]);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);

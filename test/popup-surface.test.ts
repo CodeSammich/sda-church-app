@@ -1,3 +1,4 @@
+import { AppAlertHost, resetAppAlertsForTests, showAppAlert } from '@/components/AppAlert';
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
@@ -5,6 +6,7 @@ import { StyleSheet } from 'react-native';
 import { Dialog } from 'react-native-paper';
 import { createElement } from 'react';
 import { renderWithPreferences } from './helpers/render-preferences';
+import { getSheetHosts } from './helpers/sheets';
 
 describe('popup surfaces', () => {
   it.each([customLightTheme, customDarkTheme])(
@@ -18,17 +20,30 @@ describe('popup surfaces', () => {
   );
 
   it.each([customLightTheme, customDarkTheme])(
-    'renders the language dialog on the $dark app canvas',
+    'renders an alert, a centred dialog, on the $dark app canvas',
+    async (theme) => {
+      showAppAlert('Not enough space', 'Free up some space, then try again.');
+      const screen = await renderWithPreferences(createElement(AppAlertHost), { theme });
+
+      expect(
+        StyleSheet.flatten(screen.getByTestId('app-alert-surface').props.style)
+          .backgroundColor,
+      ).toBe(theme.colors.background);
+      resetAppAlertsForTests();
+    },
+  );
+
+  it.each([customLightTheme, customDarkTheme])(
+    'renders the language sheet in the colour of the $dark floating bars, with the platform\'s corners (#867)',
     async (theme) => {
       const screen = await renderWithPreferences(
         createElement(LanguageDialog, { onDismiss: jest.fn(), visible: true }),
         { theme },
       );
-
-      expect(
-        StyleSheet.flatten(screen.getByTestId('language-dialog-surface').props.style)
-          .backgroundColor,
-      ).toBe(theme.colors.background);
+      const [sheet] = getSheetHosts(screen);
+      expect(sheet.props.nativeContainerBackgroundColor).toBe(theme.colors.floatingSurface);
+      // -1: the system's own corners.
+      expect(sheet.props.preferredCornerRadius).toBe(-1);
     },
   );
 

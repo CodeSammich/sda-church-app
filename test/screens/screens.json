@@ -250,12 +250,12 @@
     {
       "name": "bible-chapter-picker",
       "group": "bible-reading",
-      "$comment": "The chapter list, opened by popup=chapter, as the chapter pill would (#456): its title beside an X, then a row for each chapter. An English app reading the CUV names each chapter in both, 第 1 章 (Chapter 1) (#723). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis.",
+      "$comment": "The chapter list, opened by popup=chapter, as the chapter pill would (#456): its title beside an X, then a row for each chapter. It's a bottom sheet (#867) that opens at half the screen, so on the iPhone and the Android phone its title must be at least 40% of the way down; the iPad shows a centred form sheet. An English app reading the CUV names each chapter in both, 第 1 章 (Chapter 1) (#723). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=chapter",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": [{ "line": "^Chapter$", "maxTop": 0.4 }, "[(（]Chapter 1[)）]$", "[(（]Chapter 2[)）]$"],
+      "mustShowLines": [{ "line": "^Chapter$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Chapter$", "platforms": ["ipad"] }, "[(（]Chapter 1[)）]$", "[(（]Chapter 2[)）]$"],
       "mustNotShowLines": ["^Close$"]
     },
     {
@@ -297,16 +297,16 @@
     {
       "name": "bible-audio-settings",
       "group": "bible-reading",
-      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages, in English (the Google Play screenshot) and Chinese. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%. Under the audio languages, Listen offline is one row that opens Offline Bible Audio in the You tab, where Bible audio is downloaded and deleted (#556); it must show, though the Android phone's shorter popup may leave the row below the fold.",
+      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages, in English (the Google Play screenshot) and Chinese. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. Like the other popups that aren't questions, it's a bottom sheet (#867), where it sat until 1.3.2: on the iPhone and the Android phone its title must be at least 40% of the way down, where a centred popup's sat at 25 to 32%; the iPad shows Apple's centred form sheet. Under the audio languages, Listen offline is one row that opens Offline Bible Audio in the You tab, where Bible audio is downloaded and deleted (#556); it must show, though the Android phone's shorter popup may leave the row below the fold.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=audio-settings",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
       "mustShowLines": ["^WordProject$"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
-        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] },
-        "es": { "mustShowLines": [{ "line": "^Ajustes de audio$", "maxTop": 0.4 }, "^Idioma del audio$", "^Escuchar sin conexi.n$"], "mustNotShowLines": ["^Cerrar$", "^Toda la Biblia$"] }
+        "default": { "mustShowLines": [{ "line": "^Audio settings$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Audio settings$", "platforms": ["ipad"] }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
+        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^有聲書設定$", "platforms": ["ipad"] }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] },
+        "es": { "mustShowLines": [{ "line": "^Ajustes de audio$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Ajustes de audio$", "platforms": ["ipad"] }, "^Idioma del audio$", "^Escuchar sin conexi.n$"], "mustNotShowLines": ["^Cerrar$", "^Toda la Biblia$"] }
       }
     },
     {
@@ -372,7 +372,7 @@
     {
       "name": "offline-bible-audio-narrator",
       "group": "bible-reading",
-      "$comment": "Offline Bible Audio's narrator popup, which lists every narrator to download with what's on the phone, by popup=narrator in the preview build (#324). A key-screen build has nothing downloaded. Its iPad shot checks the popup's width: when it was new, it had a percentage width, which on iOS fills 90% of an iPad. In the bible-text group, the compiling runner's, since the bible-reading group's phones are at their time limit.",
+      "$comment": "Offline Bible Audio's narrator popup, which lists every narrator to download with what's on the phone, by popup=narrator in the preview build (#324). A key-screen build has nothing downloaded. Its iPad shot checked the popup's width: when it was new, it had a percentage width, which on iOS fills 90% of an iPad. Since #867 it's a sheet, which the system sizes. In the bible-text group, the compiling runner's, since the bible-reading group's phones are at their time limit.",
       "path": "you/audio-downloads?narrator=souer&popup=narrator",
       "variants": ["default"],
       "ipadVariants": ["landscape"],
@@ -846,7 +846,7 @@
     {
       "name": "text-size",
       "group": "worship-and-you",
-      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% its text runs past the popups' height limit (POPUP_MAX_HEIGHT_FRACTION in styles/PopupStyles.ts), so the dialog stops there and its text scrolls, leaving room around it to tap. Its title is also on the You screen behind it, so the rules require lines only the dialog shows. The iPad saves no text size, so its shot shows the size a tablet starts at, 150%, and Reset returns there (#324). zh-large is Traditional Chinese at 150%, where the sample, the last thing in the dialog, was cut off at its third line, 9:25, below the height limit (#797): the −5% and +5% buttons now sit either side of the slider where they fit, and the reference 約翰福音 9:25 moves to its line whole, which must show, ending the sample.",
+      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). It's a bottom sheet (#867) that opens at its content's height and keeps that height while open, so the preview doesn't jump as the text grows: at 200% it reaches full height and its text scrolls. Its title is also on the You screen behind it, so the rules require lines only the dialog shows. The iPad saves no text size, so its shot shows the size a tablet starts at, 150%, and Reset returns there (#324). zh-large is Traditional Chinese at 150%, where the sample, the last thing in the dialog, was cut off at its third line, 9:25, below the height limit (#797): the −5% and +5% buttons now sit either side of the slider where they fit, and the reference 約翰福音 9:25 moves to its line whole, which must show, ending the sample.",
       "path": "you?popup=text-size",
       "variants": ["default", "xl", "zh-large"],
       "ipadVariants": ["default", "landscape", "landscape-xl"],
@@ -1030,7 +1030,7 @@
         "$comment": "The audio settings over that Bible, opened by popup=audio-settings: Reina-Valera 1909's Spanish narration, Listen offline, and the preferred source, HelloAO first, then the church's copy (#770). Spanish's sets show it where English's show the CUV's Mandarin and Cantonese (Google Play) or the Bible with the Chinese interface (the App Store): Spanish and English, no Chinese (user, 2026-11-09). The sets taken before #770 show only NYCCSDA.org under Fuente preferida, with room below it on the iPhone and the Android phone.",
         "path": "bible?bookId=PSA&chapter=23&translationId=spa_r09&popup=audio-settings",
         "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
-        "mustShowLines": [{ "line": "^Ajustes de audio$", "maxTop": 0.4 }, "Reina-Valera", "^Escuchar sin conexi.n$", "^HelloAO$"],
+        "mustShowLines": [{ "line": "^Ajustes de audio$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Ajustes de audio$", "platforms": ["ipad"] }, "Reina-Valera", "^Escuchar sin conexi.n$", "^HelloAO$"],
         "mustNotShowLines": ["^Cerrar$", "Mandar.n", "Canton.s"]
       }
     ],

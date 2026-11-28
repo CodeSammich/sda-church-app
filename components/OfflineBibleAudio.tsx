@@ -1,7 +1,7 @@
 import { showAppAlert } from '@/components/AppAlert';
 import { AppIcon } from '@/components/AppIcon';
 import { MenuCardSwitchVisual } from '@/components/MenuCard';
-import { PopupHeader } from '@/components/PopupHeader';
+import { AppSheet } from '@/components/AppSheet';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import { getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
 import {
@@ -41,13 +41,12 @@ import {
 } from '@/services/DownloadNotifications';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync, NetworkStateType } from 'expo-network';
 import { useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentRef, type ReactNode } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
+import { IconButton, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
@@ -452,70 +451,59 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
   const { language } = useContext(LanguageContext);
   const labels: Labels = copy[language] || copy.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight();
-  const popupWidthStyle = usePopupWidthStyle();
   return (
-    <Portal>
-      <Dialog
-        visible={visible}
-        onDismiss={onDismiss}
-        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
-      >
-        <PopupHeader
-          closeLabel={labels.close}
-          onClose={onDismiss}
-          style={styles.dialogHeader}
-          title={labels.narrator}
-          variant="headlineSmall"
-        />
-        <Dialog.ScrollArea style={styles.dialogScrollArea}>
-          <PopupScrollView contentContainerStyle={styles.dialogContent}>
-            <View accessibilityRole="radiogroup" style={styles.options}>
-              {BIBLE_AUDIO_DOWNLOAD_NARRATORS.map((option) => {
-                const selected = option === narrator;
-                const name = getBibleAudioNarratorName(option, language) ?? option;
-                const total = narratorTotal(option);
-                const caption = total ? labels.downloaded(formatDownloadSize(total, language)) : labels.nothing;
-                return (
-                  <Pressable
-                    key={option}
-                    accessibilityLabel={`${name}, ${caption}`}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
-                    onPress={() => onChoose(option)}
-                    style={({ pressed }) => [
-                      styles.option,
-                      {
-                        backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
-                        borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
-                        opacity: pressed ? 0.78 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={styles.label}>
-                      <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
-                        {name}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {caption}
-                      </Text>
-                    </View>
-                    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
-                      <RadioButton.Android
-                        value={option}
-                        status={selected ? 'checked' : 'unchecked'}
-                        color={theme.colors.primary}
-                        uncheckedColor={theme.colors.onSurfaceVariant}
-                      />
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </PopupScrollView>
-        </Dialog.ScrollArea>
-      </Dialog>
-    </Portal>
+    <AppSheet
+      testID="narrator-sheet"
+      visible={visible}
+      onDismiss={onDismiss}
+      closeLabel={labels.close}
+      title={labels.narrator}
+    >
+      <PopupScrollView contentContainerStyle={styles.dialogContent}>
+        <View accessibilityRole="radiogroup" style={styles.options}>
+          {BIBLE_AUDIO_DOWNLOAD_NARRATORS.map((option) => {
+            const selected = option === narrator;
+            const name = getBibleAudioNarratorName(option, language) ?? option;
+            const total = narratorTotal(option);
+            const caption = total ? labels.downloaded(formatDownloadSize(total, language)) : labels.nothing;
+            return (
+              <Pressable
+                key={option}
+                accessibilityLabel={`${name}, ${caption}`}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                onPress={() => onChoose(option)}
+                style={({ pressed }) => [
+                  styles.option,
+                  {
+                    backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+                    borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
+                    opacity: pressed ? 0.78 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.label}>
+                  <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+                    {name}
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    {caption}
+                  </Text>
+                </View>
+                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+                  <RadioButton.Android
+                    value={option}
+                    status={selected ? 'checked' : 'unchecked'}
+                    color={theme.colors.primary}
+                    uncheckedColor={theme.colors.onSurfaceVariant}
+                  />
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      </PopupScrollView>
+    </AppSheet>
   );
 }
 
@@ -984,8 +972,6 @@ const styles = StyleSheet.create({
   progress: { borderRadius: 2, height: 4, marginTop: 6 },
   // As wide as Paper's icon buttons beside it, and a thumb's height.
   deleteButton: { alignItems: 'center', justifyContent: 'center', marginHorizontal: 6, minHeight: 48, minWidth: 40 },
-  dialogHeader: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },
-  dialogScrollArea: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 0 },
   dialogContent: { paddingBottom: 24, paddingHorizontal: 24, paddingTop: 4 },
   options: { gap: 10 },
   option: {

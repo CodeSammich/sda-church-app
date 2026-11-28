@@ -1,13 +1,13 @@
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { fireEvent } from '@testing-library/react-native';
 import { createElement } from 'react';
-import { StyleSheet } from 'react-native';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import { renderWithPreferences } from './helpers/render-preferences';
+import { getSheetColor } from './helpers/sheets';
 
 describe('LanguageDialog', () => {
   it.each([customLightTheme, customDarkTheme])(
-    'uses the $dark app canvas as its dialog background',
+    'is a sheet the colour of the $dark theme\'s floating bars (#867)',
     async (theme) => {
       const screen = await renderWithPreferences(
         createElement(LanguageDialog, {
@@ -17,18 +17,8 @@ describe('LanguageDialog', () => {
         { theme },
       );
 
-      expect(
-        StyleSheet.flatten(screen.getByTestId('language-dialog-surface').props.style)
-          .backgroundColor,
-      ).toBe(theme.colors.background);
-      expect(
-        StyleSheet.flatten(screen.getByTestId('language-dialog-scroll-area').props.style)
-          .borderBottomWidth,
-      ).toBe(0);
-      expect(
-        StyleSheet.flatten(screen.getByTestId('language-dialog-scroll-area').props.style)
-          .marginBottom,
-      ).toBe(0);
+      expect(getSheetColor(screen)).toBe(theme.colors.floatingSurface);
+      expect(screen.getByTestId('language-dialog-scroll')).toBeTruthy();
     },
   );
 

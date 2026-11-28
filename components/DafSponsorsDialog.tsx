@@ -1,5 +1,5 @@
 import { AppIcon } from '@/components/AppIcon';
-import { PopupHeader } from '@/components/PopupHeader';
+import { AppSheet } from '@/components/AppSheet';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import {
   CHURCH_EIN,
@@ -10,10 +10,9 @@ import {
 } from '@/constants/ExternalLinks';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Dialog, Portal, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 
 export const DAF_SPONSORS_COPY = {
   en: {
@@ -70,110 +69,84 @@ export function DafSponsorsDialog({ onDismiss, title, visible }: DafSponsorsDial
   const { language } = useContext(LanguageContext);
   const labels = DAF_SPONSORS_COPY[language] || DAF_SPONSORS_COPY.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight();
-  // A numeric width: on iOS, Paper splits a percentage width from maxWidth (#324).
-  const popupWidthStyle = usePopupWidthStyle();
 
   return (
-    <Portal>
-      <Dialog
-        testID="daf-sponsors-dialog"
-        visible={visible}
-        onDismiss={onDismiss}
-        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
-      >
-        <PopupHeader
-          closeLabel={labels.close}
-          onClose={onDismiss}
-          style={styles.header}
-          title={title}
-          variant="headlineSmall"
-        />
-        <Dialog.ScrollArea style={styles.scrollArea}>
-          <PopupScrollView contentContainerStyle={styles.scrollContent}>
-            <Text
-              variant="bodyMedium"
-              style={[styles.intro, { color: theme.colors.onSurfaceVariant }]}
-            >
-              {labels.intro}
-            </Text>
-            <View style={styles.sponsors}>
-              {OTHER_DAF_SPONSORS.map((sponsor) => {
-                const details = getDafSponsorDetails(sponsor, language);
-                return (
-                  <Pressable
-                    key={sponsor.id}
-                    testID={`daf-sponsor-${sponsor.id}`}
-                    accessibilityLabel={[sponsor.name, ...details].join(', ')}
-                    accessibilityRole="link"
-                    onPress={() => openDafSponsor(sponsor)}
-                    style={({ pressed }) => [
-                      styles.sponsor,
-                      {
-                        backgroundColor: theme.colors.surfaceVariant,
-                        borderColor: theme.colors.outlineVariant,
-                        opacity: pressed ? 0.78 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={styles.sponsorText}>
-                      <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
-                        {sponsor.name}
-                      </Text>
-                      {details.map((line) => (
-                        <Text key={line} variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                          {line}
-                        </Text>
-                      ))}
-                    </View>
-                    <AppIcon
-                      name="open-in-new"
-                      size={20}
-                      color={theme.colors.primary}
-                      pointerEvents="none"
-                    />
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={styles.recipient}>
-              <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-                {labels.recipient}
-              </Text>
-              <Text selectable variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
-                {CHURCH_LEGAL_NAME}
-              </Text>
-              <Text selectable variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
-                {`EIN ${CHURCH_EIN}`}
-              </Text>
-            </View>
-          </PopupScrollView>
-        </Dialog.ScrollArea>
-      </Dialog>
-    </Portal>
+    <AppSheet
+      testID="daf-sponsors-dialog"
+      visible={visible}
+      onDismiss={onDismiss}
+      closeLabel={labels.close}
+      title={title}
+    >
+      <PopupScrollView contentContainerStyle={styles.scrollContent}>
+        <Text
+          variant="bodyMedium"
+          style={[styles.intro, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {labels.intro}
+        </Text>
+        <View style={styles.sponsors}>
+          {OTHER_DAF_SPONSORS.map((sponsor) => {
+            const details = getDafSponsorDetails(sponsor, language);
+            return (
+              <Pressable
+                key={sponsor.id}
+                testID={`daf-sponsor-${sponsor.id}`}
+                accessibilityLabel={[sponsor.name, ...details].join(', ')}
+                accessibilityRole="link"
+                onPress={() => openDafSponsor(sponsor)}
+                style={({ pressed }) => [
+                  styles.sponsor,
+                  {
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderColor: theme.colors.outlineVariant,
+                    opacity: pressed ? 0.78 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.sponsorText}>
+                  <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+                    {sponsor.name}
+                  </Text>
+                  {details.map((line) => (
+                    <Text key={line} variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+                <AppIcon
+                  name="open-in-new"
+                  size={20}
+                  color={theme.colors.primary}
+                  pointerEvents="none"
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.recipient}>
+          <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            {labels.recipient}
+          </Text>
+          <Text selectable variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+            {CHURCH_LEGAL_NAME}
+          </Text>
+          <Text selectable variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+            {`EIN ${CHURCH_EIN}`}
+          </Text>
+        </View>
+      </PopupScrollView>
+    </AppSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  // As in the other popups: with the X's 48-point row, 16 keeps the title where
-  // Paper's own title sits.
-  header: {
-    marginBottom: 8,
-    marginTop: 16,
-    paddingLeft: 24,
-    paddingRight: 12,
-  },
   intro: {
     marginBottom: 16,
   },
   recipient: {
     gap: 2,
     marginTop: 20,
-  },
-  scrollArea: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingHorizontal: 0,
   },
   scrollContent: {
     paddingBottom: 24,

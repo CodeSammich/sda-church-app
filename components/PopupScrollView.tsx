@@ -1,4 +1,5 @@
 import { AppIcon } from '@/components/AppIcon';
+import { SheetContext } from '@/components/SheetContext';
 import { useAppTheme } from '@/constants/Themes';
 import { MIN_TAP_TARGET } from '@/styles/ReaderStyles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,6 +7,7 @@ import {
   type ComponentRef,
   forwardRef,
   useCallback,
+  useContext,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -85,6 +87,11 @@ export function usePopupScrollHints(handlers: ScrollHandlers = {}, flash?: () =>
   const hints = getScrollHints(metrics);
   const flashed = useRef(false);
   const { onLayout, onContentSizeChange, onScroll } = handlers;
+  // A sheet sizes itself to its content (#867).
+  const { reportScroll } = useContext(SheetContext);
+  useEffect(() => {
+    if (metrics.viewport > 0 || metrics.content > 0) reportScroll?.(metrics.viewport, metrics.content);
+  }, [metrics.content, metrics.viewport, reportScroll]);
 
   useEffect(() => {
     if (hints.below && !flashed.current) {
@@ -136,7 +143,8 @@ export function PopupScrollHints({
   onScrollDown,
 }: Readonly<{ hints: ReturnType<typeof getScrollHints>; onScrollDown: () => void }>) {
   const theme = useAppTheme();
-  const background = theme.colors.background;
+  // A sheet's own colour, or the canvas in a centred dialog.
+  const background = useContext(SheetContext).surfaceColor ?? theme.colors.background;
   const clear = transparent(background);
 
   return (
@@ -208,10 +216,11 @@ export const PopupScrollView = forwardRef<ScrollViewRef, ScrollViewProps & { fra
     flash,
   );
   const scrollDown = () => scrollRef.current?.scrollTo({ y: getScrollDownOffset(metrics), animated: true });
+  const { nestedScrollEnabled } = useContext(SheetContext);
 
   return (
     <View style={[popupFrameStyle, frameStyle]}>
-      <ScrollView ref={scrollRef} {...props} {...scrollProps} />
+      <ScrollView ref={scrollRef} nestedScrollEnabled={nestedScrollEnabled} {...props} {...scrollProps} />
       <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
     </View>
   );
@@ -233,10 +242,11 @@ export function PopupFlatList<ItemT>({
   );
   const scrollDown = () =>
     listRef.current?.scrollToOffset({ offset: getScrollDownOffset(metrics), animated: true });
+  const { nestedScrollEnabled } = useContext(SheetContext);
 
   return (
     <View style={popupFrameStyle}>
-      <FlatList ref={listRef} {...props} {...scrollProps} />
+      <FlatList ref={listRef} nestedScrollEnabled={nestedScrollEnabled} {...props} {...scrollProps} />
       <PopupScrollHints hints={hints} onScrollDown={scrollDown} />
     </View>
   );
