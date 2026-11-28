@@ -79,6 +79,7 @@ describe('popup shots (#372)', () => {
     const popup = (footnoteTop: number) => [
       line('1 Corinthians 15:5', 0.24),
       line('Footnote 1', footnoteTop),
+      line('That is, Peter', footnoteTop + 0.03),
       line('Koine Greek (Original)', 0.45),
       line('Source: Statistical Restoration Greek New Testament. Edited by', 0.55),
       line('Licensed CC BY 4.0.', 0.6),
@@ -87,6 +88,11 @@ describe('popup shots (#372)', () => {
     expect(checkShot(shot('bible-verse-footnote-default'), popup(0.36))).toEqual([]);
     expect(checkShot(shot('bible-verse-footnote-default'), popup(0.64))).toEqual([
       '/^Footnote/ is not above /\\bKoine Greek \\(Original\\)/',
+    ]);
+    // So does the footnote's text (#861's run 46129151454 checks it on the
+    // iPhone, where Share Verse is a scroll away).
+    expect(checkShot(shot('bible-verse-footnote-default'), popup(0.36).filter(({ text }) => text !== 'That is, Peter'))).toEqual([
+      'no line matches /^That is, Peter\\b/',
     ]);
     // The Greek itself has to show too.
     expect(checkShot(shot('bible-verse-footnote-default'), popup(0.36).filter(({ text }) => !text.startsWith('Koine')))).toEqual([

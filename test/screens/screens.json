@@ -234,7 +234,7 @@
     {
       "name": "bible-verse-footnote",
       "group": "bible-reading",
-      "$comment": "A verse with a footnote in the popup a tapped verse opens, opened by popup=verse (#745): the footnote comes before the Greek. 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), and no hymn names it, so with no Hymns button the Greek's credit still shows below the footnote on the iPhone, the iPad and the Android phone. bible-verse-popup checks the Hymns button on Luke 2:14, which has no footnote: one verse with both, John 20:16, filled the popup to its height limit on every device, with the credit below the fold (fork runs 45110485284 and 45110488597). The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813), and on the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <. Since #867, on a phone the half-height sheet keeps the Greek's credit a scroll away, so only the iPad checks it.",
+      "$comment": "A verse with a footnote in the popup a tapped verse opens, opened by popup=verse (#745): the footnote comes before the Greek. 1 Corinthians 15:5 is short, with a short footnote (\"That is, Peter\"), and no hymn names it, so with no Hymns button the Greek's credit still shows below the footnote on the iPhone, the iPad and the Android phone. bible-verse-popup checks the Hymns button on Luke 2:14, which has no footnote: one verse with both, John 20:16, filled the popup to its height limit on every device, with the credit below the fold (fork runs 45110485284 and 45110488597). The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Vision once read Greek in the credit as Graok, so the rule stops before it. Android's OCR drops spaces, reading 1Corinthians and Footnote1 (fork run 44996503813), and on the iPad, over the reader's text, Vision joins the Greek's label to the verse behind it (\"10 But by 1 Koine Greek (Original)\"), so that rule isn't anchored (fork run 44996349297). Vision reads the share icon before Share Verse as <. Since #867, on a phone the half-height sheet keeps the Greek's credit a scroll away, so only the iPad checks it. On the iPhone, with the footnote, the Greek and its credit, Save and Share Verse sit just below the fold of the half-height sheet, a scroll away, so only the footnote and the Greek are checked there (#861's run 46129151454). #870's option B, moving Save and Share into the sheet's title row so they always show, is the real fix, in 1.10.0.",
       "path": "bible?bookId=1CO&chapter=15&translationId=BSB&verseStart=5&verseEnd=5&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
@@ -242,7 +242,8 @@
       "mustShowLines": [
         "^1 ?Corinthians 15:5$",
         { "line": "^Footnote", "above": "\\bKoine Greek \\(Original\\)" },
-        "\\bShare Verse$",
+        "^That is, Peter\\b",
+        { "line": "\\bShare Verse$", "platforms": ["android", "ipad"] },
         { "line": "^Source: Statistical Restoration\\b", "platforms": ["ipad"] },
         { "line": "\\bCC BY 4\\.0\\b", "platforms": ["ipad"] }
       ],
@@ -251,12 +252,12 @@
     {
       "name": "bible-chapter-picker",
       "group": "bible-reading",
-      "$comment": "The chapter list, opened by popup=chapter, as the chapter pill would (#456): its title beside an X, then a row for each chapter. It's a bottom sheet (#867) that opens at half the screen, so on the iPhone and the Android phone its title must be at least 40% of the way down; the iPad shows a centred form sheet. An English app reading the CUV names each chapter in both, 第 1 章 (Chapter 1) (#723). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis. It opens with the current chapter, Psalm 23, in the middle (#867), so chapters 22 and 23 must show.",
+      "$comment": "The chapter list, opened by popup=chapter, as the chapter pill would (#456): its title beside an X, then a row for each chapter. It's a bottom sheet (#867) that opens at half the screen, so on the iPhone and the Android phone its title must be at least 40% of the way down; the iPad shows a centred form sheet. An English app reading the CUV names each chapter in both, 第 1 章 (Chapter 1) (#723). Vision reads an English shot in English first and may miss the Chinese, so the rules need only the English after its parenthesis. It opens with the current chapter, Psalm 23, in the middle (#867), so chapters 22 and 23 must show. On the iPhone and iPad the sheet still opens at the top of the list (#876), so there chapters 1 and 2 must show, as before #867; Android checks 22 and 23. When #876 is fixed, give them Android's rules.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=chapter",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": [{ "line": "^Chapter$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Chapter$", "platforms": ["ipad"] }, "[(（]Chapter 22[)）]$", "[(（]Chapter 23[)）]$"],
+      "mustShowLines": [{ "line": "^Chapter$", "minTop": 0.4, "platforms": ["ios", "android"] }, { "line": "^Chapter$", "platforms": ["ipad"] }, { "line": "[(（]Chapter 22[)）]$", "platforms": ["android"] }, { "line": "[(（]Chapter 23[)）]$", "platforms": ["android"] }, { "line": "[(（]Chapter 1[)）]$", "platforms": ["ios", "ipad"] }, { "line": "[(（]Chapter 2[)）]$", "platforms": ["ios", "ipad"] }],
       "mustNotShowLines": ["^Close$"]
     },
     {
