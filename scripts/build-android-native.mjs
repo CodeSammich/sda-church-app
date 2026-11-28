@@ -121,6 +121,12 @@ const run = (command, args, cwd = projectRoot, environment = process.env) => {
 
 mkdirSync(resolve(projectRoot, 'build'), { recursive: true });
 
+// expo-audio 58's media session misses the player's events, so the media
+// notification wouldn't follow chapter changes or pauses (#804). Gradle builds
+// expo-audio from node_modules, so fix it there first.
+const { ensureExpoAudioPatched } = require('./patch-expo-audio.cjs');
+ensureExpoAudioPatched();
+
 // Expo prebuild only needs the signing mode, not the production keystore or
 // passwords. Keep those values out of config plugins and npm child processes;
 // expose them only to the Gradle invocation that actually signs the binary.
