@@ -42,6 +42,8 @@ export function ContrastDialog({ onDismiss, visible }: Readonly<{ onDismiss: () 
               kind={kind}
               language={language}
               onChoose={(mode) => void setContrastMode(kind, mode)}
+              // The theme showing now: its choice shows when the sheet opens (#867).
+              reveal={kind === (theme.dark ? 'dark' : 'light')}
               value={contrastModes[kind]}
             />
           </View>

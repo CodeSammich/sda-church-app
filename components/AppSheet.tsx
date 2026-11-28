@@ -251,13 +251,15 @@ function NativeSheet(props: AppSheetProps) {
 
   if (!mounted) return null;
 
-  // Android keeps a sheet's content at its large height and slides the sheet
-  // down to rest, so at half height its foot would be off the screen: the
-  // content takes the height that shows. iOS sizes it to the detent.
-  const restingHeight =
-    android && fractions.length > 1
-      ? getVisibleSheetHeight(frame, fractions[Math.min(detentIndex, fractions.length - 1)])
-      : undefined;
+  // Every sheet's content is the height that shows, so whatever is taller
+  // scrolls and nothing is out of reach. Android lays a sheet's content out
+  // taller than what shows: at its large height while it rests lower, and
+  // even at full height it ran under the navigation bar, where Theme's Dark
+  // and Contrast's dark Standard were cut off and couldn't be scrolled to.
+  // iOS sizes the content to the detent itself.
+  const restingHeight = android
+    ? getVisibleSheetHeight(frame, fractions[Math.min(detentIndex, fractions.length - 1)])
+    : undefined;
 
   const content = (
     <View

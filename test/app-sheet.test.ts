@@ -16,7 +16,7 @@ import { fireEvent } from '@testing-library/react-native';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createElement } from 'react';
-import { Platform, Text } from 'react-native';
+import { Dimensions, Platform, StyleSheet, Text } from 'react-native';
 import { renderWithPreferences } from './helpers/render-preferences';
 import { getSheetHosts } from './helpers/sheets';
 
@@ -113,6 +113,11 @@ describe('the current choice shows when a sheet opens (#867)', () => {
     const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(bible).toContain('selected={option.value === sleepTimerSetting}');
     expect(bible).toContain('selectedIndex={selectionRows.findIndex(isCurrentSelection)}');
+    // A list draws every row down to the current one, so iOS can scroll to it
+    // in a book list with rows of two heights.
+    expect(readFileSync('components/PopupScrollView.tsx', 'utf8')).toContain(
+      'initialNumToRender={selectedIndex !== undefined && selectedIndex > 0 ? selectedIndex + 15 : undefined}',
+    );
   });
 });
 
@@ -150,6 +155,34 @@ describe('AppSheet (#867)', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  it.each(['auto', 'content', 'large'] as const)(
+    "gives its content, at height %s on Android, no more room than shows, so what's taller scrolls",
+    async (height) => {
+      // Android lays a sheet's content out taller than what shows; at full
+      // height it ran under the navigation bar, where Theme's Dark and
+      // Contrast's dark Standard were cut off and couldn't be scrolled to.
+      jest.replaceProperty(Platform, 'OS', 'android');
+      const screen = await renderWithPreferences(
+        createElement(AppSheet, {
+          children: createElement(Text, null, '30 minutes'),
+          closeLabel: 'Close',
+          height,
+          onDismiss: jest.fn(),
+          testID: 'test-sheet',
+          title: 'Theme',
+          visible: true,
+        }),
+      );
+      const { height: rootHeight } = StyleSheet.flatten(screen.getByTestId('test-sheet').props.style);
+      expect(typeof rootHeight).toBe('number');
+      // Never taller than the screen less the drag handle's row.
+      expect(rootHeight).toBeLessThanOrEqual(Dimensions.get('screen').height - ANDROID_DRAG_HANDLE_HEIGHT);
+      // Half height before it's measured, or full height.
+      const frame = getAndroidSheetFrame(Dimensions.get('screen').height, { top: 0, bottom: 0 });
+      expect(rootHeight).toBeLessThanOrEqual(frame.largeHeight);
+    },
+  );
 
   it('is a centred popup on the web, which has no native sheets', async () => {
     jest.replaceProperty(Platform, 'OS', 'web');

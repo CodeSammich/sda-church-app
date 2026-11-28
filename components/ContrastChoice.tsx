@@ -1,3 +1,4 @@
+import { RevealIfSelected } from '@/components/PopupScrollView';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { getFloatingSurfaceStyle } from '@/components/CapsuleTabBar';
 import { SetupHeading, SetupRoomContext } from '@/components/SetupScreen';
@@ -135,12 +136,15 @@ export function ContrastChoice({
   kind,
   language,
   onChoose,
+  reveal = false,
   value,
 }: Readonly<{
   columns?: boolean;
   kind: ThemeKind;
   language: string;
   onChoose: (mode: ContrastMode) => void;
+  /** Scrolls the chosen option into view as a sheet opens (#867): the current theme's. */
+  reveal?: boolean;
   value: ContrastMode;
 }>) {
   const theme = useAppTheme();
@@ -151,8 +155,8 @@ export function ContrastChoice({
         const selected = mode === value;
         const option = copy.options[mode];
         return (
+          <RevealIfSelected key={mode} selected={reveal && selected}>
           <Pressable
-            key={mode}
             accessibilityLabel={`${option.label}, ${option.description}`}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
@@ -190,6 +194,7 @@ export function ContrastChoice({
               </View>
             </View>
           </Pressable>
+          </RevealIfSelected>
         );
       })}
     </View>

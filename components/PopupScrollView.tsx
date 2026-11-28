@@ -358,6 +358,11 @@ export function PopupFlatList<ItemT>({
         ref={listRef}
         nestedScrollEnabled={nestedScrollEnabled}
         onScrollToIndexFailed={onScrollToIndexFailed}
+        // Every row down to the current choice and a screen past it is drawn
+        // at once, so the list can scroll to it. On iOS a book list, whose
+        // headings make rows of two heights, stopped short at Esther when it
+        // had to guess where unseen rows were (#867).
+        initialNumToRender={selectedIndex !== undefined && selectedIndex > 0 ? selectedIndex + 15 : undefined}
         {...props}
         {...scrollProps}
       />
