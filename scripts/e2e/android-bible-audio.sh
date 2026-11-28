@@ -458,9 +458,17 @@ scenario_downloaded_book_offline() {
     # Already downloaded: the X, or back, closes the popup.
     sh_ input keyevent KEYCODE_BACK >/dev/null
   else
-    # A quarter of the way across: the scroll hint's ⌄ sits centred over a
-    # list's bottom row, and a tap on it scrolls rather than opening the row.
-    # In the half-height Audio settings sheet (#867), this row can be that one.
+    # In the half-height Audio settings sheet (#867), the row can sit at the
+    # fold with only a sliver showing: a swipe up the sheet expands it, or
+    # scrolls, until the row shows. Then the tap goes a quarter of the way
+    # across, since the scroll hint's ⌄ sits centred over a list's bottom row,
+    # and a tap on it scrolls rather than opening the row.
+    local row
+    row=$(element_bounds 'Offline Bible Audio, [^"]*') || { echo 'no Listen offline row'; return 1; }
+    if [ $(awk '{ print $4 - $2 }' <<< "$row") -lt 120 ]; then
+      sh_ input swipe "$FINGER_X" "$(awk '{ print $2 - 40 }' <<< "$row")" "$FINGER_X" "$(awk '{ y = $2 - 640; print (y < 100 ? 100 : y) }' <<< "$row")" 400 >/dev/null
+      sleep 2
+    fi
     point=$(element_center 'Offline Bible Audio, [^"]*' 0.25) || { echo 'no Listen offline row'; return 1; }
     # shellcheck disable=SC2086
     sh_ input tap $point >/dev/null
