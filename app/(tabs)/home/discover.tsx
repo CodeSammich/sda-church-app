@@ -1,5 +1,5 @@
-import { GridMenuCard } from '@/components/GridMenuCard';
-import { contentColumnStyle } from '@/constants/Layout';
+import { GridMenuCard, useGridMenuCardColumns } from '@/components/GridMenuCard';
+import { contentColumnStyle, getContentWidth } from '@/constants/Layout';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
@@ -14,6 +14,7 @@ import { useContext, useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
@@ -28,6 +29,15 @@ export default function DiscoverScreen() {
   const NavigationStyles = useNavigationStyles();
   const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
+  const { width: windowWidth } = useWindowDimensions();
+  // Two cards a row, or one where a word of their titles wouldn't fit beside
+  // another card at the reader's text size, as on Home.
+  const { columns: gridColumns, onWidestWord: onGridWidestWord } = useGridMenuCardColumns(
+    getContentWidth(windowWidth, columnScale) - 2 * GRID_PADDING,
+    GRID_GAP,
+  );
+  const gridCellStyle = [styles.gridCell, gridColumns === 1 && styles.gridCellFullRow];
+  const gridTitleLines = gridColumns === 1 ? 2 : 3;
 
   const allLabels = {
     en: {
@@ -42,8 +52,10 @@ export default function DiscoverScreen() {
     zh: {
       title: '新會友／訪客',
       aboutSDA: '關於教派',
-      aboutHistory: '地點與歷史',
-      meetTeam: '認識我們的團隊',
+      // A zero-width space (\u200b) marks where a card's title may break,
+      // between its words, as on Home.
+      aboutHistory: '地點\u200b與歷史',
+      meetTeam: '認識\u200b我們的\u200b團隊',
       fellowship: '團契',
       bible: '聖經',
       join: '加入教會',
@@ -51,8 +63,8 @@ export default function DiscoverScreen() {
     'zh-cn': {
       title: '新会友／访客',
       aboutSDA: '关于教派',
-      aboutHistory: '地点与历史',
-      meetTeam: '认识我们的团队',
+      aboutHistory: '地点\u200b与历史',
+      meetTeam: '认识\u200b我们的\u200b团队',
       fellowship: '团契',
       bible: '圣经',
       join: '加入教会',
@@ -69,7 +81,7 @@ export default function DiscoverScreen() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
-  // One size for every card's text, which keeps each title's words whole.
+  // Every card's title, whose widest word decides whether two cards fit a row.
   const gridTitles = useMemo(
     () => [labels.aboutSDA, labels.aboutHistory, labels.meetTeam, labels.join, labels.fellowship, labels.bible],
     [labels],
@@ -109,68 +121,74 @@ export default function DiscoverScreen() {
         <View style={[styles.grid, contentColumnStyle(columnScale)]}>
           <GridMenuCard
             fitTitles={gridTitles}
+            onWidestWord={onGridWidestWord}
             title={labels.aboutSDA}
-            titleBlockLines={3}
+            titleBlockLines={gridTitleLines}
             icon="cross"
             color={theme.colors.cardBgColors.aboutSDA}
             iconColor={theme.colors.iconColors.aboutSDA}
             onPress={() => router.push({ pathname: '/home/about-sda', params: { backTo: '/home/discover' } } as any)}
-    style={styles.gridCell}
+    style={gridCellStyle}
     showArrow={false}
           />
           <GridMenuCard
             fitTitles={gridTitles}
+            onWidestWord={onGridWidestWord}
             title={labels.aboutHistory}
-            titleBlockLines={3}
+            titleBlockLines={gridTitleLines}
             icon="map-marker-path"
             color={theme.colors.cardBgColors.aboutHistory}
             iconColor={theme.colors.iconColors.aboutHistory}
             onPress={() => router.push({ pathname: '/home/about-my-church', params: { backTo: '/home/discover' } } as any)}
-    style={styles.gridCell}
+    style={gridCellStyle}
     showArrow={false}
           />
           <GridMenuCard
             fitTitles={gridTitles}
+            onWidestWord={onGridWidestWord}
             title={labels.meetTeam}
-            titleBlockLines={3}
+            titleBlockLines={gridTitleLines}
             icon="card-account-phone"
             color={theme.colors.cardBgColors.meetTeam}
             iconColor={theme.colors.iconColors.meetTeam}
             onPress={() => router.push({ pathname: '/home/team', params: { backTo: '/home/discover' } } as any)}
-    style={styles.gridCell}
+    style={gridCellStyle}
     showArrow={false}
           />
           <GridMenuCard
             fitTitles={gridTitles}
+            onWidestWord={onGridWidestWord}
             title={labels.join}
-            titleBlockLines={3}
+            titleBlockLines={gridTitleLines}
             icon="water-outline"
             color={theme.colors.cardBgColors.join}
             iconColor={theme.colors.iconColors.join}
             onPress={() => router.push({ pathname: '/home/baptism', params: { backTo: '/home/discover' } } as any)}
-    style={styles.gridCell}
+    style={gridCellStyle}
     showArrow={false}
           />
           <GridMenuCard
             fitTitles={gridTitles}
+            onWidestWord={onGridWidestWord}
             title={labels.fellowship}
-            titleBlockLines={3}
+            titleBlockLines={gridTitleLines}
             icon="handshake"
             color={theme.colors.cardBgColors.fellowship}
             iconColor={theme.colors.iconColors.fellowship}
             onPress={() => router.push({ pathname: '/home/fellowship', params: { backTo: '/home/discover' } } as any)}
-    style={styles.gridCell}
+    style={gridCellStyle}
     showArrow={false}
           />
           <GridMenuCard
             fitTitles={gridTitles}
+            onWidestWord={onGridWidestWord}
             title={labels.bible}
-            titleBlockLines={3}
+            titleBlockLines={gridTitleLines}
             icon="book-cross"
             color={theme.colors.cardBgColors.bible}
             iconColor={theme.colors.iconColors.bible}
             onPress={() => router.push({ pathname: '/bible', params: { backTo: '/home/discover' } } as any)}
-    style={styles.gridCell}
+    style={gridCellStyle}
     showArrow={false}
           />
         </View>
@@ -180,16 +198,23 @@ export default function DiscoverScreen() {
   );
 }
 
+// The grid's margins and the gap between its cards.
+const GRID_PADDING = 16;
+const GRID_GAP = 8;
+
 const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: GRID_GAP,
     marginBottom: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: GRID_PADDING,
   },
   gridCell: {
     flexBasis: '47.5%',
     flexGrow: 1,
+  },
+  gridCellFullRow: {
+    flexBasis: '100%',
   },
 });

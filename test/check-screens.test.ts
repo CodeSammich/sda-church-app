@@ -720,3 +720,60 @@ describe("the Sabbath countdown, with the colon Vision may read as full-width (#
     expect(checkShot(ipad, withCountdown('5d 12;13:02'))).toEqual([rule]);
   });
 });
+
+describe('card titles that grow with the text size (1.9.2)', () => {
+  // What RapidOCR read on release-candidate's Android key screens before
+  // 1.9.2 (https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/runs/46077462765),
+  // where the cards' titles stopped at 1.25× while their icons grew (#387).
+  const androidShots = planChecks(loadConfig(), 'android');
+  const androidShot = (name: string) => androidShots.find((candidate: { name: string }) => candidate.name === name);
+  const discoverAt3x: Line[] = [
+    {text: "9:41", box: [0.033, 0.000, 0.143, 0.030]},
+    {text: "New Member", box: [0.028, 0.143, 0.872, 0.076]},
+    {text: "& Visitor", box: [0.037, 0.220, 0.554, 0.062]},
+    {text: "About", box: [0.081, 0.360, 0.153, 0.028]},
+    {text: "Locations &", box: [0.554, 0.362, 0.269, 0.023]},
+    {text: "Denomination", box: [0.085, 0.391, 0.317, 0.024]},
+    {text: "History", box: [0.550, 0.390, 0.179, 0.031]},
+    {text: "Meet Our", box: [0.085, 0.637, 0.215, 0.023]},
+    {text: "Joining the", box: [0.550, 0.635, 0.264, 0.030]},
+    {text: "Home", box: [0.096, 0.922, 0.139, 0.024]},
+    {text: "Bible", box: [0.325, 0.919, 0.124, 0.028]},
+    {text: "Explore", box: [0.529, 0.922, 0.168, 0.026]},
+    {text: "You", box: [0.787, 0.921, 0.099, 0.027]},
+  ];
+  const homeZhAt150: Line[] = [
+    {text: "今日經文", box: [0.268, 0.050, 0.468, 0.063]},
+    {text: "分享經文", box: [0.436, 0.289, 0.239, 0.032]},
+    {text: "查閱經文", box: [0.421, 0.368, 0.253, 0.033]},
+    {text: "安息日快樂！", box: [0.350, 0.498, 0.274, 0.025]},
+    {text: "22:30:43", box: [0.289, 0.529, 0.425, 0.041]},
+    {text: "紐約", box: [0.443, 0.579, 0.114, 0.030]},
+    {text: "觀看直播", box: [0.096, 0.664, 0.161, 0.021]},
+    {text: "每週週報", box: [0.557, 0.664, 0.160, 0.021]},
+    {text: "首頁", box: [0.125, 0.932, 0.083, 0.024]},
+    {text: "聖經", box: [0.344, 0.932, 0.087, 0.023]},
+    {text: "探索", box: [0.568, 0.931, 0.087, 0.025]},
+    {text: "您", box: [0.812, 0.932, 0.049, 0.022]},
+  ];
+  const widen = (lines: Line[], text: string, width: number) =>
+    lines.map((each) => (each.text === text ? { ...each, box: [each.box[0], each.box[1], width, each.box[3]] } : each));
+
+  it('catch a title that stayed small at 3.2× text', () => {
+    expect(checkShot(androidShot('discover-xl-android-font-max'), discoverAt3x)).toEqual([
+      '/\\bDenomination$/ is 32% of the width wide, not at least 50%',
+    ]);
+    // About 48 points a letter's height on the 384-point phone.
+    expect(checkShot(androidShot('discover-xl-android-font-max'), widen(discoverAt3x, 'Denomination', 0.78))).toEqual([]);
+  });
+
+  it("catch Home's Chinese card titles held small at 150% on the Android phone", () => {
+    expect(checkShot(androidShot('home-zh-large'), homeZhAt150)).toEqual([
+      '/^觀看直播$/ is 16% of the width wide, not at least 20%',
+    ]);
+    // 4 characters of 22.5 points, on the 384-point phone.
+    expect(checkShot(androidShot('home-zh-large'), widen(homeZhAt150, '觀看直播', 0.24))).toEqual([]);
+    // The iPhone's wider screen leaves less of a margin, so it isn't checked there.
+    expect(checkShot(shot('home-zh-large'), homeZhAt150)).toEqual([]);
+  });
+});

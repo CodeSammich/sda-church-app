@@ -1,10 +1,9 @@
-import { GridMenuCard } from '@/components/GridMenuCard';
+import { GridMenuCard, useGridMenuCardColumns } from '@/components/GridMenuCard';
 import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
 } from '@/constants/ExternalBrandAssets';
 import { labelsFitSideBySide, WrappingActionButton } from '@/components/WrappingActionButton';
-import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   CHURCH_LATITUDE,
@@ -61,12 +60,19 @@ export default function HomeScreen() {
   const { textScale } = useTextSize();
   const { fontScale, width: windowWidth } = useWindowDimensions();
   const effectiveTextScale = Math.max(1, fontScale * textScale);
-  // Keep the home card grid at two columns at every text zoom level.
-  const useStackedLayout = false;
-  const styles = useMemo(
-    () => createStyles(textScale, effectiveTextScale, useStackedLayout),
-    [effectiveTextScale, textScale, useStackedLayout],
+  const styles = useMemo(() => createStyles(effectiveTextScale), [effectiveTextScale]);
+  // Two cards a row, or one where a word of their titles wouldn't fit beside
+  // another card at the reader's text size, as at 200% on a narrow phone:
+  // their titles grow with the text, as their icons do, and never shrink to
+  // fit two a row.
+  const { columns: gridColumns, onWidestWord: onGridWidestWord } = useGridMenuCardColumns(
+    getContentWidth(windowWidth, effectiveTextScale) - 2 * CONTENT_PADDING,
+    GRID_GAP,
   );
+  const gridCellStyle = [styles.gridCell, gridColumns === 1 && styles.gridCellFullRow];
+  // Cards that share a row keep room for three lines of title, so they stay
+  // one height whichever language's titles wrap; a card a row wide, two.
+  const gridTitleLines = gridColumns === 1 ? 2 : 3;
   const navigationStyles = useMemo(
     () =>
       createNavigationStyles(textScale, {
@@ -101,10 +107,13 @@ export default function HomeScreen() {
       readVerse: '查閱經文',
       shareVerse: '分享經文',
       livestream: '觀看直播',
-      discover: '新會友／訪客',
+      // A zero-width space (\u200b) marks where a card's title may break,
+      // between its words, since Chinese has none between them: the card keeps
+      // each word whole, so the cards fit two a row at 125% and 150% (#797).
+      discover: '新會友／\u200b訪客',
       bulletin: '每週週報',
       give: '奉獻',
-      sabbathSchool: '本週安息日學課程',
+      sabbathSchool: '本週\u200b安息日學\u200b課程',
       hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
       isSabbath: '安息日快樂！',
@@ -116,10 +125,10 @@ export default function HomeScreen() {
       readVerse: '查阅经文',
       shareVerse: '分享经文',
       livestream: '观看直播',
-      discover: '新会友／访客',
+      discover: '新会友／\u200b访客',
       bulletin: '每周周报',
       give: '奉献',
-      sabbathSchool: '本周安息日学课程',
+      sabbathSchool: '本周\u200b安息日学\u200b课程',
       hymnal: '诗歌本',
       sabbathStarts: '距离安息日还有',
       isSabbath: '安息日快乐！',
@@ -147,7 +156,7 @@ export default function HomeScreen() {
   // phone's, which the text applies again itself.
   const countdownFontSize =
     getCountdownFontSize(getContentWidth(windowWidth, effectiveTextScale), effectiveTextScale) / fontScale;
-  // One size for every card's text, which keeps each title's words whole.
+  // Every card's title, whose widest word decides whether two cards fit a row.
   const gridTitles = useMemo(
     () => [labels.livestream, labels.bulletin, labels.give, labels.hymnal, labels.sabbathSchool, labels.discover],
     [labels],
@@ -502,21 +511,23 @@ export default function HomeScreen() {
           <View style={styles.grid}>
             <GridMenuCard
               fitTitles={gridTitles}
+              onWidestWord={onGridWidestWord}
               title={labels.livestream}
-              titleBlockLines={3}
+              titleBlockLines={gridTitleLines}
               subtitle={(labels as any).liveNow}
               imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
               darkImageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
               imageContentScale={EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube}
               color={theme.colors.cardBgColors.livestream}
               onPress={openSabbathStream}
-              style={styles.gridCell}
+              style={gridCellStyle}
               showArrow={false}
             />
             <GridMenuCard
               fitTitles={gridTitles}
+              onWidestWord={onGridWidestWord}
               title={labels.bulletin}
-              titleBlockLines={3}
+              titleBlockLines={gridTitleLines}
               icon="newspaper-variant-outline"
               color={theme.colors.cardBgColors.bulletin}
               iconColor={theme.colors.iconColors.bulletin}
@@ -526,13 +537,14 @@ export default function HomeScreen() {
                   params: { backTo: '/' },
                 } as any)
               }
-              style={styles.gridCell}
+              style={gridCellStyle}
               showArrow={false}
             />
             <GridMenuCard
               fitTitles={gridTitles}
+              onWidestWord={onGridWidestWord}
               title={labels.give}
-              titleBlockLines={3}
+              titleBlockLines={gridTitleLines}
               icon="hand-heart-outline"
               color={theme.colors.cardBgColors.tithe}
               iconColor={theme.colors.iconColors.tithe}
@@ -542,13 +554,14 @@ export default function HomeScreen() {
                   params: { backTo: '/' },
                 } as any)
               }
-              style={styles.gridCell}
+              style={gridCellStyle}
               showArrow={false}
             />
             <GridMenuCard
               fitTitles={gridTitles}
+              onWidestWord={onGridWidestWord}
               title={labels.hymnal}
-              titleBlockLines={3}
+              titleBlockLines={gridTitleLines}
               icon="music-note"
               color={theme.colors.cardBgColors.hymnal}
               iconColor={theme.colors.iconColors.hymnal}
@@ -558,13 +571,14 @@ export default function HomeScreen() {
                   params: { backTo: '/' },
                 } as any)
               }
-              style={styles.gridCell}
+              style={gridCellStyle}
               showArrow={false}
             />
             <GridMenuCard
               fitTitles={gridTitles}
+              onWidestWord={onGridWidestWord}
               title={labels.sabbathSchool}
-              titleBlockLines={3}
+              titleBlockLines={gridTitleLines}
               icon="book-open-page-variant"
               color={theme.colors.cardBgColors.sabbathSchool}
               iconColor={theme.colors.iconColors.sabbathSchool}
@@ -574,13 +588,14 @@ export default function HomeScreen() {
                   params: { backTo: '/' },
                 } as any)
               }
-              style={styles.gridCell}
+              style={gridCellStyle}
               showArrow={false}
             />
             <GridMenuCard
               fitTitles={gridTitles}
+              onWidestWord={onGridWidestWord}
               title={labels.discover}
-              titleBlockLines={3}
+              titleBlockLines={gridTitleLines}
               icon="compass"
               color={theme.colors.cardBgColors.discover}
               iconColor={theme.colors.iconColors.discover}
@@ -590,7 +605,7 @@ export default function HomeScreen() {
                   params: { backTo: '/' },
                 } as any)
               }
-              style={styles.gridCell}
+              style={gridCellStyle}
               showArrow={false}
             />
           </View>
@@ -611,11 +626,12 @@ const HERO_ACTIONS_GAP = 12;
 const getHeroActionsRowWidth = (windowWidth: number, effectiveTextScale: number) =>
   getContentWidth(windowWidth, effectiveTextScale) - 2 * HERO_SIDE_PADDING - 2 * HERO_ACTIONS_PADDING;
 
-const createStyles = (
-  textScale: Parameters<typeof scaleTypographyMetric>[1],
-  effectiveTextScale: number,
-  useStackedLayout: boolean,
-) => StyleSheet.create({
+// The page's margins around the countdown and the cards, and the gap between
+// the cards.
+const CONTENT_PADDING = 20;
+const GRID_GAP = 8;
+
+const createStyles = (effectiveTextScale: number) => StyleSheet.create({
   hero: {
     paddingHorizontal: HERO_SIDE_PADDING,
     alignItems: 'center',
@@ -626,7 +642,7 @@ const createStyles = (
   },
   content: {
     ...contentColumnStyle(effectiveTextScale),
-    padding: 20,
+    padding: CONTENT_PADDING,
     paddingBottom: 16,
   },
   welcomeText: {
@@ -636,14 +652,13 @@ const createStyles = (
   },
   heroActions: {
     ...contentColumnWithin(HERO_SIDE_PADDING, effectiveTextScale),
-    flexDirection: useStackedLayout ? 'column' : 'row',
+    flexDirection: 'row',
     marginTop: 16,
     gap: HERO_ACTIONS_GAP,
     paddingHorizontal: HERO_ACTIONS_PADDING,
   },
   heroActionButton: {
-    flex: useStackedLayout ? undefined : 1,
-    width: useStackedLayout ? '100%' : undefined,
+    flex: 1,
   },
   heroActionsStacked: {
     flexDirection: 'column',
@@ -672,12 +687,15 @@ const createStyles = (
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: GRID_GAP,
     marginBottom: 8,
     borderRadius: 0,
   },
   gridCell: {
-    flexBasis: useStackedLayout ? '100%' : '47.5%',
+    flexBasis: '47.5%',
     flexGrow: 1,
+  },
+  gridCellFullRow: {
+    flexBasis: '100%',
   },
 });

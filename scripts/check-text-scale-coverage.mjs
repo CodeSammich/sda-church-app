@@ -29,10 +29,20 @@ const prohibitedPatterns = [
   },
   {
     // Text that turns off the phone's text size must apply it itself. Only the
-    // grid cards do, to hold their two-column titles at 1.25× (#387).
+    // grid cards do, so they can measure their titles' words at the size
+    // they're drawn.
     reason: 'phone text size turned off',
     pattern: /\ballowFontScaling\b/g,
     allowedFiles: ['components/GridMenuCard.tsx'],
+  },
+  {
+    // A new limit on the text size, such as the grid cards' 1.25× until 1.9.2,
+    // which a regular expression can't see applied: at 200% their cards and
+    // icons grew and their titles didn't. The app's few limits live in
+    // constants/AppPreferences.ts and hooks/useGlobalHeaderHeight.ts, outside
+    // these folders, and docs/accessibility/README.md lists each one.
+    reason: 'text-size cap',
+    pattern: /\bconst\s+(?=[A-Z0-9_]*(?:TEXT|FONT))(?=[A-Z0-9_]*(?:MAX|CAP))[A-Z0-9_]+\s*=/g,
   },
   {
     reason: 'compact Bible-reader scale cap',
