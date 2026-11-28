@@ -16,6 +16,7 @@ import {
   getOrderedBibleAudioReaders,
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
+  releaseBibleAudioFocus,
   retargetHelloAoAudioUrl,
   shouldStopBibleAudioAtChapterEnd,
   withDownloadedCopy,
@@ -30,6 +31,17 @@ describe('Bible audio playback', () => {
       playsInSilentMode: true,
       shouldPlayInBackground: true,
     });
+  });
+
+  // expo-audio on Android refuses every play from outside the app while audio
+  // is off, so the notification's play did nothing after a pause in the app.
+  it('releases the audio focus but leaves Android able to play from the notification (#804)', async () => {
+    const calls: Array<[string, boolean]> = [];
+    const record = (platform: string) => async (active: boolean) => { calls.push([platform, active]); };
+    await releaseBibleAudioFocus('android', record('android'));
+    await releaseBibleAudioFocus('ios', record('ios'));
+    await releaseBibleAudioFocus('web', record('web'));
+    expect(calls).toEqual([['android', false], ['android', true], ['ios', false]]);
   });
 
   it('publishes playback to system media controls', () => {

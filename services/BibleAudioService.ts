@@ -1,5 +1,6 @@
 import {
   setAudioModeAsync,
+  setIsAudioActiveAsync,
   type AudioMetadata,
   type AudioPlayer,
 } from 'expo-audio';
@@ -41,6 +42,25 @@ export const configureBibleAudioPlayback = () =>
     playsInSilentMode: true,
     shouldPlayInBackground: true,
   });
+
+/**
+ * Gives the audio focus back when the listener stops Bible audio in the app:
+ * a pause, the sleep timer, or leaving the reader.
+ *
+ * Turning audio off makes expo-audio on Android refuse every play that doesn't
+ * come from the app, so the media notification's, the lock screen's and the
+ * earbuds' play did nothing after a pause in the app (#804). Android turns it
+ * straight back on: the focus stays released, and the next play asks for it
+ * again. iOS's audio session stays off until the app plays again.
+ */
+export const releaseBibleAudioFocus = async (
+  platform: string,
+  setAudioActive: (active: boolean) => Promise<void> = setIsAudioActiveAsync,
+) => {
+  if (platform === 'web') return;
+  await setAudioActive(false);
+  if (platform === 'android') await setAudioActive(true);
+};
 
 /**
  * The lock screen's and the earbuds' skips match the reader's own −10 and +30

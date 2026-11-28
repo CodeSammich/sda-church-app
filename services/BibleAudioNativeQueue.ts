@@ -1,5 +1,4 @@
 import type {
-  AudioLockScreenOptions,
   AudioPlayer,
   AudioPlaylist,
   AudioPlaylistStatus,
@@ -82,9 +81,6 @@ export class BibleAudioNativeQueue {
   // with every insert since.
   private frontInsertCounts: number[] = [];
   private pendingIndexShift = 0;
-  // While lock-screen controls are on: their options, and the chapter the
-  // media session was last published with. See refreshLockScreenSession.
-  private lockScreen?: { options?: AudioLockScreenOptions; track?: BibleAudioQueueItem };
 
   constructor(private readonly createPlaylist: () => AudioPlaylist) {}
 
@@ -100,6 +96,11 @@ export class BibleAudioNativeQueue {
       this.logSource(this.snapshot.activeSourceUrl);
       const track = this.tracks[index];
       if (track && track !== this.lastMetadataTrack) {
+        // The next chapter's name and narrator, on the media session it
+        // already has (#804). Publishing the controls again would build a new
+        // session, and Android's shade drops its player when the old one is
+        // released, though playback goes on. The session hears the track
+        // change and the position itself: scripts/patch-expo-audio.cjs.
         try {
           this.updateMetadata();
         } catch (error) {
@@ -108,7 +109,6 @@ export class BibleAudioNativeQueue {
           console.warn('Bible audio lock-screen metadata update failed', error);
         }
       }
-      this.refreshLockScreenSession(track, status);
       if (status.playing && !status.isBuffering && this.retiredPlaylists.length) {
         // A playing playlist has taken over the lock screen by now.
         this.destroyRetiredPlaylists();
@@ -237,8 +237,6 @@ export class BibleAudioNativeQueue {
     this.pendingIndexShift = 0;
     this.frontInsertCounts = [];
     this.lastMetadataTrack = undefined;
-    // The controls were published for those tracks; the next ones publish their own.
-    this.lockScreen = undefined;
   }
 
   private callNative<T>(operation: string, call: (playlist: AudioPlaylist) => T): T | undefined {
@@ -303,9 +301,6 @@ export class BibleAudioNativeQueue {
       this.retirePlaylist();
       this.mount();
     }
-    // A new recording publishes its own lock-screen controls once it's queued
-    // (initializeBibleAudioPlayback); until then there's none to refresh.
-    this.lockScreen = undefined;
     this.callNative('replace', playlist => {
       this.forgetTracks();
       playlist.clear();
@@ -387,48 +382,16 @@ export class BibleAudioNativeQueue {
       throw new Error(`Bible audio playlist seekTo failed: ${message}`, { cause });
     }
   }
+  // Each call builds a new media session on Android, so the queue only
+  // publishes the controls for a new recording (initializeBibleAudioPlayback),
+  // never as the playlist moves on through its chapters. See mount().
   setActiveForLockScreen(...args: Parameters<AudioPlayer['setActiveForLockScreen']>) {
-    const [active, , options] = args;
-    this.callNative('setActiveForLockScreen', playlist => {
-      playlist.setActiveForLockScreen(...args);
-      this.lockScreen = active
-        ? { options, track: this.tracks[playlist.currentIndex] }
-        : undefined;
-    });
+    this.callNative('setActiveForLockScreen', playlist => playlist.setActiveForLockScreen(...args));
   }
   clearLockScreenControls() {
-    this.lockScreen = undefined;
     // A retired playlist can still own the lock-screen session.
     this.destroyRetiredPlaylists();
     this.callNative('clearLockScreenControls', playlist => playlist.clearLockScreenControls());
-  }
-
-  // Publishes the lock-screen controls again once the playlist has moved to
-  // another chapter by itself, or by the notification's or earbuds' next or
-  // previous, so the notification's progress bar starts that chapter (#804).
-  // expo-audio 58's media session never hears that the track changed: it
-  // wraps the player for its metadata in a Kotlin `Player.Listener by
-  // listener`, which doesn't forward Media3's default methods, so only metadata
-  // changes reach the session. Its playback state, which the bar is drawn
-  // from, can stay as it was when playback last started or paused, and the bar
-  // ran on from there into the next chapter: about three quarters along when
-  // the reader said 0:50 of 8:03. Publishing again builds a new session, which
-  // reads the position and the chapter's length, so it waits until the length
-  // is known.
-  private refreshLockScreenSession(
-    track: BibleAudioQueueItem | undefined,
-    status: AudioPlaylistStatus,
-  ) {
-    const lockScreen = this.lockScreen;
-    if (!lockScreen || !track || track === lockScreen.track || !(status.duration > 0)) return;
-    lockScreen.track = track;
-    try {
-      this.callNative('refresh lock screen', playlist =>
-        playlist.setActiveForLockScreen(true, track.metadata, lockScreen.options));
-    } catch (error) {
-      // As with the metadata, the controls are auxiliary to playback.
-      console.warn('Bible audio lock-screen refresh failed', error);
-    }
   }
 
   private lastMetadataTrack?: BibleAudioQueueItem;

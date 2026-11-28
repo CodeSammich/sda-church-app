@@ -101,10 +101,14 @@ export default function HomeScreen() {
       readVerse: '查閱經文',
       shareVerse: '分享經文',
       livestream: '觀看直播',
-      discover: '新會友／訪客',
+      // A zero-width space (\u200b) marks where a card's title may break,
+      // between its words, since Chinese has none between them. The card
+      // keeps each word whole, so its title can grow further before the
+      // widest word fills a card (#797).
+      discover: '新會友／\u200b訪客',
       bulletin: '每週週報',
       give: '奉獻',
-      sabbathSchool: '本週安息日學課程',
+      sabbathSchool: '本週\u200b安息日學\u200b課程',
       hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
       isSabbath: '安息日快樂！',
@@ -116,10 +120,10 @@ export default function HomeScreen() {
       readVerse: '查阅经文',
       shareVerse: '分享经文',
       livestream: '观看直播',
-      discover: '新会友／访客',
+      discover: '新会友／\u200b访客',
       bulletin: '每周周报',
       give: '奉献',
-      sabbathSchool: '本周安息日学课程',
+      sabbathSchool: '本周\u200b安息日学\u200b课程',
       hymnal: '诗歌本',
       sabbathStarts: '距离安息日还有',
       isSabbath: '安息日快乐！',
@@ -147,7 +151,8 @@ export default function HomeScreen() {
   // phone's, which the text applies again itself.
   const countdownFontSize =
     getCountdownFontSize(getContentWidth(windowWidth, effectiveTextScale), effectiveTextScale) / fontScale;
-  // One size for every card's text, which keeps each title's words whole.
+  // One size for every card's text: the largest, up to the reader's, at which
+  // the widest word of these titles fits a card, so no word breaks.
   const gridTitles = useMemo(
     () => [labels.livestream, labels.bulletin, labels.give, labels.hymnal, labels.sabbathSchool, labels.discover],
     [labels],

@@ -2,6 +2,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { scaleTypographyMetric, type TextScale } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
+import { keepWordsWhole } from '@/constants/LineBreaks';
 import React, { useMemo, useRef, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -36,9 +37,9 @@ interface GridMenuCardProps {
   titleBlockLines?: 2 | 3;
   showArrow?: boolean;
   /**
-   * Every title in the card's grid. A card holds its text down until the
-   * widest word of any of them fits on one line of its title, so cards that
-   * share a grid keep one size (fitGridMenuCardTextScale). Without it, the
+   * Every title in the card's grid. A card's text grows with the text size
+   * until the widest word of any of them fills a line of its title, so cards
+   * that share a grid keep one size (fitGridMenuCardTextScale). Without it, the
    * card's own title.
    */
   fitTitles?: string[];
@@ -59,57 +60,61 @@ export const getGridMenuCardTitleBlockMinHeight = (
 };
 
 /**
- * The largest a card's title and subtitle get, with the app's text size and the
- * phone's multiplied together: the size they have at the app's default 125%.
- * Two cards share a row at every size, so past this a long word breaks
- * mid-word (#387). On a Pixel 9a (412 points wide), Spanish "Compañerismo"
- * already fills its card at 125%, and English "Livestream" and "Denomination"
- * broke from about 1.4×. The rest of the page still grows to the 3.2× limit.
- */
-export const GRID_MENU_CARD_TEXT_MAX_SCALE = 1.25;
-
-/**
- * The card text's scale: the app's text size times the phone's, up to the cap.
- * The card applies it itself, with the phone's scaling turned off on its Text,
- * because Android scales lineHeight with the phone's full text size even where
- * React Native's font-size multiplier cap holds fontSize down, which spread
- * capped titles' lines apart.
+ * The card's scale before it's fitted: the app's text size times the phone's,
+ * in full. The card applies it itself, with the phone's scaling turned off on
+ * its Text, so it measures its words at the size they're drawn. Until 1.9.2
+ * the text stopped at the default 1.25× (#387) while the card's icon and
+ * height grew with the app's text size, so at 200% the icons were big and the
+ * titles small.
  */
 export const getGridMenuCardTextScale = (textScale: TextScale, fontScale: number) => {
   const phoneScale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
-  return Math.min(textScale * phoneScale, GRID_MENU_CARD_TEXT_MAX_SCALE) as TextScale;
+  return (textScale * phoneScale) as TextScale;
 };
 
-// The card's padding and border on each side, and the share of the rest that
-// its title may use (styles.title's maxWidth).
+// The card's padding and border on each side. The title has all the width
+// between them: with 90% of it, as until 1.9.2, it stopped growing sooner.
 const CARD_PADDING = 18;
 const CARD_BORDER = 1;
-const TITLE_WIDTH_FRACTION = 0.9;
 const TITLE_FONT_SIZE = 15;
 const TITLE_LINE_HEIGHT = 20;
+// Two points spare, since a word exactly as wide as its line broke on Android.
+const SPARE = 2;
+// Where a line of a title may break: a space, or a zero-width space, which
+// marks the words of a long Chinese title, such as 本週 / 安息日學 / 課程, since
+// Chinese has no spaces between its words. keepWordsWhole holds the rest of
+// the Chinese together, and keeps its no-break spaces.
+const LINE_BREAK = /[^\S\u00a0]+|\u200b/u;
 
-/** The smallest the card text gets to keep a word whole: 80% of its size at 100%. */
+/**
+ * The smallest the card gets to keep a word whole, as in a narrow iPad
+ * window: 80% of its size at 100%.
+ */
 export const GRID_MENU_CARD_TEXT_MIN_SCALE = 0.8;
 
 /** The width of a title's lines in a card `cardWidth` points wide. */
-export const getGridMenuCardTitleWidth = (cardWidth: number) =>
-  (cardWidth - 2 * (CARD_PADDING + CARD_BORDER)) * TITLE_WIDTH_FRACTION;
+export const getGridMenuCardTitleWidth = (cardWidth: number) => cardWidth - 2 * (CARD_PADDING + CARD_BORDER);
+
+/** The words of a card's title, as a line may break between them. */
+export const getGridMenuCardTitleWords = (title: string) =>
+  keepWordsWhole(title).split(LINE_BREAK).filter(Boolean);
 
 /**
- * The card text's scale, given `widestWord`, the widest word of the grid's
- * titles, in points, at `scale`: smaller in proportion where that word wouldn't
- * fit on one line of the title, which would break it mid-word. The cap above
- * was set on a 412-point phone. On narrower ones "Denomination" broke at 125%
- * from 390 points down, and Spanish "Compañerismo" from 412; in a narrow iPad
- * window, both did (#324). Two points spare, since a word exactly as wide as
- * the line broke on Android.
+ * The card's scale, for its title, its icon and its height alike, given
+ * `widestWord`, the widest word of the grid's titles, in points, at `scale`:
+ * the reader's text size, up to the largest at which that word still fits on
+ * one line of the card's title. Home's and New Member & Visitor's cards stay
+ * two a row at every size, by design (#387), so past that size a word would
+ * break mid-word, as "Compañerismo" and "Denomination" did (#324). The icon and
+ * the card stop growing there too, so the title stays in proportion to them;
+ * until 1.9.2 they grew on with the text size while the title stayed at 1.25×.
  */
 export const fitGridMenuCardTextScale = (
   scale: TextScale,
   cardWidth: number,
   widestWord: number,
 ): TextScale => {
-  const room = getGridMenuCardTitleWidth(cardWidth) - 2;
+  const room = getGridMenuCardTitleWidth(cardWidth) - SPARE;
   if (!(cardWidth > 0) || !(widestWord > room)) return scale;
   return Math.max(GRID_MENU_CARD_TEXT_MIN_SCALE, (scale * room) / widestWord) as TextScale;
 };
@@ -146,28 +151,29 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   const theme = useAppTheme();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
-  const cappedScale = getGridMenuCardTextScale(textScale, fontScale);
-  // The grid's words, each measured on a line of its own at the capped size,
-  // and the card's width, so the text can shrink to keep every word whole.
+  const scale = getGridMenuCardTextScale(textScale, fontScale);
+  // The grid's words, each measured on a line of its own at the reader's
+  // size, and the card's width, so the card stops growing where the widest
+  // word fills its title's line.
   const fitWords = useMemo(
-    () => [...new Set((fitTitles ?? [title]).flatMap((each) => each.split(/\s+/u)).filter(Boolean))],
+    () => [...new Set((fitTitles ?? [title]).flatMap(getGridMenuCardTitleWords))],
     [fitTitles, title],
   );
   const [cardWidth, setCardWidth] = useState(0);
   const [measuredWord, setMeasuredWord] = useState(0);
-  const widestWord = measuredWord || measureWebWords(fitWords, cappedScale);
-  const cardTextScale = fitGridMenuCardTextScale(cappedScale, cardWidth, widestWord);
+  const widestWord = measuredWord || measureWebWords(fitWords, scale);
+  const cardTextScale = fitGridMenuCardTextScale(scale, cardWidth, widestWord);
   const styles = useMemo(
     () => createStyles(textScale, cardTextScale, titleBlockLines),
     [cardTextScale, textScale, titleBlockLines],
   );
   const measureTextStyle = useMemo(
     () => ({
-      fontSize: scaleTypographyMetric(TITLE_FONT_SIZE, cappedScale),
+      fontSize: scaleTypographyMetric(TITLE_FONT_SIZE, scale),
       fontWeight: '700' as const,
-      lineHeight: scaleTypographyMetric(TITLE_LINE_HEIGHT, cappedScale),
+      lineHeight: scaleTypographyMetric(TITLE_LINE_HEIGHT, scale),
     }),
-    [cappedScale],
+    [scale],
   );
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -191,10 +197,12 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
 
   const cardColors = theme.colors.gridMenuCard;
   const resolvedIconColor = iconColor ?? cardColors.decorativeIcon;
+  // Read aloud without the marks between a Chinese title's words.
+  const spokenTitle = title.replace(/\u200b/gu, '');
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
       <TouchableOpacity
-        accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
+        accessibilityLabel={subtitle ? `${spokenTitle}. ${subtitle}` : spokenTitle}
         accessibilityRole={onPress ? 'button' : undefined}
         disabled={!onPress}
         style={[
@@ -232,7 +240,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
               allowFontScaling={false}
               style={[styles.title, { color: theme.colors.onSurface }]}
             >
-              {title}
+              {keepWordsWhole(title)}
             </Text>
             {subtitle ? (
               <Text
@@ -246,6 +254,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
 
         {/* Illustration + arrow row — bottom */}
         <View pointerEvents="none" style={styles.bottomRow}>
+          {/* The icon grows with the title, and stops where it does. */}
           <View style={styles.decorIconContainer}>
             {imageSource ? (
               <ExternalBrandIcon
@@ -254,6 +263,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
                 size={68}
                 contentScale={imageContentScale}
                 style={styles.decorIcon}
+                textScale={cardTextScale}
               />
             ) : icon ? (
               <AppIcon
@@ -261,6 +271,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
                 size={68}
                 color={resolvedIconColor}
                 style={styles.decorIcon}
+                textScale={cardTextScale}
               />
             ) : null}
           </View>
@@ -319,7 +330,6 @@ const createStyles = (
     fontWeight: '700',
     // color will be set via theme (onSurface) in component
     lineHeight: scaleTypographyMetric(TITLE_LINE_HEIGHT, cardTextScale),
-    maxWidth: `${TITLE_WIDTH_FRACTION * 100}%`,
   },
   // Out of sight and wide enough that no word wraps; the card clips it.
   measure: {

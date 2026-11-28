@@ -1,4 +1,4 @@
-import { scaleTypographyMetric } from '@/constants/AppPreferences';
+import { scaleTypographyMetric, type TextScale } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import type { ImageSourcePropType, StyleProp, ViewStyle } from 'react-native';
@@ -11,6 +11,8 @@ interface ExternalBrandIconProps {
   /** Scales the source before clipping transparent margins at render time. */
   contentScale?: number;
   style?: StyleProp<ViewStyle>;
+  /** The scale to draw at in place of the app's text size, as AppIcon takes. */
+  textScale?: TextScale;
 }
 
 /**
@@ -23,10 +25,11 @@ export function ExternalBrandIcon({
   size,
   contentScale = 1,
   style,
+  textScale: textScaleOverride,
 }: ExternalBrandIconProps) {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
-  const resolvedSize = scaleTypographyMetric(size, textScale);
+  const resolvedSize = scaleTypographyMetric(size, textScaleOverride ?? textScale);
   const safeContentScale =
     Number.isFinite(contentScale) && contentScale > 0 ? contentScale : 1;
   const imageSize = resolvedSize * safeContentScale;
