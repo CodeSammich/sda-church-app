@@ -222,10 +222,10 @@
     {
       "name": "bible-verse-popup",
       "group": "bible-reading",
-      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Luke 2:14, not John 3:16, which no hymn names: eight hymns are on this verse, so the popup's Hymns button must show beside Share Verse (#456). With Save, the three buttons share the iPad's 560-point popup at 150%, so Share Verse wraps inside its button there, onto two lines. Vision reads the share icon before Share Verse as <.",
+      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The original-language Greek ships with the app, so its credit must show, with the license CC BY 4.0 requires (it may wrap onto its own line). Luke 2:14, not John 3:16, which no hymn names: eight hymns are on this verse, so the popup's Hymns button must show beside Share Verse (#456). With Save, the three buttons share the iPad's 560-point popup at 150%, so Share Verse wraps inside its button there, onto two lines. Vision reads the share icon before Share Verse as <. standard-contrast-dark shows a sheet in the dark theme at standard contrast, the near-black of the floating bars (#867).",
       "path": "bible?bookId=LUK&chapter=2&translationId=BSB&verseStart=14&verseEnd=14&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
-      "variants": ["default"],
+      "variants": ["default", "standard-contrast-dark"],
       "ipadVariants": ["landscape"],
       "mustShowLines": ["^Luke 2:14$", { "line": "\\bShare Verse$", "platforms": ["ios", "android"] }, { "line": "\\bShare$", "platforms": ["ipad"] }, { "line": "^Verse$", "platforms": ["ipad"] }, "\\bHymns$", "^Source: Statistical Restoration Greek\\b", "\\bCC BY 4\\.0\\b"],
       "mustNotShowLines": ["^Close$"]
@@ -966,9 +966,9 @@
     {
       "name": "language",
       "group": "worship-and-you",
-      "$comment": "The Language sheet, opened by popup=language (#372): an X beside its title and no Close button (#464), and each language a card with a picture of the tab bar in it (#681), named only in its own language (#867), so no English name such as Traditional Chinese under it. It opens at its whole height, so all four show at once. Its title is also on the You screen behind it, and English is the language the You screen names, so the rules require Español, which only the sheet shows.",
+      "$comment": "The Language sheet, opened by popup=language (#372): an X beside its title and no Close button (#464), and each language a card with a picture of the tab bar in it (#681), named only in its own language (#867), so no English name such as Traditional Chinese under it. It opens at its whole height, so all four show at once. Its title is also on the You screen behind it, and English is the language the You screen names, so the rules require Español, which only the sheet shows. dark shows a sheet in the dark theme's high contrast, the night blue of the floating bars (#867).",
       "path": "you?popup=language",
-      "variants": ["default"],
+      "variants": ["default", "dark"],
       "ipadVariants": ["landscape"],
       "mustShowLines": ["^Español$"],
       "mustNotShowLines": ["^Close$", "^Traditional Chinese", "^Simplified Chinese", "^Spanish$"]
