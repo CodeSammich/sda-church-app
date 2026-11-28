@@ -425,6 +425,12 @@ notification_follows() { # title
   wait_until 20 'paused by the pause key' is_paused || return 1
   media_key KEYCODE_MEDIA_PLAY
   wait_until 20 'playing by the play key' playing_with_title "$1" || return 1
+  # A pause in the app gives the audio focus back. The notification's play
+  # still works after it; expo-audio refused it while audio was off.
+  tap_play_pause
+  wait_until 20 'paused in the app' is_paused || return 1
+  notification_press play || return 1
+  wait_until 20 'playing from the notification after a pause in the app' playing_with_title "$1" || return 1
   if shade_dropped_player; then
     echo "the shade dropped the media player, though audio played on"
     return 1

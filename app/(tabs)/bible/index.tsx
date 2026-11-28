@@ -85,6 +85,7 @@ import {
   getOrderedBibleAudioReaders,
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
+  releaseBibleAudioFocus,
   withDownloadedCopy,
 } from '@/services/BibleAudioService';
 import {
@@ -1223,12 +1224,11 @@ export default function BibleScreen() {
   };
   // Gives the platform audio session/focus back only for an intentional stop.
   // A network buffer or ordinary external interruption must not call this.
+  // The notification and earbuds can still play afterwards on Android (#804).
   const releaseNativeAudioFocus = () => {
-    if (Platform.OS !== 'web') {
-      void setIsAudioActiveAsync(false).catch((error) =>
-        console.warn('Native Bible audio focus release failed:', error),
-      );
-    }
+    void releaseBibleAudioFocus(Platform.OS).catch((error) =>
+      console.warn('Native Bible audio focus release failed:', error),
+    );
   };
   const clearNativeRecoveryTimeout = () => {
     if (nativeRecoveryTimeoutRef.current) {
