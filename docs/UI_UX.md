@@ -477,7 +477,9 @@ simple, blended colors.
       - Give's Other Sponsors: its whole height, so the church's EIN at its foot, which
         a grant needs, shows.
       - The Bible's book, chapter and verse lists: half height, the current one in the
-        middle; the rest is more of the same.
+        middle; the rest is more of the same. On the iPhone and iPad the book list still
+        opens at its top
+        ([#876](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/876)).
       - A verse's details and its hymns: fit, or half height when long; the verse and
         its buttons first, its original language and notes below.
       - Audio settings: fit, or half height when long; the narrators first, Listen
